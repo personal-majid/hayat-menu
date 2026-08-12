@@ -1,0 +1,52 @@
+ADDING REELS — THIS IS THE WHOLE JOB
+====================================
+
+Open config.js, find  trending: [  and paste the link. That is it.
+
+    trending: [
+      "https://www.instagram.com/reel/DapjpUJTzuf/",
+      "https://www.instagram.com/reel/Db09DWopWC3/",
+      "https://www.instagram.com/reel/DZnI_k8Tfo3/",
+      "https://www.instagram.com/reel/YOUR_NEW_ONE/",     <- just add lines
+      "https://www.instagram.com/p/A_PHOTO_POST_ALSO_WORKS/"
+    ],
+
+No QR files to make. No images to upload. Nothing to generate.
+Add one or add three hundred — the row scrolls sideways.
+
+Optional: give one a caption instead of the default text —
+
+    { url:"https://www.instagram.com/reel/XXXX/", title:"Friday night rush" },
+
+Plain links and captioned ones can sit in the same list.
+
+
+WHAT THE CUSTOMER SEES
+======================
+The real Instagram post renders on the tablet — actual video frame,
+caption, everything. Tapping it does NOT open the Instagram app.
+It opens a QR code, drawn on the spot, and they watch it on their own
+phone. The tablet stays on your menu.
+
+If the restaurant wifi is down or Instagram is unreachable, each card
+falls back to a branded play tile. Tapping still gives the QR, because
+the QR is generated on the device and needs no internet at all.
+
+
+WHY NOT JUST PLAY IT ON THE TABLET
+==================================
+Instagram's embed will not autoplay or play inline on a touch device —
+that is Meta's iframe, not something any website can override. Every
+restaurant menu has this problem.
+
+If you want video playing ON the tablet:
+  - YouTube:  paste a video id into  youtube: [...]  in config.js
+  - your mp4: drop it into gallery/reels/ and list it in  reels: [...]
+Both play right in the page. See gallery/reels/README.txt.
+
+
+THE QR CODE GENERATOR
+=====================
+assets/qr.js draws the codes in the browser. It was checked against a
+reference encoder and every code decoded back to the exact URL.
+You never need to touch this file.

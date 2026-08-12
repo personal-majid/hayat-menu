@@ -1,0 +1,58 @@
+WHERE THE FEEDBACK GOES
+=======================
+
+You asked for low ratings to be saved to a text file on the server.
+
+Cloudflare Pages is static hosting — it serves files, it cannot write them.
+There is no server-side folder to save into. So the flow works like this
+instead, with no backend and nothing to maintain:
+
+1 or 2 or 3 stars
+  -> the customer gets a private form (name, phone, what went wrong)
+  -> pressing send does TWO things:
+       a) saves the entry in that device's browser storage
+       b) opens WhatsApp with the whole complaint typed out, addressed
+          to 9844326842 — so it reaches you within seconds
+
+4 or 5 stars
+  -> Google review QR + a button, because that is where a good review
+     is actually worth something
+
+The point of splitting it: bad experiences come to you privately, good
+ones go public. That is the single highest-value thing on this site for
+your Google ranking.
+
+
+PARTY ENQUIRIES
+===============
+"Plan my party" asks for a phone number first, then occasion, date,
+headcount and notes. On submit it saves the enquiry on that tablet and
+shows a WhatsApp QR so the customer can start the chat from their own
+phone. That is how you end up with a real WhatsApp thread — a tablet
+sitting on the table cannot message them for you.
+
+WHY IT DOES NOT AUTO-SEND A HELLO
+Messaging a customer who has not written to you first requires the
+WhatsApp Business Platform (Cloud API): a Meta Business account, business
+verification, a phone number that is NOT already on normal WhatsApp, and
+pre-approved templates. Doable, first 1,000 conversations a month free,
+but a separate week of setup. Until then the enquiry lands on the tablet
+and staff call back — which for a party booking works better anyway.
+
+
+READING WHAT IS SAVED ON A TABLET
+=================================
+On the tablet, tap the small logo in the top-left corner FIVE times quickly.
+It offers to download  hayat-tablet-export.txt  containing every party
+enquiry AND every piece of feedback saved on that device. Customers will never find this by accident.
+
+Note: storage is per device and per browser. The tablet on table 1 does not
+see what was typed on table 2. WhatsApp is what gives you the single stream.
+
+
+IF YOU LATER WANT A REAL DATABASE
+=================================
+Cloudflare Pages Functions plus KV storage does this properly and is free
+(100,000 reads a day). It is about 20 lines of code and one binding in the
+dashboard. Worth doing only once the feedback volume justifies it — until
+then WhatsApp is faster and you will actually read it.

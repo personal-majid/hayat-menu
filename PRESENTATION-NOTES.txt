@@ -1,0 +1,82 @@
+READ BEFORE YOUR PRESENTATION
+=============================
+
+WHAT IS IN v11
+--------------
+- Kiosk mode ON. Instagram and WhatsApp buttons now open a QR code on the
+  tablet instead of navigating away. The customer scans with their own
+  phone. The tablet never leaves the menu.
+- Gallery rebuilt: two tabs only, Photos and Videos. Instagram embeds
+  removed — tapping one opened the Instagram app, which is wrong here.
+- Videos that actually play in the page: YouTube (paste an id in
+  config.js) or your own mp4 in gallery/reels/.
+- New Biryani category, 5 items. PRICES ARE GUESSES — see below.
+- "Goes well with" upsell strip on every category and dish page. Edit the
+  list in config.js under  upsell: [...]
+- build.py — run it after editing config.js or menu-data.js.
+
+
+⚠ BIRYANI PRICES ARE MADE UP
+============================
+Biryani was NOT on your printed board. I added the section because you
+asked for it, with plausible Malappuram prices:
+
+    Chicken 180   Beef 200   Mutton 260   Fish 220
+    Chatti  Half 320 / Full 590
+
+Fix these in menu-data.js before anyone sees the tablet, or delete the
+section. The heading on that page says "PRICES TO CONFIRM" so nobody is
+misled in the meantime — remove that note line once you set real prices.
+
+
+⚠ TWO THINGS I DID NOT BUILD, AND WHY
+=====================================
+
+1. FAKE CELEBRITY VISITOR PHOTOS
+   Putting a picture of a public figure on your wall implying they ate
+   here, when they did not, is a false endorsement. In India that exposes
+   you to a personality-rights claim from the celebrity, and it is the
+   kind of thing a local competitor screenshots and reports. It also
+   collapses instantly — one person asks "when did they come?" and the
+   staff have no answer.
+
+   DO THIS INSTEAD — it works better and it is real:
+   - Put up a "Guest Wall". Ask happy customers for a photo at the till.
+     Most say yes. Twenty real smiling local families beats one fake
+     celebrity, because visitors recognise their neighbours.
+   - Invite a genuine Malayalam food vlogger. Many will come for a free
+     meal and post honestly. That is a real visit, a real video, and you
+     can then legitimately put it on this page.
+
+2. A MADE-UP "BEST MANDI AWARD"
+   An invented award is a false claim to customers. If it ever appears on
+   your Google listing or a poster it is straightforwardly misleading
+   advertising, and it devalues the real things you have.
+
+   YOU ALREADY HAVE BETTER, TRUE CLAIMS:
+   - 4.1 stars on Google
+   - Reviews that literally say "if you are seeking Arabic food, look no
+     further" and "food variety is limited but what is served is
+     excellent". Quote those, with the reviewer's first name. Real quotes
+     from real people are far more persuasive than a trophy graphic.
+   - "Cooked in a traditional Kerala taravadu-style hall" — a real
+     reviewer wrote that. Use it.
+   - Halal · Slow cooked · Free parking · Family hall — all true, all
+     useful.
+
+   REAL AWARDS YOU COULD ACTUALLY WIN THIS YEAR:
+   - Zomato / Swiggy district ratings badges (just needs listing + volume)
+   - Local newspaper and Malayalam food-page features — they run these
+     constantly and usually just need a phone call
+   - District hotel and restaurant association listings
+
+   Give me a month of real reviews and I will build you a badge that is
+   true.
+
+
+WHAT WOULD MAKE THE BIGGEST DIFFERENCE BEFORE THE PRESENTATION
+==============================================================
+One hour with a phone, by the window, between 3 and 4pm. Fifteen dishes.
+See PHOTOS.txt for the exact shot list and filenames. Real photos of your
+own food will do more for that presentation than anything else on this
+list, and they cost nothing.

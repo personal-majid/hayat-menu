@@ -1,0 +1,79 @@
+UPDATING THE SITE — DO NOT CREATE A NEW PROJECT
+===============================================
+
+Every new project gives you a new address (hayat-menu-2.pages.dev,
+hayat-menu-3.pages.dev...). Your QR codes, your Google listing and your
+Instagram bio all point at the FIRST one. So you must always re-deploy
+INTO the same project.
+
+
+RE-DEPLOYING INTO YOUR EXISTING PROJECT
+=======================================
+
+1. dash.cloudflare.com  ->  Compute (Workers & Pages)  in the left menu
+
+2. Click your project name in the list — NOT "Create"
+
+3. Open the  Deployments  tab
+
+4. Look for  Create deployment  (top right of that tab).
+   On some accounts the button reads "Upload assets" or appears as a
+   "Create a new deployment" panel. Same thing.
+
+5. Make sure the environment is set to  Production
+
+6. Drag  hayat-cloudflare-deploy.zip  straight in. No need to unzip.
+
+7. Save and Deploy
+
+The URL never changes. The old version is replaced within a minute, and
+Cloudflare keeps the previous deployments so you can roll back.
+
+
+ROLLING BACK IF SOMETHING BREAKS
+================================
+Deployments tab -> find the last good one -> the "..." menu on its row ->
+Rollback to this deployment. Takes seconds.
+
+
+DELETING THE EXTRA PROJECTS YOU CREATED
+=======================================
+Keep the one whose address you have already shared. Delete the rest.
+
+For each extra project:
+  1. Open the project
+  2. Settings  tab
+  3. Scroll to the bottom — there is a red "Delete project" area
+  4. Type the project name to confirm
+  5. Delete
+
+WARNING: deleting is permanent and the address stops working immediately.
+If you are not sure which one you shared, open each *.pages.dev address
+in a browser first, or check which one you pasted into your Google
+Business Profile.
+
+
+WHICH ONE SHOULD YOU KEEP?
+==========================
+Keep the project whose URL is already:
+  - in your Google Business Profile website field
+  - on your printed QR codes
+  - in your Instagram bio
+
+If none of those are done yet, this is the moment to pick one, delete the
+others, and use that address everywhere from now on.
+
+
+BEFORE EVERY UPLOAD — THE ONE THING PEOPLE FORGET
+=================================================
+Open  sw.js  and change:
+
+    const CACHE = "hayat-v18";
+
+to v10, then v11, and so on. Every single time.
+
+Phones store a copy of the site so it works offline. That number is how
+they know a new version exists. Forget it and staff will swear the update
+did not work, while a fresh phone sees it fine.
+
+This build is at v18.

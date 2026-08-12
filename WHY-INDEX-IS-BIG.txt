@@ -1,0 +1,50 @@
+WHY index.html GOT BIGGER — AND WHY THE VIVO BUG IS FIXED
+=========================================================
+
+WHAT THE PHONE ACTUALLY SAID
+----------------------------
+    Script error.
+    :0:0
+    ... Chrome/123 ... VivoBrowser/15.0.2.1
+
+"Script error." with no line number is a browser refusing to tell you what
+went wrong inside a separately-loaded .js file. It is a privacy rule, and
+VivoBrowser applies it hard. So the menu had four separate files it
+depended on, and if any one of them failed the whole page died silently —
+with no way to find out which one.
+
+
+THE FIX
+-------
+index.html now carries a built-in copy of all four files:
+
+    assets/icons.js    lang.js    config.js    menu-data.js
+
+Those four files are STILL in the folder, and they still load immediately
+after the built-in copies, overwriting them.
+
+Which means:
+
+  - You edit config.js and menu-data.js exactly as before. No change.
+  - If one of them is blocked, corrupted, slow, or filtered by a phone's
+    browser, the menu still opens using the built-in copy.
+
+Tested three ways before shipping:
+    normal load ................... full menu
+    all four files blocked ........ full menu
+    menu-data.js corrupted ........ full menu
+
+The script tags also carry crossorigin="anonymous" now, so if anything
+does go wrong in future the error screen will name the actual file and
+line instead of "Script error."
+
+
+THE ONE THING TO KNOW
+---------------------
+After you edit config.js or menu-data.js, the built-in copies inside
+index.html are older than your edits. That does not break anything —
+the real files load second and win. The built-in copies only ever matter
+as an emergency fallback.
+
+If you want them refreshed too, send me the edited files and I will
+rebuild index.html.

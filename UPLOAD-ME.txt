@@ -1,0 +1,81 @@
+ALREADY DEPLOYED ONCE?  ->  read CLOUDFLARE-UPDATE.txt instead.
+Do not create another project — you will get another address.
+
+You can drag the ZIP in as-is. No need to unzip it first.
+
+
+CLOUDFLARE PAGES — FIRST TIME ONLY
+==================================
+
+You upload this folder yourself. About 10 minutes, costs nothing,
+no credit card is asked for.
+
+1. Go to  dash.cloudflare.com  and sign up (email + password).
+
+2. Left menu ->  Workers & Pages.
+
+3. Create  ->  Pages tab  ->  Upload assets.
+
+4. Project name:  hayat-menu
+   This becomes your address:  hayat-menu.pages.dev
+
+5. Drag  hayat-cloudflare-deploy.zip  straight into the upload box.
+   Cloudflare accepts a zip file or a folder — either works.
+
+6. Deploy site. Wait about a minute. Done.
+
+Live at:  https://hayat-menu.pages.dev
+
+
+AFTER IT IS LIVE
+================
+
+a) Add it to Google.
+   Google Maps -> your listing -> Edit profile -> Contact -> Website
+   Paste the address. This fills the empty Website field Google is
+   currently showing on your listing.
+
+b) Put it in the Instagram bio.
+
+c) QR codes for the tables — any free QR generator, paste the URL.
+
+d) On the tablets: open the URL in Chrome -> three-dot menu ->
+   Install app (or Add to Home screen).
+   After that it works even if the wifi drops, because the site
+   stores itself on the device.
+
+
+UPDATING LATER
+==============
+
+Edit config.js or menu-data.js on your computer, then:
+Cloudflare -> your project -> Create deployment -> drag the contents again.
+
+ONE EXTRA STEP. Open sw.js and change this line:
+
+    const CACHE = "hayat-v7";
+
+to hayat-v8, then v9, and so on every time you upload.
+That is what tells the tablets to fetch the new version instead of
+showing the old cached one. Skip it and your changes will not appear.
+
+
+WHAT IS IN HERE
+===============
+index.html              the menu
+config.js               phone numbers, Instagram handle, gallery list
+menu-data.js            dishes and prices
+lang.js                 English / Malayalam wording
+sw.js                   makes the site work offline once visited
+manifest.webmanifest    lets it install as an app icon
+assets/                 logo, app icons, WhatsApp share image
+photos/                 drop dish photos here
+gallery/                drop restaurant photos and videos here
+_headers, robots.txt    server settings, leave them alone
+
+
+STILL TO FILL IN
+================
+config.js has two placeholder phone numbers (+910000000000) and a
+guessed Instagram handle (hayatfishrestaurant). Fix those before you
+share the link with anyone.

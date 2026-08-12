@@ -1,0 +1,14 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# python
+__pycache__/
+*.pyc
+
+# build output (regenerate with the zip step)
+*.zip
+
+# local test servers / scratch
+.cache/

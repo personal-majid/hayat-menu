@@ -1,0 +1,96 @@
+GETTING REAL PHOTOS ONTO THE MENU
+=================================
+
+I cannot download images in this environment, and I would not put stock
+photos of someone else's mandi next to your prices anyway — customers
+notice, and it is a licensing risk. So here are the two honest routes.
+
+
+ROUTE 1 — SHOOT YOUR OWN (best, one hour)
+=========================================
+This beats any stock library. Your food already looks better than the
+generic pictures, and it is legally yours forever.
+
+WHEN
+  Between 3pm and 4pm on a clear day. The lunch rush is over and the
+  light is still good.
+
+WHERE
+  One table next to the window, side-on to the light. Never under the
+  ceiling tube light, never with flash. Flash makes food look grey.
+
+SETUP
+  - Wipe the plate rim
+  - Dark or wooden surface. A plain tray works
+  - Put a white A4 sheet on the shadow side to bounce light back
+  - Phone on the highest resolution setting
+
+TWO SHOTS PER DISH
+  1. Straight down from above (flat lay)
+  2. At about 30 degrees, close, so the steam and texture show
+
+SHOT LIST — 25 photos covers the whole menu
+  Signature Mandi     overloaded-mandi, beef-mandi, chicken-mandi
+  Alfaham             af-regular, af-peri, af-cheesy, af-green
+                      (the other four flavours look near identical,
+                       reuse the closest one)
+  Shawaya             sh-regular, sh-masala
+  Exotic              broast, dragon
+  Gravies             g1 butter chicken, g3 kadai, g7 dal fry
+  Breads              b3 parota, b1 khubbus
+  Shawarma            w1 chicken, w5 jumbo
+  Sides               s1 salad
+  Drinks              d1 fresh lime, d7 mint mojito, d5 mixed fruit
+  Desserts            x2 falooda, x3 mango delight, x4 ice cream
+
+ALSO SHOOT, for the Gallery
+  - The dining hall, empty, from the door
+  - The mandi pit being opened, steam rising
+  - Alfaham on the charcoal
+  - The signboard from the road at dusk
+  - Your team, one group photo
+
+HOW TO ADD THEM
+  1. Resize each to about 1600px wide, under 400 KB
+     (free: squoosh.app — drag, drop, download)
+  2. Name them exactly like the ids above:
+        photos/beef-mandi.jpg
+        photos/af-peri.jpg
+  3. Open menu-data.js, find that dish, change
+        img:""      to      img:"photos/beef-mandi.jpg"
+  4. Re-zip, re-upload
+
+Any dish you have not shot keeps its illustration. Nothing breaks.
+You can do five dishes a week.
+
+
+ROUTE 2 — GENUINELY FREE STOCK, IF YOU MUST
+===========================================
+These three allow commercial use with no attribution required. Read each
+site's licence yourself before publishing — they do change.
+
+  pexels.com          the best food photography of the three
+  unsplash.com        good for interiors and mood shots
+  pixabay.com         biggest library, quality is uneven
+
+SEARCH TERMS THAT ACTUALLY RETURN THE RIGHT FOOD
+  mandi rice            kabsa            arabic rice platter
+  grilled chicken charcoal               shish tawook
+  chicken shawarma wrap                  doner
+  butter chicken curry bowl              indian curry
+  kerala paratha        flatbread stack  khubz
+  fried chicken bucket                   broasted chicken
+  mint mojito glass     fresh lime soda  falooda
+  mango dessert bowl    ice cream cup
+
+USE THEM FOR
+  Backgrounds, the gallery, drinks and desserts — things that look the
+  same everywhere.
+
+DO NOT USE THEM FOR
+  Your mandi, alfaham, shawaya or the Overloaded Mandi. Those are what
+  the customer is paying for and comparing. A stock photo that does not
+  match what arrives on the table costs you a bad review.
+
+  Also: never take pictures off another restaurant's Instagram or Google
+  listing. That is their copyright and people in Malappuram will spot it.

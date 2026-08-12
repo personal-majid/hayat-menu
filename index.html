@@ -1,0 +1,2414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#140C06">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="Authentic Yemeni mandi, alfaham, shawaya and fresh seafood in Makkaraparamba, Malappuram. Dine-in, takeaway, home delivery and catering.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-icon.png">
+<meta property="og:type" content="restaurant">
+<meta property="og:title" content="Hayat Fish Restaurant — Menu">
+<meta property="og:description" content="Authentic Yemeni mandi, alfaham and fresh seafood. Makkaraparamba, Malappuram. Home delivery and catering.">
+<meta property="og:image" content="assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/mark.png">
+<link rel="apple-touch-icon" href="assets/mark.png">
+<title>Hayat Fish Restaurant — Menu</title>
+<style>
+html[lang="ml"] .prow .n,html[lang="ml"] .row .n{line-height:1.5}
+html[lang="ml"] h2.sec{letter-spacing:.2px}
+html[lang="ml"] .cp b,html[lang="ml"] .phead span:nth-child(n+3){letter-spacing:.2px}
+html[lang="ml"] .tag{letter-spacing:.2px}
+:root{
+  --bg:#140C06; --card:#271A0D;
+  --line:rgba(201,162,75,.20); --line2:rgba(201,162,75,.38);
+  --gold:#C9A24B; --gold2:#EFCE86; --cream:#F5F1DF; --green:#8FBE43;
+  --paper:#EFE6CF; --ink:#2A1A0D; --hot:#E4705A; --muted:#A28C6C;
+  --ig1:#F58529; --ig2:#DD2A7B; --ig3:#8134AF;
+  --r:18px; --r2:12px; --tap:52px;
+  --shadow:0 14px 40px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 700px at 12% -12%, #4A2E12 0%, transparent 58%),
+    radial-gradient(900px 560px at 104% 108%, #3A1E28 0%, transparent 55%),
+    var(--bg);
+  color:var(--cream);
+  font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,"Noto Sans Malayalam",
+    "Manjari","AnjaliOldLipi",sans-serif;
+  overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer}
+img{display:block}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ================= header ================= */
+header{display:flex;align-items:center;gap:14px;padding:11px 20px;flex:0 0 auto;z-index:30;
+  background:linear-gradient(180deg,rgba(38,24,12,.96),rgba(20,12,6,.92));
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+header .logo{height:48px;width:auto;flex:0 0 auto}
+.brand h1{margin:0;font-size:17.5px;font-weight:700;letter-spacing:.3px;color:var(--green)}
+.brand p{margin:2px 0 0;font-size:10.5px;color:var(--gold);letter-spacing:1.6px;text-transform:uppercase}
+.spacer{flex:1}
+#search{width:186px;min-height:42px;background:rgba(255,255,255,.045);border:1px solid var(--line);
+  border-radius:var(--r2);padding:0 14px;color:var(--cream);font-size:14px;outline:none}
+#search::placeholder{color:var(--muted)}
+#search:focus{border-color:var(--gold);background:rgba(255,255,255,.07)}
+.gbtn{min-height:42px;padding:0 16px;border-radius:var(--r2);display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:700;letter-spacing:.4px;border:1px solid var(--line2);
+  background:linear-gradient(135deg,rgba(201,162,75,.18),rgba(201,162,75,.06));color:var(--gold2)}
+.gbtn:active{background:rgba(201,162,75,.3)}
+
+/* ================= shell ================= */
+#body{flex:1;display:flex;min-height:0}
+nav{width:250px;flex:0 0 auto;overflow-y:auto;padding:12px;
+  border-right:1px solid var(--line);background:rgba(0,0,0,.26)}
+nav::-webkit-scrollbar,main::-webkit-scrollbar,.hscroll::-webkit-scrollbar{height:0;width:0}
+.navitem{display:flex;align-items:center;gap:12px;width:100%;min-height:var(--tap);
+  padding:0 13px;border-radius:var(--r2);margin-bottom:4px;text-align:left;
+  font-size:14.5px;font-weight:600;line-height:1.2;color:var(--cream)}
+.navitem .ic{font-size:20px}
+.navitem small{display:block;font-size:10px;font-weight:700;opacity:.55;letter-spacing:.6px}
+.navitem:active{background:rgba(255,255,255,.05)}
+.navitem.on{background:linear-gradient(135deg,var(--gold),#A8823A);color:#241608}
+.navitem.special{border:1px solid var(--line2);
+  background:linear-gradient(135deg,rgba(221,42,123,.18),rgba(129,52,175,.10));margin-bottom:12px}
+.navitem.special.on{background:linear-gradient(135deg,var(--gold),#A8823A);color:#241608;border-color:var(--gold)}
+.navsep{height:1px;background:var(--line);margin:10px 4px}
+main{flex:1;overflow-y:auto;padding:0 26px 96px;scroll-behavior:smooth}
+
+/* ================= back bars ================= */
+.backbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
+  padding:14px 0 12px;margin-bottom:6px;
+  background:linear-gradient(180deg,var(--bg) 62%,rgba(20,12,6,0))}
+.back{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0 18px 0 14px;
+  border-radius:999px;border:1px solid var(--line2);font-size:13.5px;font-weight:700;
+  background:rgba(255,255,255,.05);color:var(--gold2);letter-spacing:.3px}
+.back:active{background:rgba(201,162,75,.2)}
+.back .a{font-size:17px;line-height:1}
+.crumbtxt{font-size:12.5px;color:var(--muted);letter-spacing:.4px}
+.backbottom{display:flex;justify-content:center;margin:38px 0 6px}
+.backbottom .back{padding:0 30px;min-height:52px;font-size:14.5px}
+
+/* ================= headings ================= */
+.rule{display:flex;align-items:center;gap:16px;margin:6px 0 6px}
+.rule:before,.rule:after{content:"";height:1px;flex:1;
+  background:linear-gradient(90deg,transparent,var(--line2),transparent)}
+h2.sec{margin:0;font-size:26px;font-weight:800;letter-spacing:1px;color:var(--gold2);
+  text-transform:uppercase;text-align:center;white-space:nowrap}
+p.secsub{margin:8px 0 22px;font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.5px}
+h3.mini{margin:34px 0 14px;font-size:11.5px;letter-spacing:2.6px;text-transform:uppercase;
+  color:var(--gold);display:flex;align-items:center;gap:12px}
+h3.mini:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--line2),transparent)}
+
+/* ================= thumbnails ================= */
+.thumb{width:62px;height:62px;flex:0 0 auto;border-radius:var(--r2);overflow:hidden;
+  background:#2A1A0C;border:1px solid var(--line);position:relative}
+.thumb img{width:100%;height:100%;object-fit:cover}
+
+/* ================= price table ================= */
+.seg{display:inline-flex;gap:4px;padding:4px;background:rgba(255,255,255,.05);
+  border:1px solid var(--line);border-radius:14px;margin:0 0 18px}
+.seg button{min-height:40px;padding:0 22px;border-radius:11px;font-size:13.5px;
+  font-weight:700;color:var(--muted);letter-spacing:.3px}
+.seg button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608}
+.plist{max-width:940px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+  box-shadow:var(--shadow)}
+.phead{display:grid;grid-template-columns:62px 1fr repeat(3,94px);gap:16px;align-items:center;
+  padding:12px 20px;background:rgba(0,0,0,.34);border-bottom:1px solid var(--line)}
+.phead span:nth-child(n+3){text-align:center;font-size:10px;font-weight:800;letter-spacing:1.4px;
+  text-transform:uppercase;color:var(--gold)}
+.prow{display:grid;grid-template-columns:62px 1fr repeat(3,94px);gap:16px;align-items:center;
+  width:100%;padding:13px 20px;text-align:left;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow:active{background:rgba(201,162,75,.10)}
+.prow.anchor{background:linear-gradient(90deg,rgba(201,162,75,.16),rgba(201,162,75,.03))}
+.prow .pl{min-width:0}
+.prow .n{display:block;font-size:15.5px;font-weight:700;letter-spacing:.2px}
+.prow .d{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
+.prow .pc{text-align:center;color:var(--gold2);font-weight:700;font-size:16px;white-space:nowrap}
+.prow .pc.na{color:rgba(162,140,108,.5);font-weight:600}
+.prow .pc em{display:block;font-style:normal;font-size:9px;letter-spacing:.9px;
+  text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:3px}
+
+/* paper variant */
+.paper{background:var(--paper);color:var(--ink);border-radius:var(--r);
+  padding:8px;max-width:860px;box-shadow:var(--shadow)}
+.rows{display:grid;gap:6px}
+.row{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.5);
+  border:1px solid rgba(160,140,100,.28);border-radius:var(--r2);padding:9px 14px;
+  min-height:var(--tap);text-align:left;width:100%}
+.row:active{border-color:var(--gold)}
+.row .n{font-size:15px;font-weight:600}
+.row .d{font-size:11.5px;color:#6B5A3E;margin-top:2px}
+.row .p{margin-left:auto;color:#8A6A1E;font-weight:800;font-size:16px;white-space:nowrap}
+.paper .thumb{border-color:rgba(160,140,100,.35);background:#DCCDA9}
+
+/* ============ photo cards (price under the image) ============ */
+.pgrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(258px,1fr))}
+.pcard{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);
+  background:var(--card);text-align:left;display:block;width:100%;box-shadow:var(--shadow)}
+.pcard:active{border-color:var(--gold2);transform:scale(.99)}
+.pcard .ph{aspect-ratio:4/3;overflow:hidden;background:#2A1A0C}
+.pcard .ph img{width:100%;height:100%;object-fit:cover}
+.pcard .cap{padding:12px 14px 14px;border-top:1px solid var(--line);
+  background:linear-gradient(180deg,#2C1D0E,#1E1309)}
+.pcard .cn{font-size:15px;font-weight:700;letter-spacing:.2px;line-height:1.3}
+.pcard .cprices{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.cp{font-size:12.5px;font-weight:700;color:var(--gold2);background:rgba(201,162,75,.16);
+  border:1px solid var(--line2);border-radius:8px;padding:4px 9px;white-space:nowrap}
+.cp b{color:var(--muted);font-weight:700;font-size:9.5px;letter-spacing:.8px;
+  text-transform:uppercase;margin-right:5px}
+.ribbon{position:absolute;top:12px;left:12px;font-size:9.5px;font-weight:800;
+  letter-spacing:1.2px;text-transform:uppercase;padding:5px 10px;border-radius:7px;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608}
+.ribbon.hot{background:linear-gradient(135deg,#F08A72,var(--hot));color:#2A0D08}
+
+/* ================= dish page ================= */
+.detail{max-width:960px}
+.hero{aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:#2A1A0C;
+  border:1px solid var(--line);margin-bottom:20px;box-shadow:var(--shadow);position:relative}
+.hero img{width:100%;height:100%;object-fit:cover}
+.hero .hcap{position:absolute;left:0;right:0;bottom:0;padding:56px 24px 20px;
+  background:linear-gradient(180deg,rgba(12,7,3,0),rgba(12,7,3,.88))}
+.hero .hcap .hn{font-size:26px;font-weight:800;letter-spacing:.3px}
+.hero .hcap .hp{display:flex;flex-wrap:wrap;gap:9px;margin-top:11px}
+.detail h3{margin:0;font-size:29px;letter-spacing:.3px;color:var(--cream);font-weight:800}
+.detail .subline{font-size:13.5px;color:var(--gold);margin-bottom:8px;letter-spacing:.4px}
+.detail .desc{font-size:15px;line-height:1.75;color:#DFD6BC;margin:14px 0 4px;max-width:680px}
+table.mx{width:100%;max-width:580px;border-collapse:separate;border-spacing:0;
+  border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;font-size:14px}
+table.mx th,table.mx td{padding:13px 10px;text-align:center;border-bottom:1px solid var(--line)}
+table.mx thead th{background:rgba(0,0,0,.32);color:var(--gold);font-size:10px;
+  text-transform:uppercase;letter-spacing:1.3px;font-weight:800}
+table.mx tbody th{text-align:left;font-weight:700;color:var(--cream);font-size:13px;
+  background:rgba(0,0,0,.18)}
+table.mx td{color:var(--gold2);font-weight:700;font-size:15.5px}
+table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
+.opts{display:grid;gap:9px;max-width:460px}
+.opt{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);
+  border:1px solid var(--line);border-radius:var(--r2);padding:14px 17px;font-size:14.5px;font-weight:600}
+.opt .p{color:var(--gold2);font-size:17px;font-weight:800}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:26px}
+.chip{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:999px;
+  padding:7px 13px;font-size:11.5px;color:var(--muted)}
+
+/* ================= tags ================= */
+.tag{font-size:9px;font-weight:800;padding:3px 7px;border-radius:5px;text-transform:uppercase;
+  letter-spacing:.7px;margin-left:7px;vertical-align:1.5px;display:inline-block}
+.tag.hot{background:rgba(228,112,90,.9);color:#2A0D08}
+.tag.veg{background:rgba(143,190,67,.9);color:#17250A}
+.tag.star{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608}
+
+/* ================= gallery ================= */
+.tabs{display:inline-flex;gap:4px;padding:4px;background:rgba(255,255,255,.05);
+  border:1px solid var(--line);border-radius:14px;margin:0 0 22px}
+.tabs button{min-height:42px;padding:0 22px;border-radius:11px;font-size:13.5px;
+  font-weight:700;color:var(--muted);letter-spacing:.4px}
+.tabs button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608}
+.ggrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.gcell{border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--card);
+  position:relative;width:100%;display:block;box-shadow:var(--shadow)}
+.gcell img,.gcell video{width:100%;aspect-ratio:4/3;object-fit:cover;background:#000}
+.gcell .gc{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;font-size:13px;
+  font-weight:600;background:linear-gradient(180deg,rgba(12,7,3,0),rgba(12,7,3,.9));pointer-events:none}
+.gcell .play{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.gcell .play span{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(12,7,3,.6);border:1px solid rgba(255,255,255,.4);font-size:20px;color:#fff}
+.hscroll{display:flex;gap:15px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x mandatory}
+.igcard{flex:0 0 auto;width:330px;height:560px;border-radius:var(--r);overflow:hidden;
+  border:1px solid var(--line);background:#000;scroll-snap-align:start}
+.igcard iframe{width:100%;height:100%;border:0;display:block}
+.igwrap{display:grid;gap:15px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));max-width:1080px}
+.igwrap .igcard{width:100%}
+.offline{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;
+  height:100%;padding:26px;text-align:center;background:var(--card);color:var(--muted);font-size:13px}
+.offline b{color:var(--cream);font-size:15px}
+.offline a{color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:11px 18px;
+  border-radius:10px;background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3))}
+.nomedia{background:rgba(255,255,255,.035);border:1px dashed var(--line2);border-radius:var(--r);
+  padding:24px;color:var(--muted);font-size:13px;line-height:1.7;max-width:680px}
+.nomedia code{color:var(--gold2);font-size:12px}
+.nomedia b{color:var(--cream)}
+
+/* ================= home ================= */
+.homehero{text-align:center;padding:22px 0 4px}
+.homehero img{height:136px;width:auto;margin:0 auto 8px}
+.homehero .tl{font-size:11.5px;letter-spacing:4px;color:var(--gold);text-transform:uppercase}
+.trust{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;margin-top:18px}
+.trust span{font-size:10px;letter-spacing:1.3px;color:var(--muted);text-transform:uppercase;
+  border:1px solid var(--line);border-radius:999px;padding:6px 13px}
+.promo{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:26px}
+.pbox{border:1px solid var(--line2);border-radius:var(--r);padding:20px;
+  background:linear-gradient(150deg,rgba(201,162,75,.13),rgba(255,255,255,.02));box-shadow:var(--shadow)}
+.pbox .pi{font-size:26px;line-height:1}
+.pbox h4{margin:12px 0 6px;font-size:16.5px;font-weight:800;letter-spacing:.3px;color:var(--gold2)}
+.pbox p{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.nums{display:grid;gap:7px;margin-top:14px}
+.nums a{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  min-height:44px;padding:0 14px;border-radius:10px;text-decoration:none;
+  background:rgba(0,0,0,.28);border:1px solid var(--line);color:var(--cream);font-size:13.5px}
+.nums a b{color:var(--gold2);font-size:14.5px;letter-spacing:.3px}
+.nums a span{font-size:10.5px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(232px,1fr))}
+.tile{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;text-align:left;
+  display:flex;flex-direction:column;background:var(--card);box-shadow:var(--shadow);position:relative}
+.tile:active{border-color:var(--gold2);transform:scale(.99)}
+.tile .cover{aspect-ratio:16/10;overflow:hidden;background:#2A1A0C}
+.tile .cover img{width:100%;height:100%;object-fit:cover}
+.tile .tb{padding:13px 15px 15px}
+.tile .tt{font-size:15px;font-weight:700}
+.tile .ts{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4}
+.tile .tc{color:var(--gold2);font-weight:700;font-size:11px;margin-top:11px;display:block;
+  letter-spacing:1.2px;text-transform:uppercase}
+.infobar{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:26px;padding:16px 20px;
+  border:1px solid var(--line);border-radius:var(--r);background:rgba(255,255,255,.03);font-size:13px}
+.infobar .il{color:var(--muted)}
+.infobar a{margin-left:auto;color:var(--gold2);text-decoration:none;font-weight:700;font-size:13px}
+.igbar{display:flex;align-items:center;gap:14px;border:1px solid var(--line2);border-radius:var(--r);
+  padding:16px 20px;margin:26px 0 0;
+  background:linear-gradient(135deg,rgba(221,42,123,.16),rgba(129,52,175,.08))}
+.igbar .t{font-size:15px;font-weight:800}
+.igbar .s{font-size:12px;color:var(--muted);margin-top:3px}
+.igbar a{margin-left:auto;padding:13px 22px;border-radius:12px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:13.5px;background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3))}
+.thanks{text-align:center;color:var(--gold);font-size:13.5px;margin:36px 0 0;font-style:italic;
+  letter-spacing:.5px}
+.empty{color:var(--muted);padding:28px 0;font-size:14px}
+
+
+/* ============ celebrate ============ */
+.celebrate{position:relative;overflow:hidden;border-radius:22px;margin-top:8px;
+  border:1px solid rgba(201,162,75,.45);padding:30px 26px;
+  background:
+    radial-gradient(700px 300px at 8% 0%, rgba(221,42,123,.18), transparent 62%),
+    radial-gradient(600px 320px at 100% 100%, rgba(201,162,75,.22), transparent 60%),
+    linear-gradient(160deg,#3A1E12,#1E1209);box-shadow:var(--shadow)}
+.celebrate .kicker{font-size:10.5px;letter-spacing:3px;text-transform:uppercase;color:var(--gold)}
+.celebrate h3{margin:10px 0 6px;font-size:30px;font-weight:800;letter-spacing:-.3px;
+  background:linear-gradient(100deg,#FFF0C4,var(--gold2),#F0A8C0);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.celebrate .tag{font-size:13.5px;color:var(--gold2);letter-spacing:.4px}
+.celebrate p.cb{margin:14px 0 20px;font-size:14.5px;line-height:1.7;color:#E4DBC2;max-width:640px}
+.occ{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:22px}
+.occ .o{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;padding:14px 15px}
+.occ .o .oi{font-size:22px;line-height:1}
+.occ .o b{display:block;margin:8px 0 3px;font-size:14.5px;color:var(--cream)}
+.occ .o span{font-size:11.5px;color:var(--muted);line-height:1.5;display:block}
+.cta{display:flex;flex-wrap:wrap;gap:10px}
+.cta a,.cta button{min-height:52px;padding:0 24px;border-radius:14px;display:flex;align-items:center;
+  gap:9px;font-size:14.5px;font-weight:700;text-decoration:none;border:1px solid var(--line2);
+  background:rgba(255,255,255,.05);color:var(--cream)}
+.cta .wa{background:linear-gradient(135deg,#4ADE80,#16A34A);color:#052E16;border:0}
+.cta .gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608;border:0}
+
+/* ============ reels (instagram-style vertical feed) ============ */
+.reelrow{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 12px;scroll-snap-type:x mandatory}
+.reel{position:relative;flex:0 0 auto;width:268px;aspect-ratio:9/16;border-radius:20px;
+  overflow:hidden;background:#000;border:1px solid var(--line);scroll-snap-align:center;
+  box-shadow:var(--shadow)}
+.reel video{width:100%;height:100%;object-fit:cover;display:block}
+.reel .ov{position:absolute;left:0;right:0;bottom:0;padding:44px 14px 14px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.82))}
+.reel .ov b{font-size:14px;font-weight:700;display:block}
+.reel .sound{position:absolute;top:12px;right:12px;width:38px;height:38px;border-radius:50%;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:grid;place-items:center;
+  font-size:16px;border:1px solid rgba(255,255,255,.25)}
+.reel .igbadge{position:absolute;top:12px;left:12px;padding:6px 11px;border-radius:9px;font-size:11px;
+  font-weight:700;color:#fff;text-decoration:none;
+  background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3))}
+.reel .hint{position:absolute;left:50%;bottom:66px;transform:translateX(-50%);font-size:11px;
+  color:rgba(255,255,255,.85);background:rgba(0,0,0,.5);padding:6px 12px;border-radius:999px;
+  pointer-events:none;transition:opacity .4s}
+
+/* ============ rating ============ */
+.stars{display:flex;justify-content:center;gap:10px;margin:8px 0 4px}
+.stars button{font-size:44px;line-height:1;color:#4A3A22;transition:transform .12s,color .12s;
+  padding:4px 2px}
+.stars button.on{color:#F5C542;text-shadow:0 0 22px rgba(245,197,66,.5)}
+.stars button:active{transform:scale(1.2)}
+.fld{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;
+  padding:13px 14px;color:var(--cream);font-size:15px;font-family:inherit;margin-bottom:10px;outline:none}
+.fld:focus{border-color:var(--gold)}
+textarea.fld{min-height:110px;resize:vertical}
+.qrbox{background:#fff;border-radius:18px;padding:12px;width:210px;margin:0 auto 14px}
+.qrbox img{width:100%;height:auto;border-radius:10px}
+.qrcap{text-align:center;font-size:12.5px;color:var(--muted);margin-bottom:16px}
+.qgrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:6px}
+.qcard{border:1px solid var(--line);border-radius:18px;padding:18px;text-align:center;
+  background:rgba(255,255,255,.035)}
+.qcard h4{margin:0 0 12px;font-size:15px;color:var(--gold2)}
+.qcard .qrbox{width:100%;max-width:190px}
+.qcard a{display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:12px;
+  text-decoration:none;font-weight:700;font-size:13.5px;margin-top:4px}
+.qcard a.wa{background:linear-gradient(135deg,#4ADE80,#16A34A);color:#052E16}
+.qcard a.ig{background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3));color:#fff}
+.qcard a.gg{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608}
+
+@media (max-width:860px){
+  .celebrate{padding:22px 17px;border-radius:18px}
+  .celebrate h3{font-size:23px}
+  .occ{grid-template-columns:1fr 1fr;gap:8px}
+  .occ .o{padding:11px 12px}.occ .o span{display:none}
+  .cta a,.cta button{flex:1;justify-content:center;padding:0 14px;font-size:13.5px}
+  .reel{width:232px}
+  .stars button{font-size:38px;gap:6px}
+}
+
+
+/* ============ kiosk QR sheet ============ */
+.qsheet{text-align:center}
+.qsheet .big{background:#fff;border-radius:22px;padding:16px;width:min(300px,72vw);margin:0 auto 16px}
+.qsheet .big img{width:100%;height:auto;display:block;border-radius:12px}
+.qsheet h4{margin:0 0 6px;font-size:21px;color:var(--gold2)}
+.qsheet .handle{font-size:17px;font-weight:800;letter-spacing:.6px;color:var(--cream);margin-bottom:6px}
+.qsheet .note{font-size:13px;color:var(--muted);margin-bottom:18px}
+
+/* ============ upsell strip ============ */
+.ups{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x mandatory}
+.ups::-webkit-scrollbar{height:0}
+.upc{flex:0 0 auto;width:150px;border-radius:16px;overflow:hidden;border:1px solid var(--line);
+  background:var(--card);text-align:left;scroll-snap-align:start;box-shadow:var(--shadow)}
+.upc .ph{aspect-ratio:1/1;overflow:hidden;background:#2A1A0C}
+.upc .ph img{width:100%;height:100%;object-fit:cover}
+.upc .b{padding:9px 11px 11px}
+.upc .n{font-size:12.5px;font-weight:700;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.upc .p{margin-top:6px;font-size:14px;font-weight:800;color:var(--gold2)}
+
+/* ============ simplified gallery ============ */
+.gtabs{display:flex;gap:8px;margin:0 0 20px}
+.gtabs button{flex:1;min-height:54px;border-radius:16px;font-size:14px;font-weight:700;
+  letter-spacing:.4px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.gtabs button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608;border-color:var(--gold)}
+.mos{columns:3;column-gap:14px}
+.mos > *{break-inside:avoid;margin-bottom:14px}
+.mtile{border-radius:16px;overflow:hidden;border:1px solid var(--line);position:relative;
+  width:100%;display:block;background:var(--card)}
+.mtile img{width:100%;height:auto;display:block}
+.mtile .cap{position:absolute;left:0;right:0;bottom:0;padding:26px 12px 10px;font-size:12.5px;
+  font-weight:600;background:linear-gradient(180deg,transparent,rgba(10,6,3,.9));pointer-events:none}
+.yt{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);
+  background:#000;aspect-ratio:16/9;box-shadow:var(--shadow)}
+.yt iframe{width:100%;height:100%;border:0;display:block}
+.ygrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+@media (max-width:860px){ .mos{columns:2} .ygrid{grid-template-columns:1fr} .gtabs button{font-size:12.5px} }
+
+
+/* ============ instagram reel cards (kiosk) ============ */
+.igrow{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 12px;scroll-snap-type:x mandatory}
+.igrow::-webkit-scrollbar{height:0}
+.igc{flex:0 0 auto;width:230px;aspect-ratio:9/16;border-radius:20px;overflow:hidden;
+  position:relative;scroll-snap-align:start;border:1px solid var(--line2);text-align:left;
+  background:linear-gradient(150deg,rgba(221,42,123,.30),rgba(129,52,175,.18),#241608);
+  box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:flex-end;padding:16px}
+.igc:active{transform:scale(.98)}
+.igc .play{position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);
+  width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:24px;
+  background:rgba(12,7,3,.5);border:1.5px solid rgba(255,255,255,.55);color:#fff}
+.igc .mark{position:absolute;top:14px;left:14px;font-size:11px;font-weight:800;letter-spacing:.6px;
+  padding:5px 10px;border-radius:8px;color:#fff;
+  background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3))}
+.igc .t{font-size:14.5px;font-weight:700;line-height:1.3;position:relative}
+.igc .s{font-size:11px;color:rgba(255,255,255,.7);margin-top:5px;position:relative}
+
+
+.igc{position:relative;overflow:hidden;background:#000;padding:0}
+.igc iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;
+  transform:scale(1.02);transform-origin:top center;
+  opacity:0;transition:opacity .45s ease}
+.igc iframe.in{opacity:1}
+.igc .tapcatch{position:absolute;inset:0;z-index:2;cursor:pointer}
+.igc .foot{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:26px 13px 12px;
+  font-size:12.5px;font-weight:700;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(8,4,2,.92))}
+.igc .mark{z-index:3}
+.igfall{position:absolute;inset:0;z-index:0;display:grid;place-items:center;
+  background:linear-gradient(150deg,rgba(221,42,123,.34),rgba(129,52,175,.22),#241608)}
+.igfall .play{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;
+  font-size:24px;background:rgba(12,7,3,.5);border:1.5px solid rgba(255,255,255,.55);color:#fff;
+  position:static;transform:none}
+.igc{width:260px;aspect-ratio:9/16}
+@media (max-width:860px){ .igc{width:224px} }
+
+/* ================= footer ================= */
+footer{position:fixed;bottom:0;left:0;right:0;display:flex;gap:9px;padding:10px 16px;
+  background:rgba(16,10,5,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line);z-index:40}
+footer button,footer a{flex:1;min-height:50px;display:flex;align-items:center;justify-content:center;
+  gap:9px;border-radius:13px;text-decoration:none;font-size:13.5px;font-weight:700;letter-spacing:.3px;
+  background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--cream)}
+footer .gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608;border-color:var(--gold)}
+footer .ig{background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3));color:#fff;border:0}
+footer .star{color:var(--gold2);font-size:17px}
+
+/* ================= sheet + lightbox ================= */
+.scrim{position:fixed;inset:0;background:rgba(8,5,2,.76);backdrop-filter:blur(6px);
+  z-index:60;display:grid;place-items:end center;padding:16px}
+.sheet{width:100%;max-width:520px;background:linear-gradient(180deg,#2B1C0E,#1B1108);
+  border:1px solid var(--line2);border-radius:22px;padding:22px;box-shadow:0 -20px 60px rgba(0,0,0,.6);
+  max-height:88vh;overflow-y:auto}
+.sheet h4{margin:0 0 6px;font-size:20px;font-weight:800;color:var(--gold2);letter-spacing:.3px}
+.sheet p{margin:0 0 16px;font-size:13.5px;line-height:1.7;color:var(--muted)}
+.sheet ul{margin:0 0 16px;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.9}
+.sheet .nums a{min-height:56px;padding:0 18px;border-radius:14px;background:rgba(255,255,255,.05)}
+.sheet .nums a b{font-size:17px}
+.sheet .close{width:100%;min-height:50px;margin-top:16px;border-radius:14px;font-weight:700;
+  font-size:14px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--cream)}
+.lb{position:fixed;inset:0;background:rgba(6,4,2,.95);z-index:70;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px}
+.lb img,.lb video{max-width:94vw;max-height:74vh;border-radius:var(--r);border:1px solid var(--line2)}
+.lb .lbc{font-size:14px;color:var(--cream);text-align:center}
+.lb .close{min-height:50px;padding:0 28px;border-radius:14px;font-weight:700;
+  background:rgba(255,255,255,.08);border:1px solid var(--line2);color:var(--cream)}
+
+/* ================= narrow ================= */
+@media (max-width:860px){
+  nav{display:none}
+  main{padding:0 14px 94px}
+  #search{width:96px}
+  .brand p,.gbtn span{display:none}
+  h2.sec{font-size:19px;white-space:normal}
+  .phead,.prow{grid-template-columns:46px 1fr repeat(3,54px);gap:9px;padding:10px 11px}
+  .thumb{width:46px;height:46px;border-radius:10px}
+  .prow .n{font-size:13.5px}.prow .d{display:none}.prow .pc{font-size:13px}
+  .phead span:nth-child(n+3){font-size:8.5px;letter-spacing:.3px}
+  .seg button,.tabs button{padding:0 13px;font-size:12.5px}
+  .pgrid{grid-template-columns:1fr 1fr;gap:11px}
+  .pcard .ph{aspect-ratio:1/1}.pcard .cap{padding:10px 11px 12px}
+  .pcard .cn{font-size:13px}.cp{font-size:11px;padding:3px 7px}
+  .ggrid{grid-template-columns:1fr 1fr;gap:10px}
+  .igcard{width:286px;height:496px}.igwrap{grid-template-columns:1fr}
+  .detail h3{font-size:22px}.hero .hcap .hn{font-size:19px}
+  header .logo{height:40px}.homehero img{height:104px}
+  .igbar{flex-wrap:wrap}.igbar a{margin-left:0;width:100%;justify-content:center;text-align:center}
+  footer button,footer a{font-size:11.5px;gap:5px;padding:0 4px}
+}
+@media (max-width:580px){
+  header{gap:9px;padding:10px 12px}
+  .brand{display:none}
+  #search{flex:1;width:auto;min-width:0}
+  .gbtn{padding:0 13px}
+  .qgrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <img class="logo" src="assets/mark.png" alt="">
+    <div class="brand"><h1>Hayat Fish Restaurant</h1><p id="tagline"></p></div>
+    <div class="spacer"></div>
+    <input id="search" type="search" placeholder="Search…" autocomplete="off">
+    <button class="gbtn" id="langbtn">അ</button>
+    <button class="gbtn" id="galbtn">◎ <span id="galtxt">Gallery</span></button>
+  </header>
+  <div id="body"><nav id="nav"></nav><main id="main"></main></div>
+  <footer>
+    <button class="gold" id="fdel">Home Delivery</button>
+    <button id="fcat">Catering</button>
+    <button class="ig" id="fig">Instagram</button>
+    <a id="frev" target="_blank" rel="noopener"><span class="star">★</span> Rate Us</a>
+  </footer>
+</div>
+<div id="overlay"></div>
+
+<!-- ============================================================
+     BUILT-IN DEFAULTS
+     Everything below is a copy of icons.js / lang.js / config.js /
+     menu-data.js, inlined so the menu still works if one of those
+     files fails to load on a phone. The real files load after this
+     block and overwrite these values, so you keep editing them
+     exactly as before.
+     ============================================================ -->
+<script>/* defaults from assets/qr.js */
+/* ============================================================
+   Tiny QR encoder — byte mode, ECC level L, versions 1..10.
+   Enough for any Instagram / WhatsApp / Google URL.
+
+   Why this exists: you will post hundreds of reels. Paste the URL
+   into config.js and the code is drawn in the browser. No files to
+   generate, nothing to upload, works offline.
+
+   window.qrSvg(text, size)  ->  a data: URI you can put in <img src>
+   ============================================================ */
+(function () {
+
+  /* ---- Galois field GF(256) ---- */
+  var EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (function () {
+    var x = 1;
+    for (var i = 0; i < 255; i++) {
+      EXP[i] = x; LOG[x] = i;
+      x <<= 1; if (x & 0x100) x ^= 0x11d;
+    }
+    for (i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  })();
+  function mul(a, b) { return (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]]; }
+
+  /* ---- Reed–Solomon ---- */
+  function rsPoly(n) {
+    var p = [1];
+    for (var i = 0; i < n; i++) {
+      var q = p.concat([0]);
+      for (var j = 0; j < p.length; j++) q[j + 1] ^= mul(p[j], EXP[i]);
+      p = q;
+    }
+    return p;
+  }
+  function rsEncode(data, ecLen) {
+    var gen = rsPoly(ecLen), res = new Array(ecLen).fill(0);
+    for (var i = 0; i < data.length; i++) {
+      var factor = data[i] ^ res[0];
+      res.shift(); res.push(0);
+      for (var j = 0; j < ecLen; j++) res[j] ^= mul(gen[j + 1], factor);
+    }
+    return res;
+  }
+
+  /* ---- capacity tables, ECC level L, versions 1..10 ----
+     [ total codewords, ec codewords per block, block counts ]        */
+  var VER = {
+    1:  { tot: 26,  ec: 7,  g1: 1, d1: 19 },
+    2:  { tot: 44,  ec: 10, g1: 1, d1: 34 },
+    3:  { tot: 70,  ec: 15, g1: 1, d1: 55 },
+    4:  { tot: 100, ec: 20, g1: 1, d1: 80 },
+    5:  { tot: 134, ec: 26, g1: 1, d1: 108 },
+    6:  { tot: 172, ec: 18, g1: 2, d1: 68 },
+    7:  { tot: 196, ec: 20, g1: 2, d1: 78 },
+    8:  { tot: 242, ec: 24, g1: 2, d1: 97 },
+    9:  { tot: 292, ec: 30, g1: 2, d1: 116 },
+    10: { tot: 346, ec: 18, g1: 2, d1: 68, g2: 2, d2: 69 }
+  };
+  var ALIGN = {
+    1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30],
+    6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50]
+  };
+
+  function utf8(str) {
+    var out = [], s = encodeURIComponent(str);
+    for (var i = 0; i < s.length; i++) {
+      if (s[i] === "%") { out.push(parseInt(s.substr(i + 1, 2), 16)); i += 2; }
+      else out.push(s.charCodeAt(i));
+    }
+    return out;
+  }
+
+  function build(text) {
+    var bytes = utf8(text), ver = 0, spec = null;
+    for (var v = 1; v <= 10; v++) {
+      var s = VER[v];
+      var cap = s.g1 * s.d1 + (s.g2 || 0) * (s.d2 || 0);
+      var lenBits = v < 10 ? 8 : 16;
+      if ((4 + lenBits + bytes.length * 8) <= cap * 8) { ver = v; spec = s; break; }
+    }
+    if (!ver) throw new Error("QR: text too long");
+
+    /* --- bit stream --- */
+    var bits = [];
+    function push(val, n) { for (var i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); }
+    push(4, 4);                                   // byte mode
+    push(bytes.length, ver < 10 ? 8 : 16);
+    for (var i = 0; i < bytes.length; i++) push(bytes[i], 8);
+
+    var capBits = (spec.g1 * spec.d1 + (spec.g2 || 0) * (spec.d2 || 0)) * 8;
+    for (i = 0; i < 4 && bits.length < capBits; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    var pad = [0xEC, 0x11], k = 0;
+    while (bits.length < capBits) { push(pad[k++ % 2], 8); }
+
+    var codes = [];
+    for (i = 0; i < bits.length; i += 8) {
+      var b = 0; for (var j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+      codes.push(b);
+    }
+
+    /* --- split into blocks, add EC --- */
+    var blocks = [], ecs = [], p = 0, bi;
+    for (bi = 0; bi < spec.g1; bi++) { blocks.push(codes.slice(p, p + spec.d1)); p += spec.d1; }
+    for (bi = 0; bi < (spec.g2 || 0); bi++) { blocks.push(codes.slice(p, p + spec.d2)); p += spec.d2; }
+    for (bi = 0; bi < blocks.length; bi++) ecs.push(rsEncode(blocks[bi], spec.ec));
+
+    var out = [], maxD = Math.max.apply(null, blocks.map(function (b) { return b.length; }));
+    for (i = 0; i < maxD; i++)
+      for (bi = 0; bi < blocks.length; bi++)
+        if (i < blocks[bi].length) out.push(blocks[bi][i]);
+    for (i = 0; i < spec.ec; i++)
+      for (bi = 0; bi < ecs.length; bi++) out.push(ecs[bi][i]);
+
+    /* --- matrix --- */
+    var n = ver * 4 + 17;
+    var m = [], reserved = [];
+    for (i = 0; i < n; i++) { m.push(new Array(n).fill(0)); reserved.push(new Array(n).fill(0)); }
+
+    function finder(r, c) {
+      for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) {
+        var rr = r + dr, cc = c + dc;
+        if (rr < 0 || cc < 0 || rr >= n || cc >= n) continue;
+        var on = (dr >= 0 && dr <= 6 && (dc === 0 || dc === 6)) ||
+                 (dc >= 0 && dc <= 6 && (dr === 0 || dr === 6)) ||
+                 (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
+        m[rr][cc] = on ? 1 : 0; reserved[rr][cc] = 1;
+      }
+    }
+    finder(0, 0); finder(0, n - 7); finder(n - 7, 0);
+
+    var al = ALIGN[ver];
+    for (i = 0; i < al.length; i++) for (var jj = 0; jj < al.length; jj++) {
+      var r = al[i], c = al[jj];
+      if (reserved[r] && reserved[r][c]) continue;
+      for (var dr2 = -2; dr2 <= 2; dr2++) for (var dc2 = -2; dc2 <= 2; dc2++) {
+        m[r + dr2][c + dc2] = (Math.abs(dr2) === 2 || Math.abs(dc2) === 2 ||
+                               (dr2 === 0 && dc2 === 0)) ? 1 : 0;
+        reserved[r + dr2][c + dc2] = 1;
+      }
+    }
+    for (i = 8; i < n - 8; i++) {
+      m[6][i] = (i % 2 === 0) ? 1 : 0; reserved[6][i] = 1;
+      m[i][6] = (i % 2 === 0) ? 1 : 0; reserved[i][6] = 1;
+    }
+    m[n - 8][8] = 1; reserved[n - 8][8] = 1;                 // dark module
+    for (i = 0; i < 9; i++) {
+      if (!reserved[8][i]) reserved[8][i] = 1;
+      if (!reserved[i][8]) reserved[i][8] = 1;
+    }
+    for (i = 0; i < 8; i++) { reserved[8][n - 1 - i] = 1; reserved[n - 1 - i][8] = 1; }
+
+    /* --- place data, zig-zag --- */
+    var idx = 0, bit = 0, up = true;
+    for (var col = n - 1; col > 0; col -= 2) {
+      if (col === 6) col--;
+      for (var t = 0; t < n; t++) {
+        var row = up ? (n - 1 - t) : t;
+        for (var s2 = 0; s2 < 2; s2++) {
+          var cc2 = col - s2;
+          if (reserved[row][cc2]) continue;
+          var v2 = 0;
+          if (idx < out.length) v2 = (out[idx] >> (7 - bit)) & 1;
+          m[row][cc2] = v2;
+          bit++; if (bit === 8) { bit = 0; idx++; }
+        }
+      }
+      up = !up;
+    }
+
+    /* --- masking --- */
+    function maskFn(k, r, c) {
+      switch (k) {
+        case 0: return (r + c) % 2 === 0;
+        case 1: return r % 2 === 0;
+        case 2: return c % 3 === 0;
+        case 3: return (r + c) % 3 === 0;
+        case 4: return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0;
+        case 5: return ((r * c) % 2 + (r * c) % 3) === 0;
+        case 6: return (((r * c) % 2 + (r * c) % 3) % 2) === 0;
+        default: return (((r + c) % 2 + (r * c) % 3) % 2) === 0;
+      }
+    }
+    function penalty(g) {
+      var pen = 0, r, c, run, dark = 0;
+      for (r = 0; r < n; r++) {
+        run = 1;
+        for (c = 1; c < n; c++) {
+          if (g[r][c] === g[r][c - 1]) { run++; }
+          else { if (run >= 5) pen += 3 + (run - 5); run = 1; }
+        }
+        if (run >= 5) pen += 3 + (run - 5);
+      }
+      for (c = 0; c < n; c++) {
+        run = 1;
+        for (r = 1; r < n; r++) {
+          if (g[r][c] === g[r - 1][c]) { run++; }
+          else { if (run >= 5) pen += 3 + (run - 5); run = 1; }
+        }
+        if (run >= 5) pen += 3 + (run - 5);
+      }
+      for (r = 0; r < n - 1; r++) for (c = 0; c < n - 1; c++)
+        if (g[r][c] === g[r][c + 1] && g[r][c] === g[r + 1][c] && g[r][c] === g[r + 1][c + 1]) pen += 3;
+      for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (g[r][c]) dark++;
+      pen += Math.floor(Math.abs(dark * 100 / (n * n) - 50) / 5) * 10;
+      return pen;
+    }
+
+    var best = null, bestPen = Infinity, bestMask = 0;
+    for (var mk = 0; mk < 8; mk++) {
+      var g = m.map(function (row2) { return row2.slice(); });
+      for (r = 0; r < n; r++) for (c = 0; c < n; c++)
+        if (!reserved[r][c] && maskFn(mk, r, c)) g[r][c] ^= 1;
+      /* format info for ECC L + this mask */
+      var fmt = (0x01 << 3) | mk;               // 01 = level L
+      var rem = fmt;
+      for (i = 0; i < 10; i++) rem = (rem << 1) ^ (((rem >> 9) & 1) * 0x537);
+      var format = ((fmt << 10) | rem) ^ 0x5412;
+      for (i = 0; i < 15; i++) {
+        var bitv = (format >> i) & 1;
+        if (i < 6) g[i][8] = bitv;
+        else if (i < 8) g[i + 1][8] = bitv;
+        else if (i === 8) g[8][7] = bitv;
+        else g[8][14 - i] = bitv;
+        if (i < 8) g[8][n - 1 - i] = bitv;
+        else g[n - 15 + i][8] = bitv;
+      }
+      g[n - 8][8] = 1;
+      var pn = penalty(g);
+      if (pn < bestPen) { bestPen = pn; best = g; bestMask = mk; }
+    }
+    return best;
+  }
+
+  window.qrMatrix = build;
+
+  window.qrSvg = function (text, size) {
+    size = size || 640;
+    var m, n;
+    try { m = build(text); n = m.length; }
+    catch (e) { return ""; }
+    var quiet = 4, total = n + quiet * 2, cell = size / total, d = "";
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        if (!m[r][c]) continue;
+        var x = (c + quiet) * cell, y = (r + quiet) * cell;
+        d += "M" + x.toFixed(2) + " " + y.toFixed(2) +
+             "h" + cell.toFixed(2) + "v" + cell.toFixed(2) + "h-" + cell.toFixed(2) + "z";
+      }
+    }
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size +
+      '" viewBox="0 0 ' + size + ' ' + size + '">' +
+      '<rect width="' + size + '" height="' + size + '" fill="#fff"/>' +
+      '<path d="' + d + '" fill="#1A1008"/></svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  };
+})();
+
+</script>
+<script>/* defaults from assets/icons.js */
+/* ============================================================
+   HAYAT — DISH ILLUSTRATIONS
+   Vector artwork used for every menu item that has no photo yet.
+   Crisp at any size, works offline, ~0 KB to load.
+
+   You do not need to edit this file. To replace an illustration
+   with a real photo, set  img:"photos/whatever.jpg"  on the item
+   in menu-data.js — the photo wins automatically.
+   ============================================================ */
+(function(){
+
+const P = {
+  plate:"#E8DFC8", plateDk:"#BFB093",
+  rice:"#EBD9A8", riceDk:"#D2B877",
+  meat:"#8E4A22", meatDk:"#6B3416", meatLt:"#B4652F",
+  char:"#4A2A16",
+  bowl:"#2E4E63", bowlDk:"#1E3648", bowlLt:"#456E88",
+  clay:"#8A4B2A", clayDk:"#63321A",
+  bread:"#E3C98F", breadDk:"#C4A566",
+  glass:"rgba(255,255,255,.20)", glassEdge:"rgba(255,255,255,.42)",
+  green:"#79B54A", cream:"#F6EFDD", choc:"#5A3620"
+};
+
+/* rounded warm backdrop shared by every icon */
+function bg(a,b){
+  return `<defs>
+    <linearGradient id="bgg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".28" r=".72">
+      <stop offset="0" stop-color="rgba(255,225,170,.16)"/>
+      <stop offset="1" stop-color="rgba(255,225,170,0)"/></radialGradient>
+  </defs>
+  <rect x="-60" y="-10" width="220" height="120" fill="url(#bgg)"/>
+  <rect x="-60" y="-10" width="220" height="120" fill="url(#glow)"/>`;
+}
+const plate = (y=72)=>`<ellipse cx="50" cy="${y}" rx="36" ry="10" fill="${P.plateDk}"/>
+  <ellipse cx="50" cy="${y-2}" rx="36" ry="10" fill="${P.plate}"/>`;
+const bowlShape=(c,d)=>`<path d="M16 50 h68 a34 34 0 0 1 -68 0 z" fill="${d}"/>
+  <path d="M18 52 h64 a32 30 0 0 1 -64 0 z" fill="${c}"/>
+  <ellipse cx="50" cy="50" rx="34" ry="7" fill="${d}"/>
+  <ellipse cx="50" cy="49" rx="31" ry="5.5" fill="rgba(0,0,0,.28)"/>`;
+const tallGlass=(liquid,extra="")=>`
+  <path d="M32 22 h36 l-4 56 a6 6 0 0 1 -6 5 h-16 a6 6 0 0 1 -6 -5 z" fill="${P.glass}"/>
+  <path d="M34.5 34 h31 l-3.3 43 a4 4 0 0 1 -4 3.5 h-16.4 a4 4 0 0 1 -4 -3.5 z" fill="${liquid}"/>
+  ${extra}
+  <path d="M32 22 h36 l-4 56 a6 6 0 0 1 -6 5 h-16 a6 6 0 0 1 -6 -5 z"
+    fill="none" stroke="${P.glassEdge}" stroke-width="2.2"/>
+  <ellipse cx="50" cy="22" rx="18" ry="4.5" fill="rgba(255,255,255,.28)"/>`;
+const straw=(c="#E8556B")=>`<rect x="56" y="8" width="5" height="26" rx="2.5" fill="${c}"
+  transform="rotate(12 58 20)"/>`;
+const mint=`<ellipse cx="38" cy="24" rx="8" ry="5" fill="${P.green}" transform="rotate(-25 38 24)"/>
+  <ellipse cx="47" cy="20" rx="7" ry="4.5" fill="#8FD05C" transform="rotate(15 47 20)"/>`;
+const steam=`<g stroke="rgba(255,255,255,.35)" stroke-width="2.6" stroke-linecap="round" fill="none">
+  <path d="M40 34 q4 -6 0 -12"/><path d="M50 31 q4 -7 0 -14"/><path d="M60 34 q4 -6 0 -12"/></g>`;
+
+const I = {
+
+/* ---- rice & mandi ---- */
+mandi:()=>`${bg("#3E2A14","#6B4520")}${plate()}
+  <ellipse cx="50" cy="58" rx="30" ry="15" fill="${P.riceDk}"/>
+  <ellipse cx="50" cy="55" rx="28" ry="13" fill="${P.rice}"/>
+  <ellipse cx="44" cy="46" rx="15" ry="11" fill="${P.meatDk}"/>
+  <ellipse cx="44" cy="44" rx="14" ry="10" fill="${P.meat}"/>
+  <ellipse cx="40" cy="41" rx="6" ry="4" fill="${P.meatLt}"/>
+  <ellipse cx="66" cy="52" rx="9" ry="7" fill="${P.meatDk}"/>
+  <ellipse cx="66" cy="51" rx="8" ry="6" fill="${P.meat}"/>
+  <circle cx="30" cy="56" r="2.6" fill="#C6512F"/><circle cx="72" cy="61" r="2.2" fill="#7CA83F"/>`,
+
+/* ---- grilled / alfaham / shawaya ---- */
+grill:(tint)=>`${bg("#3A2412","#63381A")}
+  <g stroke="${P.char}" stroke-width="4" stroke-linecap="round">
+    <path d="M16 74 h68"/><path d="M16 66 h68"/></g>
+  <ellipse cx="36" cy="56" rx="17" ry="13" fill="${P.meatDk}"/>
+  <ellipse cx="36" cy="54" rx="16" ry="12" fill="${tint||P.meat}"/>
+  <ellipse cx="31" cy="49" rx="6.5" ry="4.5" fill="rgba(255,255,255,.20)"/>
+  <ellipse cx="66" cy="60" rx="13" ry="10" fill="${P.meatDk}"/>
+  <ellipse cx="66" cy="58" rx="12" ry="9" fill="${tint||P.meatLt}"/>
+  <path d="M50 30 q7 7 3 14 q9 -4 8 -14 q6 8 2 18 q-9 6 -18 0 q-4 -12 5 -18 z" fill="#E2892C"/>
+  <path d="M52 36 q4 5 1 9 q5 -3 4 -9 q3 5 1 11 q-6 4 -11 0 q-2 -7 5 -11 z" fill="#F5C245"/>`,
+
+/* ---- fried ---- */
+broast:()=>`${bg("#3F2A12","#6E4A18")}${plate(76)}
+  <g>
+   <path d="M30 66 q-9 -6 -6 -16 q3 -11 14 -10 q11 1 11 12 q0 9 -8 13 z" fill="#C98A34"/>
+   <path d="M32 62 q-6 -5 -4 -12 q3 -8 10 -7 q8 1 8 9 q0 7 -6 10 z" fill="#E6AC4E"/>
+   <path d="M28 66 q-3 8 3 10 q7 2 8 -5" fill="#F0EADA"/>
+  </g>
+  <g transform="translate(28,6)">
+   <path d="M46 64 q-9 -6 -6 -16 q3 -11 14 -10 q11 1 11 12 q0 9 -8 13 z" fill="#C98A34"/>
+   <path d="M48 60 q-6 -5 -4 -12 q3 -8 10 -7 q8 1 8 9 q0 7 -6 10 z" fill="#E6AC4E"/>
+  </g>
+  <ellipse cx="52" cy="42" rx="13" ry="10" fill="#D89A3E"/>
+  <ellipse cx="52" cy="40" rx="11" ry="8" fill="#EFB958"/>`,
+
+/* ---- wok tossed / dragon ---- */
+wok:()=>`${bg("#4A1C14","#7A2E1C")}${bowlShape("#3A2418","#241309")}
+  <circle cx="40" cy="58" r="7" fill="#C4381F"/><circle cx="55" cy="62" r="6.5" fill="#E0512C"/>
+  <circle cx="65" cy="56" r="5.5" fill="#A82C18"/><circle cx="48" cy="68" r="5" fill="#D14526"/>
+  <path d="M28 54 q10 -5 18 -1" stroke="#7CA83F" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+  <path d="M60 68 q8 -4 13 -1" stroke="#7CA83F" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="34" cy="66" r="3" fill="#F0C24A"/>`,
+
+/* ---- gravy ---- */
+curry:(tint)=>`${bg("#43290F","#70481B")}${bowlShape(P.clay,P.clayDk)}
+  <ellipse cx="50" cy="50" rx="29" ry="5" fill="${tint||"#C9622A"}"/>
+  <ellipse cx="50" cy="49.5" rx="26" ry="4.2" fill="${tint||"#E07B36"}"/>
+  <circle cx="42" cy="49" r="3.4" fill="rgba(0,0,0,.22)"/>
+  <circle cx="58" cy="50" r="2.8" fill="rgba(0,0,0,.18)"/>
+  <path d="M36 47 q14 -4 28 1" stroke="rgba(255,255,255,.45)" stroke-width="2.2" fill="none"/>
+  ${steam}`,
+
+/* ---- bread ---- */
+bread:()=>`${bg("#43300F","#6E5220")}
+  <ellipse cx="50" cy="70" rx="34" ry="12" fill="${P.breadDk}"/>
+  <ellipse cx="50" cy="66" rx="34" ry="12" fill="${P.bread}"/>
+  <ellipse cx="50" cy="58" rx="30" ry="11" fill="${P.breadDk}"/>
+  <ellipse cx="50" cy="55" rx="30" ry="11" fill="#EFD9A4"/>
+  <ellipse cx="50" cy="47" rx="26" ry="9.5" fill="${P.breadDk}"/>
+  <ellipse cx="50" cy="44" rx="26" ry="9.5" fill="#F5E3B8"/>
+  <g fill="#A9803F"><circle cx="42" cy="43" r="2"/><circle cx="56" cy="46" r="1.8"/>
+   <circle cx="50" cy="40" r="1.5"/><circle cx="38" cy="56" r="1.8"/><circle cx="60" cy="57" r="1.6"/></g>`,
+
+/* ---- shawarma wrap ---- */
+wrap:()=>`${bg("#402C12","#6B4A1D")}
+  <g transform="rotate(-28 50 50)">
+    <rect x="30" y="26" width="40" height="52" rx="19" fill="${P.breadDk}"/>
+    <rect x="32" y="28" width="36" height="48" rx="17" fill="#F0DCA9"/>
+    <ellipse cx="50" cy="30" rx="18" ry="7" fill="#C79B54"/>
+    <ellipse cx="50" cy="29" rx="14" ry="5" fill="${P.meat}"/>
+    <circle cx="45" cy="29" r="2.4" fill="#7CA83F"/><circle cx="55" cy="30" r="2.2" fill="#D14526"/>
+    <path d="M36 44 q14 6 28 0" stroke="rgba(160,120,60,.5)" stroke-width="2" fill="none"/>
+    <path d="M36 58 q14 6 28 0" stroke="rgba(160,120,60,.5)" stroke-width="2" fill="none"/>
+  </g>`,
+
+/* ---- salad / greens ---- */
+salad:()=>`${bg("#26380F","#456019")}${bowlShape("#D8CDB4","#B0A588")}
+  <circle cx="40" cy="48" r="8" fill="#6FAA3F"/><circle cx="54" cy="50" r="7" fill="#88C24F"/>
+  <circle cx="64" cy="47" r="5.5" fill="#5C9433"/>
+  <circle cx="46" cy="52" r="4" fill="#D8452F"/><circle cx="60" cy="53" r="3.4" fill="#E86A3C"/>`,
+
+/* ---- plain rice ---- */
+rice:()=>`${bg("#3E2F14","#6A5222")}${bowlShape("#E4DAC2","#BCB198")}
+  <ellipse cx="50" cy="48" rx="30" ry="9" fill="${P.riceDk}"/>
+  <ellipse cx="50" cy="45" rx="29" ry="9" fill="#F5EBD2"/>
+  <g fill="#D8C9A4"><ellipse cx="42" cy="44" rx="4" ry="1.8"/><ellipse cx="56" cy="47" rx="4" ry="1.8"/>
+   <ellipse cx="50" cy="41" rx="3.4" ry="1.6"/></g>`,
+
+/* ---- dip / sauce / pickle ---- */
+sauce:(tint)=>`${bg("#42260F","#6E4118")}
+  <path d="M30 46 h40 l-4 30 a5 5 0 0 1 -5 4 h-22 a5 5 0 0 1 -5 -4 z" fill="#D8CDB4"/>
+  <path d="M32 48 h36 l-3.6 27 a3 3 0 0 1 -3 2.6 h-22.8 a3 3 0 0 1 -3 -2.6 z" fill="${tint||"#C33F2A"}"/>
+  <ellipse cx="50" cy="46" rx="20" ry="5" fill="#B7AC90"/>
+  <ellipse cx="50" cy="46" rx="17" ry="3.6" fill="${tint||"#DC5334"}"/>
+  <ellipse cx="44" cy="45" rx="4" ry="1.6" fill="rgba(255,255,255,.35)"/>`,
+
+/* ---- soup ---- */
+soup:()=>`${bg("#3B2A12","#63481C")}${bowlShape("#D8CDB4","#AFA488")}
+  <ellipse cx="50" cy="49" rx="29" ry="5.5" fill="#B9762E"/>
+  <ellipse cx="50" cy="48.5" rx="26" ry="4.4" fill="#D68F3C"/>
+  ${steam}`,
+
+/* ---- juices ---- */
+juice:(tint)=>`${bg("#3A2A10","#66491A")}${tallGlass(tint||"#E8912A")}
+  ${straw("#F2E7CE")}
+  <circle cx="72" cy="30" r="9" fill="${tint||"#F2A93C"}"/>
+  <circle cx="72" cy="30" r="9" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"/>
+  <path d="M72 21 v18 M63 30 h18" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>`,
+
+mojito:(tint)=>`${bg("#1E3218","#3C5A22")}${tallGlass(tint||"#7FC24A")}
+  ${mint}${straw("#F2E7CE")}
+  <g fill="rgba(255,255,255,.42)"><circle cx="44" cy="52" r="2.4"/><circle cx="57" cy="62" r="2"/>
+   <circle cx="49" cy="70" r="1.8"/><circle cx="59" cy="46" r="1.6"/></g>`,
+
+/* ---- desserts ---- */
+shake:()=>`${bg("#3A2A16","#63481F")}${tallGlass("#F3EAD6")}
+  <ellipse cx="50" cy="34" rx="15.5" ry="6" fill="#FFFBF0"/>
+  <g fill="#D9A845"><circle cx="45" cy="33" r="2"/><circle cx="54" cy="35" r="1.8"/>
+   <circle cx="50" cy="31" r="1.6"/></g>
+  ${straw("#C7452E")}`,
+
+falooda:()=>`${bg("#3A1A2A","#5F2840")}
+  <path d="M32 22 h36 l-4 56 a6 6 0 0 1 -6 5 h-16 a6 6 0 0 1 -6 -5 z" fill="${P.glass}"/>
+  <path d="M37 60 h26 l-1.4 17 a4 4 0 0 1 -4 3.5 h-15.4 a4 4 0 0 1 -4 -3.5 z" fill="#C7385F"/>
+  <path d="M35.4 46 h29.2 l-1.3 14 h-26.6 z" fill="#F3EAD6"/>
+  <path d="M34.4 34 h31.2 l-1 12 h-29.2 z" fill="#E0577E"/>
+  <ellipse cx="50" cy="30" rx="15" ry="7" fill="#F6EFDD"/>
+  <circle cx="44" cy="27" r="3" fill="#C7385F"/><circle cx="55" cy="29" r="2.4" fill="#8A4B2A"/>
+  <path d="M32 22 h36 l-4 56 a6 6 0 0 1 -6 5 h-16 a6 6 0 0 1 -6 -5 z"
+    fill="none" stroke="${P.glassEdge}" stroke-width="2.2"/>
+  ${straw("#F2E7CE")}`,
+
+icecream:()=>`${bg("#3A2A1E","#61452F")}
+  <path d="M30 54 h40 l-5 26 a6 6 0 0 1 -6 5 h-18 a6 6 0 0 1 -6 -5 z" fill="#DED3BB"/>
+  <path d="M32 56 h36 l-4.4 23 a4 4 0 0 1 -4 3.4 h-19.2 a4 4 0 0 1 -4 -3.4 z" fill="#EFE6D0"/>
+  <circle cx="38" cy="46" r="12" fill="#F0C9D6"/>
+  <circle cx="60" cy="46" r="12" fill="#C79A6A"/>
+  <circle cx="49" cy="36" r="12" fill="#F6EFDD"/>
+  <g fill="#5A3620"><circle cx="35" cy="42" r="1.8"/><circle cx="62" cy="43" r="1.8"/>
+   <circle cx="48" cy="32" r="1.6"/><circle cx="54" cy="40" r="1.5"/></g>`,
+
+mango:()=>`${bg("#4A3308","#7A5510")}${bowlShape("#E4DAC2","#BCB198")}
+  <g fill="#F0A81F"><rect x="36" y="42" width="11" height="9" rx="2.5"/>
+   <rect x="49" y="44" width="11" height="9" rx="2.5"/>
+   <rect x="61" y="41" width="10" height="8" rx="2.5"/>
+   <rect x="43" y="52" width="10" height="7" rx="2.5"/></g>
+  <g fill="#FFC94A"><rect x="38" y="43" width="6" height="4" rx="1.5"/>
+   <rect x="51" y="45" width="6" height="4" rx="1.5"/></g>
+  <ellipse cx="66" cy="38" rx="7" ry="4" fill="${P.green}" transform="rotate(-20 66 38)"/>`
+
+};
+
+/* item type -> icon */
+window.ICONS = I;
+window.iconSvg = function(name, tint, wide){
+  const f = I[name] || I.mandi;
+  const box = wide ? "-39 0 178 100" : "0 0 100 100";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}">${f(tint)}</svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+};
+})();
+
+</script>
+<script>/* defaults from lang.js */
+/* ============================================================
+   HAYAT — ENGLISH / MALAYALAM
+
+   ⚠ PLEASE HAVE A MALAYALAM SPEAKER CHECK THIS FILE ONCE.
+   The Malayalam below is transliteration, not a verified
+   translation. Fixing a word here fixes it everywhere in the app.
+
+   Dish DESCRIPTIONS stay in English on purpose — names and the
+   interface are what customers actually read on a menu.
+   ============================================================ */
+
+window.LANG = {
+
+/* ---------- interface ---------- */
+ui: {
+  en: {
+    celebrate:"Celebrate with Hayat", celebrateTag:"We organise it — you just turn up",
+    celebrateBlurb:"Birthday parties, college reunions, office get-togethers, friends catching up. We organise the whole thing — the table, the platters, the timing. Tell us the date and how many, that is all we need.",
+    planParty:"Plan my party", whatsappUs:"WhatsApp us", callUs:"Call us",
+    rateTitle:"How was it?", rateSub:"Tap a star. Takes five seconds.",
+    rateThanks:"Thank you", rateLowTitle:"Sorry we missed the mark",
+    rateLowSub:"Tell us what went wrong. It comes straight to the owner, not to a public page.",
+    rateHighTitle:"That means a lot", rateHighSub:"Would you put that on Google? Scan or tap — it takes 20 seconds and it genuinely helps a small restaurant.",
+    yourName:"Your name (optional)", yourPhone:"Phone (optional)",
+    whatHappened:"What went wrong?", sendFeedback:"Send to the owner",
+    saved:"Saved. Thank you for telling us.", writeReview:"Write a Google review",
+    scanToFollow:"Scan to follow us", scanToOrder:"Scan to order on WhatsApp",
+    scanToReview:"Scan to review us", reels:"Reels", connect:"Connect",
+    orderWhatsapp:"Order on WhatsApp", followInsta:"Follow on Instagram",
+    tapUnmute:"Tap for sound", viewOnInsta:"View on Instagram",
+    partyTitle:"Let’s plan it", partySub:"Leave your number. We call back within the hour and hold the date.",
+    occasion:"What are we celebrating?", partyDate:"Date", headcount:"How many people?",
+    partyNotes:"Anything special? (cake, decoration, timing)",
+    bookNow:"Request a call back", phoneReq:"Phone number", phoneHint:"We only use this to call you about your booking.",
+    partyDone:"Got it", partyDoneSub:"Our team will call you shortly to confirm the date and the menu.",
+    partyWa:"Or message us right now", needPhone:"Please enter a phone number so we can call you back.",
+    ourReels:"Watch our reels", reelTap:"Tap a reel, scan with your phone",
+    scanReel:"Scan to watch this reel",
+    goesWith:"Goes well with", scanFollow:"Scan to follow @", scanWa:"Scan to message us",
+    scanWatch:"Scan to watch on your phone", onYourPhone:"Open it on your phone",
+    kioskNote:"Point your camera at the code",
+    watchHere:"Watch here", videosNone:"No videos added yet.",
+    langBtn:"മലയാളം", search:"Search…",
+    menu:"Menu", backMenu:"Back to Menu", backTo:"Back to",
+    gallery:"Gallery", galleryTitle:"Our Gallery",
+    gallerySub:"Inside Hayat — the room, the fire, the food",
+    galleryNav:"PHOTOS · VIDEOS",
+    photos:"Photos", videos:"Videos", instagram:"Instagram",
+    theMenu:"The Menu", dishes:"dishes", items:"items", ITEMS:"ITEMS",
+    browsePhoto:"Browse by photo", pricing:"Pricing",
+    trending:"Trending on our Instagram",
+    Quarter:"Quarter", Half:"Half", Full:"Full",
+    "Without Mandi":"Without Mandi", "With Mandi":"With Mandi", Price:"Price",
+    perPlate:"Per plate", marketPrice:"Market price",
+    homeDelivery:"Home Delivery", catering:"Catering", largeOrders:"Large Orders",
+    rateUs:"Rate Us", directions:"Get directions", close:"Close",
+    cateringBlurb:"", hoursText:"", 
+    deliveryBlurb:"Hot food to your door across Makkaraparamba and nearby villages. Call any line below.",
+    largeBlurb:"Bulk mandi platters, alfaham trays and biryani for functions and offices. Give us the headcount and the date, we do the rest.",
+    deliverySheet:"Hot food delivered across Makkaraparamba and the surrounding villages. Call whichever line answers first.",
+    cateringDesk:"Catering desk", bulkOrders:"Bulk orders", cateringBulk:"Catering & bulk orders",
+    igSeeAll:"See every dish on Instagram", igSeeAllSub:"Photos, reels and today’s specials",
+    igMore:"More of this dish on Instagram", igMoreSub:"Reels, close-ups and daily specials",
+    igFollow:"Follow us for daily specials", igFollowSub:"New reels every week",
+    follow:"Follow", thanks:"Thank you for choosing Hayat",
+    results:"results", result:"result", forQ:"for",
+    noMatch:"Nothing matched. Try “mandi”, “alfaham”, “shawarma” or “mojito”.",
+    chips:["Halal","Dine-in","Takeaway","Home delivery","Free parking","Groups welcome"],
+    ribbonParty:"Party Platter", ribbonChef:"Chef’s Pick", ribbonSpicy:"Spicy",
+    tagHot:"hot", tagVeg:"veg", tagStar:"chef’s pick",
+    offlineTitle:"Connect to wifi", offlineBody:"Instagram loads only when the tablet is online.",
+    offlineBtn:"Open on Instagram"
+  },
+  ml: {
+    celebrate:"ഹയാത്തിനൊപ്പം ആഘോഷിക്കൂ", celebrateTag:"ഞങ്ങൾ ഒരുക്കും — നിങ്ങൾ വന്നാൽ മതി",
+    celebrateBlurb:"പിറന്നാൾ പാർട്ടികൾ, കോളേജ് ഒത്തുചേരലുകൾ, ഓഫീസ് പാർട്ടികൾ, കൂട്ടുകാരുടെ കൂടിച്ചേരൽ. എല്ലാം ഞങ്ങൾ ഒരുക്കും. തീയതിയും ആളുകളുടെ എണ്ണവും പറഞ്ഞാൽ മതി.",
+    planParty:"പാർട്ടി പ്ലാൻ ചെയ്യൂ", whatsappUs:"വാട്സ്ആപ്പ്", callUs:"വിളിക്കൂ",
+    rateTitle:"എങ്ങനെയുണ്ടായിരുന്നു?", rateSub:"ഒരു നക്ഷത്രം തൊടൂ. അഞ്ച് സെക്കൻഡ് മതി.",
+    rateThanks:"നന്ദി", rateLowTitle:"ക്ഷമിക്കണം, ഞങ്ങൾക്ക് പിഴച്ചു",
+    rateLowSub:"എന്താണ് സംഭവിച്ചതെന്ന് പറയൂ. ഇത് നേരിട്ട് ഉടമയ്ക്ക് എത്തും, പൊതു ഇടത്തിലല്ല.",
+    rateHighTitle:"വളരെ സന്തോഷം", rateHighSub:"ഇത് ഗൂഗിളിൽ എഴുതാമോ? സ്കാൻ ചെയ്യൂ — 20 സെക്കൻഡ് മതി, ഞങ്ങൾക്ക് വലിയ സഹായമാണ്.",
+    yourName:"പേര് (നിർബന്ധമില്ല)", yourPhone:"ഫോൺ (നിർബന്ധമില്ല)",
+    whatHappened:"എന്താണ് കുഴപ്പം?", sendFeedback:"ഉടമയ്ക്ക് അയക്കൂ",
+    saved:"ലഭിച്ചു. പറഞ്ഞതിന് നന്ദി.", writeReview:"ഗൂഗിൾ റിവ്യൂ എഴുതൂ",
+    scanToFollow:"ഫോളോ ചെയ്യാൻ സ്കാൻ ചെയ്യൂ", scanToOrder:"വാട്സ്ആപ്പിൽ ഓർഡർ ചെയ്യാൻ സ്കാൻ ചെയ്യൂ",
+    scanToReview:"റിവ്യൂ ചെയ്യാൻ സ്കാൻ ചെയ്യൂ", reels:"റീൽസ്", connect:"ബന്ധപ്പെടൂ",
+    orderWhatsapp:"വാട്സ്ആപ്പിൽ ഓർഡർ", followInsta:"ഇൻസ്റ്റാഗ്രാമിൽ ഫോളോ",
+    tapUnmute:"ശബ്ദത്തിന് തൊടൂ", viewOnInsta:"ഇൻസ്റ്റാഗ്രാമിൽ കാണൂ",
+    partyTitle:"നമുക്ക് പ്ലാൻ ചെയ്യാം", partySub:"നമ്പർ തന്നാൽ മതി. ഒരു മണിക്കൂറിനുള്ളിൽ വിളിക്കും, തീയതി ഉറപ്പിക്കും.",
+    occasion:"എന്താണ് ആഘോഷം?", partyDate:"തീയതി", headcount:"എത്ര പേർ?",
+    partyNotes:"പ്രത്യേകിച്ച് എന്തെങ്കിലും? (കേക്ക്, അലങ്കാരം, സമയം)",
+    bookNow:"തിരികെ വിളിക്കാൻ പറയൂ", phoneReq:"ഫോൺ നമ്പർ", phoneHint:"ബുക്കിംഗിനെക്കുറിച്ച് വിളിക്കാൻ മാത്രം ഉപയോഗിക്കും.",
+    partyDone:"ലഭിച്ചു", partyDoneSub:"തീയതിയും മെനുവും ഉറപ്പിക്കാൻ ഞങ്ങൾ ഉടൻ വിളിക്കും.",
+    partyWa:"അല്ലെങ്കിൽ ഇപ്പോൾ തന്നെ മെസ്സേജ് ചെയ്യൂ", needPhone:"വിളിക്കാൻ ഒരു ഫോൺ നമ്പർ നൽകൂ.",
+    ourReels:"ഞങ്ങളുടെ റീലുകൾ", reelTap:"ഒരു റീൽ തൊട്ട് ഫോണിൽ സ്കാൻ ചെയ്യൂ",
+    scanReel:"ഈ റീൽ കാണാൻ സ്കാൻ ചെയ്യൂ",
+    goesWith:"ഇതിനൊപ്പം നന്നായിരിക്കും", scanFollow:"ഫോളോ ചെയ്യാൻ സ്കാൻ ചെയ്യൂ @", scanWa:"മെസ്സേജ് ചെയ്യാൻ സ്കാൻ ചെയ്യൂ",
+    scanWatch:"നിങ്ങളുടെ ഫോണിൽ കാണാൻ സ്കാൻ ചെയ്യൂ", onYourPhone:"നിങ്ങളുടെ ഫോണിൽ തുറക്കൂ",
+    kioskNote:"ക്യാമറ കോഡിലേക്ക് കാണിക്കൂ",
+    watchHere:"ഇവിടെ കാണൂ", videosNone:"വീഡിയോ ഒന്നും ചേർത്തിട്ടില്ല.",
+    langBtn:"ENGLISH", search:"തിരയുക…",
+    menu:"മെനു", backMenu:"മെനുവിലേക്ക്", backTo:"തിരികെ",
+    gallery:"ഗാലറി", galleryTitle:"ഞങ്ങളുടെ ഗാലറി",
+    gallerySub:"ഹയാത്തിനുള്ളിൽ — അന്തരീക്ഷം, തീ, രുചി",
+    galleryNav:"ഫോട്ടോ · വീഡിയോ",
+    photos:"ഫോട്ടോസ്", videos:"വീഡിയോസ്", instagram:"ഇൻസ്റ്റാഗ്രാം",
+    theMenu:"മെനു", dishes:"വിഭവങ്ങൾ", items:"വിഭവങ്ങൾ", ITEMS:"വിഭവങ്ങൾ",
+    browsePhoto:"ചിത്രങ്ങളിലൂടെ", pricing:"വില",
+    trending:"ഞങ്ങളുടെ ഇൻസ്റ്റാഗ്രാമിൽ",
+    Quarter:"ക്വാർട്ടർ", Half:"ഹാഫ്", Full:"ഫുൾ",
+    "Without Mandi":"മന്ദി ഇല്ലാതെ", "With Mandi":"മന്ദിയോടൊപ്പം", Price:"വില",
+    perPlate:"ഒരു പ്ലേറ്റ്", marketPrice:"മാർക്കറ്റ് വില",
+    homeDelivery:"ഹോം ഡെലിവറി", catering:"കാറ്ററിംഗ്", largeOrders:"വലിയ ഓർഡറുകൾ",
+    rateUs:"റേറ്റ് ചെയ്യൂ", directions:"വഴി കാണിക്കൂ", close:"അടയ്ക്കുക",
+    cateringBlurb:"പിറന്നാൾ പാർട്ടികൾ, കോളേജ് ഒത്തുചേരലുകൾ, ഓഫീസ് ലഞ്ച്, കൂട്ടുകാരുടെ കൂടിച്ചേരൽ. മന്ദി പ്ലാറ്ററുകൾ, അൽഫഹം ട്രേകൾ, ബിരിയാണി — വലിയ അളവിൽ പുതുതായി പാകം ചെയ്ത് ചൂടോടെ എത്തിക്കുന്നു. ആളുകളുടെ എണ്ണവും തീയതിയും പറഞ്ഞാൽ ബാക്കി ഞങ്ങൾ നോക്കിക്കൊള്ളാം.",
+    hoursText:"എല്ലാ ദിവസവും · ഉച്ച 12 – രാത്രി 11",
+    deliveryBlurb:"മക്കരപ്പറമ്പിലും പരിസര പ്രദേശങ്ങളിലും ചൂടോടെ ഭക്ഷണം വീട്ടിലെത്തിക്കുന്നു. താഴെയുള്ള ഏത് നമ്പറിലും വിളിക്കാം.",
+    largeBlurb:"കല്യാണം, ഓഫീസ്, വീട്ടിലെ പരിപാടികൾ — മന്ദി, അൽഫഹം, ബിരിയാണി വലിയ അളവിൽ. ആളുകളുടെ എണ്ണവും തീയതിയും പറഞ്ഞാൽ മതി.",
+    deliverySheet:"മക്കരപ്പറമ്പിലും ചുറ്റുമുള്ള പ്രദേശങ്ങളിലും ഡെലിവറി. ആദ്യം കിട്ടുന്ന നമ്പറിൽ വിളിക്കൂ.",
+    cateringDesk:"കാറ്ററിംഗ് ഡെസ്ക്", bulkOrders:"വലിയ ഓർഡറുകൾ", cateringBulk:"കാറ്ററിംഗ് & വലിയ ഓർഡർ",
+    igSeeAll:"എല്ലാ വിഭവങ്ങളും ഇൻസ്റ്റാഗ്രാമിൽ", igSeeAllSub:"ഫോട്ടോ, റീൽസ്, ഇന്നത്തെ സ്പെഷ്യൽ",
+    igMore:"ഈ വിഭവം ഇൻസ്റ്റാഗ്രാമിൽ", igMoreSub:"റീൽസും ചിത്രങ്ങളും",
+    igFollow:"ദിവസേനയുള്ള സ്പെഷ്യലുകൾക്ക് ഫോളോ ചെയ്യൂ", igFollowSub:"എല്ലാ ആഴ്ചയും പുതിയ റീൽസ്",
+    follow:"ഫോളോ", thanks:"ഹയാത്ത് തിരഞ്ഞെടുത്തതിന് നന്ദി",
+    results:"ഫലങ്ങൾ", result:"ഫലം", forQ:"",
+    noMatch:"ഒന്നും കണ്ടെത്തിയില്ല. “മന്ദി”, “അൽഫഹം”, “ഷവർമ” എന്നിവ ശ്രമിക്കൂ.",
+    chips:["ഹലാൽ","ഡൈൻ-ഇൻ","പാഴ്സൽ","ഹോം ഡെലിവറി","സൗജന്യ പാർക്കിംഗ്","ഗ്രൂപ്പുകൾക്ക് സ്വാഗതം"],
+    ribbonParty:"പാർട്ടി പ്ലാറ്റർ", ribbonChef:"ഷെഫിന്റെ ചോയ്സ്", ribbonSpicy:"എരിവ്",
+    tagHot:"എരിവ്", tagVeg:"വെജ്", tagStar:"ഷെഫിന്റെ ചോയ്സ്",
+    offlineTitle:"വൈഫൈ കണക്ട് ചെയ്യുക", offlineBody:"ഇൻസ്റ്റാഗ്രാം ഓൺലൈനിൽ മാത്രമേ ലോഡ് ആകൂ.",
+    offlineBtn:"ഇൻസ്റ്റാഗ്രാമിൽ തുറക്കുക"
+  }
+},
+
+/* ---------- section names ---------- */
+sections: {
+  mandi:"സിഗ്നേച്ചർ മന്ദി",
+  alfaham:"അൽഫഹം",
+  shawaya:"ഷവായ",
+  exotic:"സ്പെഷ്യൽ വിഭവങ്ങൾ",
+  biryani:"ബിരിയാണി",
+  seafood:"ചോറും മീനും",
+  gravies:"കറികൾ",
+  breads:"പൊറോട്ടയും റൊട്ടിയും",
+  shawarma:"ഷവർമ",
+  sides:"എക്സ്ട്രാ",
+  drinks:"ജ്യൂസും മൊഹീറ്റോയും",
+  desserts:"മധുരപലഹാരങ്ങൾ"
+},
+
+/* ---------- dish names ---------- */
+items: {
+  "overloaded-mandi":"ഓവർലോഡഡ് മന്ദി",
+  "beef-mandi":"ബീഫ് മന്ദി",
+  "chicken-mandi":"ചിക്കൻ മന്ദി",
+
+  "af-regular":"റെഗുലർ അൽഫഹം",
+  "af-green":"പച്ചമുളക് അൽഫഹം",
+  "af-pepper":"കുരുമുളക് അൽഫഹം",
+  "af-curry":"കറിവേപ്പില അൽഫഹം",
+  "af-masala":"മസാല അൽഫഹം",
+  "af-peri":"പെരി പെരി അൽഫഹം",
+  "af-afghani":"അഫ്ഗാനി അൽഫഹം",
+  "af-cheesy":"ചീസി ചീസി അൽഫഹം",
+
+  "sh-regular":"റെഗുലർ ഷവായ",
+  "sh-pepper":"കുരുമുളക് ഷവായ",
+  "sh-green":"പച്ചമുളക് ഷവായ",
+  "sh-masala":"മസാല ഷവായ",
+
+  "br-chicken":"ചിക്കൻ ബിരിയാണി", "br-beef":"ബീഫ് ബിരിയാണി",
+  "br-mutton":"മട്ടൻ ബിരിയാണി", "br-fish":"ഫിഷ് ബിരിയാണി", "br-chatti":"ചട്ടി ബിരിയാണി",
+
+  "fish-fry":"മീൻ പൊരിച്ചത്", "chorum-meenum":"ചോറും മീനും",
+  "fish-curry":"മീൻ കറി", "prawns-roast":"ചെമ്മീൻ റോസ്റ്റ്",
+  "squid-roast":"കൂന്തൽ റോസ്റ്റ്", "grill-fish":"ഗ്രിൽഡ് മീൻ",
+
+  "broast":"ബ്രോസ്റ്റ് ചിക്കൻ",
+  "dragon":"ഡ്രാഗൺ ചിക്കൻ",
+
+  g1:"ബട്ടർ ചിക്കൻ", g2:"ചിക്കൻ കറി", g3:"ചിക്കൻ കടായ്", g4:"ചിക്കൻ മുഗ്ലായ്",
+  g5:"ചിക്കൻ 65 ഗ്രേവി", g6:"ചിക്കൻ ടിക്ക മസാല", g7:"ദാൽ ഫ്രൈ", g8:"മിക്സ് വെജ് കറി",
+
+  b1:"ഖുബ്ബൂസ്", b2:"റുമാലി റൊട്ടി", b3:"പൊറോട്ട", b4:"കുഷി പൊറോട്ട", b5:"ചപ്പാത്തി",
+
+  w1:"ചിക്കൻ ഷവർമ", w2:"സ്പൈസി ഷവർമ", w3:"ചീസി ഷവർമ",
+  w4:"സ്പെഷ്യൽ ഷവർമ", w5:"ജംബോ ഷവർമ", w6:"ഫ്രൈസ് + ഡ്രിങ്ക്",
+
+  s1:"സാലഡ്", s2:"ചട്ണി", s3:"അച്ചാർ", s4:"ചോറ്", s5:"സൂപ്പ്", s6:"ഷവർമ സോസ്",
+
+  d1:"നാരങ്ങാ വെള്ളം", d2:"തണ്ണിമത്തൻ ജ്യൂസ്", d3:"ഓറഞ്ച് ജ്യൂസ്",
+  d4:"പൈനാപ്പിൾ ജ്യൂസ്", d5:"മിക്സഡ് ഫ്രൂട്ട് ജ്യൂസ്", d6:"മാതളം ജ്യൂസ്",
+  d7:"മിന്റ് മൊഹീറ്റോ", d8:"തണ്ണിമത്തൻ മൊഹീറ്റോ", d9:"ഓറഞ്ച് മൊഹീറ്റോ",
+  d10:"ബ്ലൂ ലഗൂൺ മൊഹീറ്റോ", d11:"പൈനാപ്പിൾ മൊഹീറ്റോ",
+  d12:"പാഷൻ ഫ്രൂട്ട് മൊഹീറ്റോ", d13:"സ്ട്രോബെറി മൊഹീറ്റോ",
+
+  x1:"അവിൽ മിൽക്ക്", x2:"ഫലൂദ", x3:"മാങ്ങ ഡിലൈറ്റ്", x4:"ഐസ്ക്രീം"
+},
+
+/* ---------- option labels used in prices ---------- */
+opts: {
+  "4 pieces":"4 പീസ്", "8 pieces":"8 പീസ്", "12 pieces":"12 പീസ്", "Plate":"പ്ലേറ്റ്"
+}
+};
+
+</script>
+<script>/* defaults from config.js */
+/* ============================================================
+   HAYAT — SETTINGS
+   Contact numbers, Instagram, and the gallery live here.
+   ============================================================ */
+
+window.CONFIG = {
+
+  /* ---- 0. KIOSK MODE --------------------------------------- *
+     true  = this is YOUR tablet on the dining table.
+             Instagram / WhatsApp buttons show a QR code for the
+             customer to scan with their own phone. Nothing ever
+             navigates away from the menu.
+     false = normal website. Buttons open links directly.
+     --------------------------------------------------------- */
+  kiosk: true,
+
+  /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
+  instagram: "zaman_yemenmandi",          // <-- CHANGE THIS
+
+  /* ---- 2. HOME DELIVERY NUMBERS ---------------------------- *
+     Three lines shown on the Home Delivery panel.
+     Change the labels to whatever suits — area names work well. */
+  delivery: [
+    { label: "Delivery Line 1", number: "+917907133238" },
+    { label: "Delivery Line 2", number: "+910000000000" },   // <-- CHANGE
+    { label: "Delivery Line 3", number: "+910000000000" }    // <-- CHANGE
+  ],
+
+  /* ---- 3. CATERING & LARGE ORDERS -------------------------- */
+  catering: {
+    headline: "Catering & Large Orders",
+    blurb: "Birthday parties, college reunions, office get-togethers, friends catching up. " +
+           "We organise the whole thing — the table, the platters, the timing. " +
+           "Tell us the headcount and the date, that is all we need.",
+    points: ["Birthday parties, cake table set up","College batch reunions and farewells",
+             "Office team lunches and celebrations","Friends catching up, no occasion needed",
+             "We organise it — you just turn up"],
+    number: "+917907133238"                                   // <-- CHANGE if different
+  },
+
+  /* ---- 4. LOCATION & REVIEWS ------------------------------- */
+  address:    "NH966, near Punarppa UP School, Makkaraparamba, Kerala 676507",
+  hours:      "Open daily · 12 pm – 11 pm",
+  mapsLink:   "https://www.google.com/maps/dir/?api=1&destination=11.0065785,76.1270507",
+  reviewLink: "https://maps.google.com/?cid=6866265905315816486",
+
+  /* ---- 4b. WHATSAPP ---------------------------------------- */
+  whatsapp: "919844326842",
+  whatsappText: "Hi Hayat, I would like to order",
+
+  /* ---- 4c. CELEBRATE WITH HAYAT ----------------------------- */
+  celebrate: {
+    number: "919844326842",
+    occasions: [
+      { icon:"🎂", title:"Birthday parties",  line:"Cake table, decorated platter, the crew singing" },
+      { icon:"🎓", title:"College reunions",  line:"Batch meetups and farewells, one long table" },
+      { icon:"💼", title:"Office get-togethers", line:"Team lunches, targets hit, month-end treats" },
+      { icon:"🤝", title:"Friends chill-outs", line:"No occasion needed. Just show up hungry" }
+    ]
+  },
+
+  /* ---- 5. GALLERY ------------------------------------------ *
+     PHOTOS  — drop files into the gallery/ folder, list them here.
+     VIDEOS  — mp4 files in gallery/ as well. Poster is optional.
+     Both play with no internet. Leave a list empty and that tab
+     simply shows a short instruction instead.                   */
+  gallery: {
+    photos: [
+      { src:"gallery/masala-shawaya.jpg", caption:"Masala Shawaya, straight off the grill" },
+      // { src:"gallery/dining-hall.jpg", caption:"Our dining hall" },
+    ],
+    videos: [
+      // { src:"gallery/alfaham-grill.mp4", poster:"gallery/alfaham-grill.jpg",
+      //   caption:"Alfaham on the coals" },
+    ]
+  },
+
+  /* ---- 6. INSTAGRAM POSTS ---------------------------------- *
+     Shown on the home page and in the Gallery → Instagram tab.
+     Open a reel or post → Share → Copy link → paste below.
+     The real Instagram post renders on the page (thumbnail, caption,
+     view count). Tapping it opens a QR so the customer watches on
+     their own phone — the tablet never leaves the menu.
+
+     Paste as many as you want. Hundreds is fine.                     */
+  trending: [
+    "https://www.instagram.com/reel/DapjpUJTzuf/",
+    "https://www.instagram.com/reel/Db09DWopWC3/",
+    "https://www.instagram.com/reel/DZnI_k8Tfo3/"
+
+    // Add as many as you like. Just paste the link and a comma.
+    // Nothing to generate — the QR is drawn in the browser.
+  ],
+
+  /* ---- 6a. YOUTUBE — PLAYS INSIDE THE PAGE ------------------ *
+     Unlike Instagram, YouTube CAN play inside our own page.
+     Paste just the video id (the bit after v= or youtu.be/).
+
+       https://www.youtube.com/watch?v=AbCdEf12345   ->  "AbCdEf12345"
+
+     Use your own uploads, or any mandi / alfaham video you like.
+     Leave the list empty and the Videos tab simply hides YouTube.     */
+  youtube: [
+    // { id:"PASTE_ID_HERE", title:"Opening the mandi pit" },
+    // { id:"PASTE_ID_HERE", title:"Alfaham on the coals" },
+  ],
+
+  /* ---- 6b. REELS THAT PLAY BY THEMSELVES -------------------- *
+     Instagram embeds cannot autoplay — that is Meta's iframe, not ours.
+     For the true Instagram feel (silent autoplay as you scroll, tap to
+     unmute) the video file has to live in your own folder.
+
+     Download your own reel from the Instagram app:
+       your post -> ... -> Save / Download  (works for your own posts)
+     Put the mp4 into  gallery/reels/  and list it here.                */
+  reels: [
+    // { src:"gallery/reels/mandi-pit.mp4",  poster:"gallery/reels/mandi-pit.jpg",
+    //   caption:"Opening the mandi pit",
+    //   link:"https://www.instagram.com/reel/DapjpUJTzuf/" },
+  ],
+
+  /* ---- 6c. UPSELL — shown under every main course ----------- *
+     Item ids from menu-data.js. These appear as a "goes well with"
+     strip on every main-course section and dish page.               */
+  upsell: ["fish-fry","chorum-meenum","d7","d10","x2","b3"],
+
+  /* ---- 7. BRANDING ----------------------------------------- */
+  tagline: "Authentic Yemeni Flavours",
+  trustBadges: ["Slow Cooked","Authentic Recipes","Premium Ingredients","Made with Passion"]
+};
+
+</script>
+<script>/* defaults from menu-data.js */
+/* ============================================================
+   HAYAT — MENU DATA
+   Edit dishes, prices, photos and Instagram links here.
+
+   Each item can have:
+     name    "Chicken Mandi"
+     sub     small line under the name
+     desc    one or two sentences
+     img     "photos/chicken-mandi.jpg"   <- the row icon + hero
+     ig      ["https://www.instagram.com/p/XXXX/", ...]
+             photos AND reels both go in this list, any order
+     tags    ["hot"] ["veg"] ["star"]
+     matrix  {cols:QHF, rows:[["Without Mandi",[q,h,f]], ...]}
+     opts    [["4 pieces",150], ["8 pieces",250]]
+     price   160                          <- single price items
+
+   To add a photo: drop the file in the photos/ folder and set img.
+   To add Instagram: open the post -> Share -> Copy link -> paste in ig.
+   Items with no img show a styled placeholder. Nothing breaks.
+   ============================================================ */
+
+var QHF = ["Quarter","Half","Full"];   /* var, not const: safe to load twice */
+
+window.MENU = [
+
+{ id:"mandi", ic:"\u{1F357}", name:"Signature Mandi",
+  tagline:"Slow cooked to perfection with our signature Yemeni spices",
+  layout:"list", items:[
+
+  { id:"overloaded-mandi", name:"Overloaded Mandi", sub:"The full table platter", anchor:true,
+    tags:["star"], icon:"mandi", img:"photos/overloaded-mandi.jpg", ig:[],
+    desc:"Everything at once. A mountain of mandi rice buried under beef, chicken and alfaham, "+
+         "finished with roasted cashew, raisin and boiled egg. Built for a full table — "+
+         "order it once and nobody at the table needs anything else.",
+    matrix:{cols:QHF,rows:[["Price",[null,599,999]]]} },
+
+  { id:"beef-mandi", name:"Beef Mandi", sub:"Our Pride", tags:["star"],
+    desc:"Tender beef slow cooked to perfection with our signature Yemeni spices.",
+    img:"photos/beef-mandi.jpg", icon:"mandi", ig:[],
+    matrix:{cols:QHF,rows:[["Price",[230,420,780]]]} },
+
+  { id:"chicken-mandi", name:"Chicken Mandi",
+    desc:"Juicy, tender chicken marinated in Yemeni spices and slow cooked with aromatic rice.",
+    img:"photos/chicken-mandi.jpg", icon:"mandi", ig:[],
+    matrix:{cols:QHF,rows:[["Price",[210,380,710]]]} }
+]},
+
+{ id:"alfaham", ic:"\u{1F525}", name:"Alfaham",
+  tagline:"Grilled to perfection · 8 signature marinations",
+  note:"Every flavour is available on its own or served with mandi rice.",
+  layout:"list", items:[
+
+  { id:"af-regular", name:"Regular Alfaham", desc:"Traditional flavour with a perfect smoky finish.",
+    img:"photos/af-regular.jpg", icon:"grill", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[130,240,450]],["With Mandi",[210,330,620]]]} },
+
+  { id:"af-green", name:"Green Chillies Alfaham", tags:["hot"],
+    desc:"Fresh green chillies, herbs and bold notes.",
+    img:"photos/af-green.jpg", icon:"grill", tint:"#7FA83C", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[140,250,460]],["With Mandi",[220,350,650]]]} },
+
+  { id:"af-pepper", name:"Pepper Alfaham", tags:["hot"],
+    desc:"Coarse black pepper — aromatic and spicy.",
+    img:"photos/af-pepper.jpg", icon:"grill", tint:"#5E4230", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[140,250,460]],["With Mandi",[220,350,650]]]} },
+
+  { id:"af-curry", name:"Curry Leaves Alfaham",
+    desc:"Infused with curry leaves, garlic and ginger.",
+    img:"photos/af-curry.jpg", icon:"grill", tint:"#6E8F35", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[140,250,460]],["With Mandi",[220,350,650]]]} },
+
+  { id:"af-masala", name:"Masala Alfaham",
+    desc:"Signature masala blend — rich and flavourful.",
+    img:"photos/af-masala.jpg", icon:"grill", tint:"#A8461F", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
+
+  { id:"af-peri", name:"Peri Peri Alfaham", tags:["hot"],
+    desc:"Fiery peri peri marinade, perfectly grilled.",
+    img:"photos/af-peri.jpg", icon:"grill", tint:"#C4361C", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
+
+  { id:"af-afghani", name:"Afghani Alfaham",
+    desc:"Creamy marinade with mild spices and herbs.",
+    img:"photos/af-afghani.jpg", icon:"grill", tint:"#D8C79A", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[160,250,490]],["With Mandi",[240,380,690]]]} },
+
+  { id:"af-cheesy", name:"Cheesy Cheesy Alfaham", sub:"Chef’s pick", tags:["star"],
+    desc:"Rich creamy marinade with layers of cheese for an indulgent finish.",
+    img:"photos/af-cheesy.jpg", icon:"grill", tint:"#E0A93A", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[170,280,510]],["With Mandi",[250,400,740]]]} }
+]},
+
+{ id:"shawaya", ic:"\u{1F356}", name:"Shawaya", tagline:"Tender, juicy, char-grilled — led by our Masala Shawaya",
+  layout:"list", items:[
+
+  { id:"sh-masala", name:"Masala Shawaya", sub:"Our most ordered grill", tags:["star"],
+    desc:"A whole bird opened flat, buried in our house masala and grilled until the "+
+         "edges char and the gravy clings to every piece. This is the plate people "+
+         "come back for — order it once and it decides the rest of your table.",
+    img:"photos/sh-masala.jpg", icon:"grill", tint:"#A8461F", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
+
+  { id:"sh-regular", name:"Regular Shawaya", desc:"Classic shawaya with traditional spices.",
+    img:"photos/sh-regular.jpg", icon:"grill", tint:"#9C5426", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[140,250,460]],["With Mandi",[220,350,650]]]} },
+
+  { id:"sh-pepper", name:"Pepper Shawaya", tags:["hot"], desc:"Pepper-marinated, smoky and bold.",
+    img:"photos/sh-pepper.jpg", icon:"grill", tint:"#5E4230", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
+
+  { id:"sh-green", name:"Green Chilli Shawaya", tags:["hot"], desc:"Spicy and zesty with a tangy kick.",
+    img:"photos/sh-green.jpg", icon:"grill", tint:"#7FA83C", ig:[],
+    matrix:{cols:QHF,rows:[["Without Mandi",[150,260,420]],["With Mandi",[230,370,670]]]} }
+]},
+
+{ id:"exotic", ic:"\u{1F336}", name:"Exotic Delights", tagline:"Crispy, fiery, made to share",
+  layout:"list", items:[
+
+  { id:"broast", name:"Broast Fried Chicken", sub:"Crispy perfection", tags:["star"],
+    desc:"Pressure-fried chicken with a crisp golden crust. Served with dip and salad.",
+    img:"photos/broast.jpg", icon:"broast", ig:[],
+    opts:[["4 pieces",150],["8 pieces",250],["12 pieces",375]] },
+
+  { id:"dragon", name:"Dragon Chicken", sub:"Fiery delight", tags:["hot"],
+    desc:"Boneless chicken tossed with dried chilli, capsicum and cashew in a glossy hot sauce.",
+    img:"photos/dragon.jpg", icon:"wok", ig:[],
+    opts:[["Plate",178.5]] }
+]},
+
+{ id:"biryani", ic:"\u{1F35B}", name:"Biryani", tagline:"Malabar dum biryani, kaima rice, cooked to order",
+  note:"⚠ PRICES TO CONFIRM — this section was not on the printed board.",
+  layout:"list", items:[
+
+  { id:"br-chicken", name:"Chicken Biryani", icon:"mandi", tint:"#C9873A", img:"photos/br-chicken.jpg", ig:[],
+    desc:"Classic Malabar dum biryani — short-grain kaima rice, fried onion, roasted cashew and raisin.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,180]]]} },
+
+  { id:"br-beef", name:"Beef Biryani", icon:"mandi", tint:"#8E4A22", img:"photos/br-beef.jpg", ig:[],
+    desc:"Slow-cooked beef layered with spiced rice. Heavier, richer, the local favourite.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,200]]]} },
+
+  { id:"br-mutton", name:"Mutton Biryani", icon:"mandi", tint:"#6B3416", img:"photos/br-mutton.jpg", ig:[],
+    desc:"Tender mutton on the bone, dum-sealed with the rice so nothing escapes.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,260]]]} },
+
+  { id:"br-fish", name:"Fish Biryani", icon:"mandi", tint:"#4A7C8C", img:"photos/br-fish.jpg", ig:[],
+    desc:"Today's catch, marinated and layered with kaima rice. Ask what came in.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,220]]]} },
+
+  { id:"br-chatti", name:"Chatti Biryani", sub:"Opened at your table", tags:["star"],
+    icon:"mandi", tint:"#A8461F", img:"photos/br-chatti.jpg", ig:[],
+    desc:"Sealed and served in the clay pot it cooked in. Cracked open in front of you — the steam is the point.",
+    matrix:{cols:QHF,rows:[["Price",[null,320,590]]]} }
+]},
+
+{ id:"seafood", ic:"\u{1F41F}", name:"Chorum Meenum & Seafood",
+  tagline:"Rice and fish, the way Malabar has always eaten it",
+  note:"⚠ PRICES TO CONFIRM — new section, set your real prices in menu-data.js.",
+  layout:"list", items:[
+
+  { id:"fish-fry", name:"Legendary Fish Fry", sub:"You will not resist it", anchor:true,
+    tags:["star"], icon:"fish", img:"photos/fish-fry.jpg", ig:[],
+    desc:"Whole fish scored to the bone, packed with red chilli, shallot and curry leaf, "+
+         "then shallow fried in coconut oil until the edges crackle. People order one to "+
+         "share and end up ordering three. This is the plate our regulars are actually here for.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,180]]]} },
+
+  { id:"chorum-meenum", name:"Chorum Meenum", sub:"Rice and fish meals", tags:["star"],
+    icon:"meals", img:"photos/chorum-meenum.jpg", ig:[],
+    desc:"Hot rice, fish curry in a clay pot, two thoran, pickle, pappadam and buttermilk. "+
+         "The everyday Kerala plate, done properly. Add a fish fry on the side and it stops "+
+         "being lunch and becomes an event.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,150]]]} },
+
+  { id:"fish-curry", name:"Meen Curry", icon:"curry", tint:"#C4381F", img:"photos/fish-curry.jpg", ig:[],
+    desc:"Clay-pot fish curry with kudampuli, chilli and coconut oil. Sour, hot, deep red.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,160]]]} },
+
+  { id:"prawns-roast", name:"Chemmeen Roast", tags:["hot"], icon:"prawns", img:"photos/prawns-roast.jpg", ig:[],
+    desc:"Prawns dry-roasted with onion, ginger and crushed pepper until the masala clings.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,260]]]} },
+
+  { id:"squid-roast", name:"Koonthal Roast", icon:"prawns", tint:"#B8563A", img:"photos/squid-roast.jpg", ig:[],
+    desc:"Squid rings tossed in a thick shallot-pepper masala. Chewy, smoky, addictive.",
+    matrix:{cols:QHF,rows:[["Price",[null,null,240]]]} },
+
+  { id:"grill-fish", name:"Charcoal Grilled Fish", icon:"fish", tint:"#8A6A3A", img:"photos/grill-fish.jpg", ig:[],
+    desc:"Today's catch, scored, spiced and grilled whole over the same coals as the alfaham.",
+    opts:[["Market price","MP"]] }
+]},
+
+{ id:"gravies", ic:"\u{1F35B}", name:"Gravies",
+  tagline:"Rich, flavourful and coated with aromatic spices", layout:"paper", items:[
+  { id:"g1", name:"Butter Chicken", desc:"Creamy, rich and buttery classic.", price:160, img:"photos/g1.jpg", icon:"curry", tint:"#E08A4A", ig:[] },
+  { id:"g2", name:"Chicken Curry", desc:"Traditional homestyle curry.", price:150, img:"photos/g2.jpg", icon:"curry", tint:"#C9622A", ig:[] },
+  { id:"g3", name:"Chicken Kadai", desc:"Spicy, aromatic and full of flavour.", price:150, tags:["hot"], img:"photos/g3.jpg", icon:"curry", tint:"#C4381F", ig:[] },
+  { id:"g4", name:"Chicken Mughlai", desc:"Mild, creamy and royal.", price:160, img:"photos/g4.jpg", icon:"curry", tint:"#E3B472", ig:[] },
+  { id:"g5", name:"Chicken 65 Gravy", desc:"Spicy, tangy and a chef’s special.", price:150, tags:["hot"], img:"photos/g5.jpg", icon:"curry", tint:"#D2462A", ig:[] },
+  { id:"g6", name:"Chicken Tikka Masala", desc:"Smooth, creamy and smoky.", price:150, img:"photos/g6.jpg", icon:"curry", tint:"#D9793A", ig:[] },
+  { id:"g7", name:"Dal Fry", desc:"Comforting and delicious dal.", price:120, tags:["veg"], img:"photos/g7.jpg", icon:"curry", tint:"#E0B23A", ig:[] },
+  { id:"g8", name:"Mix Veg Curry", desc:"Healthy mixed vegetable curry.", price:120, tags:["veg"], img:"photos/g8.jpg", icon:"curry", tint:"#7FA83C", ig:[] }
+]},
+
+{ id:"breads", ic:"\u{1F950}", name:"Breads", tagline:"Freshly made. Perfect with every bite",
+  layout:"paper", items:[
+  { id:"b1", name:"Khubbus", desc:"Soft, fluffy and perfect with gravy.", price:20, tags:["veg"], img:"photos/b1.jpg", icon:"bread", ig:[] },
+  { id:"b2", name:"Rumali Roti", desc:"Thin, soft and light as air.", price:20, tags:["veg"], img:"photos/b2.jpg", icon:"bread", ig:[] },
+  { id:"b3", name:"Parota", desc:"Flaky, soft and layered.", price:30, tags:["veg"], img:"photos/b3.jpg", icon:"bread", ig:[] },
+  { id:"b4", name:"Kushi Parota", desc:"Soft, flaky, multi-layered delight.", price:40, tags:["veg"], img:"photos/b4.jpg", icon:"bread", ig:[] },
+  { id:"b5", name:"Chapati", desc:"Soft and healthy whole wheat.", price:20, tags:["veg"], img:"photos/b5.jpg", icon:"bread", ig:[] }
+]},
+
+{ id:"shawarma", ic:"\u{1F32F}", name:"Shawarma", tagline:"Perfectly wrapped, insanely good",
+  layout:"paper", items:[
+  { id:"w1", name:"Chicken Shawarma", desc:"The classic wrap.", price:120, img:"photos/w1.jpg", icon:"wrap", ig:[] },
+  { id:"w2", name:"Spicy Shawarma", desc:"Extra heat in the sauce.", price:130, tags:["hot"], img:"photos/w2.jpg", icon:"wrap", ig:[] },
+  { id:"w3", name:"Cheesy Shawarma", desc:"Loaded with melted cheese.", price:140, img:"photos/w3.jpg", icon:"wrap", ig:[] },
+  { id:"w4", name:"Special Shawarma", desc:"House special filling.", price:140, img:"photos/w4.jpg", icon:"wrap", ig:[] },
+  { id:"w5", name:"Jumbo Shawarma", desc:"Double the filling.", price:160, tags:["star"], img:"photos/w5.jpg", icon:"wrap", ig:[] },
+  { id:"w6", name:"Add Fries + Drink", desc:"Combo add-on with any shawarma.", price:80, img:"photos/w6.jpg", icon:"broast", ig:[] }
+]},
+
+{ id:"sides", ic:"\u{1F957}", name:"Sides & Extras", tagline:"Round out the plate",
+  layout:"paper", items:[
+  { id:"s1", name:"Extra Salad", price:20, tags:["veg"], img:"photos/s1.jpg", icon:"salad", ig:[] },
+  { id:"s2", name:"Extra Chutney", price:20, tags:["veg"], img:"photos/s2.jpg", icon:"sauce", tint:"#7FA83C", ig:[] },
+  { id:"s3", name:"Extra Pickle", price:20, tags:["veg"], img:"photos/s3.jpg", icon:"sauce", tint:"#B8431F", ig:[] },
+  { id:"s4", name:"Extra Rice", price:60, tags:["veg"], img:"photos/s4.jpg", icon:"rice", ig:[] },
+  { id:"s5", name:"Extra Soup", price:20, img:"photos/s5.jpg", icon:"soup", ig:[] },
+  { id:"s6", name:"Shawarma Sauce", price:20, tags:["veg"], img:"photos/s6.jpg", icon:"sauce", tint:"#E8D08A", ig:[] }
+]},
+
+{ id:"drinks", ic:"\u{1F379}", name:"Juices & Mojitos", tagline:"Wild and fresh. Refreshing",
+  layout:"paper", items:[
+  { id:"d1", name:"Fresh Lime", price:70, tags:["veg"], img:"photos/d1.jpg", icon:"juice", tint:"#C6E04A", ig:[] },
+  { id:"d2", name:"Watermelon Juice", price:50, tags:["veg"], img:"photos/d2.jpg", icon:"juice", tint:"#E8506A", ig:[] },
+  { id:"d3", name:"Orange Juice", price:100, tags:["veg"], img:"photos/d3.jpg", icon:"juice", tint:"#F09024", ig:[] },
+  { id:"d4", name:"Pineapple Juice", price:100, tags:["veg"], img:"photos/d4.jpg", icon:"juice", tint:"#F0C42A", ig:[] },
+  { id:"d5", name:"Mixed Fruit Juice", price:110, tags:["veg"], img:"photos/d5.jpg", icon:"juice", tint:"#E8743A", ig:[] },
+  { id:"d6", name:"Pomegranate Juice", price:110, tags:["veg"], img:"photos/d6.jpg", icon:"juice", tint:"#B8324A", ig:[] },
+  { id:"d7", name:"Mint Mojito", price:90, tags:["veg"], img:"photos/d7.jpg", icon:"mojito", ig:[] },
+  { id:"d8", name:"Watermelon Mojito", price:90, tags:["veg"], img:"photos/d8.jpg", icon:"mojito", tint:"#E8607A", ig:[] },
+  { id:"d9", name:"Orange Mojito", price:90, tags:["veg"], img:"photos/d9.jpg", icon:"mojito", tint:"#F09024", ig:[] },
+  { id:"d10", name:"Blue Lagoon Mojito", price:100, tags:["veg"], img:"photos/d10.jpg", icon:"mojito", tint:"#3AA8DC", ig:[] },
+  { id:"d11", name:"Pineapple Mojito", price:100, tags:["veg"], img:"photos/d11.jpg", icon:"mojito", tint:"#EFC72E", ig:[] },
+  { id:"d12", name:"Passion Fruit Mojito", price:110, tags:["veg"], img:"photos/d12.jpg", icon:"mojito", tint:"#E0A02A", ig:[] },
+  { id:"d13", name:"Strawberry Mojito", price:110, tags:["veg"], img:"photos/d13.jpg", icon:"mojito", tint:"#DC4460", ig:[] }
+]},
+
+{ id:"desserts", ic:"\u{1F368}", name:"Desserts & Ice Cream", tagline:"The perfect sweet ending",
+  layout:"paper", items:[
+  { id:"x1", name:"Avil Milk", desc:"Kerala-style flattened rice in chilled milk.", price:110, tags:["veg"], img:"photos/x1.jpg", icon:"shake", ig:[] },
+  { id:"x2", name:"Falooda", desc:"Layered rose, vermicelli, jelly and ice cream.", price:120, tags:["veg"], img:"photos/x2.jpg", icon:"falooda", ig:[] },
+  { id:"x3", name:"Mango Delight", desc:"Chilled mango with nuts.", price:120, tags:["veg"], img:"photos/x3.jpg", icon:"mango", ig:[] },
+  { id:"x4", name:"Ice Cream Scoops", desc:"Ask for today’s flavours.", price:60, tags:["veg"], img:"photos/x4.jpg", icon:"icecream", ig:[] }
+]}
+
+];
+
+</script>
+<!-- the editable files — they override the defaults above.
+     crossorigin lets the browser report real errors instead of "Script error." -->
+<script src="assets/qr.js" crossorigin="anonymous"></script>
+<script src="assets/icons.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('assets/icons.js')"></script>
+<script src="lang.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('lang.js')"></script>
+<script src="config.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('config.js')"></script>
+<script src="menu-data.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('menu-data.js')"></script>
+<script>
+/* ANY uncaught error paints a readable screen instead of a white one */
+window.onerror=function(msg,src,line,col,err){
+  if(String(msg).indexOf("assets not loaded")>=0) return;
+  try{
+    var e=document.getElementById("crash");
+    if(e) return;
+    var d=document.createElement("div"); d.id="crash";
+    d.setAttribute("style","position:fixed;inset:0;z-index:9999;overflow:auto;background:#140C06;"+
+      "color:#F5F1DF;padding:30px 20px;font:15px/1.7 -apple-system,Segoe UI,Roboto,sans-serif");
+    d.innerHTML="<div style='max-width:560px;margin:0 auto'>"+
+      "<h2 style='color:#EFCE86'>Something broke loading the menu</h2>"+
+      "<p style='color:#A28C6C'>Please screenshot this and send it over.</p>"+
+      "<pre style='white-space:pre-wrap;word-break:break-word;background:rgba(255,255,255,.06);"+
+      "border:1px solid rgba(201,162,75,.3);border-radius:12px;padding:14px;font-size:12.5px;color:#EFCE86'>"+
+      String(msg)+"\n"+String(src||"")+":"+line+":"+col+"\n\n"+
+      ((err&&err.stack)?String(err.stack).slice(0,700):"")+"\n\n"+navigator.userAgent+"</pre>"+
+      "<button onclick=\"(async()=>{try{var r=await navigator.serviceWorker.getRegistrations();"+
+      "for(var i=0;i<r.length;i++)await r[i].unregister();var k=await caches.keys();"+
+      "for(var j=0;j<k.length;j++)await caches.delete(k[j]);}catch(e){};location.reload(true)})()\" "+
+      "style='margin-top:16px;width:100%;min-height:52px;border-radius:14px;border:1px solid #C9A24B;"+
+      "background:linear-gradient(135deg,#EFCE86,#C9A24B);color:#241608;font-weight:700;font-size:15px'>"+
+      "Clear cache and reload</button></div>";
+    document.body.appendChild(d);
+  }catch(_){}
+};
+/* everything has a built-in default, so this should never fire */
+if(!window.CONFIG||!window.MENU||!window.LANG||!window.iconSvg){
+  document.body.innerHTML='<div style="padding:40px;color:#EFCE86;font:16px sans-serif;text-align:center">'+
+    'Menu data failed to load. Please reload the page.</div>';
+  throw new Error("assets not loaded");
+}
+const C=window.CONFIG, MENU=window.MENU;
+const nav=document.getElementById("nav"), main=document.getElementById("main"),
+      search=document.getElementById("search"), overlay=document.getElementById("overlay");
+let VARIANT="Without Mandi", GTAB="photos", STARS=0;
+let L = localStorage0("hayatLang") || "en";
+function localStorage0(k){ try{return window.localStorage.getItem(k)}catch(e){return null} }
+function saveLang(v){ try{window.localStorage.setItem("hayatLang",v)}catch(e){} }
+function T(k){
+  var a = window.LANG.ui[L] && window.LANG.ui[L][k];
+  if(a !== undefined && a !== null && a !== "") return a;
+  var b = window.LANG.ui.en[k];
+  if(b !== undefined && b !== null) return b;
+  return k;
+}
+const NM = it => (L==="ml" && window.LANG.items[it.id]) || it.name;
+const SN = c  => (L==="ml" && window.LANG.sections[c.id]) || c.name;
+const OL = s  => (L==="ml" && window.LANG.opts[s]) || T(s) || s;
+const IGURL="https://www.instagram.com/"+C.instagram+"/";
+
+function applyChrome(){
+  document.getElementById("tagline").textContent=C.tagline;
+  document.getElementById("search").placeholder=T("search");
+  document.getElementById("langbtn").textContent =
+    (window.innerWidth<860) ? (L==="en" ? "അ" : "A") : T("langBtn");
+  document.getElementById("galtxt").textContent=T("gallery");
+  document.getElementById("fdel").textContent=T("homeDelivery");
+  document.getElementById("fcat").textContent=T("catering");
+  document.getElementById("frev").innerHTML='<span class="star">&#9733;</span> '+T("rateUs");
+  document.documentElement.lang = L==="ml" ? "ml" : "en";
+}
+document.getElementById("fig").onclick=()=>{ (C.kiosk!==false) ? qrSheet("insta") : window.open(IGURL,"_blank"); };
+document.getElementById("frev").onclick=()=>{STARS=0;search.value="";location.hash="#/rate"};
+applyChrome();
+
+/* ---------------- helpers ---------------- */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function rup(v){
+  if(v==null) return "—";
+  if(typeof v!=="number"){ return (String(v).toUpperCase()==="MP") ? T("marketPrice") : String(v); }
+  return "₹"+(Number.isInteger(v) ? v.toLocaleString("en-IN") : v.toFixed(2));
+}
+function lowest(it){
+  if(it.price!=null) return it.price;
+  if(it.opts){ const n=it.opts.map(o=>o[1]).filter(v=>typeof v==="number");
+               return n.length?Math.min.apply(null,n):null; }
+  if(it.matrix){ const n=it.matrix.rows.flatMap(r=>r[1]).filter(v=>typeof v==="number");
+                 return n.length?Math.min.apply(null,n):null; }
+  return null;
+}
+const telHref=n=>"tel:"+String(n).replace(/\s+/g,"");
+const telShow=n=>String(n).replace(/^\+91/,"").replace(/(\d{5})(\d{5})/,"$1 $2");
+function art(it,wide){return window.iconSvg(it.icon||"mandi",it.tint,wide)}
+function pic(it,wide){
+  const fb=art(it||{},wide);
+  return `<img loading="lazy" src="${(it&&it.img)||fb}" alt="${esc((it&&it.name)||"")}"
+    onerror="this.onerror=null;this.src='${fb}'">`;
+}
+const thumb=it=>`<span class="thumb">${pic(it)}</span>`;
+const tagHtml=it=>(it.tags||[]).map(t=>
+  `<span class="tag ${t}">${t==="star"?T("tagStar"):t==="hot"?T("tagHot"):T("tagVeg")}</span>`).join("");
+function priceChips(it){
+  if(it.matrix){
+    const r=it.matrix.rows.find(x=>x[0]===VARIANT)||it.matrix.rows[0];
+    return it.matrix.cols.map((c,i)=>r[1][i]==null?"":
+      `<span class="cp"><b>${esc(T(c))}</b>${rup(r[1][i])}</span>`).join("");
+  }
+  if(it.opts) return it.opts.map(o=>`<span class="cp"><b>${esc(OL(o[0]))}</b>${rup(o[1])}</span>`).join("");
+  return `<span class="cp">${rup(it.price)}</span>`;
+}
+function findItem(id){
+  for(const c of MENU){ const it=c.items.find(x=>x.id===id); if(it) return [it,c]; }
+  return null;
+}
+function upsellStrip(excludeCat){
+  const ids=(C.upsell||[]).filter(id=>{const f=findItem(id);return f && f[1].id!==excludeCat;});
+  if(!ids.length) return "";
+  return `<h3 class="mini">${T("goesWith")}</h3><div class="ups">${ids.map(id=>{
+    const [it,c]=findItem(id);
+    return `<button class="upc" data-go="#/d/${c.id}/${it.id}">
+      <div class="ph">${pic(it)}</div>
+      <div class="b"><div class="n">${esc(NM(it))}</div>
+      <div class="p">${it.price!=null?rup(it.price):rup(lowest(it))}</div></div></button>`;
+  }).join("")}</div>`;
+}
+const isPlaceholder=u=>/REPLACE_ME/i.test(String(u));
+const WA = (txt) => "https://wa.me/"+C.whatsapp+"?text="+encodeURIComponent(txt||C.whatsappText);
+
+/* feedback is kept on this device and can be exported as a text file.
+   A static site has no server to write to — see FEEDBACK.txt in the folder. */
+function saveFeedback(rec){
+  try{
+    const k="hayatFeedback";
+    const all=JSON.parse(localStorage.getItem(k)||"[]");
+    all.push(rec); localStorage.setItem(k,JSON.stringify(all));
+  }catch(e){}
+}
+function saveLead(rec){
+  try{
+    const all=JSON.parse(localStorage.getItem("hayatLeads")||"[]");
+    all.push(rec); localStorage.setItem("hayatLeads",JSON.stringify(all));
+  }catch(e){}
+}
+function exportAll(){
+  let fb=[],ld=[];
+  try{fb=JSON.parse(localStorage.getItem("hayatFeedback")||"[]")}catch(e){}
+  try{ld=JSON.parse(localStorage.getItem("hayatLeads")||"[]")}catch(e){}
+  if(!fb.length&&!ld.length){ alert("Nothing saved on this device yet."); return; }
+  let t="HAYAT — SAVED ON THIS TABLET\n\n";
+  t+="PARTY ENQUIRIES ("+ld.length+")\n=========================\n";
+  ld.forEach(r=>{t+="\nDate saved : "+r.at+"\nName       : "+(r.name||"-")+
+    "\nPHONE      : "+(r.phone||"-")+"\nOccasion   : "+(r.occasion||"-")+
+    "\nEvent date : "+(r.when||"-")+"\nPeople     : "+(r.people||"-")+
+    "\nNotes      : "+(r.notes||"-")+"\n-----------------------------------------\n";});
+  t+="\n\nFEEDBACK ("+fb.length+")\n=========================\n";
+  fb.forEach(r=>{t+="\nDate  : "+r.at+"\nStars : "+r.stars+"\nName  : "+(r.name||"-")+
+    "\nPhone : "+(r.phone||"-")+"\nText  : "+(r.text||"-")+
+    "\n-----------------------------------------\n";});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([t],{type:"text/plain"}));
+  a.download="hayat-tablet-export.txt"; a.click();
+}
+function exportFeedback(){
+  let all=[]; try{all=JSON.parse(localStorage.getItem("hayatFeedback")||"[]")}catch(e){}
+  if(!all.length){ alert("No feedback saved on this device yet."); return; }
+  const txt = all.map(r =>
+    "-----------------------------------------\n"+
+    "Date   : "+r.at+"\nStars  : "+r.stars+"\nName   : "+(r.name||"-")+
+    "\nPhone  : "+(r.phone||"-")+"\nComment: "+(r.text||"-")).join("\n");
+  const blob=new Blob(["HAYAT FEEDBACK\n"+all.length+" entries\n"+txt+"\n"],{type:"text/plain"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="hayat-feedback.txt"; a.click();
+}
+
+/* instagram-style reels: silent autoplay while on screen, tap to unmute */
+function mountReels(root){
+  const vids=[...root.querySelectorAll(".reel video")];
+  if(!vids.length) return;
+  if(!("IntersectionObserver" in window)){ vids.forEach(v=>{try{v.play()}catch(e){}}); return; }
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    const v=e.target;
+    if(e.isIntersecting && e.intersectionRatio>0.6){ v.play().catch(()=>{}); }
+    else { v.pause(); }
+  }),{threshold:[0,0.6,1]});
+  vids.forEach(v=>{
+    v.muted=true; v.playsInline=true; v.loop=true;
+    io.observe(v);
+    v.closest(".reel").addEventListener("click",ev=>{
+      if(ev.target.closest("a")) return;
+      v.muted=!v.muted;
+      const b=v.closest(".reel").querySelector(".sound");
+      if(b) b.textContent = v.muted ? "🔇" : "🔊";
+      const hint=v.closest(".reel").querySelector(".hint");
+      if(hint) hint.style.opacity="0";
+      if(!v.muted) vids.forEach(o=>{ if(o!==v) o.muted=true; });
+      v.play().catch(()=>{});
+    });
+  });
+}
+function reelCards(list){
+  return list.map((r,i)=>`
+    <div class="reel">
+      <video src="${esc(r.src)}" ${r.poster?`poster="${esc(r.poster)}"`:""}
+        muted loop playsinline preload="metadata"></video>
+      <div class="sound">🔇</div>
+      ${r.link?`<a class="igbadge" href="${esc(r.link)}" target="_blank" rel="noopener">◉ ${T("viewOnInsta")}</a>`:""}
+      ${i===0?`<div class="hint">${T("tapUnmute")}</div>`:""}
+      ${r.caption?`<div class="ov"><b>${esc(r.caption)}</b></div>`:""}
+    </div>`).join("");
+}
+
+/* ---------------- instagram ---------------- */
+function igEmbed(url){
+  const m=String(url).match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  if(!m) return "";
+  const src="https://www.instagram.com/"+m[1]+"/"+m[2]+"/embed/captioned/";
+  return `<div class="igcard">${navigator.onLine
+    ? `<iframe loading="lazy" src="${src}" scrolling="no" allowtransparency="true"
+        allow="encrypted-media" referrerpolicy="origin-when-cross-origin"></iframe>`
+    : `<div class="offline"><b>${T("offlineTitle")}</b>
+        <span>${T("offlineBody")}</span>
+        <a href="${esc(url)}" target="_blank" rel="noopener">${T("offlineBtn")}</a></div>`}</div>`;
+}
+const KIOSK = C.kiosk !== false;
+var IG_OK = null;                      /* null = unknown, true/false after probe */
+function igProbe(){
+  if(!navigator.onLine){ IG_OK=false; return; }
+  var done=false;
+  var t=setTimeout(function(){ if(!done){ done=true; IG_OK=false; route(); } }, 3500);
+  fetch("https://www.instagram.com/favicon.ico",{mode:"no-cors",cache:"no-store"})
+    .then(function(){ if(done) return; done=true; clearTimeout(t);
+      if(IG_OK!==true){ IG_OK=true; route(); } })
+    .catch(function(){ if(done) return; done=true; clearTimeout(t);
+      IG_OK=false; route(); });
+}
+function igNorm(x){
+  if(!x) return null;
+  var u = (typeof x === "string") ? x : x.url;
+  if(!u || isPlaceholder(u)) return null;
+  var m = String(u).match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  if(!m) return null;
+  return { url:u, kind:m[1], code:m[2], title:(x && x.title) || "" };
+}
+function igList(){ return (C.trending||[]).map(igNorm).filter(Boolean); }
+/* QR drawn in the browser — no files, any number of reels */
+function qrFor(url,size){
+  return (window.qrSvg ? window.qrSvg(url, size||620) : "");
+}
+function reelCards2(list){
+  return list.map((r,i)=>`
+    <div class="igc" data-reel="${i}">
+      <div class="igfall"><span class="play">&#9654;</span></div>
+      ${IG_OK===true
+        ? `<iframe class="igframe in" loading="lazy" scrolling="no" allowtransparency="true"
+             src="https://www.instagram.com/${r.kind}/${r.code}/embed/"></iframe>`
+        : ``}
+      <span class="tapcatch"></span>
+      <span class="mark">◉ REEL</span>
+      <span class="foot">${esc(r.title||T("scanReel"))}</span>
+    </div>`).join("");
+}
+function reelSheet(i){
+  const r=igList()[i]; if(!r) return;
+  overlay.innerHTML=`<div class="scrim" data-close><div class="sheet qsheet">
+    <h4>◉ ${esc(r.title||"Reel")}</h4>
+    <div class="note">${T("scanReel")} · ${T("kioskNote")}</div>
+    <div class="big"><img src="${qrFor(r.url)}" alt=""></div>
+    ${KIOSK?"":`<div class="cta"><a class="gold" style="flex:1;justify-content:center"
+      href="${esc(r.url)}" target="_blank" rel="noopener">${T("onYourPhone")}</a></div>`}
+    <button class="close" data-close>${T("close")}</button></div></div>`;
+}
+function qrSheet(kind){
+  const M={
+    insta:{ img:qrFor(IGURL), h:"◉ Instagram", handle:"@"+C.instagram,
+            title:T("scanFollow")+C.instagram, url:IGURL },
+    wa:{    img:qrFor(WA()),  h:"WhatsApp",   handle:telShow(C.whatsapp.replace(/^91/,"")),
+            title:T("scanWa"), url:WA() },
+    review:{img:qrFor(C.reviewLink),    h:"Google",     handle:"",
+            title:T("scanToReview"), url:C.reviewLink }
+  }[kind];
+  overlay.innerHTML=`<div class="scrim" data-close><div class="sheet qsheet">
+    <h4>${esc(M.h)}</h4>
+    ${M.handle?`<div class="handle">${esc(M.handle)}</div>`:""}
+    <div class="note">${esc(M.title)} · ${T("kioskNote")}</div>
+    <div class="big"><img src="${M.img}" alt=""></div>
+    ${KIOSK?"":`<div class="cta"><a class="gold" style="flex:1;justify-content:center"
+       href="${M.url}" target="_blank" rel="noopener">${T("onYourPhone")}</a></div>`}
+    <button class="close" data-close>${T("close")}</button></div></div>`;
+}
+const igBar=(t,s)=>`<div class="igbar"><div><div class="t">${esc(t)}</div>
+  <div class="s">${esc(s)}</div></div>
+  ${KIOSK
+    ? `<button data-qr="insta">${T("follow")} @${esc(C.instagram)}</button>`
+    : `<a href="${IGURL}" target="_blank" rel="noopener">${T("follow")} @${esc(C.instagram)}</a>`}
+  </div>`;
+
+/* ---------------- chrome ---------------- */
+function drawNav(active){
+  nav.innerHTML=
+   `<button class="navitem special ${active==="gallery"?"on":""}" data-go="#/gallery">
+      <span class="ic">◎</span><span>${T("gallery")}<small>${T("galleryNav")}</small></span></button>
+    <div class="navsep"></div>`+
+   MENU.map(c=>`<button class="navitem ${c.id===active?"on":""}" data-go="#/c/${c.id}">
+      <span class="ic">${c.ic}</span><span>${esc(SN(c))}<small>${c.items.length} ${T("ITEMS")}</small></span>
+    </button>`).join("");
+}
+const backBar=(target,label,crumb)=>`<div class="backbar">
+  <button class="back" data-go="${target}"><span class="a">&lsaquo;</span>${esc(label)}</button>
+  ${crumb?`<span class="crumbtxt">${esc(crumb)}</span>`:""}</div>`;
+const backBottom=(target,label)=>`<div class="backbottom">
+  <button class="back" data-go="${target}"><span class="a">&lsaquo;</span>${esc(label)}</button></div>`;
+const head=(t,s)=>`<div class="rule"><h2 class="sec">${esc(t)}</h2></div>
+  ${s?`<p class="secsub">${esc(s)}</p>`:""}`;
+
+/* ---------------- home ---------------- */
+function viewHome(){
+  drawNav(null);
+  const total=MENU.reduce((n,c)=>n+c.items.length,0);
+  const reels=(C.reels||[]).filter(r=>r&&r.src);
+  const igPosts=igList();
+
+  main.innerHTML=`
+   <div class="homehero"><img src="assets/logo.png" alt="Hayat Fish Restaurant">
+     <div class="tl">${esc(C.tagline)}</div>
+     <div class="trust">${(C.trustBadges||[]).map(b=>`<span>${esc(b)}</span>`).join("")}</div>
+   </div>
+
+   <h3 class="mini">${T("theMenu")} &middot; ${total} ${T("dishes")}</h3>
+   <div class="grid">${MENU.map(c=>{
+     const cover=c.items.find(i=>i.anchor)||c.items[0];
+     return `<button class="tile" data-go="#/c/${c.id}">
+       <div class="cover">${pic(cover,true)}</div>
+       <div class="tb"><div class="tt">${c.ic} ${esc(SN(c))}</div>
+       <div class="ts">${esc(c.tagline)}</div>
+       <span class="tc">${c.items.length} ${T("items")} &rarr;</span></div></button>`}).join("")}</div>
+
+   <h3 class="mini">${T("celebrate")}</h3>
+   <div class="celebrate">
+     <div class="kicker">${esc(C.tagline)}</div>
+     <h3>${T("celebrate")}</h3>
+     <div class="tag">${T("celebrateTag")}</div>
+     <p class="cb">${T("celebrateBlurb")}</p>
+     <div class="occ">${(C.celebrate.occasions||[]).map(o=>`
+       <div class="o"><div class="oi">${o.icon}</div><b>${esc(o.title)}</b>
+       <span>${esc(o.line)}</span></div>`).join("")}</div>
+     <div class="cta">
+       <button class="gold" data-go="#/party">${T("planParty")}</button>
+       <a href="tel:+${esc(C.celebrate.number)}">${T("callUs")}</a>
+     </div>
+   </div>
+
+   ${reels.length?`<h3 class="mini">${T("reels")}</h3>
+     <div class="reelrow" id="reelrow">${reelCards(reels)}</div>`:""}
+
+   ${igPosts.length?`<h3 class="mini">${T("ourReels")}</h3>
+     <p class="secsub" style="text-align:left;margin:-8px 0 14px">${T("reelTap")}</p>
+     <div class="igrow">${reelCards2(igPosts)}</div>`:""}
+
+
+   <h3 class="mini">${T("connect")}</h3>
+   <div class="qgrid">
+     <div class="qcard"><h4>${T("scanToOrder")}</h4>
+       <div class="qrbox"><img src="assets/qr/whatsapp.png" alt=""></div>
+       <button class="wa" data-qr="wa" style="display:flex;align-items:center;justify-content:center;
+         min-height:46px;border-radius:12px;font-weight:700;font-size:13.5px;width:100%">
+         ${T("orderWhatsapp")}</button></div>
+     <div class="qcard"><h4>${T("scanToFollow")}</h4>
+       <div class="qrbox"><img src="assets/qr/instagram.png" alt=""></div>
+       <button class="ig" data-qr="insta" style="display:flex;align-items:center;justify-content:center;
+         min-height:46px;border-radius:12px;font-weight:700;font-size:13.5px;width:100%">
+         ${T("followInsta")}</button></div>
+     <div class="qcard"><h4>${T("scanToReview")}</h4>
+       <div class="qrbox"><img src="assets/qr/review.png" alt=""></div>
+       <a class="gg" href="#/rate" data-go="#/rate">${T("rateUs")}</a></div>
+   </div>
+
+   <div class="promo">
+     <div class="pbox"><div class="pi">🛵</div><h4>${T("homeDelivery")}</h4>
+       <p>${T("deliveryBlurb")}</p>
+       <div class="nums">${(C.delivery||[]).map(d=>
+         `<a href="${telHref(d.number)}"><span>${esc(d.label)}</span>
+          <b>${esc(telShow(d.number))}</b></a>`).join("")}</div></div>
+
+     <div class="pbox"><div class="pi">🍽️</div><h4>${T("catering")}</h4>
+       <p>${esc(T("cateringBlurb")||C.catering.blurb)}</p>
+       <div class="nums"><a href="${telHref(C.catering.number)}">
+         <span>${T("cateringDesk")}</span><b>${esc(telShow(C.catering.number))}</b></a></div></div>
+
+     <div class="pbox"><div class="pi">📦</div><h4>${T("largeOrders")}</h4>
+       <p>${T("largeBlurb")}</p>
+       <div class="nums"><a href="${telHref(C.catering.number)}">
+         <span>${T("bulkOrders")}</span><b>${esc(telShow(C.catering.number))}</b></a></div></div>
+   </div>
+
+   <div class="infobar"><span class="il">${esc(C.address)}</span>
+     <span class="il">·</span><span class="il">${esc(T("hoursText")||C.hours)}</span>
+     <a href="${C.mapsLink}" target="_blank" rel="noopener">${T("directions")} &rarr;</a></div>
+
+   ${igBar(T("igSeeAll"),T("igSeeAllSub"))}
+   <p class="thanks">${T("thanks")}</p>`;
+  mountReels(main);
+  main.scrollTop=0;
+}
+
+/* ---------------- plan a party ---------------- */
+function viewParty(){
+  drawNav(null);
+  const occ=(C.celebrate.occasions||[]).map(o=>o.title);
+  main.innerHTML=
+    backBar("#/",T("menu"),T("celebrate"))+
+    `<div style="max-width:560px;margin:0 auto">
+      <div class="rule"><h2 class="sec">${T("partyTitle")}</h2></div>
+      <p class="secsub">${T("partySub")}</p>
+
+      <label style="display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;
+        color:var(--gold);margin:0 0 8px">${T("phoneReq")} *</label>
+      <input class="fld" id="pPhone" inputmode="tel" placeholder="9XXXXXXXXX"
+        style="font-size:19px;letter-spacing:1px">
+      <div style="font-size:11.5px;color:var(--muted);margin:-4px 0 18px">${T("phoneHint")}</div>
+
+      <input class="fld" id="pName" placeholder="${T("yourName")}">
+
+      <label style="display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;
+        color:var(--gold);margin:8px 0 8px">${T("occasion")}</label>
+      <div class="seg" id="occSeg" style="flex-wrap:wrap;margin-bottom:14px">
+        ${occ.map((o,i)=>`<button data-occ="${esc(o)}" class="${i===0?"on":""}">${esc(o)}</button>`).join("")}
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <input class="fld" id="pWhen" type="date" style="flex:1" aria-label="${T("partyDate")}">
+        <input class="fld" id="pPeople" inputmode="numeric" placeholder="${T("headcount")}" style="flex:1">
+      </div>
+      <textarea class="fld" id="pNotes" placeholder="${T("partyNotes")}"></textarea>
+
+      <div class="cta"><button class="gold" id="pSend"
+        style="flex:1;justify-content:center;min-height:58px;font-size:16px">${T("bookNow")}</button></div>
+    </div>`+
+    backBottom("#/",T("backMenu"));
+
+  let chosen=occ[0]||"";
+  main.querySelectorAll("[data-occ]").forEach(b=>b.onclick=()=>{
+    chosen=b.dataset.occ;
+    main.querySelectorAll("[data-occ]").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+  });
+
+  document.getElementById("pSend").onclick=()=>{
+    const v=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+    const phone=v("pPhone").replace(/[^0-9+]/g,"");
+    if(phone.length<10){ alert(T("needPhone")); document.getElementById("pPhone").focus(); return; }
+    const rec={ at:new Date().toLocaleString(), phone:phone, name:v("pName"),
+      occasion:chosen, when:v("pWhen"), people:v("pPeople"), notes:v("pNotes") };
+    saveLead(rec);
+    const msg="PARTY ENQUIRY — Hayat\n"+
+      "Name: "+(rec.name||"-")+"\nPhone: "+rec.phone+"\nOccasion: "+(rec.occasion||"-")+
+      "\nDate: "+(rec.when||"-")+"\nPeople: "+(rec.people||"-")+"\nNotes: "+(rec.notes||"-");
+    main.innerHTML=
+      backBar("#/",T("menu"),T("celebrate"))+
+      `<div style="max-width:460px;margin:0 auto;text-align:center;padding-top:24px">
+        <div style="font-size:56px">🎉</div>
+        <h2 style="color:var(--gold2);margin:16px 0 8px;font-size:24px">${T("partyDone")}</h2>
+        <p style="color:var(--muted);font-size:14.5px;line-height:1.7">${T("partyDoneSub")}</p>
+        <div style="font-size:20px;font-weight:800;color:var(--gold2);letter-spacing:1px;margin:18px 0 26px">
+          ${esc(rec.phone)}</div>
+        <h3 class="mini" style="justify-content:center">${T("partyWa")}</h3>
+        <div class="qrbox"><img src="assets/qr/whatsapp.png" alt=""></div>
+        <div class="qrcap">${T("scanToOrder")}</div>
+        <div class="cta"><a class="wa" style="flex:1;justify-content:center"
+          href="${WA(msg)}" target="_blank" rel="noopener">${T("whatsappUs")}</a></div>
+      </div>`+
+      backBottom("#/",T("backMenu"));
+    main.scrollTop=0;
+  };
+  main.scrollTop=0;
+}
+
+/* ---------------- rate us ---------------- */
+function viewRate(){
+  drawNav(null);
+  const s=STARS;
+  let panel="";
+  if(s===0){
+    panel=`<p class="secsub" style="margin-bottom:4px">${T("rateSub")}</p>`;
+  } else if(s<=3){
+    panel=`
+      <div style="max-width:520px;margin:22px auto 0">
+        <h3 style="margin:0 0 6px;font-size:20px;color:var(--gold2)">${T("rateLowTitle")}</h3>
+        <p style="color:var(--muted);font-size:13.5px;margin:0 0 18px">${T("rateLowSub")}</p>
+        <input class="fld" id="fbName"  placeholder="${T("yourName")}">
+        <input class="fld" id="fbPhone" placeholder="${T("yourPhone")}" inputmode="tel">
+        <textarea class="fld" id="fbText" placeholder="${T("whatHappened")}"></textarea>
+        <button class="cta" id="fbSend" style="width:100%"></button>
+        <div class="cta"><button class="gold" id="fbSave" style="flex:1;justify-content:center">
+          ${T("sendFeedback")}</button></div>
+      </div>`;
+  } else {
+    panel=`
+      <div style="max-width:460px;margin:22px auto 0;text-align:center">
+        <h3 style="margin:0 0 6px;font-size:20px;color:var(--gold2)">${T("rateHighTitle")}</h3>
+        <p style="color:var(--muted);font-size:13.5px;margin:0 0 20px">${T("rateHighSub")}</p>
+        <div class="qrbox"><img src="assets/qr/review.png" alt=""></div>
+        <div class="qrcap">${T("scanToReview")}</div>
+        <div class="cta"><a class="gold" style="flex:1;justify-content:center"
+          href="${C.reviewLink}" target="_blank" rel="noopener">${T("writeReview")}</a></div>
+      </div>`;
+  }
+  main.innerHTML=
+    backBar("#/",T("menu"),T("rateUs"))+
+    head(T("rateTitle"),"")+
+    `<div class="stars">${[1,2,3,4,5].map(n=>
+      `<button data-star="${n}" class="${n<=s?"on":""}">&#9733;</button>`).join("")}</div>`+
+    panel+
+    backBottom("#/",T("backMenu"));
+  const send=document.getElementById("fbSave");
+  if(send) send.onclick=()=>{
+    const rec={ at:new Date().toLocaleString(), stars:s,
+      name:(document.getElementById("fbName")||{}).value||"",
+      phone:(document.getElementById("fbPhone")||{}).value||"",
+      text:(document.getElementById("fbText")||{}).value||"" };
+    saveFeedback(rec);
+    const msg="Feedback for Hayat\nRating: "+s+"/5\nName: "+(rec.name||"-")+
+              "\nPhone: "+(rec.phone||"-")+"\n\n"+(rec.text||"-");
+    window.open(WA(msg),"_blank");
+    main.innerHTML=backBar("#/",T("menu"),T("rateUs"))+
+      `<div style="text-align:center;padding:60px 20px">
+        <div style="font-size:52px">🙏</div>
+        <h2 style="color:var(--gold2);margin:16px 0 8px">${T("rateThanks")}</h2>
+        <p style="color:var(--muted)">${T("saved")}</p></div>`+
+      backBottom("#/",T("backMenu"));
+  };
+  const fb=document.getElementById("fbSend"); if(fb) fb.remove();
+  main.scrollTop=0;
+}
+
+/* ---------------- category ---------------- */
+function viewCat(id){
+  const c=MENU.find(x=>x.id===id); if(!c) return viewHome();
+  drawNav(id);
+  const items=c.items;
+
+  let table;
+  if(c.layout==="paper"){
+    table=`<div class="paper"><div class="rows">${items.map(it=>`
+      <button class="row" data-go="#/d/${c.id}/${it.id}">${thumb(it)}
+        <span><span class="n">${esc(NM(it))}${tagHtml(it)}</span>
+        ${it.desc?`<span class="d">${esc(it.desc)}</span>`:""}</span>
+        <span class="p">${rup(it.price)}</span></button>`).join("")}</div></div>`;
+  } else {
+    const variants=[...new Set(items.flatMap(it=>it.matrix?it.matrix.rows.map(r=>r[0]):[]))]
+                     .filter(v=>v!=="Price");
+    if(variants.length && !variants.includes(VARIANT)) VARIANT=variants[0];
+    const toggle=variants.length>1?`<div class="seg">${variants.map(v=>
+      `<button class="${v===VARIANT?"on":""}" data-var="${esc(v)}">${esc(T(v))}</button>`).join("")}</div>`:"";
+    const cells=it=>{
+      if(it.matrix){
+        const r=it.matrix.rows.find(x=>x[0]===VARIANT)||it.matrix.rows[0];
+        return r[1].map(v=>`<span class="pc${v==null?" na":""}">${rup(v)}</span>`).join("");
+      }
+      if(it.opts) return it.opts.slice(-3).map(o=>
+        `<span class="pc"><em>${esc(OL(o[0]))}</em>${rup(o[1])}</span>`).join("");
+      return `<span class="pc" style="grid-column:span 3">${rup(it.price)}</span>`;
+    };
+    table=`${toggle}<div class="plist">
+      ${items.some(it=>it.matrix)?`<div class="phead"><span></span><span></span>
+        ${QHF.map(h=>`<span>${T(h)}</span>`).join("")}</div>`:""}
+      ${items.map(it=>`<button class="prow${it.anchor?" anchor":""}" data-go="#/d/${c.id}/${it.id}">
+        ${thumb(it)}<span class="pl"><span class="n">${esc(NM(it))}${tagHtml(it)}</span>
+        ${it.desc?`<span class="d">${esc(it.desc)}</span>`:""}</span>
+        ${cells(it)}</button>`).join("")}</div>`;
+  }
+
+  const cards=`<div class="pgrid">${items.map(it=>`
+    <button class="pcard" data-go="#/d/${c.id}/${it.id}">
+      <div class="ph">${pic(it,true)}</div>
+      ${it.anchor?`<span class="ribbon">${T("ribbonParty")}</span>`
+        :(it.tags||[]).includes("star")?`<span class="ribbon">${T("ribbonChef")}</span>`
+        :(it.tags||[]).includes("hot")?`<span class="ribbon hot">${T("ribbonSpicy")}</span>`:""}
+      <div class="cap"><div class="cn">${esc(NM(it))}</div>
+        <div class="cprices">${priceChips(it)}</div></div>
+    </button>`).join("")}</div>`;
+
+  main.innerHTML=
+    backBar("#/",T("menu"),SN(c))+
+    head(SN(c),c.tagline)+
+    (c.note?`<p class="secsub" style="margin-top:-14px">${esc(c.note)}</p>`:"")+
+    table+
+    `<h3 class="mini">${T("browsePhoto")}</h3>`+cards+
+    upsellStrip(c.id)+
+    backBottom("#/",T("backMenu"));
+  main.scrollTop=0;
+}
+
+/* ---------------- dish ---------------- */
+function viewDish(cid,did){
+  const c=MENU.find(x=>x.id===cid); if(!c) return viewHome();
+  const it=c.items.find(x=>x.id===did); if(!it) return viewCat(cid);
+  drawNav(cid);
+
+  let pricing;
+  if(it.matrix){
+    pricing=`<table class="mx"><thead><tr><th></th>
+      ${it.matrix.cols.map(h=>`<th>${esc(T(h))}</th>`).join("")}</tr></thead><tbody>
+      ${it.matrix.rows.map(r=>`<tr><th>${esc(T(r[0]))}</th>
+        ${r[1].map(v=>`<td>${rup(v)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  } else if(it.opts){
+    pricing=`<div class="opts">${it.opts.map(o=>
+      `<div class="opt"><span>${esc(OL(o[0]))}</span><span class="p">${rup(o[1])}</span></div>`).join("")}</div>`;
+  } else {
+    pricing=`<div class="opts"><div class="opt"><span>${T("perPlate")}</span>
+      <span class="p">${rup(it.price)}</span></div></div>`;
+  }
+
+  const posts=(it.ig||[]).filter(u=>!isPlaceholder(u));
+  const shots=(it.photos||[]);
+  const gal=(shots.length||posts.length)
+    ? (shots.length?`<div class="pgrid">${shots.map(p=>`
+        <button class="pcard" data-lb="${esc(p.src)}" data-cap="${esc(p.caption||NM(it))}">
+          <div class="ph"><img loading="lazy" src="${esc(p.src)}" alt=""></div>
+          <div class="cap"><div class="cn">${esc(p.caption||NM(it))}</div>
+            <div class="cprices">${priceChips(it)}</div></div></button>`).join("")}</div>`:"")
+      +(posts.length?`<div class="nomedia" style="margin-top:14px">
+         ${T("scanWatch")} — <b>@${esc(C.instagram)}</b></div>`:"")
+    : `<div class="nomedia"><b>No gallery for this dish yet.</b><br>
+       Add photos in <code>menu-data.js</code> as
+       <code>photos:[{src:"photos/x.jpg",caption:"..."}]</code>, or paste Instagram links
+       into <code>ig:[]</code> for <code>id:"${esc(it.id)}"</code>.</div>`;
+
+  main.innerHTML=
+    backBar("#/c/"+cid,SN(c),NM(it))+
+    `<div class="detail">
+      <div class="hero">${pic(it,true)}
+        <div class="hcap"><div class="hn">${esc(NM(it))}</div>
+          <div class="hp">${priceChips(it)}</div></div></div>
+      ${it.sub?`<div class="subline">${esc(it.sub)}</div>`:""}
+      <h3>${esc(NM(it))}${tagHtml(it)}</h3>
+      ${it.desc?`<p class="desc">${esc(it.desc)}</p>`:"<div style='height:12px'></div>"}
+      <h3 class="mini">${T("pricing")}</h3>
+      ${pricing}
+      <h3 class="mini">${T("gallery")}</h3>
+      ${gal}
+      ${igBar(T("igMore"),T("igMoreSub"))}
+      <div class="chips">${T("chips").map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>
+    </div>`+
+    upsellStrip(cid)+
+    backBottom("#/c/"+cid,T("backTo")+" "+SN(c));
+  main.scrollTop=0;
+}
+
+/* ---------------- gallery ---------------- */
+function viewGallery(){
+  drawNav("gallery");
+  const G=C.gallery||{photos:[],videos:[]};
+  const PH=(G.photos||[]), VD=(G.videos||[]), RL=(C.reels||[]).filter(r=>r&&r.src),
+        YT=(C.youtube||[]).filter(y=>y&&y.id&&y.id.indexOf("PASTE")<0),
+        IG=igList();
+  if(GTAB!=="photos" && GTAB!=="videos") GTAB="photos";
+
+  let panel;
+  if(GTAB==="photos"){
+    panel = PH.length
+      ? `<div class="mos">${PH.map(p=>`
+          <button class="mtile" data-lb="${esc(p.src)}" data-cap="${esc(p.caption||"")}">
+            <img loading="lazy" src="${esc(p.src)}" alt="">
+            ${p.caption?`<div class="cap">${esc(p.caption)}</div>`:""}</button>`).join("")}</div>`
+      : `<div class="nomedia"><b>No photos yet.</b><br>
+         Drop jpg files into <code>gallery/</code> and list them in <code>config.js</code>
+         under <code>gallery: { photos: [...] }</code>.</div>`;
+  } else {
+    const blocks=[];
+    if(YT.length) blocks.push(`<div class="ygrid">${YT.map(y=>`
+      <div><div class="yt"><iframe loading="lazy"
+        src="https://www.youtube-nocookie.com/embed/${esc(y.id)}?rel=0&playsinline=1"
+        allow="accelerometer;encrypted-media;gyroscope;picture-in-picture"
+        allowfullscreen title="${esc(y.title||"")}"></iframe></div>
+        ${y.title?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${esc(y.title)}</div>`:""}
+      </div>`).join("")}</div>`);
+    if(RL.length) blocks.push(`<div class="reelrow" style="margin-top:16px">${reelCards(RL)}</div>`);
+    if(IG.length) blocks.push(`<div class="igrow" style="margin-top:16px">${reelCards2(IG)}</div>`);
+    if(VD.length) blocks.push(`<div class="ygrid" style="margin-top:16px">${VD.map(v=>`
+      <div class="yt"><video src="${esc(v.src)}" ${v.poster?`poster="${esc(v.poster)}"`:""}
+        controls playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover"></video></div>`).join("")}</div>`);
+    panel = blocks.length ? blocks.join("")
+      : `<div class="nomedia"><b>${T("videosNone")}</b><br><br>
+         <b style="color:#EFCE86">Two ways to get video playing right here:</b><br>
+         1. YouTube — paste the video id into <code>config.js</code> under
+            <code>youtube: [...]</code>. It plays inside this page.<br>
+         2. Your own mp4 — drop it into <code>gallery/reels/</code> and list it under
+            <code>reels: [...]</code>. Silent autoplay as you scroll, tap for sound.<br><br>
+         Instagram embeds are deliberately not used here: tapping one opens the
+         Instagram app instead of playing, which is wrong for a table tablet.</div>`;
+  }
+
+  main.innerHTML=
+    backBar("#/",T("menu"),T("gallery"))+
+    head(T("galleryTitle"),T("gallerySub"))+
+    `<div class="gtabs">
+       <button class="${GTAB==="photos"?"on":""}" data-tab="photos">&#9638; ${T("photos")}${PH.length?" "+PH.length:""}</button>
+       <button class="${GTAB==="videos"?"on":""}" data-tab="videos">&#9654; ${T("videos")}${(YT.length+RL.length+VD.length+IG.length)?" "+(YT.length+RL.length+VD.length+IG.length):""}</button>
+     </div>${panel}
+     ${igBar(T("igFollow"),T("igFollowSub"))}`+
+    backBottom("#/",T("backMenu"));
+  mountReels(main);
+  main.scrollTop=0;
+}
+
+/* ---------------- search ---------------- */
+function viewSearch(q){
+  drawNav(null);
+  const hits=[];
+  MENU.forEach(c=>c.items.forEach(it=>{
+    if((it.name+" "+(it.desc||"")+" "+(it.sub||"")+" "+c.name).toLowerCase()
+       .includes(q.toLowerCase())) hits.push([it,c]);
+  }));
+  main.innerHTML=backBar("#/",T("menu"),T("search"))+
+    head(hits.length+" "+(hits.length===1?T("result"):T("results")),T("forQ")+' "'+q+'"')+
+    (hits.length?`<div class="pgrid">${hits.map(([it,c])=>`
+      <button class="pcard" data-go="#/d/${c.id}/${it.id}">
+        <div class="ph">${pic(it,true)}</div>
+        <div class="cap"><div class="cn">${esc(NM(it))}</div>
+          <div class="cprices">${priceChips(it)}</div></div></button>`).join("")}</div>`
+     :`<div class="empty">${T("noMatch")}</div>`);
+  main.scrollTop=0;
+}
+
+/* ---------------- sheets & lightbox ---------------- */
+const closeOverlay=()=>{overlay.innerHTML=""};
+function sheetDelivery(){
+  overlay.innerHTML=`<div class="scrim" data-close><div class="sheet">
+    <h4>${T("homeDelivery")}</h4>
+    <p>${T("deliverySheet")}</p>
+    <div class="nums">${(C.delivery||[]).map(d=>`<a href="${telHref(d.number)}">
+      <span>${esc(d.label)}</span><b>${esc(telShow(d.number))}</b></a>`).join("")}</div>
+    <button class="close" data-close>${T("close")}</button></div></div>`;
+}
+function sheetCatering(){
+  overlay.innerHTML=`<div class="scrim" data-close><div class="sheet">
+    <h4>${esc(L==="ml"?T("catering"):C.catering.headline)}</h4>
+    <p>${esc(T("cateringBlurb")||C.catering.blurb)}</p>
+    <ul>${(C.catering.points||[]).map(p=>`<li>${esc(p)}</li>`).join("")}</ul>
+    <div class="nums"><a href="${telHref(C.catering.number)}">
+      <span>${T("cateringBulk")}</span><b>${esc(telShow(C.catering.number))}</b></a></div>
+    <button class="close" data-close>${T("close")}</button></div></div>`;
+}
+function lightbox(src,cap,isVideo){
+  overlay.innerHTML=`<div class="lb" data-close>
+    ${isVideo?`<video src="${esc(src)}" controls autoplay playsinline></video>`
+             :`<img src="${esc(src)}" alt="">`}
+    ${cap?`<div class="lbc">${esc(cap)}</div>`:""}
+    <button class="close" data-close>${T("close")}</button></div>`;
+}
+
+/* ---------------- routing ---------------- */
+function route(){
+  if(search.value.trim()) return viewSearch(search.value.trim());
+  const p=(location.hash||"#/").slice(2).split("/").filter(Boolean);
+  if(p[0]==="gallery") return viewGallery();
+  if(p[0]==="rate") return viewRate();
+  if(p[0]==="party") return viewParty();
+  if(p[0]==="c") return viewCat(p[1]);
+  if(p[0]==="d") return viewDish(p[1],p[2]);
+  viewHome();
+}
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-close]")) return closeOverlay();
+  const lb=e.target.closest("[data-lb]");   if(lb) return lightbox(lb.dataset.lb,lb.dataset.cap,false);
+  const lv=e.target.closest("[data-lbv]");  if(lv) return lightbox(lv.dataset.lbv,lv.dataset.cap,true);
+  const rl=e.target.closest("[data-reel]"); if(rl) return reelSheet(+rl.dataset.reel);
+  const qr=e.target.closest("[data-qr]"); if(qr) return qrSheet(qr.dataset.qr);
+  const st=e.target.closest("[data-star]"); if(st){STARS=+st.dataset.star;return viewRate()}
+  const tb=e.target.closest("[data-tab]");  if(tb){GTAB=tb.dataset.tab;return viewGallery()}
+  const v =e.target.closest("[data-var]");  if(v){VARIANT=v.dataset.var;return route()}
+  const b =e.target.closest("[data-go]");   if(b){search.value="";location.hash=b.dataset.go}
+});
+document.getElementById("fdel").onclick=sheetDelivery;
+document.getElementById("fcat").onclick=sheetCatering;
+(function(){var n=0,t=0;var el=document.querySelector("header .logo");if(!el)return;
+  el.addEventListener("click",function(){var now=Date.now();n=(now-t<900)?n+1:1;t=now;
+    if(n>=5){n=0;if(confirm("Download party enquiries + feedback as a text file?"))exportAll();}});})();
+document.getElementById("galbtn").onclick=()=>{search.value="";location.hash="#/gallery"};
+document.getElementById("langbtn").onclick=()=>{
+  L = L==="en" ? "ml" : "en"; saveLang(L); applyChrome(); route();
+};
+search.addEventListener("input",route);
+window.addEventListener("resize",applyChrome);
+window.addEventListener("hashchange",route);
+window.addEventListener("online",function(){IG_OK=null;igProbe();route()});
+window.addEventListener("offline",function(){IG_OK=false;route()});
+igProbe();
+try{ route(); }catch(err){
+  window.onerror("Startup failed: "+(err&&err.message), "index.html", 0, 0, err);
+}
+if("wakeLock" in navigator) navigator.wakeLock.request("screen").catch(()=>{});
+
+/* offline support — https only, silently skipped on file:// */
+var okCtx = location.protocol==="https:" || ["localhost","127.0.0.1"].indexOf(location.hostname)>=0;
+if("serviceWorker" in navigator && okCtx){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+
+</script>
+</body>
+</html>
