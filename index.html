@@ -426,12 +426,24 @@ textarea.fld{min-height:110px;resize:vertical}
   transform:scale(1.02);transform-origin:top center;
   opacity:0;transition:opacity .45s ease}
 .igc iframe.in{opacity:1}
-.igc .qrb{position:absolute;right:10px;top:12px;z-index:4;cursor:pointer;
+/* The embed is a picture, not a player. Instagram will not play a reel inside
+   an iframe — tapping inside it navigates to instagram.com. On a table tablet
+   that is exactly what must not happen, so the iframe takes no taps at all and
+   our own play button opens the QR instead. */
+.igc iframe{pointer-events:none}
+.igc .igmask{position:absolute;left:0;right:0;z-index:2;pointer-events:none;background:#0d0703}
+.igc .igmask.top{top:0;height:54px}
+.igc .igmask.bot{bottom:0;height:132px}
+.igc .bigplay{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:4;
+  width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-size:22px;
+  color:#fff;background:rgba(10,6,3,.52);border:1.5px solid rgba(255,255,255,.6);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none}
+.igc .qrb{position:absolute;right:10px;bottom:44px;z-index:5;cursor:pointer;
   border:1px solid rgba(255,255,255,.34);background:rgba(10,6,3,.62);color:#fff;
   border-radius:999px;padding:6px 11px;font:700 11px/1 inherit;letter-spacing:.3px;
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .igc .qrb:active{transform:scale(.94)}
-.igc .foot{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:26px 13px 12px;
+.igc .foot{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:26px 13px 12px;
   font-size:12.5px;font-weight:700;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(8,4,2,.92))}
 .igc .mark{z-index:3}
@@ -1970,10 +1982,12 @@ function reelCards2(list){
       <div class="igfall"><span class="play">&#9654;</span></div>
       ${IG_OK===true
         ? `<iframe class="igframe in" loading="lazy" scrolling="no" allowtransparency="true"
-             src="https://www.instagram.com/${r.kind}/${r.code}/embed/"></iframe>`
+             tabindex="-1" src="https://www.instagram.com/${r.kind}/${r.code}/embed/"></iframe>`
         : ``}
-      <button class="qrb" type="button">&#9635; ${T("onYourPhone")}</button>
+      <span class="igmask top"></span><span class="igmask bot"></span>
       <span class="mark">◉ REEL</span>
+      <span class="bigplay">&#9654;</span>
+      <button class="qrb" type="button">&#9635; ${T("onYourPhone")}</button>
       <span class="foot">${esc(r.title||T("scanReel"))}</span>
     </div>`).join("");
 }

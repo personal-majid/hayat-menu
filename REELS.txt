@@ -45,6 +45,36 @@ WHAT META DOES AND DOES NOT REQUIRE
 We use the first one. Nothing to register, nothing to renew.
 
 
+THE ONE THING THE EMBED CANNOT DO
+=================================
+It cannot PLAY the reel. Instagram's iframe shows the cover frame and a play
+button, and that play button navigates to instagram.com. There is no setting,
+no API, no Meta review that changes this — Meta does not allow reel playback
+inside somebody else's page.
+
+So on the tablet the embed is used as a live picture only. It takes no taps.
+Tapping the card gives the QR code and the tablet stays on your menu.
+
+IF YOU WANT THE VIDEO TO ACTUALLY PLAY ON THE TABLET
+====================================================
+Use your own file. You already own these videos.
+
+  1. Instagram app -> your reel -> ... -> Download  (works on your own posts)
+     or just use the original file you posted from.
+  2. Drop the mp4 into  gallery/reels/
+  3. List it in config.js:
+
+     reels: [
+       { src:"gallery/reels/mandi-pit.mp4", poster:"gallery/reels/mandi-pit.jpg",
+         caption:"Opening the mandi pit",
+         link:"https://www.instagram.com/reel/DapjpUJTzuf/" }
+     ],
+
+That plays inline, silent, starting by itself as the guest scrolls — the real
+Instagram feel — and it keeps working when the wifi drops. Keep each file
+under about 8 MB.
+
+
 WHY IT DOES NOT START BY ITSELF
 ==============================
 The embed plays when the guest taps it. It will not autoplay silently
