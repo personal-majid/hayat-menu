@@ -35,6 +35,8 @@ window.CONFIG = {
     enabled: true,
     clips:   ["intro/intro-1.mp4", "intro/intro-2.mp4"],
     posters: ["intro/intro-1.jpg", "intro/intro-2.jpg"],
+    showEveryLoad: true,       // play every time the page loads or is refreshed.
+                               // Set to false to use showAgainAfterMin instead.
     showAgainAfterMin: 15,
     sound: true,               // start with the audio ON. If the browser blocks
                                // it, the first tap anywhere turns the sound on.

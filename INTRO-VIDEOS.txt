@@ -14,6 +14,18 @@ The clips play one after the other and loop, so the screen is never
 dead. Nothing but a swipe up (or Skip) gets past it.
 
 
+EVERY LOAD, OR ONCE PER GUEST — YOUR CHOICE
+===========================================
+Right now it is set to play on EVERY page load and every refresh:
+
+    intro: { showEveryLoad: true }
+
+That is what you want on a tablet that gets reset between tables, or
+while you are demoing it.
+
+Set showEveryLoad to false and the rule below takes over instead.
+
+
 IT ONLY INTERRUPTS ONCE
 =======================
 Once a guest swipes up, the intro stays out of the way for the whole
