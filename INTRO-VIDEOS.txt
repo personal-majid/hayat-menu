@@ -1,0 +1,84 @@
+THE WELCOME VIDEOS
+==================
+
+What the guest sees when they sit down:
+
+  full-screen video, playing on its own, no sound
+       |
+       +-- swipe LEFT / RIGHT  ->  the next clip
+       +-- swipe UP            ->  the menu
+       +-- "Tap for sound"     ->  audio on
+       +-- "Skip"              ->  straight to the menu
+
+The clips play one after the other and loop, so the screen is never
+dead. Nothing but a swipe up (or Skip) gets past it.
+
+
+IT ONLY INTERRUPTS ONCE
+=======================
+Once a guest swipes up, the intro stays out of the way for the whole
+time they are browsing. It comes back by itself after the tablet has
+been left untouched for 15 minutes — ready for the next table.
+
+Change that in config.js:
+
+    intro: { showAgainAfterMin: 15 }
+
+    15  -> comes back after 15 quiet minutes   (recommended)
+    45  -> only between long sittings
+    0   -> show it once on this tablet, ever, and never again
+
+There is also a "Watch the intro" button on the home screen, so a
+guest who swiped past it can play it again whenever they like.
+
+
+ADDING OR CHANGING CLIPS
+========================
+1. Put the file in the  intro/  folder.
+2. List it in config.js:
+
+    intro: {
+      enabled: true,
+      clips:   ["intro/intro-1.mp4", "intro/intro-2.mp4", "intro/diwali.mp4"],
+      posters: ["intro/intro-1.jpg", "intro/intro-2.jpg", "intro/diwali.jpg"],
+      showAgainAfterMin: 15
+    }
+
+3. Bump the version in sw.js and re-upload. That is all.
+
+posters are the still frames shown in the split second before the
+video starts. Optional but it looks cleaner with them.
+
+To switch the whole thing off:  enabled: false
+
+
+KEEP THE FILES SMALL
+====================
+Rule of thumb: 10-20 seconds, under 8 MB each. A 40 MB clip will
+stall on restaurant wifi and the guest sees black.
+
+Each clip ships twice — .mp4 and .webm. The mp4 is what nearly every
+device plays; the webm covers the odd browser built without H.264
+support. If you add a clip as mp4 only it still works — the webm is
+just insurance.
+
+
+NO SOUND AT FIRST — THAT IS NOT A BUG
+=====================================
+Every phone and tablet browser blocks video with audio from starting
+on its own. Muted autoplay is the only thing allowed. That is why the
+"Tap for sound" button exists. Nothing can be done about it — it is
+the same on every website.
+
+So: make sure the clip works with the sound off. Text on screen,
+food shots, the logo. Treat audio as a bonus.
+
+
+IF THE VIDEO DOES NOT SHOW
+==========================
+- Did you bump  const CACHE = "hayat-vNN"  in sw.js? The tablet is
+  showing the old cached version otherwise.
+- Is the filename in config.js exactly right, including capitals?
+  intro/Intro-1.mp4 and intro/intro-1.mp4 are different files.
+- If every clip fails to load, the intro removes itself and goes
+  straight to the menu, so a guest is never stuck on a black screen.

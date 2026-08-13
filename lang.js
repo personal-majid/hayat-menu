@@ -47,6 +47,7 @@ ui: {
     galleryNav:"PHOTOS · VIDEOS",
     photos:"Photos", videos:"Videos", instagram:"Instagram",
     theMenu:"The Menu", dishes:"dishes", items:"items", ITEMS:"ITEMS",
+    introSwipe:"Swipe up for the menu", introSound:"Tap for sound", introMuted:"Sound off", introSkip:"Skip", watchIntro:"Watch the intro",
     browsePhoto:"Browse by photo", pricing:"Pricing",
     trending:"Trending on our Instagram",
     Quarter:"Quarter", Half:"Half", Full:"Full",
@@ -105,6 +106,7 @@ ui: {
     galleryNav:"ഫോട്ടോ · വീഡിയോ",
     photos:"ഫോട്ടോസ്", videos:"വീഡിയോസ്", instagram:"ഇൻസ്റ്റാഗ്രാം",
     theMenu:"മെനു", dishes:"വിഭവങ്ങൾ", items:"വിഭവങ്ങൾ", ITEMS:"വിഭവങ്ങൾ",
+    introSwipe:"മെനുവിനായി മുകളിലേക്ക് സ്വൈപ്പ് ചെയ്യുക", introSound:"ശബ്ദത്തിനായി ടാപ്പ് ചെയ്യുക", introMuted:"ശബ്ദം ഓഫ്", introSkip:"ഒഴിവാക്കുക", watchIntro:"ഇൻട്രോ കാണുക",
     browsePhoto:"ചിത്രങ്ങളിലൂടെ", pricing:"വില",
     trending:"ഞങ്ങളുടെ ഇൻസ്റ്റാഗ്രാമിൽ",
     Quarter:"ക്വാർട്ടർ", Half:"ഹാഫ്", Full:"ഫുൾ",
@@ -193,6 +195,7 @@ items: {
   d7:"മിന്റ് മൊഹീറ്റോ", d8:"തണ്ണിമത്തൻ മൊഹീറ്റോ", d9:"ഓറഞ്ച് മൊഹീറ്റോ",
   d10:"ബ്ലൂ ലഗൂൺ മൊഹീറ്റോ", d11:"പൈനാപ്പിൾ മൊഹീറ്റോ",
   d12:"പാഷൻ ഫ്രൂട്ട് മൊഹീറ്റോ", d13:"സ്ട്രോബെറി മൊഹീറ്റോ",
+  d14:"ക്യാരറ്റ് ജ്യൂസ്", d15:"പൈനാപ്പിൾ ചില്ലി മൊഹീറ്റോ",
 
   x1:"അവിൽ മിൽക്ക്", x2:"ഫലൂദ", x3:"മാങ്ങ ഡിലൈറ്റ്", x4:"ഐസ്ക്രീം"
 },

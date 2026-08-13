@@ -233,18 +233,20 @@ window.MENU = [
 { id:"drinks", ic:"\u{1F379}", name:"Juices & Mojitos", tagline:"Wild and fresh. Refreshing",
   layout:"paper", items:[
   { id:"d1", name:"Fresh Lime", price:70, tags:["veg"], img:"photos/d1.jpg", icon:"juice", tint:"#C6E04A", ig:[] },
-  { id:"d2", name:"Watermelon Juice", price:50, tags:["veg"], img:"photos/d2.jpg", icon:"juice", tint:"#E8506A", ig:[] },
+  { id:"d2", name:"Watermelon Juice", desc:"Blended from juicy handpicked watermelons. Naturally sweet, instantly cooling.", price:70, tags:["veg","star"], img:"photos/d2.jpg", icon:"juice", tint:"#E8506A", photos:[{src:"photos/posters/d2.jpg", caption:"Watermelon Juice \u2014 no added preservatives"}], ig:[] },
   { id:"d3", name:"Orange Juice", price:100, tags:["veg"], img:"photos/d3.jpg", icon:"juice", tint:"#F09024", ig:[] },
-  { id:"d4", name:"Pineapple Juice", price:100, tags:["veg"], img:"photos/d4.jpg", icon:"juice", tint:"#F0C42A", ig:[] },
+  { id:"d4", name:"Pineapple Juice", desc:"Handpicked ripe pineapples, blended fresh. Rich in vitamin C.", price:60, tags:["veg","star"], img:"photos/d4.jpg", icon:"juice", tint:"#F0C42A", photos:[{src:"photos/posters/d4.jpg", caption:"Pineapple Juice \u2014 100% real pineapple"}], ig:[] },
   { id:"d5", name:"Mixed Fruit Juice", price:110, tags:["veg"], img:"photos/d5.jpg", icon:"juice", tint:"#E8743A", ig:[] },
   { id:"d6", name:"Pomegranate Juice", price:110, tags:["veg"], img:"photos/d6.jpg", icon:"juice", tint:"#B8324A", ig:[] },
+  { id:"d14", name:"Carrot Juice", desc:"Fresh carrots, packed with beta-carotene. A healthy, refreshing boost.", price:70, tags:["veg","star"], img:"photos/d14.jpg", icon:"juice", tint:"#F07A18", photos:[{src:"photos/posters/d14.jpg", caption:"Carrot Juice \u2014 rich in vitamin A"}], ig:[] },
   { id:"d7", name:"Mint Mojito", price:90, tags:["veg"], img:"photos/d7.jpg", icon:"mojito", ig:[] },
   { id:"d8", name:"Watermelon Mojito", price:90, tags:["veg"], img:"photos/d8.jpg", icon:"mojito", tint:"#E8607A", ig:[] },
   { id:"d9", name:"Orange Mojito", price:90, tags:["veg"], img:"photos/d9.jpg", icon:"mojito", tint:"#F09024", ig:[] },
   { id:"d10", name:"Blue Lagoon Mojito", price:100, tags:["veg"], img:"photos/d10.jpg", icon:"mojito", tint:"#3AA8DC", ig:[] },
   { id:"d11", name:"Pineapple Mojito", price:100, tags:["veg"], img:"photos/d11.jpg", icon:"mojito", tint:"#EFC72E", ig:[] },
   { id:"d12", name:"Passion Fruit Mojito", price:110, tags:["veg"], img:"photos/d12.jpg", icon:"mojito", tint:"#E0A02A", ig:[] },
-  { id:"d13", name:"Strawberry Mojito", price:110, tags:["veg"], img:"photos/d13.jpg", icon:"mojito", tint:"#DC4460", ig:[] }
+  { id:"d13", name:"Strawberry Mojito", price:110, tags:["veg"], img:"photos/d13.jpg", icon:"mojito", tint:"#DC4460", ig:[] },
+  { id:"d15", name:"Pineapple Chilli Mojito", sub:"Spicy. Refreshing. Unforgettable.", desc:"Pineapple, lime and mint with a green chilli kick. The one people come back for.", price:70, tags:["veg","hot","star"], anchor:true, img:"photos/d15.jpg", icon:"mojito", tint:"#C6D63A", photos:[{src:"photos/posters/d15.jpg", caption:"Pineapple Chilli Mojito \u2014 spicy, refreshing, unforgettable"}], ig:[] }
 ]},
 
 { id:"desserts", ic:"\u{1F368}", name:"Desserts & Ice Cream", tagline:"The perfect sweet ending",

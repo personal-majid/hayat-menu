@@ -14,6 +14,31 @@ window.CONFIG = {
      --------------------------------------------------------- */
   kiosk: true,
 
+  /* ---- 0b. WELCOME VIDEOS (the intro that plays first) ------ *
+     Full-screen marketing videos shown when the tablet is idle
+     and a new guest sits down. They play automatically, one
+     after the other, and loop.
+
+     The guest swipes UP to get to the menu — nothing else
+     dismisses it. Swipe LEFT / RIGHT to jump between clips.
+
+     Add or remove clips by editing the two lists below. Drop the
+     files into the  intro/  folder. Keep each clip short (10-20s)
+     and under about 8 MB so it starts instantly.
+
+     showAgainAfterMin — once a guest has swiped past it, the
+     intro stays away while they browse. It comes back after this
+     many minutes of the tablet sitting untouched, ready for the
+     next table. Set to 0 to show it only once per browser.
+     --------------------------------------------------------- */
+  intro: {
+    enabled: true,
+    clips:   ["intro/intro-1.mp4", "intro/intro-2.mp4"],
+    posters: ["intro/intro-1.jpg", "intro/intro-2.jpg"],
+    showAgainAfterMin: 15,
+    autoAdvance: true          // move to the next clip when one ends
+  },
+
   /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
   instagram: "zaman_yemenmandi",          // <-- CHANGE THIS
 
@@ -122,7 +147,7 @@ window.CONFIG = {
   /* ---- 6c. UPSELL — shown under every main course ----------- *
      Item ids from menu-data.js. These appear as a "goes well with"
      strip on every main-course section and dish page.               */
-  upsell: ["fish-fry","chorum-meenum","d7","d10","x2","b3"],
+  upsell: ["fish-fry","d15","chorum-meenum","d4","d2","d14","x2","b3"],
 
   /* ---- 7. BRANDING ----------------------------------------- */
   tagline: "Authentic Yemeni Flavours",

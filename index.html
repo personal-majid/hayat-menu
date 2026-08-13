@@ -498,9 +498,66 @@ footer .star{color:var(--gold2);font-size:17px}
   .gbtn{padding:0 13px}
   .qgrid{grid-template-columns:1fr}
 }
+
+/* ===== WELCOME VIDEO OVERLAY ===================================== */
+#intro{position:fixed;inset:0;z-index:9000;background:#000;overflow:hidden;
+  touch-action:none;transition:transform .5s cubic-bezier(.4,0,.2,1),opacity .5s}
+#intro[hidden]{display:none}
+#intro.gone{transform:translateY(-100%);opacity:0;pointer-events:none}
+#introtrack{display:flex;height:100%;width:100%;
+  transition:transform .38s cubic-bezier(.4,0,.2,1)}
+#introtrack.nosnap{transition:none}
+.introslide{flex:0 0 100%;height:100%;position:relative;background:#000}
+.introslide video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
+/* the clips are 16:9 — on a portrait phone, letterbox instead of
+   cropping the logo out of frame */
+@media (orientation:portrait){ .introslide video{object-fit:contain} }
+#intro .veil{position:absolute;inset:auto 0 0 0;height:42%;pointer-events:none;
+  background:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,0))}
+#intro .topveil{position:absolute;inset:0 0 auto 0;height:22%;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(0,0,0,.55),rgba(0,0,0,0))}
+#introhint{position:absolute;left:0;right:0;bottom:max(26px,env(safe-area-inset-bottom));
+  text-align:center;color:#fff;z-index:3;pointer-events:none;
+  font-size:clamp(15px,2.1vw,20px);letter-spacing:.04em;
+  text-shadow:0 2px 14px rgba(0,0,0,.7)}
+#introhint .chev{display:block;width:17px;height:17px;margin:0 auto 9px;
+  border-left:3px solid var(--gold,#d9a441);border-top:3px solid var(--gold,#d9a441);
+  border-radius:3px;transform:rotate(45deg);font-size:0;
+  animation:introbob 1.6s ease-in-out infinite}
+@keyframes introbob{0%,100%{transform:rotate(45deg) translate(4px,4px);opacity:.5}
+  50%{transform:rotate(45deg) translate(-3px,-3px);opacity:1}}
+#introdots{position:absolute;left:0;right:0;bottom:max(104px,calc(env(safe-area-inset-bottom) + 92px));
+  display:flex;gap:8px;justify-content:center;z-index:3;pointer-events:none}
+#introdots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.38);
+  transition:all .25s}
+#introdots i.on{background:var(--gold,#d9a441);width:22px;border-radius:4px}
+#intro .ib{position:absolute;z-index:4;border:1px solid rgba(255,255,255,.3);
+  background:rgba(0,0,0,.42);color:#fff;border-radius:999px;cursor:pointer;
+  font:600 14px/1 inherit;padding:11px 16px;backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px)}
+#intro .ib:active{transform:scale(.95)}
+#introsound{top:max(16px,env(safe-area-inset-top));right:16px}
+#introskip{top:max(16px,env(safe-area-inset-top));left:16px}
+#introreplay{display:inline-flex;align-items:center;gap:8px;margin-top:14px;
+  border:1px solid rgba(217,164,65,.5);background:rgba(217,164,65,.1);
+  color:var(--gold,#d9a441);border-radius:999px;padding:9px 18px;cursor:pointer;
+  font:600 14px/1 inherit}
+#introreplay:active{transform:scale(.97)}
+@media (max-width:560px){
+  #intro .ib{padding:9px 13px;font-size:13px}
+  #introhint{font-size:14px}
+}
 </style>
 </head>
 <body>
+<div id="intro" hidden>
+  <div id="introtrack"></div>
+  <div class="topveil"></div><div class="veil"></div>
+  <button class="ib" id="introskip" type="button">Skip &rarr;</button>
+  <button class="ib" id="introsound" type="button">&#128263; Tap for sound</button>
+  <div id="introdots"></div>
+  <div id="introhint"><span class="chev">&#94;</span><span id="introhinttxt">Swipe up for the menu</span></div>
+</div>
 <div id="app">
   <header>
     <img class="logo" src="assets/mark.png" alt="">
@@ -1061,6 +1118,7 @@ ui: {
     galleryNav:"PHOTOS · VIDEOS",
     photos:"Photos", videos:"Videos", instagram:"Instagram",
     theMenu:"The Menu", dishes:"dishes", items:"items", ITEMS:"ITEMS",
+    introSwipe:"Swipe up for the menu", introSound:"Tap for sound", introMuted:"Sound off", introSkip:"Skip", watchIntro:"Watch the intro",
     browsePhoto:"Browse by photo", pricing:"Pricing",
     trending:"Trending on our Instagram",
     Quarter:"Quarter", Half:"Half", Full:"Full",
@@ -1119,6 +1177,7 @@ ui: {
     galleryNav:"ഫോട്ടോ · വീഡിയോ",
     photos:"ഫോട്ടോസ്", videos:"വീഡിയോസ്", instagram:"ഇൻസ്റ്റാഗ്രാം",
     theMenu:"മെനു", dishes:"വിഭവങ്ങൾ", items:"വിഭവങ്ങൾ", ITEMS:"വിഭവങ്ങൾ",
+    introSwipe:"മെനുവിനായി മുകളിലേക്ക് സ്വൈപ്പ് ചെയ്യുക", introSound:"ശബ്ദത്തിനായി ടാപ്പ് ചെയ്യുക", introMuted:"ശബ്ദം ഓഫ്", introSkip:"ഒഴിവാക്കുക", watchIntro:"ഇൻട്രോ കാണുക",
     browsePhoto:"ചിത്രങ്ങളിലൂടെ", pricing:"വില",
     trending:"ഞങ്ങളുടെ ഇൻസ്റ്റാഗ്രാമിൽ",
     Quarter:"ക്വാർട്ടർ", Half:"ഹാഫ്", Full:"ഫുൾ",
@@ -1207,6 +1266,7 @@ items: {
   d7:"മിന്റ് മൊഹീറ്റോ", d8:"തണ്ണിമത്തൻ മൊഹീറ്റോ", d9:"ഓറഞ്ച് മൊഹീറ്റോ",
   d10:"ബ്ലൂ ലഗൂൺ മൊഹീറ്റോ", d11:"പൈനാപ്പിൾ മൊഹീറ്റോ",
   d12:"പാഷൻ ഫ്രൂട്ട് മൊഹീറ്റോ", d13:"സ്ട്രോബെറി മൊഹീറ്റോ",
+  d14:"ക്യാരറ്റ് ജ്യൂസ്", d15:"പൈനാപ്പിൾ ചില്ലി മൊഹീറ്റോ",
 
   x1:"അവിൽ മിൽക്ക്", x2:"ഫലൂദ", x3:"മാങ്ങ ഡിലൈറ്റ്", x4:"ഐസ്ക്രീം"
 },
@@ -1234,6 +1294,31 @@ window.CONFIG = {
      false = normal website. Buttons open links directly.
      --------------------------------------------------------- */
   kiosk: true,
+
+  /* ---- 0b. WELCOME VIDEOS (the intro that plays first) ------ *
+     Full-screen marketing videos shown when the tablet is idle
+     and a new guest sits down. They play automatically, one
+     after the other, and loop.
+
+     The guest swipes UP to get to the menu — nothing else
+     dismisses it. Swipe LEFT / RIGHT to jump between clips.
+
+     Add or remove clips by editing the two lists below. Drop the
+     files into the  intro/  folder. Keep each clip short (10-20s)
+     and under about 8 MB so it starts instantly.
+
+     showAgainAfterMin — once a guest has swiped past it, the
+     intro stays away while they browse. It comes back after this
+     many minutes of the tablet sitting untouched, ready for the
+     next table. Set to 0 to show it only once per browser.
+     --------------------------------------------------------- */
+  intro: {
+    enabled: true,
+    clips:   ["intro/intro-1.mp4", "intro/intro-2.mp4"],
+    posters: ["intro/intro-1.jpg", "intro/intro-2.jpg"],
+    showAgainAfterMin: 15,
+    autoAdvance: true          // move to the next clip when one ends
+  },
 
   /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
   instagram: "zaman_yemenmandi",          // <-- CHANGE THIS
@@ -1343,7 +1428,7 @@ window.CONFIG = {
   /* ---- 6c. UPSELL — shown under every main course ----------- *
      Item ids from menu-data.js. These appear as a "goes well with"
      strip on every main-course section and dish page.               */
-  upsell: ["fish-fry","chorum-meenum","d7","d10","x2","b3"],
+  upsell: ["fish-fry","d15","chorum-meenum","d4","d2","d14","x2","b3"],
 
   /* ---- 7. BRANDING ----------------------------------------- */
   tagline: "Authentic Yemeni Flavours",
@@ -1587,18 +1672,20 @@ window.MENU = [
 { id:"drinks", ic:"\u{1F379}", name:"Juices & Mojitos", tagline:"Wild and fresh. Refreshing",
   layout:"paper", items:[
   { id:"d1", name:"Fresh Lime", price:70, tags:["veg"], img:"photos/d1.jpg", icon:"juice", tint:"#C6E04A", ig:[] },
-  { id:"d2", name:"Watermelon Juice", price:50, tags:["veg"], img:"photos/d2.jpg", icon:"juice", tint:"#E8506A", ig:[] },
+  { id:"d2", name:"Watermelon Juice", desc:"Blended from juicy handpicked watermelons. Naturally sweet, instantly cooling.", price:70, tags:["veg","star"], img:"photos/d2.jpg", icon:"juice", tint:"#E8506A", photos:[{src:"photos/posters/d2.jpg", caption:"Watermelon Juice \u2014 no added preservatives"}], ig:[] },
   { id:"d3", name:"Orange Juice", price:100, tags:["veg"], img:"photos/d3.jpg", icon:"juice", tint:"#F09024", ig:[] },
-  { id:"d4", name:"Pineapple Juice", price:100, tags:["veg"], img:"photos/d4.jpg", icon:"juice", tint:"#F0C42A", ig:[] },
+  { id:"d4", name:"Pineapple Juice", desc:"Handpicked ripe pineapples, blended fresh. Rich in vitamin C.", price:60, tags:["veg","star"], img:"photos/d4.jpg", icon:"juice", tint:"#F0C42A", photos:[{src:"photos/posters/d4.jpg", caption:"Pineapple Juice \u2014 100% real pineapple"}], ig:[] },
   { id:"d5", name:"Mixed Fruit Juice", price:110, tags:["veg"], img:"photos/d5.jpg", icon:"juice", tint:"#E8743A", ig:[] },
   { id:"d6", name:"Pomegranate Juice", price:110, tags:["veg"], img:"photos/d6.jpg", icon:"juice", tint:"#B8324A", ig:[] },
+  { id:"d14", name:"Carrot Juice", desc:"Fresh carrots, packed with beta-carotene. A healthy, refreshing boost.", price:70, tags:["veg","star"], img:"photos/d14.jpg", icon:"juice", tint:"#F07A18", photos:[{src:"photos/posters/d14.jpg", caption:"Carrot Juice \u2014 rich in vitamin A"}], ig:[] },
   { id:"d7", name:"Mint Mojito", price:90, tags:["veg"], img:"photos/d7.jpg", icon:"mojito", ig:[] },
   { id:"d8", name:"Watermelon Mojito", price:90, tags:["veg"], img:"photos/d8.jpg", icon:"mojito", tint:"#E8607A", ig:[] },
   { id:"d9", name:"Orange Mojito", price:90, tags:["veg"], img:"photos/d9.jpg", icon:"mojito", tint:"#F09024", ig:[] },
   { id:"d10", name:"Blue Lagoon Mojito", price:100, tags:["veg"], img:"photos/d10.jpg", icon:"mojito", tint:"#3AA8DC", ig:[] },
   { id:"d11", name:"Pineapple Mojito", price:100, tags:["veg"], img:"photos/d11.jpg", icon:"mojito", tint:"#EFC72E", ig:[] },
   { id:"d12", name:"Passion Fruit Mojito", price:110, tags:["veg"], img:"photos/d12.jpg", icon:"mojito", tint:"#E0A02A", ig:[] },
-  { id:"d13", name:"Strawberry Mojito", price:110, tags:["veg"], img:"photos/d13.jpg", icon:"mojito", tint:"#DC4460", ig:[] }
+  { id:"d13", name:"Strawberry Mojito", price:110, tags:["veg"], img:"photos/d13.jpg", icon:"mojito", tint:"#DC4460", ig:[] },
+  { id:"d15", name:"Pineapple Chilli Mojito", sub:"Spicy. Refreshing. Unforgettable.", desc:"Pineapple, lime and mint with a green chilli kick. The one people come back for.", price:70, tags:["veg","hot","star"], anchor:true, img:"photos/d15.jpg", icon:"mojito", tint:"#C6D63A", photos:[{src:"photos/posters/d15.jpg", caption:"Pineapple Chilli Mojito \u2014 spicy, refreshing, unforgettable"}], ig:[] }
 ]},
 
 { id:"desserts", ic:"\u{1F368}", name:"Desserts & Ice Cream", tagline:"The perfect sweet ending",
@@ -1935,6 +2022,8 @@ function viewHome(){
    <div class="homehero"><img src="assets/logo.png" alt="Hayat Fish Restaurant">
      <div class="tl">${esc(C.tagline)}</div>
      <div class="trust">${(C.trustBadges||[]).map(b=>`<span>${esc(b)}</span>`).join("")}</div>
+     ${(C.intro && C.intro.enabled!==false && (C.intro.clips||[]).length)
+        ? `<button id="introreplay" type="button">&#9654; ${T("watchIntro")}</button>` : ""}
    </div>
 
    <h3 class="mini">${T("theMenu")} &middot; ${total} ${T("dishes")}</h3>
@@ -2391,6 +2480,7 @@ document.getElementById("fcat").onclick=sheetCatering;
 document.getElementById("galbtn").onclick=()=>{search.value="";location.hash="#/gallery"};
 document.getElementById("langbtn").onclick=()=>{
   L = L==="en" ? "ml" : "en"; saveLang(L); applyChrome(); route();
+  try{ if(window.INTRO) window.INTRO.relabel(); }catch(e){}
 };
 search.addEventListener("input",route);
 window.addEventListener("resize",applyChrome);
@@ -2402,6 +2492,213 @@ try{ route(); }catch(err){
   window.onerror("Startup failed: "+(err&&err.message), "index.html", 0, 0, err);
 }
 if("wakeLock" in navigator) navigator.wakeLock.request("screen").catch(()=>{});
+
+/* ===== WELCOME VIDEO OVERLAY =====================================
+   Full-screen clips that play when a new guest sits down.
+   Swipe UP  -> the menu.  Swipe LEFT/RIGHT -> next / previous clip.
+   Comes back on its own after the tablet has been idle a while, so
+   the next table gets the same welcome. ================================ */
+var INTRO = (function(){
+  var cfg   = (C && C.intro) || {};
+  var el    = document.getElementById("intro");
+  var track = document.getElementById("introtrack");
+  var dots  = document.getElementById("introdots");
+  var bSnd  = document.getElementById("introsound");
+  var bSkip = document.getElementById("introskip");
+  var hint  = document.getElementById("introhinttxt");
+  var KEY   = "hayat_intro_seen";
+
+  var clips = [], posters = [];
+  try{
+    clips = (cfg.clips || []).filter(function(s){ return s && String(s).indexOf("PUT_")!==0; });
+    posters = cfg.posters || [];
+  }catch(e){ clips = []; }
+
+  var idx = 0, vids = [], built = false, live = false, muted = true;
+  var lastTouch = Date.now(), armed = false;
+
+  function gapMs(){
+    var m = (cfg.showAgainAfterMin == null) ? 15 : Number(cfg.showAgainAfterMin);
+    return (m > 0 ? m : 0) * 60000;
+  }
+  function stamp(){ try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){} }
+  function lastSeen(){ try{ return Number(localStorage.getItem(KEY)) || 0; }catch(e){ return 0; } }
+
+  function srcTag(url, type){
+    var s = document.createElement("source");
+    s.src = url; s.type = type; return s;
+  }
+  function build(){
+    if(built || !el || !clips.length) return;
+    track.innerHTML = "";
+    vids = clips.map(function(src,i){
+      var s = document.createElement("div"); s.className = "introslide";
+      var v = document.createElement("video");
+      /* mp4 first (iOS, Android Chrome), webm as a fallback for browsers
+         built without H.264. Same clip, both formats sit in intro/. */
+      var alt = String(src).replace(/\.mp4$/i, ".webm");
+      v.appendChild(srcTag(src, "video/mp4"));
+      if(alt !== src) v.appendChild(srcTag(alt, "video/webm"));
+      if(posters[i]) v.poster = posters[i];
+      v.muted = true; v.defaultMuted = true; v.playsInline = true;
+      v.setAttribute("playsinline",""); v.setAttribute("webkit-playsinline","");
+      v.preload = i === 0 ? "auto" : "metadata";
+      v.addEventListener("ended", function(){
+        if(cfg.autoAdvance === false){ try{ v.currentTime = 0; v.play(); }catch(e){} }
+        else go(idx + 1);
+      });
+      v.addEventListener("error", function(){
+        v.dataset.bad = "1";
+        /* if every clip is unplayable, get out of the way rather than
+           trapping the guest on a black screen */
+        if(vids.every(function(x){ return x.dataset.bad; })){ close(); return; }
+        go(idx + 1);
+      });
+      s.appendChild(v); track.appendChild(s);
+      return v;
+    });
+    dots.innerHTML = clips.map(function(_,i){
+      return '<i class="' + (i ? "" : "on") + '"></i>';
+    }).join("");
+    built = true;
+  }
+
+  function paint(){
+    track.style.transform = "translateX(" + (-idx * 100) + "%)";
+    var ds = dots.children;
+    for(var i = 0; i < ds.length; i++) ds[i].className = (i === idx ? "on" : "");
+    vids.forEach(function(v,i){
+      if(i === idx){
+        v.muted = muted;
+        var p = v.play(); if(p && p.catch) p.catch(function(){});
+        var nx = vids[i+1]; if(nx && nx.preload !== "auto") nx.preload = "auto";
+      }else{
+        try{ v.pause(); v.currentTime = 0; }catch(e){}
+      }
+    });
+  }
+  function go(n){
+    if(!clips.length) return;
+    idx = ((n % clips.length) + clips.length) % clips.length;
+    track.classList.remove("nosnap");
+    paint();
+  }
+
+  function open(force){
+    if(!el || !clips.length) return;
+    if(!force && !shouldShow()) return;
+    build();
+    idx = 0; muted = true;
+    label();
+    el.hidden = false;
+    void el.offsetWidth;                 // force reflow so the transition runs
+    el.classList.remove("gone");
+    document.body.style.overflow = "hidden";
+    live = true;
+    paint();
+  }
+  function close(){
+    if(!live) return;
+    live = false;
+    el.classList.add("gone");
+    stamp();
+    vids.forEach(function(v){ try{ v.pause(); }catch(e){} });
+    document.body.style.overflow = "";
+    setTimeout(function(){ if(!live) el.hidden = true; }, 520);
+  }
+  function shouldShow(){
+    if(cfg.enabled === false || !clips.length) return false;
+    var last = lastSeen();
+    if(!last) return true;
+    var g = gapMs();
+    if(!g) return false;                 // showAgainAfterMin: 0  -> once per tablet
+    return (Date.now() - last) > g;
+  }
+
+  function label(){
+    try{
+      bSkip.innerHTML = T("introSkip") + " &rarr;";
+      bSnd.innerHTML  = (muted ? "&#128263; " : "&#128266; ") + T(muted ? "introSound" : "introMuted");
+      hint.textContent = T("introSwipe");
+    }catch(e){}
+  }
+
+  /* ---- gestures ---- */
+  var sx = 0, sy = 0, dx = 0, dy = 0, dragging = false, axis = "";
+  function down(e){
+    if(!live) return;
+    var t = e.touches ? e.touches[0] : e;
+    sx = t.clientX; sy = t.clientY; dx = dy = 0; dragging = true; axis = "";
+    track.classList.add("nosnap");
+  }
+  function move(e){
+    if(!dragging || !live) return;
+    var t = e.touches ? e.touches[0] : e;
+    dx = t.clientX - sx; dy = t.clientY - sy;
+    if(!axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8))
+      axis = Math.abs(dy) > Math.abs(dx) ? "y" : "x";
+    if(axis === "x"){
+      track.style.transform = "translateX(calc(" + (-idx * 100) + "% + " + dx + "px))";
+    }else if(axis === "y" && dy < 0){
+      el.style.transform = "translateY(" + Math.max(dy, -260) + "px)";
+      el.style.opacity = String(Math.max(0, 1 + dy / 420));
+    }
+    if(e.cancelable) e.preventDefault();
+  }
+  function up(){
+    if(!dragging) return;
+    dragging = false;
+    el.style.transform = ""; el.style.opacity = "";
+    if(axis === "y" && dy < -70){ close(); return; }
+    if(axis === "x" && Math.abs(dx) > 55) go(idx + (dx < 0 ? 1 : -1));
+    else go(idx);
+    axis = "";
+  }
+  if(el){
+    el.addEventListener("touchstart", down, {passive:true});
+    el.addEventListener("touchmove",  move, {passive:false});
+    el.addEventListener("touchend",   up);
+    el.addEventListener("touchcancel",up);
+    el.addEventListener("mousedown",  down);
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup",   up);
+    el.addEventListener("wheel", function(e){ if(live && e.deltaY > 12) close(); }, {passive:true});
+    bSkip.addEventListener("click", function(e){ e.stopPropagation(); close(); });
+    bSnd.addEventListener("click",  function(e){
+      e.stopPropagation(); muted = !muted;
+      var v = vids[idx]; if(v){ v.muted = muted; if(!muted){ var p = v.play(); if(p&&p.catch) p.catch(function(){}); } }
+      label();
+    });
+    window.addEventListener("keydown", function(e){
+      if(!live) return;
+      if(e.key === "Escape" || e.key === "ArrowUp") close();
+      if(e.key === "ArrowRight") go(idx + 1);
+      if(e.key === "ArrowLeft")  go(idx - 1);
+    });
+  }
+
+  /* ---- replay button on the home screen ---- */
+  document.addEventListener("click", function(e){
+    var b = e.target && e.target.closest && e.target.closest("#introreplay");
+    if(b){ e.preventDefault(); open(true); }
+  });
+
+  /* ---- idle: bring it back for the next table ---- */
+  ["touchstart","mousedown","keydown","scroll"].forEach(function(ev){
+    window.addEventListener(ev, function(){ lastTouch = Date.now(); }, {passive:true});
+  });
+  setInterval(function(){
+    if(live || !gapMs() || cfg.enabled === false) return;
+    if(Date.now() - lastTouch < gapMs()) return;
+    lastTouch = Date.now();
+    if(location.hash && location.hash !== "#/") location.hash = "#/";
+    open(true);
+  }, 20000);
+
+  return { open:open, close:close, relabel:label, has:function(){ return clips.length > 0; } };
+})();
+
+try{ INTRO.open(false); }catch(e){}
 
 /* offline support — https only, silently skipped on file:// */
 var okCtx = location.protocol==="https:" || ["localhost","127.0.0.1"].indexOf(location.hostname)>=0;
