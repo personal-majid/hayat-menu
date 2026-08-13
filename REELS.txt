@@ -52,8 +52,14 @@ button, and that play button navigates to instagram.com. There is no setting,
 no API, no Meta review that changes this — Meta does not allow reel playback
 inside somebody else's page.
 
-So on the tablet the embed is used as a live picture only. It takes no taps.
-Tapping the card gives the QR code and the tablet stays on your menu.
+So on the tablet the embed is used as a live picture only. It takes no taps
+of its own. Tapping the card opens our own sheet, which gives the guest both:
+
+    [ Open on Instagram ]      <- opens the reel in a new tab, right there
+    -- or scan the code --     <- QR, they watch it on their own phone
+
+The menu is never lost: closing the Instagram tab, or the Close button,
+brings the tablet straight back.
 
 IF YOU WANT THE VIDEO TO ACTUALLY PLAY ON THE TABLET
 ====================================================

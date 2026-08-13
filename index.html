@@ -434,15 +434,12 @@ textarea.fld{min-height:110px;resize:vertical}
 .igc .igmask{position:absolute;left:0;right:0;z-index:2;pointer-events:none;background:#0d0703}
 .igc .igmask.top{top:0;height:54px}
 .igc .igmask.bot{bottom:0;height:132px}
-.igc .bigplay{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:4;
-  width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-size:22px;
-  color:#fff;background:rgba(10,6,3,.52);border:1.5px solid rgba(255,255,255,.6);
-  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none}
 .igc .qrb{position:absolute;right:10px;bottom:44px;z-index:5;cursor:pointer;
   border:1px solid rgba(255,255,255,.34);background:rgba(10,6,3,.62);color:#fff;
   border-radius:999px;padding:6px 11px;font:700 11px/1 inherit;letter-spacing:.3px;
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .igc .qrb:active{transform:scale(.94)}
+.qsheet .orline{margin-top:9px;text-align:center;font-size:12px;opacity:.62;letter-spacing:.02em}
 .igc .foot{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:26px 13px 12px;
   font-size:12.5px;font-weight:700;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(8,4,2,.92))}
@@ -1125,6 +1122,7 @@ ui: {
     scanReel:"Scan to watch this reel",
     goesWith:"Goes well with", scanFollow:"Scan to follow @", scanWa:"Scan to message us",
     scanWatch:"Scan to watch on your phone", onYourPhone:"Open it on your phone",
+    openInsta:"Open on Instagram", orScan:"\u2014 or scan the code to watch it on your own phone \u2014",
     kioskNote:"Point your camera at the code",
     watchHere:"Watch here", videosNone:"No videos added yet.",
     langBtn:"മലയാളം", search:"Search…",
@@ -1182,6 +1180,7 @@ ui: {
     partyWa:"അല്ലെങ്കിൽ ഇപ്പോൾ തന്നെ മെസ്സേജ് ചെയ്യൂ", needPhone:"വിളിക്കാൻ ഒരു ഫോൺ നമ്പർ നൽകൂ.",
     ourReels:"ഞങ്ങളുടെ റീലുകൾ", reelTap:"ഒരു റീൽ തൊട്ട് ഫോണിൽ സ്കാൻ ചെയ്യൂ",
     scanReel:"ഈ റീൽ കാണാൻ സ്കാൻ ചെയ്യൂ",
+    openInsta:"ഇന്‍സ്റ്റഗ്രാമിൽ തുറക്കുക", orScan:"— അല്ലെങ്കിൽ സ്കാൻ ചെയ്ത് സ്വന്തം ഫോണിൽ കാണുക —",
     goesWith:"ഇതിനൊപ്പം നന്നായിരിക്കും", scanFollow:"ഫോളോ ചെയ്യാൻ സ്കാൻ ചെയ്യൂ @", scanWa:"മെസ്സേജ് ചെയ്യാൻ സ്കാൻ ചെയ്യൂ",
     scanWatch:"നിങ്ങളുടെ ഫോണിൽ കാണാൻ സ്കാൻ ചെയ്യൂ", onYourPhone:"നിങ്ങളുടെ ഫോണിൽ തുറക്കൂ",
     kioskNote:"ക്യാമറ കോഡിലേക്ക് കാണിക്കൂ",
@@ -1986,8 +1985,7 @@ function reelCards2(list){
         : ``}
       <span class="igmask top"></span><span class="igmask bot"></span>
       <span class="mark">◉ REEL</span>
-      <span class="bigplay">&#9654;</span>
-      <button class="qrb" type="button">&#9635; ${T("onYourPhone")}</button>
+      <button class="qrb" type="button">&#9635; ${T("openInsta")}</button>
       <span class="foot">${esc(r.title||T("scanReel"))}</span>
     </div>`).join("");
 }
@@ -1997,8 +1995,9 @@ function reelSheet(i){
     <h4>◉ ${esc(r.title||"Reel")}</h4>
     <div class="note">${T("scanReel")} · ${T("kioskNote")}</div>
     <div class="big"><img src="${qrFor(r.url)}" alt=""></div>
-    ${KIOSK?"":`<div class="cta"><a class="gold" style="flex:1;justify-content:center"
-      href="${esc(r.url)}" target="_blank" rel="noopener">${T("onYourPhone")}</a></div>`}
+    <div class="cta"><a class="gold" style="flex:1;justify-content:center"
+      href="${esc(r.url)}" target="_blank" rel="noopener">${T("openInsta")}</a></div>
+    <div class="orline">${T("orScan")}</div>
     <button class="close" data-close>${T("close")}</button></div></div>`;
 }
 function qrSheet(kind){
