@@ -36,6 +36,8 @@ window.CONFIG = {
     clips:   ["intro/intro-1.mp4", "intro/intro-2.mp4"],
     posters: ["intro/intro-1.jpg", "intro/intro-2.jpg"],
     showAgainAfterMin: 15,
+    sound: true,               // start with the audio ON. If the browser blocks
+                               // it, the first tap anywhere turns the sound on.
     autoAdvance: true          // move to the next clip when one ends
   },
 
@@ -103,9 +105,9 @@ window.CONFIG = {
   /* ---- 6. INSTAGRAM POSTS ---------------------------------- *
      Shown on the home page and in the Gallery → Instagram tab.
      Open a reel or post → Share → Copy link → paste below.
-     The real Instagram post renders on the page (thumbnail, caption,
-     view count). Tapping it opens a QR so the customer watches on
-     their own phone — the tablet never leaves the menu.
+     The real Instagram post renders and plays on the page. The small
+     QR button in the corner of each card hands the reel to the guest's
+     own phone — the tablet never leaves the menu.
 
      Paste as many as you want. Hundreds is fine.                     */
   trending: [

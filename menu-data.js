@@ -32,7 +32,7 @@ window.MENU = [
     desc:"Everything at once. A mountain of mandi rice buried under beef, chicken and alfaham, "+
          "finished with roasted cashew, raisin and boiled egg. Built for a full table — "+
          "order it once and nobody at the table needs anything else.",
-    matrix:{cols:QHF,rows:[["Price",[null,599,999]]]} },
+    matrix:{cols:QHF,rows:[["Price",[349,699,1399]]]} },
 
   { id:"beef-mandi", name:"Beef Mandi", sub:"Our Pride", tags:["star"],
     desc:"Tender beef slow cooked to perfection with our signature Yemeni spices.",
@@ -113,13 +113,20 @@ window.MENU = [
     matrix:{cols:QHF,rows:[["Without Mandi",[150,260,420]],["With Mandi",[230,370,670]]]} }
 ]},
 
-{ id:"exotic", ic:"\u{1F336}", name:"Exotic Delights", tagline:"Crispy, fiery, made to share",
+{ id:"exotic", ic:"\u{1F357}", name:"Fried Chicken", tagline:"Broasted, crunchy, fried the minute you order it",
   layout:"list", items:[
 
   { id:"broast", name:"Broast Fried Chicken", sub:"Crispy perfection", tags:["star"],
     desc:"Pressure-fried chicken with a crisp golden crust. Served with dip and salad.",
     img:"photos/broast.jpg", icon:"broast", ig:[],
     opts:[["4 pieces",150],["8 pieces",250],["12 pieces",375]] },
+
+  { id:"chicken-65", name:"Chicken 65", sub:"The one everyone starts with", tags:["hot","star"],
+    desc:"Boneless chicken marinated in chilli, ginger and curry leaf, fried hard and fast "+
+         "so the outside snaps and the inside stays juicy. Order it before anything else "+
+         "arrives — it never lasts the table.",
+    img:"photos/chicken-65.jpg", icon:"broast", tint:"#D2462A", ig:[],
+    opts:[["Plate",150]] },
 
   { id:"dragon", name:"Dragon Chicken", sub:"Fiery delight", tags:["hot"],
     desc:"Boneless chicken tossed with dried chilli, capsicum and cashew in a glossy hot sauce.",
@@ -158,11 +165,14 @@ window.MENU = [
   note:"⚠ PRICES TO CONFIRM — new section, set your real prices in menu-data.js.",
   layout:"list", items:[
 
-  { id:"fish-fry", name:"Legendary Fish Fry", sub:"You will not resist it", anchor:true,
-    tags:["star"], icon:"fish", img:"photos/fish-fry.jpg", ig:[],
-    desc:"Whole fish scored to the bone, packed with red chilli, shallot and curry leaf, "+
-         "then shallow fried in coconut oil until the edges crackle. People order one to "+
-         "share and end up ordering three. This is the plate our regulars are actually here for.",
+  { id:"fish-fry", name:"The Legendary Fish Fry", sub:"Our pride. The reason people drive here.",
+    anchor:true, hero:true, tags:["star","hot"], icon:"fish", img:"photos/fish-fry.jpg", ig:[],
+    desc:"This is the plate we built our name on. Whole fish, bought off the boat that morning, "+
+         "scored to the bone and packed with red chilli, shallot and curry leaf. Fried in coconut "+
+         "oil until the edges crackle and the smell reaches the next table. "+
+         "One family orders it, the table beside them asks what it is, and orders it too. "+
+         "Nobody has ever finished a piece and left it at one. "+
+         "If you order one thing in this restaurant, order this.",
     matrix:{cols:QHF,rows:[["Price",[null,null,180]]]} },
 
   { id:"chorum-meenum", name:"Chorum Meenum", sub:"Rice and fish meals", tags:["star"],

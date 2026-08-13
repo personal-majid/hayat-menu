@@ -426,7 +426,11 @@ textarea.fld{min-height:110px;resize:vertical}
   transform:scale(1.02);transform-origin:top center;
   opacity:0;transition:opacity .45s ease}
 .igc iframe.in{opacity:1}
-.igc .tapcatch{position:absolute;inset:0;z-index:2;cursor:pointer}
+.igc .qrb{position:absolute;right:10px;top:12px;z-index:4;cursor:pointer;
+  border:1px solid rgba(255,255,255,.34);background:rgba(10,6,3,.62);color:#fff;
+  border-radius:999px;padding:6px 11px;font:700 11px/1 inherit;letter-spacing:.3px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.igc .qrb:active{transform:scale(.94)}
 .igc .foot{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:26px 13px 12px;
   font-size:12.5px;font-weight:700;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(8,4,2,.92))}
@@ -1118,7 +1122,7 @@ ui: {
     galleryNav:"PHOTOS · VIDEOS",
     photos:"Photos", videos:"Videos", instagram:"Instagram",
     theMenu:"The Menu", dishes:"dishes", items:"items", ITEMS:"ITEMS",
-    introSwipe:"Swipe up for the menu", introSound:"Tap for sound", introMuted:"Sound off", introSkip:"Skip", watchIntro:"Watch the intro",
+    introSwipe:"Swipe up for the menu", introSound:"Tap for sound", introMuted:"Tap to mute", introSkip:"Skip", watchIntro:"Watch the intro",
     browsePhoto:"Browse by photo", pricing:"Pricing",
     trending:"Trending on our Instagram",
     Quarter:"Quarter", Half:"Half", Full:"Full",
@@ -1177,7 +1181,7 @@ ui: {
     galleryNav:"ഫോട്ടോ · വീഡിയോ",
     photos:"ഫോട്ടോസ്", videos:"വീഡിയോസ്", instagram:"ഇൻസ്റ്റാഗ്രാം",
     theMenu:"മെനു", dishes:"വിഭവങ്ങൾ", items:"വിഭവങ്ങൾ", ITEMS:"വിഭവങ്ങൾ",
-    introSwipe:"മെനുവിനായി മുകളിലേക്ക് സ്വൈപ്പ് ചെയ്യുക", introSound:"ശബ്ദത്തിനായി ടാപ്പ് ചെയ്യുക", introMuted:"ശബ്ദം ഓഫ്", introSkip:"ഒഴിവാക്കുക", watchIntro:"ഇൻട്രോ കാണുക",
+    introSwipe:"മെനുവിനായി മുകളിലേക്ക് സ്വൈപ്പ് ചെയ്യുക", introSound:"ശബ്ദത്തിനായി ടാപ്പ് ചെയ്യുക", introMuted:"ശബ്ദം ഓഫ് ചെയ്യുക", introSkip:"ഒഴിവാക്കുക", watchIntro:"ഇൻട്രോ കാണുക",
     browsePhoto:"ചിത്രങ്ങളിലൂടെ", pricing:"വില",
     trending:"ഞങ്ങളുടെ ഇൻസ്റ്റാഗ്രാമിൽ",
     Quarter:"ക്വാർട്ടർ", Half:"ഹാഫ്", Full:"ഫുൾ",
@@ -1210,7 +1214,7 @@ sections: {
   mandi:"സിഗ്നേച്ചർ മന്ദി",
   alfaham:"അൽഫഹം",
   shawaya:"ഷവായ",
-  exotic:"സ്പെഷ്യൽ വിഭവങ്ങൾ",
+  exotic:"ഫ്രൈഡ് ചിക്കൻ",
   biryani:"ബിരിയാണി",
   seafood:"ചോറും മീനും",
   gravies:"കറികൾ",
@@ -1266,6 +1270,7 @@ items: {
   d7:"മിന്റ് മൊഹീറ്റോ", d8:"തണ്ണിമത്തൻ മൊഹീറ്റോ", d9:"ഓറഞ്ച് മൊഹീറ്റോ",
   d10:"ബ്ലൂ ലഗൂൺ മൊഹീറ്റോ", d11:"പൈനാപ്പിൾ മൊഹീറ്റോ",
   d12:"പാഷൻ ഫ്രൂട്ട് മൊഹീറ്റോ", d13:"സ്ട്രോബെറി മൊഹീറ്റോ",
+  "chicken-65":"ചിക്കൻ 65",
   d14:"ക്യാരറ്റ് ജ്യൂസ്", d15:"പൈനാപ്പിൾ ചില്ലി മൊഹീറ്റോ",
 
   x1:"അവിൽ മിൽക്ക്", x2:"ഫലൂദ", x3:"മാങ്ങ ഡിലൈറ്റ്", x4:"ഐസ്ക്രീം"
@@ -1317,6 +1322,8 @@ window.CONFIG = {
     clips:   ["intro/intro-1.mp4", "intro/intro-2.mp4"],
     posters: ["intro/intro-1.jpg", "intro/intro-2.jpg"],
     showAgainAfterMin: 15,
+    sound: true,               // start with the audio ON. If the browser blocks
+                               // it, the first tap anywhere turns the sound on.
     autoAdvance: true          // move to the next clip when one ends
   },
 
@@ -1384,9 +1391,9 @@ window.CONFIG = {
   /* ---- 6. INSTAGRAM POSTS ---------------------------------- *
      Shown on the home page and in the Gallery → Instagram tab.
      Open a reel or post → Share → Copy link → paste below.
-     The real Instagram post renders on the page (thumbnail, caption,
-     view count). Tapping it opens a QR so the customer watches on
-     their own phone — the tablet never leaves the menu.
+     The real Instagram post renders and plays on the page. The small
+     QR button in the corner of each card hands the reel to the guest's
+     own phone — the tablet never leaves the menu.
 
      Paste as many as you want. Hundreds is fine.                     */
   trending: [
@@ -1471,7 +1478,7 @@ window.MENU = [
     desc:"Everything at once. A mountain of mandi rice buried under beef, chicken and alfaham, "+
          "finished with roasted cashew, raisin and boiled egg. Built for a full table — "+
          "order it once and nobody at the table needs anything else.",
-    matrix:{cols:QHF,rows:[["Price",[null,599,999]]]} },
+    matrix:{cols:QHF,rows:[["Price",[349,699,1399]]]} },
 
   { id:"beef-mandi", name:"Beef Mandi", sub:"Our Pride", tags:["star"],
     desc:"Tender beef slow cooked to perfection with our signature Yemeni spices.",
@@ -1552,13 +1559,20 @@ window.MENU = [
     matrix:{cols:QHF,rows:[["Without Mandi",[150,260,420]],["With Mandi",[230,370,670]]]} }
 ]},
 
-{ id:"exotic", ic:"\u{1F336}", name:"Exotic Delights", tagline:"Crispy, fiery, made to share",
+{ id:"exotic", ic:"\u{1F357}", name:"Fried Chicken", tagline:"Broasted, crunchy, fried the minute you order it",
   layout:"list", items:[
 
   { id:"broast", name:"Broast Fried Chicken", sub:"Crispy perfection", tags:["star"],
     desc:"Pressure-fried chicken with a crisp golden crust. Served with dip and salad.",
     img:"photos/broast.jpg", icon:"broast", ig:[],
     opts:[["4 pieces",150],["8 pieces",250],["12 pieces",375]] },
+
+  { id:"chicken-65", name:"Chicken 65", sub:"The one everyone starts with", tags:["hot","star"],
+    desc:"Boneless chicken marinated in chilli, ginger and curry leaf, fried hard and fast "+
+         "so the outside snaps and the inside stays juicy. Order it before anything else "+
+         "arrives — it never lasts the table.",
+    img:"photos/chicken-65.jpg", icon:"broast", tint:"#D2462A", ig:[],
+    opts:[["Plate",150]] },
 
   { id:"dragon", name:"Dragon Chicken", sub:"Fiery delight", tags:["hot"],
     desc:"Boneless chicken tossed with dried chilli, capsicum and cashew in a glossy hot sauce.",
@@ -1597,11 +1611,14 @@ window.MENU = [
   note:"⚠ PRICES TO CONFIRM — new section, set your real prices in menu-data.js.",
   layout:"list", items:[
 
-  { id:"fish-fry", name:"Legendary Fish Fry", sub:"You will not resist it", anchor:true,
-    tags:["star"], icon:"fish", img:"photos/fish-fry.jpg", ig:[],
-    desc:"Whole fish scored to the bone, packed with red chilli, shallot and curry leaf, "+
-         "then shallow fried in coconut oil until the edges crackle. People order one to "+
-         "share and end up ordering three. This is the plate our regulars are actually here for.",
+  { id:"fish-fry", name:"The Legendary Fish Fry", sub:"Our pride. The reason people drive here.",
+    anchor:true, hero:true, tags:["star","hot"], icon:"fish", img:"photos/fish-fry.jpg", ig:[],
+    desc:"This is the plate we built our name on. Whole fish, bought off the boat that morning, "+
+         "scored to the bone and packed with red chilli, shallot and curry leaf. Fried in coconut "+
+         "oil until the edges crackle and the smell reaches the next table. "+
+         "One family orders it, the table beside them asks what it is, and orders it too. "+
+         "Nobody has ever finished a piece and left it at one. "+
+         "If you order one thing in this restaurant, order this.",
     matrix:{cols:QHF,rows:[["Price",[null,null,180]]]} },
 
   { id:"chorum-meenum", name:"Chorum Meenum", sub:"Rice and fish meals", tags:["star"],
@@ -1953,7 +1970,7 @@ function reelCards2(list){
         ? `<iframe class="igframe in" loading="lazy" scrolling="no" allowtransparency="true"
              src="https://www.instagram.com/${r.kind}/${r.code}/embed/"></iframe>`
         : ``}
-      <span class="tapcatch"></span>
+      <button class="qrb" type="button">&#9635; ${T("onYourPhone")}</button>
       <span class="mark">◉ REEL</span>
       <span class="foot">${esc(r.title||T("scanReel"))}</span>
     </div>`).join("");
@@ -2569,13 +2586,39 @@ var INTRO = (function(){
     for(var i = 0; i < ds.length; i++) ds[i].className = (i === idx ? "on" : "");
     vids.forEach(function(v,i){
       if(i === idx){
-        v.muted = muted;
-        var p = v.play(); if(p && p.catch) p.catch(function(){});
+        playCur();
         var nx = vids[i+1]; if(nx && nx.preload !== "auto") nx.preload = "auto";
       }else{
         try{ v.pause(); v.currentTime = 0; }catch(e){}
       }
     });
+  }
+  /* Sound on by default. Browsers may still refuse to start audio without a
+     tap — when that happens we drop to muted and unmute on the first touch. */
+  var armedSnd = false;
+  function playCur(){
+    var v = vids[idx]; if(!v) return;
+    v.muted = muted;
+    var p = v.play();
+    if(p && p.catch) p.catch(function(){
+      muted = true; v.muted = true; label(); armUnmute();
+      var q = v.play(); if(q && q.catch) q.catch(function(){});
+    });
+  }
+  function armUnmute(){
+    if(armedSnd) return; armedSnd = true;
+    var f = function(){
+      document.removeEventListener("pointerdown", f, true);
+      document.removeEventListener("touchstart", f, true);
+      armedSnd = false;
+      if(!live) return;
+      muted = false;
+      var v = vids[idx];
+      if(v){ v.muted = false; var p = v.play(); if(p && p.catch) p.catch(function(){}); }
+      label();
+    };
+    document.addEventListener("pointerdown", f, true);
+    document.addEventListener("touchstart", f, true);
   }
   function go(n){
     if(!clips.length) return;
@@ -2588,7 +2631,7 @@ var INTRO = (function(){
     if(!el || !clips.length) return;
     if(!force && !shouldShow()) return;
     build();
-    idx = 0; muted = true;
+    idx = 0; muted = (cfg.sound === false);
     label();
     el.hidden = false;
     void el.offsetWidth;                 // force reflow so the transition runs

@@ -23,26 +23,39 @@ Plain links and captioned ones can sit in the same list.
 
 WHAT THE CUSTOMER SEES
 ======================
-The real Instagram post renders on the tablet — actual video frame,
-caption, everything. Tapping it does NOT open the Instagram app.
-It opens a QR code, drawn on the spot, and they watch it on their own
-phone. The tablet stays on your menu.
+The real Instagram post renders on the tablet and PLAYS THERE. It is a
+plain iframe pointed at instagram.com/reel/<code>/embed/ — no Meta app,
+no developer review, no API key. The post just has to be public.
+
+Each card also carries a small round QR button in the corner. Tapping
+that gives a QR code, drawn on the spot, so the guest can carry the
+reel to their own phone and follow you. The tablet stays on the menu
+either way.
 
 If the restaurant wifi is down or Instagram is unreachable, each card
-falls back to a branded play tile. Tapping still gives the QR, because
-the QR is generated on the device and needs no internet at all.
+falls back to a branded play tile. The QR still works — it is generated
+on the device and needs no internet at all.
+
+WHAT META DOES AND DOES NOT REQUIRE
+===================================
+  direct iframe   /embed/          no review, no app        <- what we use
+  blockquote + embed.js            no review, auto-sizes
+  oEmbed JSON API                  needs a Meta app + oembed_read
+
+We use the first one. Nothing to register, nothing to renew.
 
 
-WHY NOT JUST PLAY IT ON THE TABLET
-==================================
-Instagram's embed will not autoplay or play inline on a touch device —
-that is Meta's iframe, not something any website can override. Every
-restaurant menu has this problem.
+WHY IT DOES NOT START BY ITSELF
+==============================
+The embed plays when the guest taps it. It will not autoplay silently
+the way a reel does inside the Instagram app — that is Meta's iframe,
+not something any website can override.
 
-If you want video playing ON the tablet:
+If you want video that starts on its own:
   - YouTube:  paste a video id into  youtube: [...]  in config.js
   - your mp4: drop it into gallery/reels/ and list it in  reels: [...]
-Both play right in the page. See gallery/reels/README.txt.
+  - the welcome videos: intro/ — see INTRO-VIDEOS.txt
+All three play by themselves.
 
 
 THE QR CODE GENERATOR
