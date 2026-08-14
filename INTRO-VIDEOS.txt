@@ -75,8 +75,19 @@ support. If you add a clip as mp4 only it still works — the webm is
 just insurance.
 
 
-NO SOUND AT FIRST — THAT IS NOT A BUG
-=====================================
+ABOUT THE SOUND
+===============
+The clips start WITH sound. If the browser blocks it — every phone and
+tablet browser blocks audio that starts on its own before the guest has
+touched anything — the video plays silently and the gold "Tap for sound"
+button pulses. The very first touch anywhere turns the sound on.
+
+To have sound from the first frame with no tap at all, install the menu
+as an app on the tablet: Chrome menu -> Install app. An installed app is
+trusted and plays audio straight away.
+
+OLD NOTE, STILL TRUE FOR BROWSERS
+==================================
 Every phone and tablet browser blocks video with audio from starting
 on its own. Muted autoplay is the only thing allowed. That is why the
 "Tap for sound" button exists. Nothing can be done about it — it is

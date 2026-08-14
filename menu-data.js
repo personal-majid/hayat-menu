@@ -138,6 +138,19 @@ window.MENU = [
     img:"photos/chicken-65.jpg", icon:"broast", tint:"#D2462A", ig:[],
     opts:[["Plate",150]] },
 
+  { id:"kondattam", name:"Kondattam Chicken", sub:"Kerala's signature spicy fried chicken",
+    tags:["hot","star"],
+    desc:"Curry leaf, shallot and a hard chilli hit, tossed straight from the fryer. "+
+         "The one that tastes like home and burns like a dare.",
+    img:"photos/kondattam.jpg", icon:"broast", tint:"#B23A18", ig:[],
+    opts:[["Half",250],["Full",500]] },
+
+  { id:"popcorn", name:"Chicken Popcorn", sub:"Small bites. Big crunch.",
+    desc:"Bite-size chicken in a crisp seasoned crumb, fried to order. "+
+         "The plate the children finish first.",
+    img:"photos/popcorn.jpg", icon:"broast", tint:"#D99A3A", ig:[],
+    opts:[["Regular",120],["Large",200]] },
+
   { id:"dragon", name:"Dragon Chicken", sub:"Fiery delight", tags:["hot"],
     desc:"Boneless chicken tossed with dried chilli, capsicum and cashew in a glossy hot sauce.",
     img:"photos/dragon.jpg", icon:"wok", ig:[],

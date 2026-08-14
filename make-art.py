@@ -480,6 +480,8 @@ JOBS = {
   "br-chatti":        lambda: scene_biryani(),
   "broast":           lambda: scene_broast(),
   "chicken-65":       lambda: scene_broast(),
+  "kondattam":        lambda: scene_broast(),
+  "popcorn":          lambda: scene_broast(),
   "dragon":           lambda: scene_curry((188, 54, 32)),
   "g1":  lambda: scene_curry((226, 142, 70)),
   "g2":  lambda: scene_curry((196, 92, 40)),

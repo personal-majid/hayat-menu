@@ -594,6 +594,10 @@ footer .star{color:var(--gold2);font-size:17px}
   font:600 14px/1 inherit;padding:11px 16px;backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px)}
 #intro .ib:active{transform:scale(.95)}
+#introsound.pulse{background:linear-gradient(135deg,var(--gold,#d9a441),#f0cd80);
+  color:#1a1006;border-color:transparent;animation:sndpulse 1.5s ease-in-out infinite}
+@keyframes sndpulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(217,164,65,.55)}
+  50%{transform:scale(1.05);box-shadow:0 0 0 12px rgba(217,164,65,0)}}
 #introsound{top:max(16px,env(safe-area-inset-top));right:16px}
 #introskip{top:max(16px,env(safe-area-inset-top));left:16px}
 #introreplay{display:inline-flex;align-items:center;gap:8px;margin-top:14px;
@@ -622,6 +626,7 @@ footer .star{color:var(--gold2);font-size:17px}
     <div class="brand"><h1>Hayat Fish Restaurant</h1><p id="tagline"></p></div>
     <div class="spacer"></div>
     <input id="search" type="search" placeholder="Search…" autocomplete="off">
+    <button class="gbtn" id="fsbtn" title="Full screen">&#9974;</button>
     <button class="gbtn" id="viewbtn">&#9638; <span id="viewtxt">Photos</span></button>
     <button class="gbtn" id="langbtn">അ</button>
     <button class="gbtn" id="galbtn">◎ <span id="galtxt">Gallery</span></button>
@@ -1361,6 +1366,17 @@ window.CONFIG = {
      --------------------------------------------------------- */
   kiosk: true,
 
+  /* ---- 0a. FULL SCREEN ------------------------------------- *
+     true  = the menu goes full screen (no address bar, no tabs)
+             the moment the guest first touches the tablet, and
+             a small corner button lets staff toggle it.
+     Browsers only allow this after a tap — that is a browser
+     rule, not a setting. Installing the page as an app
+     (Chrome menu -> Install app) makes it open full screen on
+     its own, with no tap needed.
+     --------------------------------------------------------- */
+  fullscreen: true,
+
   /* ---- 0b. WELCOME VIDEOS (the intro that plays first) ------ *
      Full-screen marketing videos shown when the tablet is idle
      and a new guest sits down. They play automatically, one
@@ -1646,6 +1662,19 @@ window.MENU = [
          "arrives — it never lasts the table.",
     img:"photos/chicken-65.jpg", icon:"broast", tint:"#D2462A", ig:[],
     opts:[["Plate",150]] },
+
+  { id:"kondattam", name:"Kondattam Chicken", sub:"Kerala's signature spicy fried chicken",
+    tags:["hot","star"],
+    desc:"Curry leaf, shallot and a hard chilli hit, tossed straight from the fryer. "+
+         "The one that tastes like home and burns like a dare.",
+    img:"photos/kondattam.jpg", icon:"broast", tint:"#B23A18", ig:[],
+    opts:[["Half",250],["Full",500]] },
+
+  { id:"popcorn", name:"Chicken Popcorn", sub:"Small bites. Big crunch.",
+    desc:"Bite-size chicken in a crisp seasoned crumb, fried to order. "+
+         "The plate the children finish first.",
+    img:"photos/popcorn.jpg", icon:"broast", tint:"#D99A3A", ig:[],
+    opts:[["Regular",120],["Large",200]] },
 
   { id:"dragon", name:"Dragon Chicken", sub:"Fiery delight", tags:["hot"],
     desc:"Boneless chicken tossed with dried chilli, capsicum and cashew in a glossy hot sauce.",
@@ -2858,11 +2887,15 @@ var INTRO = (function(){
   function playCur(){
     var v = vids[idx]; if(!v) return;
     v.muted = muted;
+    try{ v.volume = 1; }catch(e){}
     var p = v.play();
     if(p && p.catch) p.catch(function(){
+      /* the browser refused audio without a tap. Play silently, make the
+         sound button obvious, and turn the sound on at the first touch. */
       muted = true; v.muted = true; label(); armUnmute();
       var q = v.play(); if(q && q.catch) q.catch(function(){});
     });
+    if(muted) armUnmute();      /* muted for any other reason? same deal */
   }
   function armUnmute(){
     if(armedSnd) return; armedSnd = true;
@@ -2922,6 +2955,7 @@ var INTRO = (function(){
     try{
       bSkip.innerHTML = T("introSkip") + " &rarr;";
       bSnd.innerHTML  = (muted ? "&#128263; " : "&#128266; ") + T(muted ? "introSound" : "introMuted");
+      bSnd.classList.toggle("pulse", !!muted);
       hint.textContent = T("introSwipe");
     }catch(e){}
   }
@@ -2998,10 +3032,52 @@ var INTRO = (function(){
     open(true);
   }, 20000);
 
-  return { open:open, close:close, relabel:label, has:function(){ return clips.length > 0; } };
+  function sound(on){
+    muted = !on;
+    var v = vids[idx];
+    if(v){ v.muted = muted; var p = v.play(); if(p && p.catch) p.catch(function(){}); }
+    label();
+  }
+  return { open:open, close:close, relabel:label, sound:sound,
+           has:function(){ return clips.length > 0; } };
 })();
 
 try{ INTRO.open(false); }catch(e){}
+
+/* ===== FULL SCREEN =================================================
+   A tablet on a table should show the menu, not Chrome. Browsers only
+   grant full screen off a real tap, so we take the first one. Installed
+   as an app it is already full screen and none of this runs. */
+(function(){
+  var want = C.fullscreen !== false;
+  var el = document.documentElement;
+  function isFs(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function enter(){
+    if(isFs()) return;
+    var f = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if(f){ try{ f.call(el); }catch(e){} }
+  }
+  function exit(){
+    var f = document.exitFullscreen || document.webkitExitFullscreen;
+    if(f){ try{ f.call(document); }catch(e){} }
+  }
+  var btn = document.getElementById("fsbtn");
+  if(btn) btn.onclick = function(){ isFs() ? exit() : enter(); };
+  if(!want) return;
+  /* already an installed app? then it is full screen already */
+  if(window.matchMedia && window.matchMedia("(display-mode: fullscreen)").matches) return;
+  var once = function(){
+    document.removeEventListener("pointerdown", once, true);
+    document.removeEventListener("touchstart", once, true);
+    document.removeEventListener("keydown", once, true);
+    enter();
+    /* the same tap unblocks audio — hand it to the intro if it is running */
+    try{ if(window.INTRO && window.INTRO.sound) window.INTRO.sound(true); }catch(e){}
+  };
+  document.addEventListener("pointerdown", once, true);
+  document.addEventListener("touchstart", once, true);
+  document.addEventListener("keydown", once, true);
+})();
 
 /* offline support — https only, silently skipped on file:// */
 var okCtx = location.protocol==="https:" || ["localhost","127.0.0.1"].indexOf(location.hostname)>=0;

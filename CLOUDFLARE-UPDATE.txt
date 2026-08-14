@@ -68,7 +68,7 @@ BEFORE EVERY UPLOAD — THE ONE THING PEOPLE FORGET
 =================================================
 Open  sw.js  and change:
 
-    const CACHE = "hayat-v30";
+    const CACHE = "hayat-v32";
 
 to v10, then v11, and so on. Every single time.
 
@@ -76,4 +76,4 @@ Phones store a copy of the site so it works offline. That number is how
 they know a new version exists. Forget it and staff will swear the update
 did not work, while a fresh phone sees it fine.
 
-This build is at v30.
+This build is at v32.

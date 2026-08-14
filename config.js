@@ -14,6 +14,17 @@ window.CONFIG = {
      --------------------------------------------------------- */
   kiosk: true,
 
+  /* ---- 0a. FULL SCREEN ------------------------------------- *
+     true  = the menu goes full screen (no address bar, no tabs)
+             the moment the guest first touches the tablet, and
+             a small corner button lets staff toggle it.
+     Browsers only allow this after a tap — that is a browser
+     rule, not a setting. Installing the page as an app
+     (Chrome menu -> Install app) makes it open full screen on
+     its own, with no tap needed.
+     --------------------------------------------------------- */
+  fullscreen: true,
+
   /* ---- 0b. WELCOME VIDEOS (the intro that plays first) ------ *
      Full-screen marketing videos shown when the tablet is idle
      and a new guest sits down. They play automatically, one
