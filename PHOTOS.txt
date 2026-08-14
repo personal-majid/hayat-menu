@@ -94,3 +94,52 @@ DO NOT USE THEM FOR
 
   Also: never take pictures off another restaurant's Instagram or Google
   listing. That is their copyright and people in Malappuram will spot it.
+
+VIDEOS ON A DISH PAGE
+=====================
+A dish can have videos as well as photos. Videos always come first, play
+by themselves with no sound, and go full screen (with sound) when tapped.
+
+  1. Put the mp4 in  gallery/videos/
+  2. Grab a still for the poster (optional but nicer)
+  3. In menu-data.js, on that dish:
+
+     videos:[{ src:"gallery/videos/creamy-1.mp4",
+               poster:"gallery/videos/creamy-1.jpg",
+               caption:"Straight off the grill" }],
+
+Order on the page:
+     videos  ->  photos  ->  nothing at all if the dish has neither.
+No empty headings, no "coming soon" text.
+
+Keep clips 10-20 seconds and under about 8 MB. If you also drop a .webm
+next to the .mp4 with the same name it is used automatically on browsers
+that cannot play H.264.
+
+
+THE PHOTOS / LIST SWITCH
+========================
+The header has a button that flips the whole menu between the price
+table and the picture cards. The guest's choice is remembered on that
+tablet. Nothing to configure.
+
+A SLIDESHOW ON TOP OF A CATEGORY
+================================
+Every section runs a slideshow across the top of its page. It fades every
+few seconds, has dots you can tap, and swipes left and right.
+
+To control what a section shows, put the files in  banners/  and add a
+slides list to that section in menu-data.js:
+
+  { id:"biryani", name:"Biryani", ...
+    slides:[{ src:"banners/biryani-1.jpg" },
+            { src:"banners/biryani-2.jpg", caption:"Serving happiness every day" }],
+    items:[ ... ] }
+
+caption is optional. Leave it out when the artwork already has words on
+it — otherwise you get the same line twice.
+
+Sections with no slides list build one automatically from the dish photos
+in that section, so nothing is ever bare. Best size is a wide image,
+about 1600 x 520. Anything wider or taller still works — it is cropped
+to fit, centred.

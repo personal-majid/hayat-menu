@@ -440,6 +440,48 @@ textarea.fld{min-height:110px;resize:vertical}
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .igc .qrb:active{transform:scale(.94)}
 .qsheet .orline{margin-top:9px;text-align:center;font-size:12px;opacity:.62;letter-spacing:.02em}
+
+/* ---- dish videos ---- */
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:6px}
+.vcard{position:relative;border-radius:16px;overflow:hidden;background:#000;
+  border:1px solid var(--line);cursor:pointer}
+.vcard video{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#000}
+.vcard .vtag{position:absolute;top:12px;left:12px;z-index:2;font:800 11px/1 inherit;
+  letter-spacing:.6px;padding:6px 10px;border-radius:8px;color:#1a1006;
+  background:linear-gradient(135deg,var(--gold,#d9a441),#f0cd80)}
+.vcard .vfs{position:absolute;top:10px;right:10px;z-index:2;cursor:pointer;
+  border:1px solid rgba(255,255,255,.3);background:rgba(8,5,2,.55);color:#fff;
+  border-radius:999px;padding:7px 12px;font:700 12px/1 inherit;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.vcard .vfs:active{transform:scale(.95)}
+.vcard .vcap{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:24px 13px 11px;
+  font-size:13px;font-weight:700;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(8,4,2,.9))}
+@media (max-width:560px){ .vgrid{grid-template-columns:1fr} }
+
+/* ---- category slideshow ---- */
+.slides{position:relative;border-radius:18px;overflow:hidden;background:#0b0603;
+  border:1px solid var(--line);margin:0 0 18px;aspect-ratio:1600/560;
+  max-height:52vh;transition:height .45s ease}
+.slides .sl{position:absolute;inset:0;opacity:0;transition:opacity .7s ease}
+.slides .sl.on{opacity:1}
+/* contain, not cover: these are branded posters — cropping would cut the
+   logo or the wording off. The frame takes the shape of the tallest slide. */
+.slides .sl img{width:100%;height:100%;object-fit:contain;display:block;background:#0b0603}
+.slides .scap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:34px 18px 14px;
+  font-size:14px;font-weight:700;letter-spacing:.02em;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(6,3,1,.86))}
+.slides .scap:empty{display:none}
+.slides .sdots{position:absolute;right:14px;bottom:14px;z-index:4;display:flex;gap:7px}
+.slides .sdots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);
+  transition:all .25s;cursor:pointer}
+.slides .sdots i.on{background:var(--gold,#d9a441);width:20px;border-radius:4px}
+@media (max-width:700px){ .slides{aspect-ratio:16/9} .slides .scap{font-size:12.5px} }
+
+/* ---- photo / table switch ---- */
+#viewbtn.on{background:linear-gradient(135deg,var(--gold,#d9a441),#f0cd80);
+  color:#1a1006;border-color:transparent}
+.qsheet .orline{margin-top:9px;text-align:center;font-size:12px;opacity:.62;letter-spacing:.02em}
 .igc .foot{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:26px 13px 12px;
   font-size:12.5px;font-weight:700;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(8,4,2,.92))}
@@ -577,6 +619,7 @@ footer .star{color:var(--gold2);font-size:17px}
     <div class="brand"><h1>Hayat Fish Restaurant</h1><p id="tagline"></p></div>
     <div class="spacer"></div>
     <input id="search" type="search" placeholder="Search…" autocomplete="off">
+    <button class="gbtn" id="viewbtn">&#9638; <span id="viewtxt">Photos</span></button>
     <button class="gbtn" id="langbtn">അ</button>
     <button class="gbtn" id="galbtn">◎ <span id="galtxt">Gallery</span></button>
   </header>
@@ -1122,6 +1165,8 @@ ui: {
     scanReel:"Scan to watch this reel",
     goesWith:"Goes well with", scanFollow:"Scan to follow @", scanWa:"Scan to message us",
     scanWatch:"Scan to watch on your phone", onYourPhone:"Open it on your phone",
+    videosHead:"Watch it being made", photosHead:"Photos", videoTag:"VIDEO",
+    fullScreen:"Full screen", viewPhotos:"Photos", viewList:"List",
     openInsta:"Open on Instagram", orScan:"\u2014 or scan the code to watch it on your own phone \u2014",
     kioskNote:"Point your camera at the code",
     watchHere:"Watch here", videosNone:"No videos added yet.",
@@ -1180,6 +1225,8 @@ ui: {
     partyWa:"അല്ലെങ്കിൽ ഇപ്പോൾ തന്നെ മെസ്സേജ് ചെയ്യൂ", needPhone:"വിളിക്കാൻ ഒരു ഫോൺ നമ്പർ നൽകൂ.",
     ourReels:"ഞങ്ങളുടെ റീലുകൾ", reelTap:"ഒരു റീൽ തൊട്ട് ഫോണിൽ സ്കാൻ ചെയ്യൂ",
     scanReel:"ഈ റീൽ കാണാൻ സ്കാൻ ചെയ്യൂ",
+    videosHead:"ഉണ്ടാക്കുന്ന വീഡിയോ", photosHead:"ചിത്രങ്ങൾ", videoTag:"വീഡിയോ",
+    fullScreen:"ഫുൾ സ്ക്രീൻ", viewPhotos:"ചിത്രങ്ങൾ", viewList:"ലിസ്റ്റ്",
     openInsta:"ഇന്‍സ്റ്റഗ്രാമിൽ തുറക്കുക", orScan:"— അല്ലെങ്കിൽ സ്കാൻ ചെയ്ത് സ്വന്തം ഫോണിൽ കാണുക —",
     goesWith:"ഇതിനൊപ്പം നന്നായിരിക്കും", scanFollow:"ഫോളോ ചെയ്യാൻ സ്കാൻ ചെയ്യൂ @", scanWa:"മെസ്സേജ് ചെയ്യാൻ സ്കാൻ ചെയ്യൂ",
     scanWatch:"നിങ്ങളുടെ ഫോണിൽ കാണാൻ സ്കാൻ ചെയ്യൂ", onYourPhone:"നിങ്ങളുടെ ഫോണിൽ തുറക്കൂ",
@@ -1507,6 +1554,8 @@ window.MENU = [
 { id:"alfaham", ic:"\u{1F525}", name:"Alfaham",
   tagline:"Grilled to perfection · 8 signature marinations",
   note:"Every flavour is available on its own or served with mandi rice.",
+  slides:[{ src:"banners/alfaham-1.jpg" },    /* artwork carries its own words */
+          { src:"banners/alfaham-2.jpg" }],
   layout:"list", items:[
 
   { id:"af-regular", name:"Regular Alfaham", desc:"Traditional flavour with a perfect smoky finish.",
@@ -1533,9 +1582,11 @@ window.MENU = [
     img:"photos/af-masala.jpg", icon:"grill", tint:"#A8461F", ig:[],
     matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
 
-  { id:"af-peri", name:"Peri Peri Alfaham", tags:["hot"],
-    desc:"Fiery peri peri marinade, perfectly grilled.",
+  { id:"af-peri", name:"Peri Peri Alfaham", sub:"Fiery. Smoky. Unforgettable.", tags:["hot","star"],
+    desc:"Marinated in a bold blend of African peri peri spices and grilled over coals "+
+         "for a smoky, juicy, properly spicy bite. Served with lemon, salad and dip.",
     img:"photos/af-peri.jpg", icon:"grill", tint:"#C4361C", ig:[],
+    photos:[{src:"photos/posters/af-peri.jpg", caption:"Peri Peri Chicken Al Faham"}],
     matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
 
   { id:"af-afghani", name:"Afghani Alfaham",
@@ -1546,6 +1597,10 @@ window.MENU = [
   { id:"af-cheesy", name:"Cheesy Cheesy Alfaham", sub:"Chef’s pick", tags:["star"],
     desc:"Rich creamy marinade with layers of cheese for an indulgent finish.",
     img:"photos/af-cheesy.jpg", icon:"grill", tint:"#E0A93A", ig:[],
+    videos:[{src:"gallery/videos/creamy-1.mp4", poster:"gallery/videos/creamy-1.jpg",
+             caption:"Straight off the grill, sauce still moving"},
+            {src:"gallery/videos/creamy-2.mp4", poster:"gallery/videos/creamy-2.jpg",
+             caption:"The finish — herbs on top, served hot"}],
     matrix:{cols:QHF,rows:[["Without Mandi",[170,280,510]],["With Mandi",[250,400,740]]]} }
 ]},
 
@@ -1595,18 +1650,30 @@ window.MENU = [
 
 { id:"biryani", ic:"\u{1F35B}", name:"Biryani", tagline:"Malabar dum biryani, kaima rice, cooked to order",
   note:"⚠ PRICES TO CONFIRM — this section was not on the printed board.",
+  /* slides: the banner that runs across the top of this section.
+     Any section can have one — drop the files in banners/ and list them. */
+  slides:[{ src:"banners/biryani-1.jpg" },     /* these four already carry the */
+          { src:"banners/biryani-2.jpg" },     /* wording, so no caption on top */
+          { src:"banners/biryani-3.jpg" },
+          { src:"banners/biryani-4.jpg" }],
   layout:"list", items:[
 
   { id:"br-chicken", name:"Chicken Biryani", icon:"mandi", tint:"#C9873A", img:"photos/br-chicken.jpg", ig:[],
     desc:"Classic Malabar dum biryani — short-grain kaima rice, fried onion, roasted cashew and raisin.",
+    photos:[{src:"banners/biryani-3.jpg", caption:"Fragrant. Authentic. Irresistible."}],
     matrix:{cols:QHF,rows:[["Price",[null,null,180]]]} },
 
   { id:"br-beef", name:"Beef Biryani", icon:"mandi", tint:"#8E4A22", img:"photos/br-beef.jpg", ig:[],
     desc:"Slow-cooked beef layered with spiced rice. Heavier, richer, the local favourite.",
+    photos:[{src:"banners/biryani-1.jpg", caption:"Fragrant. Rich. Unforgettable."},
+            {src:"banners/biryani-2.jpg", caption:"Served the way it should be"},
+            {src:"banners/biryani-3.jpg", caption:"Fragrant. Authentic. Irresistible."},
+            {src:"banners/biryani-4.jpg", caption:"Serving happiness every day"}],
     matrix:{cols:QHF,rows:[["Price",[null,null,200]]]} },
 
   { id:"br-mutton", name:"Mutton Biryani", icon:"mandi", tint:"#6B3416", img:"photos/br-mutton.jpg", ig:[],
     desc:"Tender mutton on the bone, dum-sealed with the rice so nothing escapes.",
+    photos:[{src:"banners/biryani-4.jpg", caption:"Serving happiness every day"}],
     matrix:{cols:QHF,rows:[["Price",[null,null,260]]]} },
 
   { id:"br-fish", name:"Fish Biryani", icon:"mandi", tint:"#4A7C8C", img:"photos/br-fish.jpg", ig:[],
@@ -1772,7 +1839,11 @@ const C=window.CONFIG, MENU=window.MENU;
 const nav=document.getElementById("nav"), main=document.getElementById("main"),
       search=document.getElementById("search"), overlay=document.getElementById("overlay");
 let VARIANT="Without Mandi", GTAB="photos", STARS=0;
+/* "table" = the price list, "photo" = the picture cards. The guest flips
+   between them from the header; the choice is remembered on the device. */
+let VIEW = "table";
 let L = localStorage0("hayatLang") || "en";
+try{ VIEW = localStorage0("hayatView") === "photo" ? "photo" : "table"; }catch(e){}
 function localStorage0(k){ try{return window.localStorage.getItem(k)}catch(e){return null} }
 function saveLang(v){ try{window.localStorage.setItem("hayatLang",v)}catch(e){} }
 function T(k){
@@ -1793,6 +1864,11 @@ function applyChrome(){
   document.getElementById("langbtn").textContent =
     (window.innerWidth<860) ? (L==="en" ? "അ" : "A") : T("langBtn");
   document.getElementById("galtxt").textContent=T("gallery");
+  var vb=document.getElementById("viewbtn"), vt=document.getElementById("viewtxt");
+  if(vb && vt){
+    vb.classList.toggle("on", VIEW==="photo");
+    vt.textContent = VIEW==="photo" ? T("viewPhotos") : T("viewList");
+  }
   document.getElementById("fdel").textContent=T("homeDelivery");
   document.getElementById("fcat").textContent=T("catering");
   document.getElementById("frev").innerHTML='<span class="star">&#9733;</span> '+T("rateUs");
@@ -2271,7 +2347,7 @@ function viewCat(id){
   drawNav(id);
   const items=c.items;
 
-  let table;
+  let table, toggle="";
   if(c.layout==="paper"){
     table=`<div class="paper"><div class="rows">${items.map(it=>`
       <button class="row" data-go="#/d/${c.id}/${it.id}">${thumb(it)}
@@ -2282,7 +2358,7 @@ function viewCat(id){
     const variants=[...new Set(items.flatMap(it=>it.matrix?it.matrix.rows.map(r=>r[0]):[]))]
                      .filter(v=>v!=="Price");
     if(variants.length && !variants.includes(VARIANT)) VARIANT=variants[0];
-    const toggle=variants.length>1?`<div class="seg">${variants.map(v=>
+    toggle=variants.length>1?`<div class="seg">${variants.map(v=>
       `<button class="${v===VARIANT?"on":""}" data-var="${esc(v)}">${esc(T(v))}</button>`).join("")}</div>`:"";
     const cells=it=>{
       if(it.matrix){
@@ -2314,13 +2390,93 @@ function viewCat(id){
 
   main.innerHTML=
     backBar("#/",T("menu"),SN(c))+
+    slideShow(c)+
     head(SN(c),c.tagline)+
     (c.note?`<p class="secsub" style="margin-top:-14px">${esc(c.note)}</p>`:"")+
-    table+
-    `<h3 class="mini">${T("browsePhoto")}</h3>`+cards+
+    (VIEW==="photo" ? toggle+cards : table)+
     upsellStrip(c.id)+
     backBottom("#/",T("backMenu"));
+  wireSlides();
   main.scrollTop=0;
+}
+
+/* Every section runs a slideshow across the top. Use the section's own
+   slides:[...] if it has them, otherwise build one from the dish photos
+   so no section is ever bare. */
+function sectionSlides(c){
+  if(c.slides && c.slides.length) return c.slides.filter(x=>x && x.src);
+  var out=[], seen={};
+  (c.items||[]).forEach(function(it){
+    (it.photos||[]).forEach(function(p){ if(p&&p.src&&!seen[p.src]){ seen[p.src]=1;
+      out.push({src:p.src, caption:p.caption||it.name}); } });
+  });
+  if(out.length < 2){
+    (c.items||[]).forEach(function(it){
+      if(it.img && !seen[it.img]){ seen[it.img]=1; out.push({src:it.img, caption:it.name}); }
+    });
+  }
+  return out.slice(0,6);
+}
+function slideShow(c){
+  var sl = sectionSlides(c);
+  if(!sl.length) return "";
+  return '<div class="slides" id="slides">'+sl.map(function(x,i){
+    return '<div class="sl'+(i?"":" on")+'"><img '+(i?'loading="lazy" ':'')+
+           'src="'+esc(x.src)+'" alt=""></div>';
+  }).join("")+
+  '<div class="scap" id="scap">'+esc(sl[0].caption||"")+'</div>'+
+  '<div class="sdots">'+sl.map(function(_,i){
+    return '<i class="'+(i?"":"on")+'" data-slide="'+i+'"></i>';}).join("")+'</div></div>';
+}
+var SLIDE_TIMER=null;
+/* Shape the frame to whichever slide is showing, so a wide banner and a
+   3:2 poster both fill it properly instead of sitting in black bands. */
+function slideRatio(im){
+  return (im && im.naturalWidth && im.naturalHeight) ? im.naturalWidth/im.naturalHeight : 0;
+}
+function fitBox(box, i){
+  var imgs = box.querySelectorAll(".sl img");
+  var im = imgs[i || 0]; if(!im) return;
+  function apply(){
+    var r = slideRatio(im); if(!r) return;
+    var w = box.clientWidth || box.getBoundingClientRect().width;
+    if(!w) return;
+    var h = Math.min(w / Math.max(1.2, Math.min(3.4, r)), window.innerHeight * 0.52);
+    box.style.height = Math.round(h) + "px";
+  }
+  if(im.complete) apply();
+  else { im.addEventListener("load", apply); im.addEventListener("error", apply); }
+}
+function wireSlides(){
+  if(SLIDE_TIMER){ clearInterval(SLIDE_TIMER); SLIDE_TIMER=null; }
+  var box=document.getElementById("slides"); if(!box) return;
+  var sl=box.querySelectorAll(".sl"), dots=box.querySelectorAll(".sdots i"),
+      cap=document.getElementById("scap"), caps=[], i=0;
+  if(sl.length<2){ return; }
+  var c=MENU.find(function(x){ return "#/c/"+x.id===location.hash.split("?")[0]; });
+  caps=(c?sectionSlides(c):[]).map(function(x){ return x.caption||""; });
+  function show(n){
+    i=((n%sl.length)+sl.length)%sl.length;
+    for(var k=0;k<sl.length;k++) sl[k].className = "sl"+(k===i?" on":"");
+    for(var k=0;k<dots.length;k++) dots[k].className = (k===i?"on":"");
+    if(cap) cap.textContent = caps[i]||"";
+    fitBox(box, i);
+  }
+  for(var k=0;k<dots.length;k++)(function(k){
+    dots[k].addEventListener("click",function(e){ e.stopPropagation(); show(k); reset(); });
+  })(k);
+  var sx=null;
+  box.addEventListener("touchstart",function(e){ sx=e.touches[0].clientX; },{passive:true});
+  box.addEventListener("touchend",function(e){
+    if(sx===null) return;
+    var dx=(e.changedTouches[0].clientX-sx); sx=null;
+    if(Math.abs(dx)>45){ show(i+(dx<0?1:-1)); reset(); }
+  });
+  fitBox(box, 0);
+  window.addEventListener("resize", function(){ fitBox(box, i); });
+  function reset(){ if(SLIDE_TIMER) clearInterval(SLIDE_TIMER);
+    SLIDE_TIMER=setInterval(function(){ show(i+1); }, 4800); }
+  reset();
 }
 
 /* ---------------- dish ---------------- */
@@ -2343,20 +2499,36 @@ function viewDish(cid,did){
       <span class="p">${rup(it.price)}</span></div></div>`;
   }
 
+  /* Videos come first and play by themselves. Photos come after. If the dish
+     has neither, the whole block is left out — no empty headings, no notes. */
   const posts=(it.ig||[]).filter(u=>!isPlaceholder(u));
   const shots=(it.photos||[]);
-  const gal=(shots.length||posts.length)
-    ? (shots.length?`<div class="pgrid">${shots.map(p=>`
-        <button class="pcard" data-lb="${esc(p.src)}" data-cap="${esc(p.caption||NM(it))}">
-          <div class="ph"><img loading="lazy" src="${esc(p.src)}" alt=""></div>
-          <div class="cap"><div class="cn">${esc(p.caption||NM(it))}</div>
-            <div class="cprices">${priceChips(it)}</div></div></button>`).join("")}</div>`:"")
-      +(posts.length?`<div class="nomedia" style="margin-top:14px">
-         ${T("scanWatch")} — <b>@${esc(C.instagram)}</b></div>`:"")
-    : `<div class="nomedia"><b>No gallery for this dish yet.</b><br>
-       Add photos in <code>menu-data.js</code> as
-       <code>photos:[{src:"photos/x.jpg",caption:"..."}]</code>, or paste Instagram links
-       into <code>ig:[]</code> for <code>id:"${esc(it.id)}"</code>.</div>`;
+  const clips=(it.videos||[]).filter(v=>v && v.src);
+
+  const vBlock = clips.length ? `<h3 class="mini">${T("videosHead")}</h3>
+    <div class="vgrid">${clips.map((v,i)=>`
+      <div class="vcard">
+        <video class="dv" playsinline webkit-playsinline muted loop preload="metadata"
+          ${v.poster?`poster="${esc(v.poster)}"`:""}>
+          <source src="${esc(v.src)}" type="video/mp4">
+          <source src="${esc(String(v.src).replace(/\.mp4$/i,".webm"))}" type="video/webm">
+        </video>
+        <span class="vtag">&#9654; ${T("videoTag")}</span>
+        <button class="vfs" type="button" data-fs="${i}">&#9974; ${T("fullScreen")}</button>
+        ${v.caption?`<div class="vcap">${esc(v.caption)}</div>`:""}
+      </div>`).join("")}</div>` : "";
+
+  const pBlock = shots.length ? `<h3 class="mini">${T("photosHead")}</h3>
+    <div class="pgrid">${shots.map(p=>`
+      <button class="pcard" data-lb="${esc(p.src)}" data-cap="${esc(p.caption||NM(it))}">
+        <div class="ph"><img loading="lazy" src="${esc(p.src)}" alt=""></div>
+        <div class="cap"><div class="cn">${esc(p.caption||NM(it))}</div>
+          <div class="cprices">${priceChips(it)}</div></div></button>`).join("")}</div>` : "";
+
+  const gal = (clips.length || shots.length)
+    ? vBlock + pBlock + (posts.length?`<div class="nomedia" style="margin-top:14px">
+        ${T("scanWatch")} — <b>${esc("@"+C.instagram)}</b></div>`:"")
+    : "";
 
   main.innerHTML=
     backBar("#/c/"+cid,SN(c),NM(it))+
@@ -2369,15 +2541,53 @@ function viewDish(cid,did){
       ${it.desc?`<p class="desc">${esc(it.desc)}</p>`:"<div style='height:12px'></div>"}
       <h3 class="mini">${T("pricing")}</h3>
       ${pricing}
-      <h3 class="mini">${T("gallery")}</h3>
+      <!-- videos, then photos, then nothing at all -->
       ${gal}
       ${igBar(T("igMore"),T("igMoreSub"))}
       <div class="chips">${T("chips").map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>
     </div>`+
     upsellStrip(cid)+
     backBottom("#/c/"+cid,T("backTo")+" "+SN(c));
+  wireVideos();
   main.scrollTop=0;
 }
+
+/* Dish videos: silent autoplay while they are on screen, tap for full screen
+   with sound. Muted is not a choice — no browser autoplays audio. */
+function wireVideos(){
+  var vs = main.querySelectorAll("video.dv");
+  if(!vs.length) return;
+  function play(v){ var p=v.play(); if(p && p.catch) p.catch(function(){}); }
+  if("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting) play(e.target);
+        else { try{ e.target.pause(); }catch(x){} }
+      });
+    },{threshold:.3});
+    Array.prototype.forEach.call(vs,function(v){ io.observe(v); });
+  }else{
+    Array.prototype.forEach.call(vs,function(v){ play(v); });
+  }
+  Array.prototype.forEach.call(main.querySelectorAll(".vcard"),function(card){
+    var v = card.querySelector("video.dv");
+    if(!v) return;
+    card.addEventListener("click",function(){ fullScreen(v); });
+  });
+}
+function fullScreen(v){
+  try{ v.muted = false; }catch(e){}
+  var f = v.requestFullscreen || v.webkitRequestFullscreen ||
+          v.webkitEnterFullscreen || v.msRequestFullscreen;
+  if(f){ try{ f.call(v); }catch(e){} }
+  var p = v.play(); if(p && p.catch) p.catch(function(){ v.muted = true; v.play(); });
+}
+document.addEventListener("fullscreenchange", function(){
+  if(document.fullscreenElement) return;
+  Array.prototype.forEach.call(document.querySelectorAll("video.dv"),function(v){
+    v.muted = true;                      /* back in the page: silent again */
+  });
+});
 
 /* ---------------- gallery ---------------- */
 function viewGallery(){
@@ -2510,6 +2720,11 @@ document.getElementById("fcat").onclick=sheetCatering;
   el.addEventListener("click",function(){var now=Date.now();n=(now-t<900)?n+1:1;t=now;
     if(n>=5){n=0;if(confirm("Download party enquiries + feedback as a text file?"))exportAll();}});})();
 document.getElementById("galbtn").onclick=()=>{search.value="";location.hash="#/gallery"};
+document.getElementById("viewbtn").onclick=()=>{
+  VIEW = VIEW==="photo" ? "table" : "photo";
+  try{ window.localStorage.setItem("hayatView", VIEW); }catch(e){}
+  applyChrome(); route();
+};
 document.getElementById("langbtn").onclick=()=>{
   L = L==="en" ? "ml" : "en"; saveLang(L); applyChrome(); route();
   try{ if(window.INTRO) window.INTRO.relabel(); }catch(e){}

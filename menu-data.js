@@ -48,6 +48,8 @@ window.MENU = [
 { id:"alfaham", ic:"\u{1F525}", name:"Alfaham",
   tagline:"Grilled to perfection · 8 signature marinations",
   note:"Every flavour is available on its own or served with mandi rice.",
+  slides:[{ src:"banners/alfaham-1.jpg" },    /* artwork carries its own words */
+          { src:"banners/alfaham-2.jpg" }],
   layout:"list", items:[
 
   { id:"af-regular", name:"Regular Alfaham", desc:"Traditional flavour with a perfect smoky finish.",
@@ -74,9 +76,11 @@ window.MENU = [
     img:"photos/af-masala.jpg", icon:"grill", tint:"#A8461F", ig:[],
     matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
 
-  { id:"af-peri", name:"Peri Peri Alfaham", tags:["hot"],
-    desc:"Fiery peri peri marinade, perfectly grilled.",
+  { id:"af-peri", name:"Peri Peri Alfaham", sub:"Fiery. Smoky. Unforgettable.", tags:["hot","star"],
+    desc:"Marinated in a bold blend of African peri peri spices and grilled over coals "+
+         "for a smoky, juicy, properly spicy bite. Served with lemon, salad and dip.",
     img:"photos/af-peri.jpg", icon:"grill", tint:"#C4361C", ig:[],
+    photos:[{src:"photos/posters/af-peri.jpg", caption:"Peri Peri Chicken Al Faham"}],
     matrix:{cols:QHF,rows:[["Without Mandi",[150,260,470]],["With Mandi",[230,370,670]]]} },
 
   { id:"af-afghani", name:"Afghani Alfaham",
@@ -87,6 +91,10 @@ window.MENU = [
   { id:"af-cheesy", name:"Cheesy Cheesy Alfaham", sub:"Chef’s pick", tags:["star"],
     desc:"Rich creamy marinade with layers of cheese for an indulgent finish.",
     img:"photos/af-cheesy.jpg", icon:"grill", tint:"#E0A93A", ig:[],
+    videos:[{src:"gallery/videos/creamy-1.mp4", poster:"gallery/videos/creamy-1.jpg",
+             caption:"Straight off the grill, sauce still moving"},
+            {src:"gallery/videos/creamy-2.mp4", poster:"gallery/videos/creamy-2.jpg",
+             caption:"The finish — herbs on top, served hot"}],
     matrix:{cols:QHF,rows:[["Without Mandi",[170,280,510]],["With Mandi",[250,400,740]]]} }
 ]},
 
@@ -136,18 +144,30 @@ window.MENU = [
 
 { id:"biryani", ic:"\u{1F35B}", name:"Biryani", tagline:"Malabar dum biryani, kaima rice, cooked to order",
   note:"⚠ PRICES TO CONFIRM — this section was not on the printed board.",
+  /* slides: the banner that runs across the top of this section.
+     Any section can have one — drop the files in banners/ and list them. */
+  slides:[{ src:"banners/biryani-1.jpg" },     /* these four already carry the */
+          { src:"banners/biryani-2.jpg" },     /* wording, so no caption on top */
+          { src:"banners/biryani-3.jpg" },
+          { src:"banners/biryani-4.jpg" }],
   layout:"list", items:[
 
   { id:"br-chicken", name:"Chicken Biryani", icon:"mandi", tint:"#C9873A", img:"photos/br-chicken.jpg", ig:[],
     desc:"Classic Malabar dum biryani — short-grain kaima rice, fried onion, roasted cashew and raisin.",
+    photos:[{src:"banners/biryani-3.jpg", caption:"Fragrant. Authentic. Irresistible."}],
     matrix:{cols:QHF,rows:[["Price",[null,null,180]]]} },
 
   { id:"br-beef", name:"Beef Biryani", icon:"mandi", tint:"#8E4A22", img:"photos/br-beef.jpg", ig:[],
     desc:"Slow-cooked beef layered with spiced rice. Heavier, richer, the local favourite.",
+    photos:[{src:"banners/biryani-1.jpg", caption:"Fragrant. Rich. Unforgettable."},
+            {src:"banners/biryani-2.jpg", caption:"Served the way it should be"},
+            {src:"banners/biryani-3.jpg", caption:"Fragrant. Authentic. Irresistible."},
+            {src:"banners/biryani-4.jpg", caption:"Serving happiness every day"}],
     matrix:{cols:QHF,rows:[["Price",[null,null,200]]]} },
 
   { id:"br-mutton", name:"Mutton Biryani", icon:"mandi", tint:"#6B3416", img:"photos/br-mutton.jpg", ig:[],
     desc:"Tender mutton on the bone, dum-sealed with the rice so nothing escapes.",
+    photos:[{src:"banners/biryani-4.jpg", caption:"Serving happiness every day"}],
     matrix:{cols:QHF,rows:[["Price",[null,null,260]]]} },
 
   { id:"br-fish", name:"Fish Biryani", icon:"mandi", tint:"#4A7C8C", img:"photos/br-fish.jpg", ig:[],
