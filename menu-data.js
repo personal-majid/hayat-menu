@@ -122,6 +122,8 @@ window.MENU = [
 ]},
 
 { id:"exotic", ic:"\u{1F357}", name:"Fried Chicken", tagline:"Broasted, crunchy, fried the minute you order it",
+  slides:[{ src:"banners/fried-1.jpg" },      /* artwork carries its own words */
+          { src:"banners/fried-2.jpg" }],
   layout:"list", items:[
 
   { id:"broast", name:"Broast Fried Chicken", sub:"Crispy perfection", tags:["star"],
