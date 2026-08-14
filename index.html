@@ -464,7 +464,7 @@ textarea.fld{min-height:110px;resize:vertical}
   border-radius:18px;overflow:hidden;background:#0b0603;
   border:1px solid var(--line);margin:0 0 18px;aspect-ratio:1600/560;
   max-height:52vh;transition:height .45s ease}
-.slides .sl{position:absolute;inset:0;opacity:0;transition:opacity .7s ease}
+.slides .sl{position:absolute;inset:0;opacity:0;transition:opacity .7s ease;pointer-events:none}
 .slides .sl.on{opacity:1}
 /* contain, not cover: these are branded posters — cropping would cut the
    logo or the wording off. The frame takes the shape of the tallest slide. */
@@ -473,6 +473,8 @@ textarea.fld{min-height:110px;resize:vertical}
   font-size:14px;font-weight:700;letter-spacing:.02em;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(6,3,1,.86))}
 .slides .scap:empty{display:none}
+.slides.small{max-height:32vh;margin-bottom:22px;cursor:pointer}
+.slides.small .scap{padding:26px 16px 12px;font-size:13px}
 .slides .sdots{position:absolute;right:14px;bottom:14px;z-index:4;display:flex;gap:7px}
 .slides .sdots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);
   transition:all .25s;cursor:pointer}
@@ -2138,6 +2140,8 @@ function viewHome(){
         ? `<button id="introreplay" type="button">&#9654; ${T("watchIntro")}</button>` : ""}
    </div>
 
+   ${slideShow({slidesOverride: allSlides()}, true)}
+
    <h3 class="mini">${T("theMenu")} &middot; ${total} ${T("dishes")}</h3>
    <div class="grid">${MENU.map(c=>{
      const cover=c.items.find(i=>i.anchor)||c.items[0];
@@ -2212,6 +2216,7 @@ function viewHome(){
    ${igBar(T("igSeeAll"),T("igSeeAllSub"))}
    <p class="thanks">${T("thanks")}</p>`;
   mountReels(main);
+  wireSlides();
   main.scrollTop=0;
 }
 
@@ -2421,16 +2426,28 @@ function sectionSlides(c){
   }
   return out.slice(0,6);
 }
-function slideShow(c){
-  var sl = sectionSlides(c);
+function slideShow(c, small){
+  var sl = (c && c.slidesOverride) || sectionSlides(c);
   if(!sl.length) return "";
-  return '<div class="slides" id="slides">'+sl.map(function(x,i){
-    return '<div class="sl'+(i?"":" on")+'"><img '+(i?'loading="lazy" ':'')+
-           'src="'+esc(x.src)+'" alt=""></div>';
+  return '<div class="slides'+(small?" small":"")+'" id="slides">'+sl.map(function(x,i){
+    return '<div class="sl'+(i?"":" on")+'" data-cap="'+esc(x.caption||"")+'"'+
+           (x.go?' data-goto="'+esc(x.go)+'"':'')+'>'+
+           '<img '+(i?'loading="lazy" ':'')+'src="'+esc(x.src)+'" alt=""></div>';
   }).join("")+
   '<div class="scap" id="scap">'+esc(sl[0].caption||"")+'</div>'+
   '<div class="sdots">'+sl.map(function(_,i){
     return '<i class="'+(i?"":"on")+'" data-slide="'+i+'"></i>';}).join("")+'</div></div>';
+}
+/* Every banner in the whole menu, for the strip on the home page.
+   Tapping one jumps straight to that section. */
+function allSlides(){
+  var out=[];
+  MENU.forEach(function(c){
+    (c.slides||[]).forEach(function(x){
+      if(x && x.src) out.push({src:x.src, caption:x.caption||"", go:"#/c/"+c.id});
+    });
+  });
+  return out;
 }
 var SLIDE_TIMER=null;
 /* Shape the frame to whichever slide is showing, so a wide banner and a
@@ -2445,7 +2462,8 @@ function fitBox(box, i){
     var r = slideRatio(im); if(!r) return;
     var w = box.clientWidth || box.getBoundingClientRect().width;
     if(!w) return;
-    var h = Math.min(w / Math.max(1.2, Math.min(3.4, r)), window.innerHeight * 0.52);
+    var cap = box.classList.contains("small") ? 0.32 : 0.52;
+    var h = Math.min(w / Math.max(1.2, Math.min(3.4, r)), window.innerHeight * cap);
     box.style.aspectRatio = "auto";     /* height rules from here on, not the ratio */
     box.style.height = Math.round(h) + "px";
   }
@@ -2458,8 +2476,7 @@ function wireSlides(){
   var sl=box.querySelectorAll(".sl"), dots=box.querySelectorAll(".sdots i"),
       cap=document.getElementById("scap"), caps=[], i=0;
   if(sl.length<2){ return; }
-  var c=MENU.find(function(x){ return "#/c/"+x.id===location.hash.split("?")[0]; });
-  caps=(c?sectionSlides(c):[]).map(function(x){ return x.caption||""; });
+  caps = Array.prototype.map.call(sl, function(el){ return el.getAttribute("data-cap")||""; });
   function show(n){
     i=((n%sl.length)+sl.length)%sl.length;
     for(var k=0;k<sl.length;k++) sl[k].className = "sl"+(k===i?" on":"");
@@ -2479,6 +2496,11 @@ function wireSlides(){
   });
   fitBox(box, 0);
   window.addEventListener("resize", function(){ fitBox(box, i); });
+  box.addEventListener("click", function(e){
+    if(e.target && e.target.closest && e.target.closest(".sdots")) return;
+    var go = sl[i] && sl[i].getAttribute("data-goto");
+    if(go) location.hash = go;
+  });
   function reset(){ if(SLIDE_TIMER) clearInterval(SLIDE_TIMER);
     SLIDE_TIMER=setInterval(function(){ show(i+1); }, 4800); }
   reset();
