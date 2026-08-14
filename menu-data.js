@@ -25,6 +25,10 @@ window.MENU = [
 
 { id:"mandi", ic:"\u{1F357}", name:"Signature Mandi",
   tagline:"Slow cooked to perfection with our signature Yemeni spices",
+  slides:[{ src:"banners/mandi-1.jpg" },      /* artwork carries its own words */
+          { src:"banners/mandi-2.jpg" },
+          { src:"banners/mandi-3.jpg" },
+          { src:"banners/mandi-4.jpg" }],
   layout:"list", items:[
 
   { id:"overloaded-mandi", name:"Overloaded Mandi", sub:"The full table platter", anchor:true,
@@ -32,16 +36,19 @@ window.MENU = [
     desc:"Everything at once. A mountain of mandi rice buried under beef, chicken and alfaham, "+
          "finished with roasted cashew, raisin and boiled egg. Built for a full table — "+
          "order it once and nobody at the table needs anything else.",
+    photos:[{src:"photos/posters/overloaded-mandi.jpg", caption:"Overloaded Alfaham Mandi \u2014 perfect for sharing"}],
     matrix:{cols:QHF,rows:[["Price",[349,699,1399]]]} },
 
   { id:"beef-mandi", name:"Beef Mandi", sub:"Our Pride", tags:["star"],
     desc:"Tender beef slow cooked to perfection with our signature Yemeni spices.",
     img:"photos/beef-mandi.jpg", icon:"mandi", ig:[],
+    photos:[{src:"photos/posters/beef-mandi.jpg", caption:"Beef Mandi \u2014 8 tender pieces, slow cooked"}],
     matrix:{cols:QHF,rows:[["Price",[230,420,780]]]} },
 
   { id:"chicken-mandi", name:"Chicken Mandi",
     desc:"Juicy, tender chicken marinated in Yemeni spices and slow cooked with aromatic rice.",
     img:"photos/chicken-mandi.jpg", icon:"mandi", ig:[],
+    photos:[{src:"photos/posters/chicken-mandi.jpg", caption:"Chicken Mandi \u2014 soft, juicy, aromatic"}],
     matrix:{cols:QHF,rows:[["Price",[210,380,710]]]} }
 ]},
 
