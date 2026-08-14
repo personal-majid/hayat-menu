@@ -2523,25 +2523,31 @@ function allSlides(){
   return out;
 }
 var SLIDE_TIMER=null;
-/* Shape the frame to whichever slide is showing, so a wide banner and a
-   3:2 poster both fill it properly instead of sitting in black bands. */
-function slideRatio(im){
-  return (im && im.naturalWidth && im.naturalHeight) ? im.naturalWidth/im.naturalHeight : 0;
-}
-function fitBox(box, i){
+/* One height for the whole slideshow, worked out from the TALLEST picture in
+   it. Sizing per slide made the page jump every few seconds as a short banner
+   was replaced by a tall one. Nothing is cropped — the shorter ones simply sit
+   in the middle of the frame. */
+function fitBox(box){
   var imgs = box.querySelectorAll(".sl img");
-  var im = imgs[i || 0]; if(!im) return;
+  if(!imgs.length) return;
   function apply(){
-    var r = slideRatio(im); if(!r) return;
+    var ratio = 99;
+    Array.prototype.forEach.call(imgs, function(im){
+      if(im.naturalWidth && im.naturalHeight)
+        ratio = Math.min(ratio, im.naturalWidth / im.naturalHeight);
+    });
+    if(ratio === 99) return;                       /* nothing loaded yet */
     var w = box.clientWidth || box.getBoundingClientRect().width;
     if(!w) return;
-    var cap = box.classList.contains("small") ? 0.32 : 0.52;
-    var h = Math.min(w / Math.max(1.2, Math.min(3.4, r)), window.innerHeight * cap);
-    box.style.aspectRatio = "auto";     /* height rules from here on, not the ratio */
+    var cap = box.classList.contains("small") ? 0.34 : 0.52;
+    var h = Math.min(w / Math.max(1.2, Math.min(3.4, ratio)), window.innerHeight * cap);
+    box.style.aspectRatio = "auto";
     box.style.height = Math.round(h) + "px";
   }
-  if(im.complete) apply();
-  else { im.addEventListener("load", apply); im.addEventListener("error", apply); }
+  apply();
+  Array.prototype.forEach.call(imgs, function(im){
+    if(!im.complete){ im.addEventListener("load", apply); im.addEventListener("error", apply); }
+  });
 }
 function wireSlides(){
   if(SLIDE_TIMER){ clearInterval(SLIDE_TIMER); SLIDE_TIMER=null; }
@@ -2555,7 +2561,6 @@ function wireSlides(){
     for(var k=0;k<sl.length;k++) sl[k].className = "sl"+(k===i?" on":"");
     for(var k=0;k<dots.length;k++) dots[k].className = (k===i?"on":"");
     if(cap) cap.textContent = caps[i]||"";
-    fitBox(box, i);
   }
   for(var k=0;k<dots.length;k++)(function(k){
     dots[k].addEventListener("click",function(e){ e.stopPropagation(); show(k); reset(); });
@@ -2567,8 +2572,8 @@ function wireSlides(){
     var dx=(e.changedTouches[0].clientX-sx); sx=null;
     if(Math.abs(dx)>45){ show(i+(dx<0?1:-1)); reset(); }
   });
-  fitBox(box, 0);
-  window.addEventListener("resize", function(){ fitBox(box, i); });
+  fitBox(box);
+  window.addEventListener("resize", function(){ fitBox(box); });
   box.addEventListener("click", function(e){
     if(e.target && e.target.closest && e.target.closest(".sdots")) return;
     var go = sl[i] && sl[i].getAttribute("data-goto");
@@ -3124,7 +3129,18 @@ try{ INTRO.open(false); }catch(e){}
 /* offline support — https only, silently skipped on file:// */
 var okCtx = location.protocol==="https:" || ["localhost","127.0.0.1"].indexOf(location.hostname)>=0;
 if("serviceWorker" in navigator && okCtx){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"})
+      .then(function(reg){ try{ reg.update(); }catch(e){} })
+      .catch(function(){});
+  });
+  /* When a new version takes over, reload once so the guest sees it straight
+     away instead of the copy stored on the device. */
+  var swapped = false;
+  navigator.serviceWorker.addEventListener("controllerchange", function(){
+    if(swapped) return; swapped = true;
+    location.reload();
+  });
 }
 
 </script>
