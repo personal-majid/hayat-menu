@@ -261,8 +261,15 @@ table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
 .tile{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;text-align:left;
   display:flex;flex-direction:column;background:var(--card);box-shadow:var(--shadow);position:relative}
 .tile:active{border-color:var(--gold2);transform:scale(.99)}
-.tile .cover{aspect-ratio:16/10;overflow:hidden;background:#2A1A0C}
+.tile .cover{position:relative;aspect-ratio:16/10;overflow:hidden;background:#2A1A0C}
 .tile .cover img{width:100%;height:100%;object-fit:cover}
+/* a category with more than one picture cycles them right on the tile */
+.tile .tsl{position:absolute;inset:0}
+.tile .tsl img{position:absolute;inset:0;opacity:0;transition:opacity .8s ease}
+.tile .tsl img.on{opacity:1}
+.tile .tdots{position:absolute;right:9px;bottom:9px;z-index:2;display:flex;gap:5px}
+.tile .tdots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.45);transition:all .3s}
+.tile .tdots i.on{background:var(--gold2);width:15px;border-radius:3px}
 .tile .tb{padding:13px 15px 15px}
 .tile .tt{font-size:15px;font-weight:700}
 .tile .ts{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4}
@@ -2176,8 +2183,14 @@ function viewHome(){
    <h3 class="mini">${T("theMenu")} &middot; ${total} ${T("dishes")}</h3>
    <div class="grid">${MENU.map(c=>{
      const cover=c.items.find(i=>i.anchor)||c.items[0];
+     const cs=(c.slides||[]).filter(x=>x&&x.src);      /* the category's own pictures */
      return `<button class="tile" data-go="#/c/${c.id}">
-       <div class="cover">${pic(cover,true)}</div>
+       <div class="cover">${cs.length
+         ? `<div class="tsl">${cs.map((x,i)=>
+             `<img ${i?'loading="lazy" ':''}class="${i?"":"on"}" src="${esc(x.src)}" alt="">`).join("")}</div>`
+           + (cs.length>1 ? `<span class="tdots">${cs.map((_,i)=>
+               `<i class="${i?"":"on"}"></i>`).join("")}</span>` : "")
+         : pic(cover,true)}</div>
        <div class="tb"><div class="tt">${c.ic} ${esc(SN(c))}</div>
        <div class="ts">${esc(c.tagline)}</div>
        <span class="tc">${c.items.length} ${T("items")} &rarr;</span></div></button>`}).join("")}</div>
@@ -2248,7 +2261,29 @@ function viewHome(){
    <p class="thanks">${T("thanks")}</p>`;
   mountReels(main);
   wireSlides();
+  wireTiles();
   main.scrollTop=0;
+}
+
+/* Category tiles with more than one picture cycle through them. One timer
+   drives every tile, so twenty categories cost the same as one. */
+var TILE_TIMER=null;
+function wireTiles(){
+  if(TILE_TIMER){ clearInterval(TILE_TIMER); TILE_TIMER=null; }
+  var sets = main.querySelectorAll(".tile .tsl");
+  if(!sets.length) return;
+  var step = 0;
+  TILE_TIMER = setInterval(function(){
+    step++;
+    Array.prototype.forEach.call(sets, function(box){
+      var imgs = box.querySelectorAll("img");
+      if(imgs.length < 2) return;
+      var n = step % imgs.length;
+      for(var k=0;k<imgs.length;k++) imgs[k].className = (k===n ? "on" : "");
+      var dots = box.parentNode.querySelectorAll(".tdots i");
+      for(var k=0;k<dots.length;k++) dots[k].className = (k===n ? "on" : "");
+    });
+  }, 3600);
 }
 
 /* ---------------- plan a party ---------------- */
