@@ -241,6 +241,9 @@ window.MENU = [
 ]},
 
 { id:"shawarma", ic:"\u{1F32F}", name:"Shawarma", tagline:"Perfectly wrapped, insanely good",
+  slides:[{ src:"banners/shawarma-1.jpg" },   /* artwork carries its own words */
+          { src:"banners/shawarma-2.jpg" },
+          { src:"banners/shawarma-3.jpg" }],
   layout:"paper", items:[
   { id:"w1", name:"Chicken Shawarma", desc:"The classic wrap.", price:120, img:"photos/w1.jpg", icon:"wrap", ig:[] },
   { id:"w2", name:"Spicy Shawarma", desc:"Extra heat in the sauce.", price:130, tags:["hot"], img:"photos/w2.jpg", icon:"wrap", ig:[] },

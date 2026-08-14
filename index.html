@@ -460,7 +460,8 @@ textarea.fld{min-height:110px;resize:vertical}
 @media (max-width:560px){ .vgrid{grid-template-columns:1fr} }
 
 /* ---- category slideshow ---- */
-.slides{position:relative;border-radius:18px;overflow:hidden;background:#0b0603;
+.slides{position:relative;width:100%;box-sizing:border-box;
+  border-radius:18px;overflow:hidden;background:#0b0603;
   border:1px solid var(--line);margin:0 0 18px;aspect-ratio:1600/560;
   max-height:52vh;transition:height .45s ease}
 .slides .sl{position:absolute;inset:0;opacity:0;transition:opacity .7s ease}
@@ -1747,6 +1748,9 @@ window.MENU = [
 ]},
 
 { id:"shawarma", ic:"\u{1F32F}", name:"Shawarma", tagline:"Perfectly wrapped, insanely good",
+  slides:[{ src:"banners/shawarma-1.jpg" },   /* artwork carries its own words */
+          { src:"banners/shawarma-2.jpg" },
+          { src:"banners/shawarma-3.jpg" }],
   layout:"paper", items:[
   { id:"w1", name:"Chicken Shawarma", desc:"The classic wrap.", price:120, img:"photos/w1.jpg", icon:"wrap", ig:[] },
   { id:"w2", name:"Spicy Shawarma", desc:"Extra heat in the sauce.", price:130, tags:["hot"], img:"photos/w2.jpg", icon:"wrap", ig:[] },
@@ -2442,6 +2446,7 @@ function fitBox(box, i){
     var w = box.clientWidth || box.getBoundingClientRect().width;
     if(!w) return;
     var h = Math.min(w / Math.max(1.2, Math.min(3.4, r)), window.innerHeight * 0.52);
+    box.style.aspectRatio = "auto";     /* height rules from here on, not the ratio */
     box.style.height = Math.round(h) + "px";
   }
   if(im.complete) apply();
