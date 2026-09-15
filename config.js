@@ -122,8 +122,40 @@ window.CONFIG = {
      who wants to write something is not staring at a blank box.
      They are suggestions only — never put words in their mouth.  */
   review: {
+    /* ---- WHO IS OFFERED GOOGLE -------------------------------- *
+       true  = 4 and 5 stars are offered Google. 3 and below get our
+               own form instead, which reaches WhatsApp.
+       false = everybody sees both doors.
+
+       Worth knowing: Google calls the first one review gating and it
+       is against their policy. A listing caught doing it can have
+       reviews removed, carry a "fake reviews removed" banner, or be
+       suspended. Set this to false and that risk goes away.          */
+    gate: true,
+
     writeLink: "https://search.google.com/local/writereview?placeid=ChIJ6e-dHwDLpzsRJqS5O3bgSV8",
-    topics: ["the mandi", "the service", "the room"]
+    topics: ["the mandi", "the service", "the room"],
+
+    /* ---- TAP-TO-COPY STARTERS ---------------------------------
+       A guest who wants to write something is not staring at a
+       blank box. They tap one, it lands on their clipboard, they
+       paste it into Google and finish the sentence themselves.
+
+       Keep them HALF FINISHED, and keep them varied. Google's
+       filter removes reviews that read the same as each other,
+       and a listing that collects them can be suspended. The
+       guest's own ending is what makes each review survive.
+       ----------------------------------------------------------- */
+    starters: [
+      "The mandi here is the real thing — ",
+      "Came for the alfaham and ",
+      "Fish fry was the best I have had in ",
+      "The rice was still steaming when ",
+      "Staff looked after us properly, especially ",
+      "Brought the whole family and ",
+      "Portions are generous for the price — ",
+      "Worth the drive from "
+    ]
   },
 
   /* ---- 4b. WHATSAPP ---------------------------------------- */

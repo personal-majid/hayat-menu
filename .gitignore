@@ -15,3 +15,5 @@ __pycache__/
 
 # scratch test scripts
 *.mjs
+
+Claude outputs/

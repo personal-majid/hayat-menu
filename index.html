@@ -10,13 +10,13 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/apple-icon.png">
 <meta property="og:type" content="restaurant">
-<meta property="og:title" content="Hayat Fish Restaurant — Menu">
+<meta property="og:title" content="Hayat Fish and Mandi Restaurant — Menu">
 <meta property="og:description" content="Authentic Yemeni mandi, alfaham and fresh seafood. Makkaraparamba, Malappuram. Home delivery and catering.">
 <meta property="og:image" content="assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/mark.png">
 <link rel="apple-touch-icon" href="assets/mark.png">
-<title>Hayat Fish Restaurant — Menu</title>
+<title>Hayat Fish and Mandi Restaurant — Menu</title>
 <style>
 html[lang="ml"] .prow .n,html[lang="ml"] .row .n{line-height:1.5}
 html[lang="ml"] h2.sec{letter-spacing:.2px}
@@ -737,6 +737,33 @@ footer .star{color:var(--gold2);font-size:17px}
   font-weight:700;width:100%;text-align:center;margin-bottom:2px}
 .revtopics span{font-size:12px;color:var(--gold2);border:1px solid var(--line);border-radius:999px;
   padding:5px 12px;background:var(--accentwash2)}
+.revstart{display:flex;flex-direction:column;gap:7px;margin:16px 0 6px}
+.revstart b{font-size:var(--t-tiny);letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);
+  font-weight:700;text-align:center;margin-bottom:4px}
+.stchip{display:block;width:100%;text-align:left;font:inherit;font-size:13px;line-height:1.5;
+  color:var(--ink);background:var(--accentwash2);border:1px solid var(--line);border-radius:12px;
+  padding:10px 13px;cursor:pointer;transition:border-color .16s,background .16s,opacity .16s}
+.stchip:active{background:var(--accentwash)}
+.stchip.done{border-color:var(--gold2);opacity:.62}
+.stchip.done::after{content:" \2713";color:var(--gold2);font-weight:800}
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);z-index:9999;
+  background:#12100D;color:#F6EBDA;border:1px solid var(--line);border-radius:999px;
+  padding:11px 20px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.45);
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:88vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.fbmedia{display:flex;gap:9px;margin:4px 0 10px;flex-wrap:wrap}
+.mbtn{flex:1 1 46%;display:flex;align-items:center;justify-content:center;gap:7px;
+  font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;
+  background:var(--accentwash2);border:1px solid var(--line);border-radius:12px;padding:11px 10px}
+.mbtn .d{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.mbtn.rec{border-color:var(--hot);color:var(--hot)}
+.mbtn.rec .d{background:var(--hot);animation:pulsedot 1s infinite}
+@keyframes pulsedot{50%{opacity:.25}}
+.fblist{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}
+.fbchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);
+  background:var(--soft2);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
+.fbchip b{cursor:pointer;color:var(--muted);font-size:15px;line-height:1}
+@media (prefers-reduced-motion:reduce){.mbtn.rec .d{animation:none}}
 .revphoto{font-size:12px;color:var(--muted);text-align:center;margin:12px 0 22px}
 .revpriv{border-top:1px solid var(--line);padding-top:16px;margin-top:4px}
 
@@ -815,7 +842,7 @@ html[data-theme="garden"]{--listbg:var(--card)}
 <div id="app">
   <header>
     <img class="logo" src="assets/mark.png" alt="">
-    <div class="brand"><h1>Hayat Fish Restaurant</h1><p id="tagline"></p></div>
+    <div class="brand"><h1>Hayat Fish and Mandi Restaurant</h1><p id="tagline"></p></div>
     <div class="spacer"></div>
     <input id="search" type="search" placeholder="Search…" autocomplete="off">
     <div class="tools">
@@ -1348,7 +1375,7 @@ ui: {
     celebrate:"Celebrate with Hayat", celebrateTag:"We organise it — you just turn up",
     celebrateBlurb:"Birthday parties, college reunions, office get-togethers, friends catching up. We organise the whole thing — the table, the platters, the timing. Tell us the date and how many, that is all we need.",
     planParty:"Plan my party", whatsappUs:"WhatsApp us", callUs:"Call us",
-    rateTitle:"How was it?", rateSub:"Tap a star. Takes five seconds.",
+    rateTitle:"Thank you for coming", rateSub:"Now help us serve you better. Tap a star.",
     rateThanks:"Thank you", rateLowTitle:"Sorry we missed the mark",
     rateLowSub:"Tell us what went wrong. It comes straight to the owner, not to a public page.",
     rateHighTitle:"That means a lot", rateHighSub:"Would you put that on Google? Scan or tap — it takes 20 seconds and it genuinely helps a small restaurant.",
@@ -1358,14 +1385,21 @@ ui: {
     scanToFollow:"Scan to follow us", scanToOrder:"Scan to order on WhatsApp",
     scanToReview:"Scan to review us",
     revOnGoogle:"Post it on Google", revPrivate:"Tell us privately",
-    revPrivateSub:"Comes straight to the owner. Not a public page.",
-    revPhoto:"A photo of the food helps more than anything",
+    revPrivateSub:"Straight to the owner. Nothing public, nothing filtered.",
+    revPhoto:"A photo of the food says more than any words",
     revTopics:"You could mention", revThanksTitle:"Thank you",
+    revStarters:"Tap one to copy, then finish it in your own words",
+    revOnPhone:"Scan this and finish on your own phone — you can type it, say it, or show us a photo.",
+    scanToPhone:"Continue on your phone",
+    fbRecord:"Record a voice note", fbStop:"Stop recording",
+    fbAttach:"Add a photo or video",
+    fbNoMic:"This browser will not let us use the microphone",
+    revCopied:"Copied — paste it into Google",
     revOpen:"Opening Google\u2026", revBack:"Back to the menu",
-    revHead5:"That means a lot", revHead4:"Glad you enjoyed it",
-    revHead3:"Thank you for being honest", revHead2:"We are sorry",
-    revSub5:"Twenty seconds on Google genuinely helps a small restaurant.",
-    revSubLow:"Tell us what went wrong and the owner will read it himself.", reels:"Reels", connect:"Connect",
+    revHead5:"That means a great deal", revHead4:"Glad it landed well",
+    revHead3:"Thank you for being honest", revHead2:"We let you down",
+    revSub5:"If you have a moment, a few words on Google would mean a lot to us.",
+    revSubLow:"Tell us what happened. The owner reads every one himself.", reels:"Reels", connect:"Connect",
     orderWhatsapp:"Order on WhatsApp", followInsta:"Follow on Instagram",
     tapUnmute:"Tap for sound", viewOnInsta:"View on Instagram",
     partyTitle:"Let’s plan it", partySub:"Leave your number. We call back within the hour and hold the date.",
@@ -1419,7 +1453,7 @@ ui: {
     celebrate:"ഹയാത്തിനൊപ്പം ആഘോഷിക്കൂ", celebrateTag:"ഞങ്ങൾ ഒരുക്കും — നിങ്ങൾ വന്നാൽ മതി",
     celebrateBlurb:"പിറന്നാൾ പാർട്ടികൾ, കോളേജ് ഒത്തുചേരലുകൾ, ഓഫീസ് പാർട്ടികൾ, കൂട്ടുകാരുടെ കൂടിച്ചേരൽ. എല്ലാം ഞങ്ങൾ ഒരുക്കും. തീയതിയും ആളുകളുടെ എണ്ണവും പറഞ്ഞാൽ മതി.",
     planParty:"പാർട്ടി പ്ലാൻ ചെയ്യൂ", whatsappUs:"വാട്സ്ആപ്പ്", callUs:"വിളിക്കൂ",
-    rateTitle:"എങ്ങനെയുണ്ടായിരുന്നു?", rateSub:"ഒരു നക്ഷത്രം തൊടൂ. അഞ്ച് സെക്കൻഡ് മതി.",
+    rateTitle:"വന്നതിന് നന്ദി", rateSub:"ഇനി കൂടുതൽ മികവാകാൻ സഹായിക്കൂ. ഒരു നക്ഷത്രം തൊടൂ.",
     rateThanks:"നന്ദി", rateLowTitle:"ക്ഷമിക്കണം, ഞങ്ങൾക്ക് പിഴച്ചു",
     rateLowSub:"എന്താണ് സംഭവിച്ചതെന്ന് പറയൂ. ഇത് നേരിട്ട് ഉടമയ്ക്ക് എത്തും, പൊതു ഇടത്തിലല്ല.",
     rateHighTitle:"വളരെ സന്തോഷം", rateHighSub:"ഇത് ഗൂഗിളിൽ എഴുതാമോ? സ്കാൻ ചെയ്യൂ — 20 സെക്കൻഡ് മതി, ഞങ്ങൾക്ക് വലിയ സഹായമാണ്.",
@@ -1432,9 +1466,16 @@ ui: {
     revPrivateSub:"ഉടമയക്ക് നേരിട്ട് എത്തും. പൊതുവായി കാണിക്കില്ല.",
     revPhoto:"ഓരോ ഫോട്ടോ കൂടി ചേർത്താൽ വളരെ നന്നി",
     revTopics:"ഇതൊക്കെ പറയാം", revThanksTitle:"നന്ദി",
+    revStarters:"ഒന്ന് തൊട്ടാൽ പകർത്തും, ബാക്കി സ്വന്തം വാക്കിൽ എഴുതൂ",
+    revOnPhone:"ഇത് സ്കാൻ ചെയ്ത് സ്വന്തം ഫോണിൽ പൂർത്തിയാക്കൂ — എഴുതാം, പറയാം, ഫോട്ടോ അയക്കാം.",
+    scanToPhone:"ഫോണിൽ തുടരൂ",
+    fbRecord:"ശബ്ദസന്ദേശം റെക്കോർഡ് ചെയ്യൂ", fbStop:"നിർത്തൂ",
+    fbAttach:"ഫോട്ടോ / വീഡിയോ ചേർക്കൂ",
+    fbNoMic:"ഈ ബ്രൗസറിൽ മൈക്ക് ഉപയോഗിക്കാനാകുന്നില്ല",
+    revCopied:"പകർത്തി — ഗൂഗിളിൽ ഒട്ടിക്കൂ",
     revHead5:"വളരെ സന്തോഷം", revHead4:"സന്തോഷമായി",
-    revHead3:"തുറന്നു പറഞ്ങതിന് നന്ദി", revHead2:"ക്ഷമിക്കണം",
-    revSub5:"ഗൂഗിളിൽ ഇരുപത് സെക്കൻഡ് — ഞങ്ങൾക്ക് വലിയ സഹായമാണ്.",
+    revHead3:"തുറന്നു പറഞ്ങതിന് നന്ദി", revHead2:"ഞങ്ങൾക്ക് പിഴച്ചു",
+    revSub5:"സമയമുണ്ടെങ്കിൽ ഗൂഗിളിൽ ഒരു വാക്ക് — ഞങ്ങൾക്ക് വലിയ സന്തോഷമാകും.",
     revSubLow:"എന്താണ് സംഭവിച്ചതെന്ന് പറയൂ, ഉടമ നേരിട്ട് വായിക്കും.",
     orderWhatsapp:"വാട്സ്ആപ്പിൽ ഓർഡർ", followInsta:"ഇൻസ്റ്റാഗ്രാമിൽ ഫോളോ",
     tapUnmute:"ശബ്ദത്തിന് തൊടൂ", viewOnInsta:"ഇൻസ്റ്റാഗ്രാമിൽ കാണൂ",
@@ -1687,8 +1728,40 @@ window.CONFIG = {
      who wants to write something is not staring at a blank box.
      They are suggestions only — never put words in their mouth.  */
   review: {
+    /* ---- WHO IS OFFERED GOOGLE -------------------------------- *
+       true  = 4 and 5 stars are offered Google. 3 and below get our
+               own form instead, which reaches WhatsApp.
+       false = everybody sees both doors.
+
+       Worth knowing: Google calls the first one review gating and it
+       is against their policy. A listing caught doing it can have
+       reviews removed, carry a "fake reviews removed" banner, or be
+       suspended. Set this to false and that risk goes away.          */
+    gate: true,
+
     writeLink: "https://search.google.com/local/writereview?placeid=ChIJ6e-dHwDLpzsRJqS5O3bgSV8",
-    topics: ["the mandi", "the service", "the room"]
+    topics: ["the mandi", "the service", "the room"],
+
+    /* ---- TAP-TO-COPY STARTERS ---------------------------------
+       A guest who wants to write something is not staring at a
+       blank box. They tap one, it lands on their clipboard, they
+       paste it into Google and finish the sentence themselves.
+
+       Keep them HALF FINISHED, and keep them varied. Google's
+       filter removes reviews that read the same as each other,
+       and a listing that collects them can be suspended. The
+       guest's own ending is what makes each review survive.
+       ----------------------------------------------------------- */
+    starters: [
+      "The mandi here is the real thing — ",
+      "Came for the alfaham and ",
+      "Fish fry was the best I have had in ",
+      "The rice was still steaming when ",
+      "Staff looked after us properly, especially ",
+      "Brought the whole family and ",
+      "Portions are generous for the price — ",
+      "Worth the drive from "
+    ]
   },
 
   /* ---- 4b. WHATSAPP ---------------------------------------- */
@@ -2452,6 +2525,49 @@ function openOut(u){
   try{ w=window.open(u,"_blank","noopener"); }catch(e){ w=null; }
   if(!w || w.closed || typeof w.closed==="undefined"){ location.href=u; }
 }
+/* Tap a starter -> it lands on the clipboard, guest pastes it into Google
+   and finishes the sentence. Never the whole review: identical text across
+   reviews is what Google's filter removes. */
+function copyText(t){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText)
+      return navigator.clipboard.writeText(t).catch(function(){ legacyCopy(t); });
+  }catch(e){}
+  legacyCopy(t);
+}
+function legacyCopy(t){
+  var a=document.createElement("textarea");
+  a.value=t; a.setAttribute("readonly","");
+  a.style.cssText="position:fixed;top:-1000px;opacity:0";
+  document.body.appendChild(a); a.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(a);
+}
+function toast(msg){
+  var t=document.getElementById("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t=setTimeout(function(){ t.classList.remove("on"); },2200);
+}
+/* Android: hand the review to the Google Maps app if it is installed.
+   The intent carries a browser fallback, so a phone without Maps — and
+   every iPhone — simply lands on the same web page as before. QR codes
+   always keep the plain https address; a scanner cannot read an intent. */
+function nativeReview(u){
+  if(!u || KIOSK) return u;
+  if(!/Android/i.test(navigator.userAgent||"")) return u;
+  if(!/^https:\/\//.test(u)) return u;
+  return "intent://" + u.slice(8) +
+         "#Intent;scheme=https;package=com.google.android.apps.maps;" +
+         "S.browser_fallback_url=" + encodeURIComponent(u) + ";end";
+}
+/* The tablet hands the written form over to the guest's own phone:
+   same page, guest mode, so the microphone and the share sheet work. */
+function RATEURL(){
+  var base=location.href.split("#")[0].split("?")[0];
+  return base+"?guest#/review";
+}
 function qrTarget(kind){
   if(kind==="insta")  return IGURL;
   if(kind==="wa")     return WA();
@@ -2465,7 +2581,9 @@ function qrSheet(kind){
     wa:{    img:qrFor(WA()),  h:"WhatsApp",   handle:telShow(C.whatsapp.replace(/^91/,"")),
             title:T("scanWa"), url:WA() },
     review:{img:qrFor(qrTarget("review")), h:"Google", handle:"",
-            title:T("scanToReview"), url:qrTarget("review") }
+            title:T("scanToReview"), url:qrTarget("review") },
+    rate:{  img:qrFor(RATEURL()), h:"\u2605", handle:"",
+            title:T("scanToPhone"), url:RATEURL() }
   }[kind];
   overlay.innerHTML=`<div class="scrim" data-close><div class="sheet qsheet">
     <h4>${esc(M.h)}</h4>
@@ -2509,7 +2627,7 @@ function viewHome(){
   const igPosts=igList();
 
   main.innerHTML=`
-   <div class="homehero"><img src="assets/logo.png" alt="Hayat Fish Restaurant">
+   <div class="homehero"><img src="assets/logo.png" alt="Hayat Fish and Mandi Restaurant">
      <div class="tl">${esc(C.tagline)}</div>
      <div class="trust">${(C.trustBadges||[]).map(b=>`<span>${esc(b)}</span>`).join("")}</div>
      ${(C.intro && C.intro.enabled!==false && (C.intro.clips||[]).length)
@@ -2726,36 +2844,72 @@ function viewRate(){
   const R=C.review||{};
   const link=R.writeLink || C.reviewLink;
   const topics=(R.topics||[]).filter(Boolean);
+  const starters=(R.starters||[]).filter(Boolean);
 
-  /* Everybody is asked the same thing and everybody gets the same two doors.
-     Only the wording follows the rating — nobody is filtered out of Google.
-     Screening guests by score is against Google's rules and costs listings. */
+  /* ------------------------------------------------------------------
+     OWNER'S DECISION, 2026: four stars and up are offered Google.
+     Three and below go to our own form instead, which reaches the
+     owner on WhatsApp.
+
+     Be aware of what this is: Google calls it review gating and it is
+     against their policy. The listing can have reviews stripped, carry
+     a "fake reviews removed" banner, or be suspended. Set
+       review.gate: false
+     in config.js and both doors come back for everybody.
+     ------------------------------------------------------------------ */
+  const GATE  = (R.gate !== false);
+  const happy = !GATE || s>=4;
+
   const head5 = s>=5 ? T("revHead5") : s===4 ? T("revHead4")
               : s===3 ? T("revHead3") : T("revHead2");
   const sub   = s>=4 ? T("revSub5") : T("revSubLow");
 
   const google = own
-    ? `<a class="revbtn primary" href="${esc(link)}" target="_blank" rel="noopener">
+    ? `<a class="revbtn primary" href="${esc(nativeReview(link))}" target="_blank" rel="noopener">
          <span class="g">G</span>${T("revOnGoogle")}</a>`
     : `<button class="revbtn primary" data-qr="review"><span class="g">G</span>${T("revOnGoogle")}</button>`;
 
-  const panel = s===0 ? `<p class="secsub">${T("rateSub")}</p>` : `
-    <div class="revwrap">
-      <h3 class="revh">${esc(head5)}</h3>
-      <p class="revsub">${esc(sub)}</p>
+  /* the low-star form: written, spoken, or shown in pictures */
+  const media = own ? `
+      <div class="fbmedia">
+        <button class="mbtn" id="fbRec"><span class="d"></span><span id="fbRecTxt">${T("fbRecord")}</span></button>
+        <label class="mbtn"><input type="file" id="fbFiles" accept="image/*,video/*" multiple hidden>
+          &#128247; ${T("fbAttach")}</label>
+      </div>
+      <div class="fblist" id="fbList"></div>` : "";
+
+  const form = `
+      <p class="revsub" style="margin:0 0 14px">${T("revPrivateSub")}</p>
+      <input class="fld" id="fbName"  placeholder="${T("yourName")}">
+      <input class="fld" id="fbPhone" placeholder="${T("yourPhone")}" inputmode="tel">
+      <textarea class="fld" id="fbText" placeholder="${T("whatHappened")}"></textarea>
+      ${media}
+      <button class="revbtn primary" id="fbSave">${T("sendFeedback")}</button>`;
+
+  const happyPanel = `
       ${google}
+      ${starters.length?`<div class="revstart"><b>${T("revStarters")}</b>
+        ${starters.map((t,i)=>`<button class="stchip" data-start="${i}">${esc(t)}&#8230;</button>`).join("")}
+        </div>`:""}
       ${topics.length?`<div class="revtopics"><b>${T("revTopics")}</b>
         ${topics.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
       <div class="revphoto">&#128247; ${T("revPhoto")}</div>
 
       <button class="revbtn ghost" id="revPrivOpen">${T("revPrivate")}</button>
-      <div class="revpriv" id="revPriv" hidden>
-        <p class="revsub" style="margin:0 0 12px">${T("revPrivateSub")}</p>
-        <input class="fld" id="fbName"  placeholder="${T("yourName")}">
-        <input class="fld" id="fbPhone" placeholder="${T("yourPhone")}" inputmode="tel">
-        <textarea class="fld" id="fbText" placeholder="${T("whatHappened")}"></textarea>
-        <button class="revbtn primary" id="fbSave">${T("sendFeedback")}</button>
-      </div>
+      <div class="revpriv" id="revPriv" hidden>${form}</div>`;
+
+  /* On the tablet there is no point offering the microphone — the guest
+     finishes this on their own phone, so we hand the page over by QR. */
+  const lowPanel = own
+    ? `<div class="revpriv" style="border:0;padding-top:0">${form}</div>`
+    : `<p class="revsub">${T("revOnPhone")}</p>
+       <button class="revbtn primary" data-qr="rate">${T("scanToPhone")}</button>`;
+
+  const panel = s===0 ? `<p class="secsub">${T("rateSub")}</p>` : `
+    <div class="revwrap">
+      <h3 class="revh">${esc(head5)}</h3>
+      <p class="revsub">${esc(sub)}</p>
+      ${happy ? happyPanel : lowPanel}
     </div>`;
 
   main.innerHTML=
@@ -2770,25 +2924,99 @@ function viewRate(){
   const priv=document.getElementById("revPriv");
   if(open && priv) open.onclick=()=>{ priv.hidden=!priv.hidden; open.hidden=!priv.hidden; };
 
+  wireFeedback(s);
+  restoreScroll();
+}
+
+/* ---- the low-star form: typed, spoken, or shown ---------------------
+   WhatsApp links carry text only — no attachment can be added to a
+   wa.me address. Anything recorded or picked therefore goes out
+   through the phone's own share sheet, where the guest taps WhatsApp
+   and the files ride along. With nothing attached we fall back to the
+   plain wa.me link, which is what the tablet always uses. */
+let FBFILES=[], FBREC=null, FBCHUNKS=[];
+
+function fbRender(){
+  const box=document.getElementById("fbList");
+  if(!box) return;
+  box.innerHTML = FBFILES.map((f,i)=>
+    `<span class="fbchip">${f.type.indexOf("audio")===0?"&#127908;"
+      :f.type.indexOf("video")===0?"&#127909;":"&#128247;"}
+     ${esc(f.name.length>18?f.name.slice(0,16)+"\u2026":f.name)}
+     <b data-fbdrop="${i}">&times;</b></span>`).join("");
+}
+
+function wireFeedback(s){
+  FBFILES=[]; FBCHUNKS=[]; FBREC=null;
+
+  const open=document.getElementById("revPrivOpen");
+  const priv=document.getElementById("revPriv");
+  if(open && priv) open.onclick=()=>{ priv.hidden=!priv.hidden; open.hidden=!priv.hidden; };
+
+  const pick=document.getElementById("fbFiles");
+  if(pick) pick.onchange=()=>{
+    for(const f of pick.files||[]) FBFILES.push(f);
+    pick.value=""; fbRender();
+  };
+
+  const list=document.getElementById("fbList");
+  if(list) list.onclick=(e)=>{
+    const d=e.target.closest("[data-fbdrop]");
+    if(d){ FBFILES.splice(+d.dataset.fbdrop,1); fbRender(); }
+  };
+
+  const rec=document.getElementById("fbRec"), rtx=document.getElementById("fbRecTxt");
+  if(rec) rec.onclick=async ()=>{
+    if(FBREC && FBREC.state==="recording"){ FBREC.stop(); return; }
+    if(!navigator.mediaDevices || !window.MediaRecorder){ toast(T("fbNoMic")); return; }
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      FBCHUNKS=[]; FBREC=new MediaRecorder(stream);
+      FBREC.ondataavailable=ev=>{ if(ev.data && ev.data.size) FBCHUNKS.push(ev.data); };
+      FBREC.onstop=()=>{
+        stream.getTracks().forEach(t=>t.stop());
+        const type=(FBREC.mimeType||"audio/webm").split(";")[0];
+        const ext=type.indexOf("mp4")>=0?"m4a":"webm";
+        FBFILES.push(new File(FBCHUNKS,"voice-note."+ext,{type:type}));
+        rec.classList.remove("rec"); if(rtx) rtx.textContent=T("fbRecord");
+        fbRender();
+      };
+      FBREC.start();
+      rec.classList.add("rec"); if(rtx) rtx.textContent=T("fbStop");
+    }catch(e){ toast(T("fbNoMic")); }
+  };
+
   const send=document.getElementById("fbSave");
-  if(send) send.onclick=()=>{
-    const rec={ at:new Date().toLocaleString(), stars:s,
+  if(send) send.onclick=async ()=>{
+    if(FBREC && FBREC.state==="recording"){ FBREC.stop(); await new Promise(r=>setTimeout(r,320)); }
+    const rec2={ at:new Date().toLocaleString(), stars:s,
       name:(document.getElementById("fbName")||{}).value||"",
       phone:(document.getElementById("fbPhone")||{}).value||"",
       text:(document.getElementById("fbText")||{}).value||"" };
-    saveFeedback(rec);
-    const msg="Feedback for Hayat\nRating: "+s+"/5\nName: "+(rec.name||"-")+
-              "\nPhone: "+(rec.phone||"-")+"\n\n"+(rec.text||"-");
-    openOut(WA(msg));
+    saveFeedback(rec2);
+    const msg="Feedback for Hayat\nRating: "+s+"/5\nName: "+(rec2.name||"-")+
+              "\nPhone: "+(rec2.phone||"-")+"\n\n"+(rec2.text||"-");
+
+    let shared=false;
+    if(FBFILES.length && navigator.share){
+      try{
+        if(!navigator.canShare || navigator.canShare({files:FBFILES})){
+          await navigator.share({text:msg, files:FBFILES});
+          shared=true;
+        }
+      }catch(e){ shared = (e && e.name==="AbortError"); }
+    }
+    if(!shared) openOut(WA(msg));
+
     main.innerHTML=backBar("#/",T("menu"),T("rateUs"))+
       `<div class="revwrap" style="text-align:center;padding:50px 20px">
         <div style="font-size:44px">&#128591;</div>
         <h3 class="revh">${T("revThanksTitle")}</h3>
         <p class="revsub">${T("saved")}</p></div>`+
       backBottom("#/",T("backMenu"));
+    FBFILES=[];
     restoreScroll();
   };
-  restoreScroll();
 }
 
 /* ---------------- category ---------------- */
@@ -3215,11 +3443,19 @@ document.addEventListener("click",e=>{
   const qr=e.target.closest("[data-qr]");
   if(qr){
     if(!KIOSK){
-      const u=qrTarget(qr.dataset.qr);
+      let u=qrTarget(qr.dataset.qr);
+      if(qr.dataset.qr==="review") u=nativeReview(u);
       if(u) openOut(u);
       return;
     }
     return qrSheet(qr.dataset.qr);
+  }
+  const sc=e.target.closest("[data-start]");
+  if(sc){
+    const L=((C.review||{}).starters||[]).filter(Boolean);
+    const t=L[+sc.dataset.start];
+    if(t){ copyText(t); toast(T("revCopied")); sc.classList.add("done"); }
+    return;
   }
   const st=e.target.closest("[data-star]"); if(st){STARS=+st.dataset.star;return viewRate()}
   const tb=e.target.closest("[data-tab]");  if(tb){GTAB=tb.dataset.tab;return viewGallery()}
