@@ -111,6 +111,10 @@ window.CONFIG = {
        Google Business Profile  ->  "Ask for reviews"  ->  copy
        It looks like   https://g.page/r/XXXXXXXXXXXX/review
 
+     ALREADY SET below. The address carries our Google place id
+     (ChIJ6e-dHwDLpzsRJqS5O3bgSV8 = Hayat Fish and Mandi) and lands
+     the guest on the five stars with the keyboard ready.
+
      Leave it empty and we fall back to reviewLink above, which
      opens the listing — the guest then taps "Write a review".
 
@@ -118,7 +122,7 @@ window.CONFIG = {
      who wants to write something is not staring at a blank box.
      They are suggestions only — never put words in their mouth.  */
   review: {
-    writeLink: "",
+    writeLink: "https://search.google.com/local/writereview?placeid=ChIJ6e-dHwDLpzsRJqS5O3bgSV8",
     topics: ["the mandi", "the service", "the room"]
   },
 
