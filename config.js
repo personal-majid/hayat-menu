@@ -84,6 +84,24 @@ window.CONFIG = {
   mapsLink:   "https://www.google.com/maps/dir/?api=1&destination=11.0065785,76.1270507",
   reviewLink: "https://maps.google.com/?cid=6866265905315816486",
 
+  /* ---- 4a. REVIEWS ----------------------------------------- *
+     writeLink opens Google's star box straight away, with no
+     hunting on the listing page. Get it once and paste it here:
+
+       Google Business Profile  ->  "Ask for reviews"  ->  copy
+       It looks like   https://g.page/r/XXXXXXXXXXXX/review
+
+     Leave it empty and we fall back to reviewLink above, which
+     opens the listing — the guest then taps "Write a review".
+
+     topics are gentle prompts shown on the review page so a guest
+     who wants to write something is not staring at a blank box.
+     They are suggestions only — never put words in their mouth.  */
+  review: {
+    writeLink: "",
+    topics: ["the mandi", "the service", "the room"]
+  },
+
   /* ---- 4b. WHATSAPP ---------------------------------------- */
   whatsapp: "919844326842",
   whatsappText: "Hi Hayat, I would like to order",
