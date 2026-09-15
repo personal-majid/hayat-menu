@@ -14,6 +14,13 @@ window.CONFIG = {
      --------------------------------------------------------- */
   kiosk: true,
 
+  /* ---- 0aa. COLOUR THEME ----------------------------------- *
+     "night"  = the dark gold dining room (default)
+     "garden" = the green and cream of the printed flyer
+     Either way the guest can switch it with the leaf button in
+     the header, and their choice sticks on that device.        */
+  theme: "night",
+
   /* ---- 0a. FULL SCREEN ------------------------------------- *
      true  = the menu goes full screen (no address bar, no tabs)
              the moment the guest first touches the tablet, and
