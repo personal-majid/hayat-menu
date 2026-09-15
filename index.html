@@ -26,9 +26,7 @@ html[lang="ml"] .tag{letter-spacing:.2px}
   --bg:#100A05; --card:#1D1409; --card2:#241906;
   --line:rgba(201,162,75,.14); --line2:rgba(201,162,75,.28);
   --gold:#C9A24B; --gold2:#EFCE86; --cream:#F3EFE2; --green:#8FBE43;
-  --paper:#EFE6CF; --ink:#2A1A0D; --hot:#E4705A; --muted:#9C8straight;
-  --muted:#9A8straight;
-  --muted:#998straight;
+  --paper:#EFE6CF; --ink:#2A1A0D; --hot:#E4705A; --muted:#9C8A6C;
   --ig1:#F58529; --ig2:#DD2A7B; --ig3:#8134AF;
   --r:16px; --r2:11px; --r3:9px; --tap:48px;
   /* type scale — everything on the page picks from these */
@@ -741,7 +739,7 @@ footer .star{color:var(--gold2);font-size:17px}
 .revstart b{font-size:var(--t-tiny);letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);
   font-weight:700;text-align:center;margin-bottom:4px}
 .stchip{display:block;width:100%;text-align:left;font:inherit;font-size:13px;line-height:1.5;
-  color:var(--ink);background:var(--accentwash2);border:1px solid var(--line);border-radius:12px;
+  color:var(--cream);background:var(--accentwash2);border:1px solid var(--line);border-radius:12px;
   padding:10px 13px;cursor:pointer;transition:border-color .16s,background .16s,opacity .16s}
 .stchip:active{background:var(--accentwash)}
 .stchip.done{border-color:var(--gold2);opacity:.62}
@@ -753,14 +751,18 @@ footer .star{color:var(--gold2);font-size:17px}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 .fbmedia{display:flex;gap:9px;margin:4px 0 10px;flex-wrap:wrap}
 .mbtn{flex:1 1 46%;display:flex;align-items:center;justify-content:center;gap:7px;
-  font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;
+  font:inherit;font-size:13px;font-weight:600;color:var(--cream);cursor:pointer;
   background:var(--accentwash2);border:1px solid var(--line);border-radius:12px;padding:11px 10px}
 .mbtn .d{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
 .mbtn.rec{border-color:var(--hot);color:var(--hot)}
 .mbtn.rec .d{background:var(--hot);animation:pulsedot 1s infinite}
 @keyframes pulsedot{50%{opacity:.25}}
 .fblist{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}
-.fbchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);
+.fbnote{font-size:11.5px;color:var(--muted);text-align:center;margin:10px 0 0;line-height:1.55}
+.fbdone{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:700;
+  color:var(--green);background:var(--accentwash2);border:1px solid var(--line);
+  border-radius:12px;padding:11px;margin:0 0 14px}
+.fbchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--cream);
   background:var(--soft2);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
 .fbchip b{cursor:pointer;color:var(--muted);font-size:15px;line-height:1}
 @media (prefers-reduced-motion:reduce){.mbtn.rec .d{animation:none}}
@@ -1394,6 +1396,12 @@ ui: {
     fbRecord:"Record a voice note", fbStop:"Stop recording",
     fbAttach:"Add a photo or video",
     fbNoMic:"This browser will not let us use the microphone",
+    fbShareNote:"Your phone will ask which app to send it with \u2014 choose WhatsApp, the same chat you just opened.",
+    fbToNumber:"Goes to the owner on WhatsApp \u00b7",
+    fbSent:"Sent. Thank you.",
+    fbStep2:"If it is easier to show us than to type it, add a voice note, a photo or a short video.",
+    fbSendMedia:"Send it across", fbNoThanks:"That is all, thank you",
+    fbNoShare:"This browser cannot pass files on \u2014 please send them in the WhatsApp chat you just opened.",
     revCopied:"Copied — paste it into Google",
     revOpen:"Opening Google\u2026", revBack:"Back to the menu",
     revHead5:"That means a great deal", revHead4:"Glad it landed well",
@@ -1472,6 +1480,12 @@ ui: {
     fbRecord:"ശബ്ദസന്ദേശം റെക്കോർഡ് ചെയ്യൂ", fbStop:"നിർത്തൂ",
     fbAttach:"ഫോട്ടോ / വീഡിയോ ചേർക്കൂ",
     fbNoMic:"ഈ ബ്രൗസറിൽ മൈക്ക് ഉപയോഗിക്കാനാകുന്നില്ല",
+    fbShareNote:"ഏത് ആപ്പ് എന്ന് ഫോൺ ചോദിക്കും — ഇപ്പോൾ തുറന്ന അതേ വാട്സാപ്പ് തിരഞ്ഞെടുക്കൂ.",
+    fbToNumber:"ഉടമയുടെ വാട്സാപ്പിലേക്ക് ·",
+    fbSent:"അയച്ചു. നന്ദി.",
+    fbStep2:"എഴുതുന്നതിലും എളുപ്പം കാണിക്കുന്നതാണെങ്കിൽ ശബ്ദമോ ഫോട്ടോയോ ചെറിയ വീഡിയോയോ ചേർക്കൂ.",
+    fbSendMedia:"അയക്കൂ", fbNoThanks:"ഇത്രമതി, നന്ദി",
+    fbNoShare:"ഈ ബ്രൗസറിന് ഫയൽ കൈമാറാനാകില്ല — ഇപ്പോൾ തുറന്ന വാട്സാപ്പിൽ നേരിട്ട് അയക്കൂ.",
     revCopied:"പകർത്തി — ഗൂഗിളിൽ ഒട്ടിക്കൂ",
     revHead5:"വളരെ സന്തോഷം", revHead4:"സന്തോഷമായി",
     revHead3:"തുറന്നു പറഞ്ങതിന് നന്ദി", revHead2:"ഞങ്ങൾക്ക് പിഴച്ചു",
@@ -2878,12 +2892,28 @@ function viewRate(){
       </div>
       <div class="fblist" id="fbList"></div>` : "";
 
-  const form = `
+  /* Two steps on purpose. The first sends the words to our WhatsApp number,
+     so the guest ends up holding our chat and knows exactly where anything
+     else is going. Only then are they offered the microphone and camera. */
+  const form = own ? `
       <p class="revsub" style="margin:0 0 14px">${T("revPrivateSub")}</p>
-      <input class="fld" id="fbName"  placeholder="${T("yourName")}">
-      <input class="fld" id="fbPhone" placeholder="${T("yourPhone")}" inputmode="tel">
+
+      <div id="fbStep1">
+        <textarea class="fld" id="fbText" placeholder="${T("whatHappened")}"></textarea>
+        <a class="revbtn primary" id="fbSave" href="#" target="_blank" rel="noopener">${T("sendFeedback")}</a>
+        <p class="fbnote">${T("fbToNumber")} ${esc(telShow(C.whatsapp.replace(/^91/,"")))}</p>
+      </div>
+
+      <div id="fbStep2" hidden>
+        <div class="fbdone">&#10003; ${T("fbSent")}</div>
+        <p class="revsub" style="margin:0 0 12px">${T("fbStep2")}</p>
+        ${media}
+        <button class="revbtn primary" id="fbSend2" disabled>${T("fbSendMedia")}</button>
+        <p class="fbnote" id="fbNote" hidden>${T("fbShareNote")}</p>
+        <button class="revbtn ghost" id="fbSkip2">${T("fbNoThanks")}</button>
+      </div>` : `
+      <p class="revsub" style="margin:0 0 14px">${T("revPrivateSub")}</p>
       <textarea class="fld" id="fbText" placeholder="${T("whatHappened")}"></textarea>
-      ${media}
       <button class="revbtn primary" id="fbSave">${T("sendFeedback")}</button>`;
 
   const happyPanel = `
@@ -2938,6 +2968,10 @@ let FBFILES=[], FBREC=null, FBCHUNKS=[];
 
 function fbRender(){
   const box=document.getElementById("fbList");
+  const note=document.getElementById("fbNote");
+  if(note) note.hidden = !FBFILES.length;
+  const go=document.getElementById("fbSend2");
+  if(go) go.disabled = !FBFILES.length;
   if(!box) return;
   box.innerHTML = FBFILES.map((f,i)=>
     `<span class="fbchip">${f.type.indexOf("audio")===0?"&#127908;"
@@ -2986,28 +3020,7 @@ function wireFeedback(s){
     }catch(e){ toast(T("fbNoMic")); }
   };
 
-  const send=document.getElementById("fbSave");
-  if(send) send.onclick=async ()=>{
-    if(FBREC && FBREC.state==="recording"){ FBREC.stop(); await new Promise(r=>setTimeout(r,320)); }
-    const rec2={ at:new Date().toLocaleString(), stars:s,
-      name:(document.getElementById("fbName")||{}).value||"",
-      phone:(document.getElementById("fbPhone")||{}).value||"",
-      text:(document.getElementById("fbText")||{}).value||"" };
-    saveFeedback(rec2);
-    const msg="Feedback for Hayat\nRating: "+s+"/5\nName: "+(rec2.name||"-")+
-              "\nPhone: "+(rec2.phone||"-")+"\n\n"+(rec2.text||"-");
-
-    let shared=false;
-    if(FBFILES.length && navigator.share){
-      try{
-        if(!navigator.canShare || navigator.canShare({files:FBFILES})){
-          await navigator.share({text:msg, files:FBFILES});
-          shared=true;
-        }
-      }catch(e){ shared = (e && e.name==="AbortError"); }
-    }
-    if(!shared) openOut(WA(msg));
-
+  const thanks=()=>{
     main.innerHTML=backBar("#/",T("menu"),T("rateUs"))+
       `<div class="revwrap" style="text-align:center;padding:50px 20px">
         <div style="font-size:44px">&#128591;</div>
@@ -3017,6 +3030,48 @@ function wireFeedback(s){
     FBFILES=[];
     restoreScroll();
   };
+
+  /* step one — the words, straight to our WhatsApp number.
+     A real link, not a scripted popup: a blocked window.open would
+     navigate this page away and the guest would lose step two. */
+  const send=document.getElementById("fbSave");
+  if(send) send.onclick=(e)=>{
+    const rec2={ at:new Date().toLocaleString(), stars:s,
+      text:(document.getElementById("fbText")||{}).value||"" };
+    saveFeedback(rec2);
+    const url=WA("Feedback for Hayat\nRating: "+s+"/5\n\n"+(rec2.text||"-"));
+    const a=document.getElementById("fbStep1"), b=document.getElementById("fbStep2");
+    if(send.tagName==="A"){
+      send.href=url;
+      if(a && b) setTimeout(()=>{ a.hidden=true; b.hidden=false; fbRender(); },0);
+      return;
+    }
+    if(e && e.preventDefault) e.preventDefault();
+    openOut(url);
+    thanks();
+  };
+
+  /* step two — whatever they recorded or picked, through the share sheet */
+  const send2=document.getElementById("fbSend2");
+  if(send2) send2.onclick=async ()=>{
+    if(FBREC && FBREC.state==="recording"){ FBREC.stop(); await new Promise(r=>setTimeout(r,320)); }
+    if(!FBFILES.length) return;
+    const msg="Feedback for Hayat \u00b7 "+s+"/5";
+    let shared=false;
+    if(navigator.share){
+      try{
+        if(!navigator.canShare || navigator.canShare({files:FBFILES})){
+          await navigator.share({text:msg, files:FBFILES});
+          shared=true;
+        }
+      }catch(e){ shared = (e && e.name==="AbortError"); }
+    }
+    if(!shared) toast(T("fbNoShare"));
+    else thanks();
+  };
+
+  const skip=document.getElementById("fbSkip2");
+  if(skip) skip.onclick=thanks;
 }
 
 /* ---------------- category ---------------- */
@@ -3721,6 +3776,7 @@ var INTRO = (function(){
   });
   setInterval(function(){
     if(live || !gapMs() || cfg.enabled === false) return;
+    if(/^#\/(review|rate)\b/.test(location.hash || "")) return;   /* not mid-review */
     if(Date.now() - lastTouch < gapMs()) return;
     lastTouch = Date.now();
     if(location.hash && location.hash !== "#/") location.hash = "#/";
@@ -3737,7 +3793,12 @@ var INTRO = (function(){
            has:function(){ return clips.length > 0; } };
 })();
 
-try{ INTRO.open(false); }catch(e){}
+/* Someone who scanned the review card came to say something, not to watch
+   a reel. The intro stays out of the way on the rating pages. */
+function introWelcome(){
+  return !/^#\/(review|rate)\b/.test(location.hash || "");
+}
+try{ if(introWelcome()) INTRO.open(false); }catch(e){}
 
 /* ===== FULL SCREEN =================================================
    A tablet on a table should show the menu, not Chrome. Browsers only

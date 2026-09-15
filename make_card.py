@@ -31,6 +31,7 @@ THEMES = {
     muted = (0.612, 0.541, 0.424),
     qr_dark = "#1a1006",
     ml_rgb  = (156, 138, 108),
+    sub_rgb = (0.949, 0.945, 0.816),
   ),
   "garden": dict(
     out   = "print/review-card-a5-garden.pdf",
@@ -41,6 +42,7 @@ THEMES = {
     qr_dark = "#24350F",
     ml_rgb  = (95, 110, 75),
     logo_tint = (47, 74, 18),
+    sub_rgb   = (0.184, 0.290, 0.071),
   ),
 }
 
@@ -51,10 +53,17 @@ def qr_image(url, dark="#1a1006"):
     buf.seek(0)
     return ImageReader(Image.open(buf))
 
+# The artwork's own strapline reads "Fish Restaurant". The restaurant is
+# Hayat Fish and Mandi Restaurant, so the strapline is cropped off the mark
+# and set again below it in type.
+SUB_TOP  = 482          # first row of the strapline inside assets/logo.png
+SUBTITLE = "FISH AND MANDI RESTAURANT"
+
 def logo_for(T):
-    """The mark is cream and gold, which disappears on the light garden card.
-       There it is redrawn as one deep-olive silhouette instead."""
+    """Crops the old strapline away, and on the light garden card redraws
+       the cream mark as one deep-olive silhouette so it stays visible."""
     img = Image.open(LOGO).convert("RGBA")
+    img = img.crop((0, 0, img.size[0], SUB_TOP))
     tint = T.get("logo_tint")
     if tint:
         px = img.load()
@@ -91,7 +100,18 @@ def draw_card(name, T):
 
     logo = logo_for(T); lw, lh = logo.getSize()
     logo_w = 34*mm; logo_h = logo_w*lh/lw
-    c.drawImage(logo, (W-logo_w)/2, H-13*mm-logo_h, width=logo_w, height=logo_h, mask="auto")
+    logo_y = H-13*mm-logo_h
+    c.drawImage(logo, (W-logo_w)/2, logo_y, width=logo_w, height=logo_h, mask="auto")
+
+    # the strapline, reset to the restaurant's full name
+    c.saveState()
+    c.setFillColorRGB(*T.get("sub_rgb", CREAM))
+    to = c.beginText(); to.setFont("Helvetica", 6.4); to.setCharSpace(1.15)
+    span = c.stringWidth(SUBTITLE, "Helvetica", 6.4) + 1.15*(len(SUBTITLE)-1)
+    to.setTextOrigin((W-span)/2, logo_y - 3.4*mm)
+    to.textOut(SUBTITLE)
+    c.drawText(to)
+    c.restoreState()
 
     c.setFillColorRGB(*CREAM); c.setFont("Helvetica-Bold", 20)
     c.drawCentredString(W/2, H-62*mm, "Thank you for coming.")
