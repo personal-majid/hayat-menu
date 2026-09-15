@@ -1,0 +1,49 @@
+THE TWO ADDRESSES
+=================
+
+Same site, two very different people. The address decides which.
+
+  OUR TABLET      https://personal-majid.github.io/hayat-menu/?us
+  A GUEST'S PHONE https://personal-majid.github.io/hayat-menu/
+
+That ?us is the whole trick.
+
+
+WHAT CHANGES
+------------
+                          our tablet (?us)      a guest's phone
+  Instagram / WhatsApp     shows a QR to scan     opens the app
+  Google review            shows a QR to scan     opens Google
+  A reel                   shows a QR to scan     opens Instagram
+  Full screen              yes, on first touch    no, leave their browser alone
+  Star page                #/rate, ends in a QR   #/review, opens Google
+
+The tablet never navigates away from the menu. The guest's phone always
+goes straight where they tapped — they are already signed in there.
+
+
+SETTING UP A TABLET (once per tablet)
+-------------------------------------
+  1. Chrome -> open   .../hayat-menu/?us
+  2. Three-dot menu -> Install app  (or Add to Home screen)
+  3. Open it from the home screen icon from now on.
+
+Once a tablet has been opened with ?us it stays in tablet mode for good,
+even if someone later opens the plain address on it. To hand a device back
+to normal, open it once with  ?guest  on the end.
+
+
+THE THREE QR CODES
+------------------
+  Table QR (menu)    .../hayat-menu/           -> guest phone, full menu
+  Review card        .../hayat-menu/#/review   -> guest phone, stars
+  Tablet             .../hayat-menu/?us        -> only used when setting up
+
+Never print the ?us address on anything a customer can scan. A guest who
+lands on it gets QR codes instead of working links.
+
+
+IF A TABLET IS BEHAVING LIKE A PHONE
+------------------------------------
+It was opened without ?us before it was ever marked. Open
+.../hayat-menu/?us once and it will remember.

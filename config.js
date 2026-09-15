@@ -5,14 +5,27 @@
 
 window.CONFIG = {
 
-  /* ---- 0. KIOSK MODE --------------------------------------- *
-     true  = this is YOUR tablet on the dining table.
-             Instagram / WhatsApp buttons show a QR code for the
-             customer to scan with their own phone. Nothing ever
-             navigates away from the menu.
-     false = normal website. Buttons open links directly.
-     --------------------------------------------------------- */
-  kiosk: true,
+  /* ---- 0. WHO IS HOLDING THE SCREEN ------------------------- *
+     The same site serves two very different people, and it works
+     out which one from the address:
+
+       OUR TABLET      .../hayat-menu/?us
+                       Instagram, WhatsApp and Google open as a QR
+                       the guest scans with their own phone, so the
+                       tablet never leaves the menu. Also goes full
+                       screen. Once opened with ?us the tablet stays
+                       in this mode for good.
+
+       A GUEST'S PHONE .../hayat-menu/          (the QR on the table)
+                       .../hayat-menu/#/review  (the review card)
+                       Every link opens directly — they are already
+                       signed in to Instagram and Google there.
+
+     defaultMode only decides what an address with no marker does.
+     Leave it on "guest": far more people scan than use the tablet,
+     and the tablet has ?us on its home screen icon.
+     ---------------------------------------------------------- */
+  defaultMode: "guest",
 
   /* ---- 0aa. COLOUR THEME ----------------------------------- *
      "night"  = the dark gold dining room (default)

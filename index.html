@@ -1570,14 +1570,27 @@ opts: {
 
 window.CONFIG = {
 
-  /* ---- 0. KIOSK MODE --------------------------------------- *
-     true  = this is YOUR tablet on the dining table.
-             Instagram / WhatsApp buttons show a QR code for the
-             customer to scan with their own phone. Nothing ever
-             navigates away from the menu.
-     false = normal website. Buttons open links directly.
-     --------------------------------------------------------- */
-  kiosk: true,
+  /* ---- 0. WHO IS HOLDING THE SCREEN ------------------------- *
+     The same site serves two very different people, and it works
+     out which one from the address:
+
+       OUR TABLET      .../hayat-menu/?us
+                       Instagram, WhatsApp and Google open as a QR
+                       the guest scans with their own phone, so the
+                       tablet never leaves the menu. Also goes full
+                       screen. Once opened with ?us the tablet stays
+                       in this mode for good.
+
+       A GUEST'S PHONE .../hayat-menu/          (the QR on the table)
+                       .../hayat-menu/#/review  (the review card)
+                       Every link opens directly — they are already
+                       signed in to Instagram and Google there.
+
+     defaultMode only decides what an address with no marker does.
+     Leave it on "guest": far more people scan than use the tablet,
+     and the tablet has ?us on its home screen icon.
+     ---------------------------------------------------------- */
+  defaultMode: "guest",
 
   /* ---- 0aa. COLOUR THEME ----------------------------------- *
      "night"  = the dark gold dining room (default)
@@ -2180,8 +2193,12 @@ function applyChrome(){
   document.getElementById("frev").innerHTML='<span class="star">&#9733;</span> '+T("rateUs");
   document.documentElement.lang = L==="ml" ? "ml" : "en";
 }
-document.getElementById("fig").onclick=()=>{ (C.kiosk!==false) ? qrSheet("insta") : window.open(IGURL,"_blank"); };
-document.getElementById("frev").onclick=()=>{STARS=0;search.value="";location.hash="#/rate"};
+document.getElementById("fig").onclick=()=>{
+  KIOSK ? qrSheet("insta") : window.open(IGURL,"_blank","noopener");
+};
+document.getElementById("frev").onclick=()=>{
+  STARS=0; search.value=""; location.hash = KIOSK ? "#/rate" : "#/review";
+};
 applyChrome();
 
 /* ---------------- helpers ---------------- */
@@ -2350,7 +2367,29 @@ function igEmbed(url){
         <span>${T("offlineBody")}</span>
         <a href="${esc(url)}" target="_blank" rel="noopener">${T("offlineBtn")}</a></div>`}</div>`;
 }
-const KIOSK = C.kiosk !== false;
+/* ===== WHOSE SCREEN IS THIS? =======================================
+   tablet : our tablet on the table. Instagram, WhatsApp and Google open
+            as a QR code the guest scans, so the tablet never leaves the
+            menu. Marked by  ?us  (or #/us) in the address, then
+            remembered on that device for good.
+   guest  : somebody's own phone, from the QR on the table or the card.
+            Every link opens directly — they are already signed in to
+            Instagram and Google there.
+   The star page is always treated as the guest's own phone unless it is
+   running on our tablet, where it falls back to a QR. */
+var MODE = (function(){
+  var q = (location.search || "") + " " + (location.hash || "");
+  function remember(v){ try{ window.localStorage.setItem("hayatMode", v); }catch(e){} return v; }
+  if(/[?&]us\b/.test(location.search) || /#\/us\b/.test(location.hash)) return remember("tablet");
+  if(/[?&](guest|me)\b/.test(location.search))                            return remember("guest");
+  var saved = null;
+  try{ saved = window.localStorage.getItem("hayatMode"); }catch(e){}
+  if(saved === "tablet" || saved === "guest") return saved;
+  return (C.defaultMode === "tablet") ? "tablet" : "guest";
+})();
+const KIOSK = (MODE === "tablet");
+/* #/us was only a marker — drop straight into the menu */
+if(/#\/us\b/.test(location.hash)) location.hash = "#/";
 var IG_OK = null;                      /* null = unknown, true/false after probe */
 function igProbe(){
   if(!navigator.onLine){ IG_OK=false; return; }
@@ -2400,14 +2439,20 @@ function reelSheet(i){
     <div class="orline">${T("orScan")}</div>
     <button class="close" data-close>${T("close")}</button></div></div>`;
 }
+function qrTarget(kind){
+  if(kind==="insta")  return IGURL;
+  if(kind==="wa")     return WA();
+  if(kind==="review") return (C.review&&C.review.writeLink) || C.reviewLink;
+  return null;
+}
 function qrSheet(kind){
   const M={
     insta:{ img:qrFor(IGURL), h:"◉ Instagram", handle:"@"+C.instagram,
             title:T("scanFollow")+C.instagram, url:IGURL },
     wa:{    img:qrFor(WA()),  h:"WhatsApp",   handle:telShow(C.whatsapp.replace(/^91/,"")),
             title:T("scanWa"), url:WA() },
-    review:{img:qrFor(C.reviewLink),    h:"Google",     handle:"",
-            title:T("scanToReview"), url:C.reviewLink }
+    review:{img:qrFor(qrTarget("review")), h:"Google", handle:"",
+            title:T("scanToReview"), url:qrTarget("review") }
   }[kind];
   overlay.innerHTML=`<div class="scrim" data-close><div class="sheet qsheet">
     <h4>${esc(M.h)}</h4>
@@ -3130,11 +3175,12 @@ function restoreScroll(){
 }
 
 function route(){
+  closeOverlay();                      /* a sheet must never survive a page change */
   if(search.value.trim()) return viewSearch(search.value.trim());
   const p=(location.hash||"#/").slice(2).split("/").filter(Boolean);
   if(p[0]==="gallery") return viewGallery();
-  if(p[0]==="rate")   { RATEMODE="kiosk"; return viewRate(); }
-  if(p[0]==="review") { RATEMODE="own";   return viewRate(); }
+  if(p[0]==="rate")   { RATEMODE = KIOSK ? "kiosk" : "own"; return viewRate(); }
+  if(p[0]==="review") { RATEMODE = KIOSK ? "kiosk" : "own"; return viewRate(); }
   if(p[0]==="party") return viewParty();
   if(p[0]==="c") return viewCat(p[1]);
   if(p[0]==="d") return viewDish(p[1],p[2]);
@@ -3144,8 +3190,24 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-close]")) return closeOverlay();
   const lb=e.target.closest("[data-lb]");   if(lb) return lightbox(lb.dataset.lb,lb.dataset.cap,false);
   const lv=e.target.closest("[data-lbv]");  if(lv) return lightbox(lv.dataset.lbv,lv.dataset.cap,true);
-  const rl=e.target.closest("[data-reel]"); if(rl) return reelSheet(+rl.dataset.reel);
-  const qr=e.target.closest("[data-qr]"); if(qr) return qrSheet(qr.dataset.qr);
+  const rl=e.target.closest("[data-reel]");
+  if(rl){
+    if(!KIOSK){                                   /* their own phone: go straight there */
+      const r=igList()[+rl.dataset.reel];
+      if(r) window.open(r.url,"_blank","noopener");
+      return;
+    }
+    return reelSheet(+rl.dataset.reel);
+  }
+  const qr=e.target.closest("[data-qr]");
+  if(qr){
+    if(!KIOSK){
+      const u=qrTarget(qr.dataset.qr);
+      if(u) window.open(u,"_blank","noopener");
+      return;
+    }
+    return qrSheet(qr.dataset.qr);
+  }
   const st=e.target.closest("[data-star]"); if(st){STARS=+st.dataset.star;return viewRate()}
   const tb=e.target.closest("[data-tab]");  if(tb){GTAB=tb.dataset.tab;return viewGallery()}
   const v =e.target.closest("[data-var]");  if(v){VARIANT=v.dataset.var;return route()}
@@ -3433,7 +3495,7 @@ try{ INTRO.open(false); }catch(e){}
    grant full screen off a real tap, so we take the first one. Installed
    as an app it is already full screen and none of this runs. */
 (function(){
-  var want = C.fullscreen !== false;
+  var want = (C.fullscreen !== false) && (MODE === "tablet");
   var el = document.documentElement;
   function isFs(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
   function enter(){
