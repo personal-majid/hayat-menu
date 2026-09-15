@@ -28,11 +28,11 @@ window.CONFIG = {
   defaultMode: "guest",
 
   /* ---- 0aa. COLOUR THEME ----------------------------------- *
-     "night"  = the dark gold dining room (default)
-     "garden" = the green and cream of the printed flyer
+     "garden" = the green and cream of the printed flyer (default)
+     "night"  = the dark gold dining room
      Either way the guest can switch it with the leaf button in
      the header, and their choice sticks on that device.        */
-  theme: "night",
+  theme: "garden",
 
   /* ---- 0a. FULL SCREEN ------------------------------------- *
      true  = the menu goes full screen (no address bar, no tabs)
