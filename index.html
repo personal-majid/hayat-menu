@@ -23,20 +23,23 @@ html[lang="ml"] h2.sec{letter-spacing:.2px}
 html[lang="ml"] .cp b,html[lang="ml"] .phead span:nth-child(n+3){letter-spacing:.2px}
 html[lang="ml"] .tag{letter-spacing:.2px}
 :root{
-  --bg:#140C06; --card:#271A0D;
-  --line:rgba(201,162,75,.20); --line2:rgba(201,162,75,.38);
-  --gold:#C9A24B; --gold2:#EFCE86; --cream:#F5F1DF; --green:#8FBE43;
-  --paper:#EFE6CF; --ink:#2A1A0D; --hot:#E4705A; --muted:#A28C6C;
+  --bg:#100A05; --card:#1D1409; --card2:#241906;
+  --line:rgba(201,162,75,.14); --line2:rgba(201,162,75,.28);
+  --gold:#C9A24B; --gold2:#EFCE86; --cream:#F3EFE2; --green:#8FBE43;
+  --paper:#EFE6CF; --ink:#2A1A0D; --hot:#E4705A; --muted:#9C8straight;
+  --muted:#9A8straight;
+  --muted:#998straight;
   --ig1:#F58529; --ig2:#DD2A7B; --ig3:#8134AF;
-  --r:18px; --r2:12px; --tap:52px;
-  --shadow:0 14px 40px rgba(0,0,0,.45);
+  --r:16px; --r2:11px; --r3:9px; --tap:48px;
+  /* type scale — everything on the page picks from these */
+  --t-hero:26px; --t-h2:19px; --t-h3:15.5px; --t-body:14px; --t-small:12px; --t-tiny:10.5px;
+  --shadow:0 10px 30px rgba(0,0,0,.40);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{
   background:
-    radial-gradient(1200px 700px at 12% -12%, #4A2E12 0%, transparent 58%),
-    radial-gradient(900px 560px at 104% 108%, #3A1E28 0%, transparent 55%),
+    radial-gradient(900px 520px at 50% -20%, #1E1309 0%, transparent 62%),
     var(--bg);
   color:var(--cream);
   font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,"Noto Sans Malayalam",
@@ -48,21 +51,28 @@ img{display:block}
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
 /* ================= header ================= */
-header{display:flex;align-items:center;gap:14px;padding:11px 20px;flex:0 0 auto;z-index:30;
-  background:linear-gradient(180deg,rgba(38,24,12,.96),rgba(20,12,6,.92));
-  backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-header .logo{height:48px;width:auto;flex:0 0 auto}
-.brand h1{margin:0;font-size:17.5px;font-weight:700;letter-spacing:.3px;color:var(--green)}
-.brand p{margin:2px 0 0;font-size:10.5px;color:var(--gold);letter-spacing:1.6px;text-transform:uppercase}
+header{display:flex;align-items:center;gap:12px;padding:10px 20px;flex:0 0 auto;z-index:30;
+  background:rgba(16,10,5,.92);
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+header .logo{height:38px;width:auto;flex:0 0 auto;opacity:.95}
+.brand h1{margin:0;font-size:15.5px;font-weight:650;letter-spacing:.2px;color:var(--cream)}
+.brand p{margin:1px 0 0;font-size:9.5px;color:var(--gold);letter-spacing:1.4px;text-transform:uppercase;opacity:.8}
 .spacer{flex:1}
-#search{width:186px;min-height:42px;background:rgba(255,255,255,.045);border:1px solid var(--line);
-  border-radius:var(--r2);padding:0 14px;color:var(--cream);font-size:14px;outline:none}
+#search{width:190px;height:40px;background:rgba(255,255,255,.04);border:1px solid var(--line);
+  border-radius:var(--r3);padding:0 13px;color:var(--cream);font-size:13.5px;outline:none;
+  transition:border-color .2s,background .2s}
 #search::placeholder{color:var(--muted)}
-#search:focus{border-color:var(--gold);background:rgba(255,255,255,.07)}
-.gbtn{min-height:42px;padding:0 16px;border-radius:var(--r2);display:flex;align-items:center;gap:8px;
-  font-size:13px;font-weight:700;letter-spacing:.4px;border:1px solid var(--line2);
-  background:linear-gradient(135deg,rgba(201,162,75,.18),rgba(201,162,75,.06));color:var(--gold2)}
-.gbtn:active{background:rgba(201,162,75,.3)}
+#search:focus{border-color:var(--line2);background:rgba(255,255,255,.06)}
+/* every header control is the same quiet chip; only the active one lights up */
+.gbtn{height:40px;min-width:40px;padding:0 13px;border-radius:var(--r3);
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:12.5px;font-weight:600;letter-spacing:.2px;border:1px solid var(--line);
+  background:rgba(255,255,255,.035);color:var(--cream);transition:all .18s}
+.gbtn:hover{background:rgba(255,255,255,.07)}
+.gbtn:active{transform:scale(.96)}
+.gbtn.on{background:rgba(201,162,75,.16);border-color:var(--line2);color:var(--gold2)}
+.tools{display:flex;align-items:center;gap:7px}
+.tools .sep{width:1px;height:22px;background:var(--line);margin:0 3px}
 
 /* ================= shell ================= */
 #body{flex:1;display:flex;min-height:0}
@@ -75,10 +85,10 @@ nav::-webkit-scrollbar,main::-webkit-scrollbar,.hscroll::-webkit-scrollbar{heigh
 .navitem .ic{font-size:20px}
 .navitem small{display:block;font-size:10px;font-weight:700;opacity:.55;letter-spacing:.6px}
 .navitem:active{background:rgba(255,255,255,.05)}
-.navitem.on{background:linear-gradient(135deg,var(--gold),#A8823A);color:#241608}
-.navitem.special{border:1px solid var(--line2);
-  background:linear-gradient(135deg,rgba(221,42,123,.18),rgba(129,52,175,.10));margin-bottom:12px}
-.navitem.special.on{background:linear-gradient(135deg,var(--gold),#A8823A);color:#241608;border-color:var(--gold)}
+.navitem.on{background:rgba(201,162,75,.16);color:var(--gold2);
+  box-shadow:inset 2px 0 0 var(--gold)}
+.navitem.special{border:1px solid var(--line);background:rgba(255,255,255,.035);margin-bottom:12px}
+.navitem.special.on{background:rgba(201,162,75,.16);color:var(--gold2);border-color:var(--line2)}
 .navsep{height:1px;background:var(--line);margin:10px 4px}
 main{flex:1;overflow-y:auto;padding:0 26px 96px;scroll-behavior:smooth}
 
@@ -99,17 +109,72 @@ main{flex:1;overflow-y:auto;padding:0 26px 96px;scroll-behavior:smooth}
 .rule{display:flex;align-items:center;gap:16px;margin:6px 0 6px}
 .rule:before,.rule:after{content:"";height:1px;flex:1;
   background:linear-gradient(90deg,transparent,var(--line2),transparent)}
-h2.sec{margin:0;font-size:26px;font-weight:800;letter-spacing:1px;color:var(--gold2);
-  text-transform:uppercase;text-align:center;white-space:nowrap}
-p.secsub{margin:8px 0 22px;font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.5px}
-h3.mini{margin:34px 0 14px;font-size:11.5px;letter-spacing:2.6px;text-transform:uppercase;
-  color:var(--gold);display:flex;align-items:center;gap:12px}
+h2.sec{margin:0;font-size:var(--t-h2);font-weight:650;letter-spacing:.4px;color:var(--cream);
+  text-align:center;white-space:nowrap}
+p.secsub{margin:6px 0 18px;font-size:var(--t-small);color:var(--muted);text-align:center;letter-spacing:.2px}
+h3.mini{font-size:var(--t-tiny);font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);margin:26px 0 12px;display:flex;align-items:center;gap:12px}
 h3.mini:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--line2),transparent)}
 
+/* ================= motion =================
+   Small, quick, once. A menu should feel alive when a page opens, not busy
+   while people read it. Anything longer than a third of a second reads as lag. */
+@keyframes riseIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes ruleIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes markIn{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+
+/* the category header */
+.rule{animation:riseIn .34s cubic-bezier(.22,.9,.3,1) both}
+.rule:before,.rule:after{transform-origin:center;animation:ruleIn .5s .08s cubic-bezier(.22,.9,.3,1) both}
+p.secsub{animation:riseIn .34s .06s cubic-bezier(.22,.9,.3,1) both}
+h3.mini{animation:riseIn .3s cubic-bezier(.22,.9,.3,1) both}
+.backbar{animation:fadeIn .25s both}
+
+/* the slideshow and hero slide up as a block */
+.slides,.hero{animation:riseIn .38s .04s cubic-bezier(.22,.9,.3,1) both}
+.brandhero .mark{animation:markIn .5s .12s cubic-bezier(.22,.9,.3,1) both}
+.brandhero .bs{animation:riseIn .45s .2s cubic-bezier(.22,.9,.3,1) both}
+
+/* rows, tiles and cards come in one after another — capped so a long list
+   never leaves the guest waiting on the last item */
+.grid .tile,.plist .prow,.paper .row,.pgrid .pcard,.vgrid .vcard{
+  animation:riseIn .32s cubic-bezier(.22,.9,.3,1) both}
+.grid .tile:nth-child(1),.plist .prow:nth-child(1),.paper .row:nth-child(1),.pgrid .pcard:nth-child(1){animation-delay:.02s}
+.grid .tile:nth-child(2),.plist .prow:nth-child(2),.paper .row:nth-child(2),.pgrid .pcard:nth-child(2){animation-delay:.05s}
+.grid .tile:nth-child(3),.plist .prow:nth-child(3),.paper .row:nth-child(3),.pgrid .pcard:nth-child(3){animation-delay:.08s}
+.grid .tile:nth-child(4),.plist .prow:nth-child(4),.paper .row:nth-child(4),.pgrid .pcard:nth-child(4){animation-delay:.11s}
+.grid .tile:nth-child(5),.plist .prow:nth-child(5),.paper .row:nth-child(5),.pgrid .pcard:nth-child(5){animation-delay:.14s}
+.grid .tile:nth-child(6),.plist .prow:nth-child(6),.paper .row:nth-child(6),.pgrid .pcard:nth-child(6){animation-delay:.17s}
+.grid .tile:nth-child(n+7),.plist .prow:nth-child(n+7),.paper .row:nth-child(n+7),.pgrid .pcard:nth-child(n+7){animation-delay:.19s}
+
+/* the side menu opens once, top to bottom */
+.navitem{animation:riseIn .3s both}
+.navitem:nth-child(1){animation-delay:.01s} .navitem:nth-child(2){animation-delay:.03s}
+.navitem:nth-child(3){animation-delay:.05s} .navitem:nth-child(4){animation-delay:.07s}
+.navitem:nth-child(5){animation-delay:.09s} .navitem:nth-child(6){animation-delay:.11s}
+.navitem:nth-child(n+7){animation-delay:.13s}
+
+/* pressing something should answer immediately */
+.tile:active{transform:scale(.99)}
+.prow:active,.row:active{background:rgba(255,255,255,.035)}
+.navitem,.tile,.gbtn,.prow,.row,footer button,footer a{transition:background .18s,border-color .18s,transform .12s}
+
+@media (prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation:none!important;transition:none!important}
+}
+
 /* ================= thumbnails ================= */
-.thumb{width:62px;height:62px;flex:0 0 auto;border-radius:var(--r2);overflow:hidden;
-  background:#2A1A0C;border:1px solid var(--line);position:relative}
+.thumb{width:58px;height:58px;flex:0 0 auto;border-radius:var(--r3);overflow:hidden;
+  background:var(--card2);border:1px solid var(--line);position:relative}
 .thumb img{width:100%;height:100%;object-fit:cover}
+.artmark{display:flex;align-items:center;justify-content:center;width:100%;height:100%;
+  background:radial-gradient(120% 100% at 50% 0%, rgba(201,162,75,.10), transparent 70%)}
+/* the mark stays a modest watermark whatever size the frame is */
+.artmark img{width:auto;height:42%;max-height:58px;object-fit:contain;opacity:.32}
+.thumb .artmark img{height:50%;max-height:26px;opacity:.4}
+/* on the cream "paper" sections the mark has to go dark to be visible */
+.paper .artmark{background:radial-gradient(120% 100% at 50% 0%, rgba(90,66,20,.10), transparent 70%)}
+.paper .artmark img{filter:brightness(.22) saturate(.25);opacity:.55}
 
 /* ================= price table ================= */
 .seg{display:inline-flex;gap:4px;padding:4px;background:rgba(255,255,255,.05);
@@ -173,16 +238,27 @@ h3.mini:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(
 
 /* ================= dish page ================= */
 .detail{max-width:960px}
-.hero{aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:#2A1A0C;
-  border:1px solid var(--line);margin-bottom:20px;box-shadow:var(--shadow);position:relative}
+.hero{width:100%;aspect-ratio:16/9;max-height:38vh;border-radius:var(--r);overflow:hidden;
+  background:var(--card);border:1px solid var(--line);margin-bottom:18px;position:relative}
+.brandhero{aspect-ratio:21/7;max-height:22vh}
 .hero img{width:100%;height:100%;object-fit:cover}
-.hero .hcap{position:absolute;left:0;right:0;bottom:0;padding:56px 24px 20px;
-  background:linear-gradient(180deg,rgba(12,7,3,0),rgba(12,7,3,.88))}
-.hero .hcap .hn{font-size:26px;font-weight:800;letter-spacing:.3px}
-.hero .hcap .hp{display:flex;flex-wrap:wrap;gap:9px;margin-top:11px}
-.detail h3{margin:0;font-size:29px;letter-spacing:.3px;color:var(--cream);font-weight:800}
-.detail .subline{font-size:13.5px;color:var(--gold);margin-bottom:8px;letter-spacing:.4px}
-.detail .desc{font-size:15px;line-height:1.75;color:#DFD6BC;margin:14px 0 4px;max-width:680px}
+/* the branded panel for dishes with no photograph yet */
+.brandhero{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  background:
+    radial-gradient(520px 260px at 50% 0%, rgba(201,162,75,.10), transparent 70%),
+    var(--card2)}
+.brandhero .mark{width:auto;height:44px;object-fit:contain;opacity:.5}
+.brandhero .bh{font-size:22px;font-weight:650;letter-spacing:.2px;color:var(--cream);text-align:center;
+  padding:0 24px}
+.brandhero .bs{font-size:var(--t-tiny);letter-spacing:2.4px;text-transform:uppercase;color:var(--gold);
+  opacity:.75}
+.dhead{display:flex;flex-direction:column;gap:4px;margin-bottom:2px}
+.detail h3.mini{font-size:var(--t-tiny);font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--muted);margin:26px 0 12px;display:flex;align-items:center;gap:12px}
+.detail h3{margin:0;font-size:var(--t-hero);letter-spacing:.2px;color:var(--cream);font-weight:650;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.detail .subline{font-size:13px;color:var(--gold);letter-spacing:.2px;opacity:.85}
+.detail .desc{font-size:var(--t-body);line-height:1.7;color:#CFC6AE;margin:12px 0 4px;max-width:660px}
 table.mx{width:100%;max-width:580px;border-collapse:separate;border-spacing:0;
   border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;font-size:14px}
 table.mx th,table.mx td{padding:13px 10px;text-align:center;border-bottom:1px solid var(--line)}
@@ -239,17 +315,18 @@ table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
 .nomedia b{color:var(--cream)}
 
 /* ================= home ================= */
-.homehero{text-align:center;padding:22px 0 4px}
-.homehero img{height:136px;width:auto;margin:0 auto 8px}
-.homehero .tl{font-size:11.5px;letter-spacing:4px;color:var(--gold);text-transform:uppercase}
-.trust{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;margin-top:18px}
-.trust span{font-size:10px;letter-spacing:1.3px;color:var(--muted);text-transform:uppercase;
-  border:1px solid var(--line);border-radius:999px;padding:6px 13px}
+.homehero{text-align:center;padding:18px 0 2px}
+.homehero img{height:88px;width:auto;margin:0 auto 6px;opacity:.96}
+.homehero .tl{font-size:var(--t-tiny);letter-spacing:3px;color:var(--gold);text-transform:uppercase;opacity:.85}
+/* the four claims read as one quiet line, not four competing pills */
+.trust{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 18px;margin-top:10px}
+.trust span{font-size:10px;letter-spacing:1.1px;color:var(--muted);text-transform:uppercase;opacity:.7}
+.trust span+span:before{content:"·";margin-right:18px;opacity:.5}
 .promo{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:26px}
-.pbox{border:1px solid var(--line2);border-radius:var(--r);padding:20px;
-  background:linear-gradient(150deg,rgba(201,162,75,.13),rgba(255,255,255,.02));box-shadow:var(--shadow)}
-.pbox .pi{font-size:26px;line-height:1}
-.pbox h4{margin:12px 0 6px;font-size:16.5px;font-weight:800;letter-spacing:.3px;color:var(--gold2)}
+.pbox{border:1px solid var(--line);border-radius:var(--r);padding:18px;
+  background:var(--card);box-shadow:none}
+.pbox .pi{font-size:22px;line-height:1;opacity:.9}
+.pbox h4{margin:10px 0 6px;font-size:var(--t-h3);font-weight:700;letter-spacing:.2px;color:var(--cream)}
 .pbox p{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
 .nums{display:grid;gap:7px;margin-top:14px}
 .nums a{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -259,9 +336,12 @@ table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
 .nums a span{font-size:10.5px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
 .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(232px,1fr))}
 .tile{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;text-align:left;
-  display:flex;flex-direction:column;background:var(--card);box-shadow:var(--shadow);position:relative}
+  display:flex;flex-direction:column;background:var(--card);box-shadow:none;position:relative;
+  transition:border-color .2s,transform .12s}
 .tile:active{border-color:var(--gold2);transform:scale(.99)}
-.tile .cover{position:relative;aspect-ratio:16/10;overflow:hidden;background:#2A1A0C}
+.tile .cover{position:relative;aspect-ratio:16/10;overflow:hidden;background:#1A1108}
+.tile .cover:after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(10,6,3,.10) 0%,rgba(10,6,3,.05) 55%,rgba(10,6,3,.55) 100%)}
 .tile .cover img{width:100%;height:100%;object-fit:cover}
 /* a category with more than one picture cycles them right on the tile */
 .tile .tsl{position:absolute;inset:0}
@@ -271,7 +351,7 @@ table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
 .tile .tdots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.45);transition:all .3s}
 .tile .tdots i.on{background:var(--gold2);width:15px;border-radius:3px}
 .tile .tb{padding:13px 15px 15px}
-.tile .tt{font-size:15px;font-weight:700}
+.tile .tt{font-size:var(--t-h3);font-weight:650}
 .tile .ts{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4}
 .tile .tc{color:var(--gold2);font-weight:700;font-size:11px;margin-top:11px;display:block;
   letter-spacing:1.2px;text-transform:uppercase}
@@ -475,17 +555,27 @@ textarea.fld{min-height:110px;resize:vertical}
 .slides .sl.on{opacity:1}
 /* contain, not cover: these are branded posters — cropping would cut the
    logo or the wording off. The frame takes the shape of the tallest slide. */
-.slides .sl img{width:100%;height:100%;object-fit:contain;display:block;background:#0b0603}
+.slides .sl img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain;display:block}
+.slides .sl .blurbg{position:absolute;inset:0;z-index:0;background-image:var(--bgimg);
+  background-size:cover;background-position:center;filter:blur(30px) brightness(.45) saturate(.9);
+  transform:scale(1.2)}
 .slides .scap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:34px 18px 14px;
   font-size:14px;font-weight:700;letter-spacing:.02em;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(6,3,1,.86))}
 .slides .scap:empty{display:none}
-.slides.small{max-height:32vh;margin-bottom:22px;cursor:pointer}
+.slides.small{max-height:26vh;margin-bottom:20px;cursor:pointer;aspect-ratio:21/9}
+.slides.small .sl img{object-fit:cover}
+.slides.small .blurbg{display:none}
 .slides.small .scap{padding:26px 16px 12px;font-size:13px}
-.slides .sdots{position:absolute;right:14px;bottom:14px;z-index:4;display:flex;gap:7px}
-.slides .sdots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);
-  transition:all .25s;cursor:pointer}
-.slides .sdots i.on{background:var(--gold,#d9a441);width:20px;border-radius:4px}
+.slides .sdots{position:absolute;right:14px;bottom:14px;z-index:4;display:flex;gap:7px;align-items:center}
+.slides .sdots.many{font-size:11px;font-weight:700;letter-spacing:.8px;color:rgba(255,255,255,.7);
+  background:rgba(8,5,2,.5);border-radius:999px;padding:5px 11px;backdrop-filter:blur(6px)}
+.slides .sdots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);
+  transition:all .25s;cursor:pointer;font-size:0;overflow:hidden}
+.slides .sdots i.on{background:var(--gold2);width:16px;border-radius:3px}
+.slides .sdots.many i{display:none}
+.slides .sdots.many i.on{display:block;width:auto;height:auto;border-radius:0;background:none;
+  font-size:11px;overflow:visible}
 @media (max-width:700px){ .slides{aspect-ratio:16/9} .slides .scap{font-size:12.5px} }
 
 /* ---- photo / table switch ---- */
@@ -505,13 +595,15 @@ textarea.fld{min-height:110px;resize:vertical}
 @media (max-width:860px){ .igc{width:224px} }
 
 /* ================= footer ================= */
-footer{position:fixed;bottom:0;left:0;right:0;display:flex;gap:9px;padding:10px 16px;
-  background:rgba(16,10,5,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line);z-index:40}
-footer button,footer a{flex:1;min-height:50px;display:flex;align-items:center;justify-content:center;
-  gap:9px;border-radius:13px;text-decoration:none;font-size:13.5px;font-weight:700;letter-spacing:.3px;
-  background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--cream)}
-footer .gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608;border-color:var(--gold)}
-footer .ig{background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3));color:#fff;border:0}
+footer{position:fixed;bottom:0;left:0;right:0;display:flex;gap:8px;padding:9px 16px;
+  background:rgba(14,9,4,.94);backdrop-filter:blur(16px);border-top:1px solid var(--line);z-index:40}
+footer button,footer a{flex:1;min-height:46px;display:flex;align-items:center;justify-content:center;
+  gap:9px;border-radius:var(--r2);text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.2px;
+  background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--cream);transition:all .18s}
+footer button:active,footer a:active{transform:scale(.985)}
+footer .gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#241608;border-color:transparent;
+  font-weight:700}
+footer .ig{background:rgba(221,42,123,.12);border-color:rgba(221,42,123,.35);color:#F0B9D2}
 footer .star{color:var(--gold2);font-size:17px}
 
 /* ================= sheet + lightbox ================= */
@@ -540,7 +632,7 @@ footer .star{color:var(--gold2);font-size:17px}
   main{padding:0 14px 94px}
   #search{width:96px}
   .brand p,.gbtn span{display:none}
-  h2.sec{font-size:19px;white-space:normal}
+  h2.sec{font-size:16.5px;white-space:normal}
   .phead,.prow{grid-template-columns:46px 1fr repeat(3,54px);gap:9px;padding:10px 11px}
   .thumb{width:46px;height:46px;border-radius:10px}
   .prow .n{font-size:13.5px}.prow .d{display:none}.prow .pc{font-size:13px}
@@ -616,6 +708,11 @@ footer .star{color:var(--gold2);font-size:17px}
   #intro .ib{padding:9px 13px;font-size:13px}
   #introhint{font-size:14px}
 }
+
+/* the watermark must never be stretched by the picture rules above it */
+.cover .artmark img,.ph .artmark img,.thumb .artmark img,.hero .artmark img{
+  width:auto;height:40%;max-height:54px;object-fit:contain;opacity:.30}
+.thumb .artmark img{height:48%;max-height:24px;opacity:.38}
 </style>
 </head>
 <body>
@@ -633,10 +730,13 @@ footer .star{color:var(--gold2);font-size:17px}
     <div class="brand"><h1>Hayat Fish Restaurant</h1><p id="tagline"></p></div>
     <div class="spacer"></div>
     <input id="search" type="search" placeholder="Search…" autocomplete="off">
-    <button class="gbtn" id="fsbtn" title="Full screen">&#9974;</button>
-    <button class="gbtn" id="viewbtn">&#9638; <span id="viewtxt">Photos</span></button>
-    <button class="gbtn" id="langbtn">അ</button>
-    <button class="gbtn" id="galbtn">◎ <span id="galtxt">Gallery</span></button>
+    <div class="tools">
+      <button class="gbtn" id="viewbtn">&#9638; <span id="viewtxt">Photos</span></button>
+      <button class="gbtn" id="langbtn" title="English / Malayalam">അ</button>
+      <span class="sep"></span>
+      <button class="gbtn" id="fsbtn" title="Full screen">&#9974;</button>
+      <button class="gbtn" id="galbtn">◎ <span id="galtxt">Gallery</span></button>
+    </div>
   </header>
   <div id="body"><nav id="nav"></nav><main id="main"></main></div>
   <footer>
@@ -1553,14 +1653,20 @@ window.CONFIG = {
 
 var QHF = ["Quarter","Half","Full"];   /* var, not const: safe to load twice */
 
+/* Dishes still showing generated artwork rather than a real photograph.
+   The dish page gives these a clean branded panel instead of a big fake
+   plate. Delete an id from this list the day you shoot that dish. */
+window.ART_ONLY = ["af-afghani", "af-cheesy", "af-curry", "af-green", "af-masala", "af-pepper", "af-regular", "b1", "b2", "b3", "b4", "b5", "br-beef", "br-chatti", "br-chicken", "br-fish", "br-mutton", "broast", "chicken-65", "chorum-meenum", "d1", "d10", "d11", "d12", "d13", "d3", "d5", "d6", "d7", "d8", "d9", "dragon", "fish-curry", "fish-fry", "g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8", "grill-fish", "kondattam", "popcorn", "prawns-roast", "s1", "s2", "s3", "s4", "s5", "s6", "sh-green", "sh-masala", "sh-pepper", "sh-regular", "squid-roast", "w1", "w2", "w3", "w4", "w5", "w6", "x1", "x2", "x3", "x4"];
+
 window.MENU = [
 
 { id:"mandi", ic:"\u{1F357}", name:"Signature Mandi",
   tagline:"Slow cooked to perfection with our signature Yemeni spices",
-  slides:[{ src:"banners/mandi-1.jpg" },      /* artwork carries its own words */
-          { src:"banners/mandi-2.jpg" },
+  /* single-dish banners lead; the three-in-one poster still comes round */
+  slides:[{ src:"banners/mandi-2.jpg" },
           { src:"banners/mandi-3.jpg" },
-          { src:"banners/mandi-4.jpg" }],
+          { src:"banners/mandi-4.jpg" },
+          { src:"banners/mandi-1.jpg" }],
   layout:"list", items:[
 
   { id:"overloaded-mandi", name:"Overloaded Mandi", sub:"The full table platter", anchor:true,
@@ -1947,12 +2053,30 @@ function lowest(it){
 const telHref=n=>"tel:"+String(n).replace(/\s+/g,"");
 const telShow=n=>String(n).replace(/^\+91/,"").replace(/(\d{5})(\d{5})/,"$1 $2");
 function art(it,wide){return window.iconSvg(it.icon||"mandi",it.tint,wide)}
+/* A dish with a real photograph gets the photograph. A dish that only has
+   generated artwork gets a quiet branded panel — better an honest mark than a
+   fake plate blown up to full width. */
+function isArtOnly(it){
+  try{ return (window.ART_ONLY||[]).indexOf(it.id) >= 0; }catch(e){ return false; }
+}
+function dishHero(it){
+  if(!isArtOnly(it)) return '<div class="hero">'+pic(it,true)+'</div>';
+  return '<div class="hero brandhero">'+
+           '<img class="mark" src="assets/mark.png" alt="">'+
+           '<div class="bs">'+esc(C.tagline||"")+'</div>'+
+         '</div>';
+}
 function pic(it,wide){
   const fb=art(it||{},wide);
   return `<img loading="lazy" src="${(it&&it.img)||fb}" alt="${esc((it&&it.name)||"")}"
     onerror="this.onerror=null;this.src='${fb}'">`;
 }
-const thumb=it=>`<span class="thumb">${pic(it)}</span>`;
+/* Dishes without a photograph get the mark, not a drawn plate. */
+function media(it,wide){
+  if(isArtOnly(it)) return '<span class="artmark"><img src="assets/mark.png" alt=""></span>';
+  return pic(it,wide);
+}
+const thumb=it=>`<span class="thumb${isArtOnly(it)?" art":""}">${media(it)}</span>`;
 const tagHtml=it=>(it.tags||[]).map(t=>
   `<span class="tag ${t}">${t==="star"?T("tagStar"):t==="hot"?T("tagHot"):T("tagVeg")}</span>`).join("");
 function priceChips(it){
@@ -2197,7 +2321,7 @@ function viewHome(){
              `<img ${i?'loading="lazy" ':''}class="${i?"":"on"}" src="${esc(x.src)}" alt="">`).join("")}</div>`
            + (cs.length>1 ? `<span class="tdots">${cs.map((_,i)=>
                `<i class="${i?"":"on"}"></i>`).join("")}</span>` : "")
-         : pic(cover,true)}</div>
+         : media(cover,true)}</div>
        <div class="tb"><div class="tt">${c.ic} ${esc(SN(c))}</div>
        <div class="ts">${esc(c.tagline)}</div>
        <span class="tc">${c.items.length} ${T("items")} &rarr;</span></div></button>`}).join("")}</div>
@@ -2269,16 +2393,39 @@ function viewHome(){
   mountReels(main);
   wireSlides();
   wireTiles();
-  main.scrollTop=0;
+  restoreScroll();
 }
 
 /* Category tiles with more than one picture cycle through them. One timer
    drives every tile, so twenty categories cost the same as one. */
 var TILE_TIMER=null;
+/* Move the picture closest to the tile's own shape to the front. */
+function leadWithBestFit(box){
+  var imgs = box.querySelectorAll("img");
+  if(imgs.length < 2) return;
+  var done = 0;
+  function pick(){
+    if(++done < imgs.length) return;
+    var best = 0, bestGap = 99;
+    Array.prototype.forEach.call(imgs, function(im, i){
+      if(!im.naturalWidth || !im.naturalHeight) return;
+      var gap = Math.abs((im.naturalWidth/im.naturalHeight) - 1.6);
+      if(gap < bestGap){ bestGap = gap; best = i; }
+    });
+    if(!best) return;
+    box.insertBefore(imgs[best], imgs[0]);
+    for(var k=0;k<imgs.length;k++) imgs[k].className = "";
+    imgs[best].className = "on";
+  }
+  Array.prototype.forEach.call(imgs, function(im){
+    if(im.complete) pick(); else { im.addEventListener("load", pick); im.addEventListener("error", pick); }
+  });
+}
 function wireTiles(){
   if(TILE_TIMER){ clearInterval(TILE_TIMER); TILE_TIMER=null; }
   var sets = main.querySelectorAll(".tile .tsl");
   if(!sets.length) return;
+  Array.prototype.forEach.call(sets, function(box){ leadWithBestFit(box); });
   var step = 0;
   TILE_TIMER = setInterval(function(){
     step++;
@@ -2360,9 +2507,9 @@ function viewParty(){
           href="${WA(msg)}" target="_blank" rel="noopener">${T("whatsappUs")}</a></div>
       </div>`+
       backBottom("#/",T("backMenu"));
-    main.scrollTop=0;
+    restoreScroll();
   };
-  main.scrollTop=0;
+  restoreScroll();
 }
 
 /* ---------------- rate us ---------------- */
@@ -2420,7 +2567,7 @@ function viewRate(){
       backBottom("#/",T("backMenu"));
   };
   const fb=document.getElementById("fbSend"); if(fb) fb.remove();
-  main.scrollTop=0;
+  restoreScroll();
 }
 
 /* ---------------- category ---------------- */
@@ -2462,7 +2609,7 @@ function viewCat(id){
 
   const cards=`<div class="pgrid">${items.map(it=>`
     <button class="pcard" data-go="#/d/${c.id}/${it.id}">
-      <div class="ph">${pic(it,true)}</div>
+      <div class="ph">${media(it,true)}</div>
       ${it.anchor?`<span class="ribbon">${T("ribbonParty")}</span>`
         :(it.tags||[]).includes("star")?`<span class="ribbon">${T("ribbonChef")}</span>`
         :(it.tags||[]).includes("hot")?`<span class="ribbon hot">${T("ribbonSpicy")}</span>`:""}
@@ -2479,7 +2626,7 @@ function viewCat(id){
     upsellStrip(c.id)+
     backBottom("#/",T("backMenu"));
   wireSlides();
-  main.scrollTop=0;
+  restoreScroll();
 }
 
 /* Every section runs a slideshow across the top. Use the section's own
@@ -2504,12 +2651,15 @@ function slideShow(c, small){
   if(!sl.length) return "";
   return '<div class="slides'+(small?" small":"")+'" id="slides">'+sl.map(function(x,i){
     return '<div class="sl'+(i?"":" on")+'" data-cap="'+esc(x.caption||"")+'"'+
-           (x.go?' data-goto="'+esc(x.go)+'"':'')+'>'+
+           (x.go?' data-goto="'+esc(x.go)+'"':'')+
+           ' style="--bgimg:url(\''+esc(x.src)+'\')">'+
+           '<span class="blurbg"></span>'+
            '<img '+(i?'loading="lazy" ':'')+'src="'+esc(x.src)+'" alt=""></div>';
   }).join("")+
   '<div class="scap" id="scap">'+esc(sl[0].caption||"")+'</div>'+
-  '<div class="sdots">'+sl.map(function(_,i){
-    return '<i class="'+(i?"":"on")+'" data-slide="'+i+'"></i>';}).join("")+'</div></div>';
+  '<div class="sdots'+(sl.length>6?" many":"")+'">'+sl.map(function(x,i){
+    return '<i class="'+(i?"":"on")+'" data-slide="'+i+'">'+(i+1)+' / '+sl.length+'</i>';
+  }).join("")+'</div></div>';
 }
 /* Every banner in the whole menu, for the strip on the home page.
    Tapping one jumps straight to that section. */
@@ -2528,6 +2678,7 @@ var SLIDE_TIMER=null;
    was replaced by a tall one. Nothing is cropped — the shorter ones simply sit
    in the middle of the frame. */
 function fitBox(box){
+  if(box.classList.contains("small")) return;     /* fixed band, set in CSS */
   var imgs = box.querySelectorAll(".sl img");
   if(!imgs.length) return;
   function apply(){
@@ -2539,7 +2690,7 @@ function fitBox(box){
     if(ratio === 99) return;                       /* nothing loaded yet */
     var w = box.clientWidth || box.getBoundingClientRect().width;
     if(!w) return;
-    var cap = box.classList.contains("small") ? 0.34 : 0.52;
+    var cap = box.classList.contains("small") ? 0.26 : 0.40;
     var h = Math.min(w / Math.max(1.2, Math.min(3.4, ratio)), window.innerHeight * cap);
     box.style.aspectRatio = "auto";
     box.style.height = Math.round(h) + "px";
@@ -2638,12 +2789,12 @@ function viewDish(cid,did){
   main.innerHTML=
     backBar("#/c/"+cid,SN(c),NM(it))+
     `<div class="detail">
-      <div class="hero">${pic(it,true)}
-        <div class="hcap"><div class="hn">${esc(NM(it))}</div>
-          <div class="hp">${priceChips(it)}</div></div></div>
-      ${it.sub?`<div class="subline">${esc(it.sub)}</div>`:""}
-      <h3>${esc(NM(it))}${tagHtml(it)}</h3>
-      ${it.desc?`<p class="desc">${esc(it.desc)}</p>`:"<div style='height:12px'></div>"}
+      ${dishHero(it)}
+      <div class="dhead">
+        <h3>${esc(NM(it))}${tagHtml(it)}</h3>
+        ${it.sub?`<div class="subline">${esc(it.sub)}</div>`:""}
+      </div>
+      ${it.desc?`<p class="desc">${esc(it.desc)}</p>`:"<div style='height:10px'></div>"}
       <h3 class="mini">${T("pricing")}</h3>
       ${pricing}
       <!-- videos, then photos, then nothing at all -->
@@ -2654,7 +2805,7 @@ function viewDish(cid,did){
     upsellStrip(cid)+
     backBottom("#/c/"+cid,T("backTo")+" "+SN(c));
   wireVideos();
-  main.scrollTop=0;
+  restoreScroll();
 }
 
 /* Dish videos: silent autoplay while they are on screen, tap for full screen
@@ -2748,7 +2899,7 @@ function viewGallery(){
      ${igBar(T("igFollow"),T("igFollowSub"))}`+
     backBottom("#/",T("backMenu"));
   mountReels(main);
-  main.scrollTop=0;
+  restoreScroll();
 }
 
 /* ---------------- search ---------------- */
@@ -2763,11 +2914,11 @@ function viewSearch(q){
     head(hits.length+" "+(hits.length===1?T("result"):T("results")),T("forQ")+' "'+q+'"')+
     (hits.length?`<div class="pgrid">${hits.map(([it,c])=>`
       <button class="pcard" data-go="#/d/${c.id}/${it.id}">
-        <div class="ph">${pic(it,true)}</div>
+        <div class="ph">${media(it,true)}</div>
         <div class="cap"><div class="cn">${esc(NM(it))}</div>
           <div class="cprices">${priceChips(it)}</div></div></button>`).join("")}</div>`
      :`<div class="empty">${T("noMatch")}</div>`);
-  main.scrollTop=0;
+  restoreScroll();
 }
 
 /* ---------------- sheets & lightbox ---------------- */
@@ -2798,6 +2949,23 @@ function lightbox(src,cap,isVideo){
 }
 
 /* ---------------- routing ---------------- */
+/* Remember where the guest was on every page, so coming back from a dish
+   lands them exactly where they left instead of at the top. */
+var SCROLLMEM = {}, CURHASH = location.hash || "#/", HOLDSCROLL = false;
+main.addEventListener("scroll", function(){
+  if(!HOLDSCROLL) SCROLLMEM[CURHASH] = main.scrollTop;
+}, {passive:true});
+function restoreScroll(){
+  var h = location.hash || "#/";
+  var y = SCROLLMEM[h] || 0;
+  HOLDSCROLL = true; CURHASH = h;
+  main.scrollTop = y;
+  requestAnimationFrame(function(){
+    main.scrollTop = y;
+    setTimeout(function(){ main.scrollTop = y; HOLDSCROLL = false; }, 160);
+  });
+}
+
 function route(){
   if(search.value.trim()) return viewSearch(search.value.trim());
   const p=(location.hash||"#/").slice(2).split("/").filter(Boolean);

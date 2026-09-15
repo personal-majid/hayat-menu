@@ -21,14 +21,20 @@
 
 var QHF = ["Quarter","Half","Full"];   /* var, not const: safe to load twice */
 
+/* Dishes still showing generated artwork rather than a real photograph.
+   The dish page gives these a clean branded panel instead of a big fake
+   plate. Delete an id from this list the day you shoot that dish. */
+window.ART_ONLY = ["af-afghani", "af-cheesy", "af-curry", "af-green", "af-masala", "af-pepper", "af-regular", "b1", "b2", "b3", "b4", "b5", "br-beef", "br-chatti", "br-chicken", "br-fish", "br-mutton", "broast", "chicken-65", "chorum-meenum", "d1", "d10", "d11", "d12", "d13", "d3", "d5", "d6", "d7", "d8", "d9", "dragon", "fish-curry", "fish-fry", "g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8", "grill-fish", "kondattam", "popcorn", "prawns-roast", "s1", "s2", "s3", "s4", "s5", "s6", "sh-green", "sh-masala", "sh-pepper", "sh-regular", "squid-roast", "w1", "w2", "w3", "w4", "w5", "w6", "x1", "x2", "x3", "x4"];
+
 window.MENU = [
 
 { id:"mandi", ic:"\u{1F357}", name:"Signature Mandi",
   tagline:"Slow cooked to perfection with our signature Yemeni spices",
-  slides:[{ src:"banners/mandi-1.jpg" },      /* artwork carries its own words */
-          { src:"banners/mandi-2.jpg" },
+  /* single-dish banners lead; the three-in-one poster still comes round */
+  slides:[{ src:"banners/mandi-2.jpg" },
           { src:"banners/mandi-3.jpg" },
-          { src:"banners/mandi-4.jpg" }],
+          { src:"banners/mandi-4.jpg" },
+          { src:"banners/mandi-1.jpg" }],
   layout:"list", items:[
 
   { id:"overloaded-mandi", name:"Overloaded Mandi", sub:"The full table platter", anchor:true,
