@@ -856,6 +856,17 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
 .pinlink{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:700;color:var(--green);
   text-decoration:none;border-bottom:1px solid currentColor}
 .addr.nopin{color:var(--muted);opacity:.75;font-style:italic}
+.admap{height:280px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--line);
+  background:var(--soft2);margin:0 0 8px}
+.admaplegend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.lg{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+.lg::before{content:"";width:10px;height:10px;border-radius:50%;border:1.5px solid var(--line2)}
+.lg.s-placed::before{background:#E4705A}
+.lg.s-accepted::before{background:#C9A24B}
+.lg.s-on_way::before{background:#8FBE43}
+.lg.s-delivered::before{background:#9A8A6C;opacity:.55}
+.lg.s-placed,.lg.s-accepted,.lg.s-on_way,.lg.s-delivered{background:none;padding:0}
 .conn{font-size:12.5px;line-height:1.6;padding:11px 13px;border-radius:var(--r2);margin:0 0 14px;
   border:1px solid var(--line)}
 .conn b{display:block;margin-bottom:3px}
@@ -3849,7 +3860,7 @@ var INTRO = (function(){
     live = false;
     el.classList.add("gone");
     stamp();
-    vids.forEach(function(v){ try{ v.pause(); }catch(e){} });
+    vids.forEach(function(v){ try{ v.muted = true; v.pause(); v.currentTime = 0; }catch(e){} });
     document.body.style.overflow = "";
     setTimeout(function(){ if(!live) el.hidden = true; }, 520);
   }
@@ -3963,6 +3974,9 @@ function introWelcome(){
   return h === "" || h === "#" || h === "#/";
 }
 try{ if(introWelcome()) INTRO.open(false); }catch(e){}
+window.addEventListener("hashchange", function(){
+  try{ if(!introWelcome()) INTRO.close(); }catch(e){}
+});
 
 /* ===== FULL SCREEN =================================================
    A tablet on a table should show the menu, not Chrome. Browsers only

@@ -347,16 +347,35 @@ var HOME = { lat: 11.0065785, lng: 76.1270507 };   /* the restaurant */
 function loadLeaflet(){
   if(window.L) return Promise.resolve();
   if(loadLeaflet._p) return loadLeaflet._p;
-  loadLeaflet._p = new Promise(function(done, fail){
-    var css = document.createElement("link");
-    css.rel = "stylesheet";
-    css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    document.head.appendChild(css);
-    var js = document.createElement("script");
-    js.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    js.onload = done;
-    js.onerror = function(){ fail(new Error("leaflet")); };
-    document.head.appendChild(js);
+
+  /* three mirrors: a blocked or flaky CDN should not cost us the map */
+  var HOSTS = [
+    "https://unpkg.com/leaflet@1.9.4/dist/",
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/",
+    "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/"
+  ];
+
+  function one(base){
+    return new Promise(function(done, fail){
+      var css = document.createElement("link");
+      css.rel = "stylesheet"; css.href = base + "leaflet.css";
+      document.head.appendChild(css);
+      var js = document.createElement("script");
+      js.src = base + "leaflet.js";
+      js.onload  = function(){ window.L ? done() : fail(new Error("loaded but no L")); };
+      js.onerror = function(){ fail(new Error("blocked: " + base)); };
+      document.head.appendChild(js);
+      setTimeout(function(){ if(!window.L) fail(new Error("timed out: " + base)); }, 9000);
+    });
+  }
+
+  loadLeaflet._p = HOSTS.reduce(function(chain, base){
+    return chain.catch(function(){ return one(base); });
+  }, Promise.reject())
+  .catch(function(e){
+    loadLeaflet._p = null;        /* never cache a failure — let the next
+                                     visit to checkout try again */
+    throw e;
   });
   return loadLeaflet._p;
 }
@@ -370,6 +389,8 @@ function mountMap(saved){
 
   loadLeaflet().then(function(){
     var at = PIN || HOME;
+    /* a container Leaflet has already claimed cannot be reused */
+    try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
     MAP = L.map(box, { zoomControl:true, attributionControl:true })
            .setView([at.lat, at.lng], PIN ? 17 : 15);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -384,9 +405,12 @@ function mountMap(saved){
       pinText("Pin set \u00b7 " + PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5));
     });
     setTimeout(function(){ MAP.invalidateSize(); }, 200);
-  }).catch(function(){
-    box.innerHTML = '<div class="mapfail">The map could not load. ' +
-      'The address above is enough \u2014 we will call if we cannot find it.</div>';
+  }).catch(function(err){
+    /* say what actually went wrong — a blanket message hides real faults */
+    box.innerHTML = '<div class="mapfail">The map is not loading here.<br>' +
+      'Use <b>my location</b> above, or just the address \u2014 we will call if ' +
+      'we cannot find it.<br><small>' + esc(String(err && err.message || err)) +
+      '</small></div>';
   });
 
   var here = el("coHere");
