@@ -27,6 +27,38 @@ window.CONFIG = {
      ---------------------------------------------------------- */
   defaultMode: "guest",
 
+  /* ---- 0ab. ORDERING --------------------------------------- *
+     true  = every dish page gets an "add to cart" strip, and the
+             cart, checkout and order tracking pages are live.
+     false = the menu goes back to being a menu only.
+
+     While testing, orders live in the browser that placed them —
+     open the office at  .../#/admin  in a second tab of the SAME
+     browser to watch them arrive. Passcode 1234, temporary.      */
+  ordering: true,
+
+  /* ---- 0ac. FIREBASE ---------------------------------------- *
+     With this filled in, orders live in Firestore and the three
+     screens (customer, office, rider) talk to each other from
+     different phones. Empty it and everything falls back to this
+     browser's own storage, which is fine for a demo.
+
+     This block is public on purpose — it ships inside every
+     Firebase web app and is not a password. What protects the
+     data is the Firestore rules, set in the console.
+
+     TEST MODE is open to anyone until it expires. Before real
+     customer orders flow through, the rules have to be tightened
+     and the staff passcode replaced with a real login.           */
+  firebase: {
+    apiKey: "AIzaSyA48aGGeEvg9lyVzeTX5fPIA21SrMZQPn8",
+    authDomain: "h-menu.firebaseapp.com",
+    projectId: "h-menu",
+    storageBucket: "h-menu.firebasestorage.app",
+    messagingSenderId: "1020503266242",
+    appId: "1:1020503266242:web:6a6da2ed26570dd994fc5b"
+  },
+
   /* ---- 0aa. COLOUR THEME ----------------------------------- *
      "garden" = the green and cream of the printed flyer (default)
      "night"  = the dark gold dining room

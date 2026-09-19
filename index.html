@@ -766,6 +766,97 @@ footer .star{color:var(--gold2);font-size:17px}
   background:var(--soft2);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
 .fbchip b{cursor:pointer;color:var(--muted);font-size:15px;line-height:1}
 @media (prefers-reduced-motion:reduce){.mbtn.rec .d{animation:none}}
+/* ---------- cart, orders, riders ---------- */
+#cartfab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));
+  z-index:60;display:flex;align-items:center;gap:9px;border:0;border-radius:999px;cursor:pointer;
+  padding:13px 22px;font:inherit;font-size:14px;font-weight:700;color:var(--onaccent);
+  background:linear-gradient(135deg,var(--gold2),var(--gold));box-shadow:0 10px 26px rgba(0,0,0,.30)}
+#cartfab .b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  background:rgba(0,0,0,.22);font-size:12px}
+body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
+#cartfab[hidden]{display:none}            /* display:flex above beats [hidden] */
+.shopwrap{max-width:520px;margin:0 auto;padding:6px 2px 30px}
+.shoph{font-size:var(--t-h2);margin:6px 0 16px;color:var(--cream);text-align:center}
+.shopsub{color:var(--muted);font-size:13.5px;text-align:center;margin:10px 0 18px}
+.shopnote{color:var(--muted);font-size:11.5px;text-align:center;margin:10px 0 14px;line-height:1.55}
+.shopbtn{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;gap:8px;
+  border-radius:var(--r2);border:1px solid transparent;font:inherit;font-size:15px;font-weight:700;
+  cursor:pointer;text-decoration:none;margin:10px 0 0;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.shopbtn.ghost{background:var(--soft);border-color:var(--line);color:var(--cream);font-weight:600}
+.shopbtn.small{min-height:44px;font-size:13.5px}
+.lines{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin:0 0 12px}
+.line{display:flex;align-items:center;gap:10px;padding:12px 13px;border-bottom:1px solid var(--line);
+  background:var(--soft3)}
+.line:last-child{border-bottom:0}
+.ln{flex:1;min-width:0}
+.ln b{display:block;font-size:14px;color:var(--cream);font-weight:650}
+.ln small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.lp{font-size:14px;font-weight:700;color:var(--gold2);white-space:nowrap}
+.lq{font-size:13px;color:var(--muted)}
+.qty{display:flex;align-items:center;gap:4px}
+.qty button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);cursor:pointer;
+  background:var(--soft2);color:var(--cream);font:inherit;font-size:16px;line-height:1}
+.qty span{min-width:22px;text-align:center;font-size:14px;font-weight:700;color:var(--cream)}
+.total{display:flex;justify-content:space-between;align-items:center;padding:13px 2px;
+  border-top:1px solid var(--line);font-size:15px;color:var(--muted)}
+.total b{font-size:19px;color:var(--gold2)}
+.sel{appearance:none;-webkit-appearance:none}
+.addwrap{display:flex;flex-direction:column;gap:8px;margin:14px 0 6px}
+.addbtn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:48px;
+  padding:0 15px;border-radius:var(--r2);border:1px solid var(--line);cursor:pointer;
+  background:var(--accentwash2);color:var(--cream);font:inherit;font-size:14px;font-weight:600;
+  transition:background .16s,border-color .16s}
+.addbtn b{color:var(--gold2);font-size:15px}
+.addbtn.added{border-color:var(--green);background:var(--accentwash)}
+.track{display:flex;flex-direction:column;margin:4px 0 20px}
+.tstep{display:flex;align-items:flex-start;gap:12px;padding:0 0 18px;position:relative;opacity:.42}
+.tstep::before{content:"";position:absolute;left:6px;top:16px;bottom:0;width:2px;background:var(--line2)}
+.tstep:last-child::before{display:none}
+.tstep.on{opacity:1}
+.tstep .dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--line2);
+  background:var(--bg);flex:none;margin-top:2px;z-index:1}
+.tstep.on .dot{border-color:var(--green);background:var(--green)}
+.tstep.now .dot{box-shadow:0 0 0 5px var(--accentwash2);animation:tpulse 1.6s infinite}
+@keyframes tpulse{50%{box-shadow:0 0 0 9px transparent}}
+.tstep b{display:block;font-size:14.5px;color:var(--cream);font-weight:650}
+.tstep small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.tstep .tt{margin-left:auto;font-size:11.5px;color:var(--muted);white-space:nowrap}
+.ridercard{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);
+  border-radius:var(--r2);background:var(--accentwash2);margin:0 0 14px}
+.ridercard b{display:block;font-size:14.5px;color:var(--cream)}
+.ridercard small{display:block;font-size:11.5px;color:var(--muted)}
+.callbtn{margin-left:auto;padding:9px 18px;border-radius:999px;text-decoration:none;font-size:13px;
+  font-weight:700;background:var(--green);color:#0E1A06}
+.adminbar{display:flex;align-items:center;gap:8px;margin:0 0 14px;flex-wrap:wrap}
+.pill{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  padding:5px 11px;border-radius:999px;background:var(--accentwash);color:var(--gold2)}
+.pill.quiet{background:var(--soft2);color:var(--muted)}
+.linky{margin-left:auto;background:none;border:0;cursor:pointer;font:inherit;font-size:13px;
+  font-weight:650;color:var(--gold2);text-decoration:underline;text-underline-offset:3px}
+.linky.warn{margin-left:0;color:var(--hot)}
+.ocard{border:1px solid var(--line);border-radius:var(--r2);padding:13px;margin:0 0 11px;background:var(--soft3)}
+.orow{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.orow b{font-size:15px;color:var(--cream)}
+.otime{margin-left:auto;font-size:11.5px;color:var(--muted)}
+.status{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;background:var(--soft2);color:var(--muted)}
+.status.big{display:block;text-align:center;font-size:13px;padding:11px;margin:12px 0 0}
+.s-placed{background:rgba(228,112,90,.16);color:var(--hot)}
+.s-accepted,.s-assigned{background:var(--accentwash);color:var(--gold2)}
+.s-on_way{background:rgba(143,190,67,.18);color:var(--green)}
+.s-delivered{background:var(--soft2);color:var(--muted)}
+.who{font-size:13.5px;color:var(--cream)}
+.who.big{font-size:18px;font-weight:700;margin-bottom:4px}
+.who a{color:var(--gold2)}
+.addr{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:3px}
+.addr.note{color:var(--gold2)}
+.items{font-size:12.5px;color:var(--muted);margin:9px 0;line-height:1.6}
+.items i{font-style:normal;opacity:.75}
+.tot{font-size:16px;font-weight:700;color:var(--gold2)}
+.rname{margin-left:auto;font-size:12px;color:var(--muted)}
+.rowbtns{display:flex;gap:9px;margin:12px 0}
+.rowbtns .shopbtn{margin:0}
 .revphoto{font-size:12px;color:var(--muted);text-align:center;margin:12px 0 22px}
 .revpriv{border-top:1px solid var(--line);padding-top:16px;margin-top:4px}
 
@@ -1647,6 +1738,38 @@ window.CONFIG = {
      ---------------------------------------------------------- */
   defaultMode: "guest",
 
+  /* ---- 0ab. ORDERING --------------------------------------- *
+     true  = every dish page gets an "add to cart" strip, and the
+             cart, checkout and order tracking pages are live.
+     false = the menu goes back to being a menu only.
+
+     While testing, orders live in the browser that placed them —
+     open the office at  .../#/admin  in a second tab of the SAME
+     browser to watch them arrive. Passcode 1234, temporary.      */
+  ordering: true,
+
+  /* ---- 0ac. FIREBASE ---------------------------------------- *
+     With this filled in, orders live in Firestore and the three
+     screens (customer, office, rider) talk to each other from
+     different phones. Empty it and everything falls back to this
+     browser's own storage, which is fine for a demo.
+
+     This block is public on purpose — it ships inside every
+     Firebase web app and is not a password. What protects the
+     data is the Firestore rules, set in the console.
+
+     TEST MODE is open to anyone until it expires. Before real
+     customer orders flow through, the rules have to be tightened
+     and the staff passcode replaced with a real login.           */
+  firebase: {
+    apiKey: "AIzaSyA48aGGeEvg9lyVzeTX5fPIA21SrMZQPn8",
+    authDomain: "h-menu.firebaseapp.com",
+    projectId: "h-menu",
+    storageBucket: "h-menu.firebasestorage.app",
+    messagingSenderId: "1020503266242",
+    appId: "1:1020503266242:web:6a6da2ed26570dd994fc5b"
+  },
+
   /* ---- 0aa. COLOUR THEME ----------------------------------- *
      "garden" = the green and cream of the printed flyer (default)
      "night"  = the dark gold dining room
@@ -2195,6 +2318,7 @@ window.MENU = [
 <script src="lang.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('lang.js')"></script>
 <script src="config.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('config.js')"></script>
 <script src="menu-data.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('menu-data.js')"></script>
+<script src="shop.js" crossorigin="anonymous" onerror="window.__missing=(window.__missing||[]).concat('shop.js')"></script>
 <script>
 /* ANY uncaught error paints a readable screen instead of a white one */
 window.onerror=function(msg,src,line,col,err){
@@ -3301,6 +3425,7 @@ function viewDish(cid,did){
       ${it.desc?`<p class="desc">${esc(it.desc)}</p>`:"<div style='height:10px'></div>"}
       <h3 class="mini">${T("pricing")}</h3>
       ${pricing}
+      ${(window.SHOP && C.ordering!==false) ? SHOP.dishButtons(it) : ""}
       <!-- videos, then photos, then nothing at all -->
       ${gal}
       ${igBar(T("igMore"),T("igMoreSub"))}
@@ -3474,6 +3599,9 @@ function route(){
   closeOverlay();                      /* a sheet must never survive a page change */
   if(search.value.trim()) return viewSearch(search.value.trim());
   const p=(location.hash||"#/").slice(2).split("/").filter(Boolean);
+  /* cart, checkout, order tracking, the office and the rider all live in
+     shop.js. It returns true when it has taken the page. */
+  try{ if(window.SHOP && SHOP.route(p, main)){ drawNav(null); restoreScroll(); return; } }catch(e){}
   if(p[0]==="gallery") return viewGallery();
   if(p[0]==="rate")   { RATEMODE = KIOSK ? "kiosk" : "own"; return viewRate(); }
   if(p[0]==="review") { RATEMODE = KIOSK ? "kiosk" : "own"; return viewRate(); }
@@ -3776,7 +3904,7 @@ var INTRO = (function(){
   });
   setInterval(function(){
     if(live || !gapMs() || cfg.enabled === false) return;
-    if(/^#\/(review|rate)\b/.test(location.hash || "")) return;   /* not mid-review */
+    if(!introWelcome()) return;          /* never interrupt someone mid-task */
     if(Date.now() - lastTouch < gapMs()) return;
     lastTouch = Date.now();
     if(location.hash && location.hash !== "#/") location.hash = "#/";
@@ -3793,10 +3921,12 @@ var INTRO = (function(){
            has:function(){ return clips.length > 0; } };
 })();
 
-/* Someone who scanned the review card came to say something, not to watch
-   a reel. The intro stays out of the way on the rating pages. */
+/* The intro is a welcome, so it only belongs on the front door. Anyone who
+   followed a link to a particular page — a review card, an order they are
+   tracking, the office — came for that page, not for a film. */
 function introWelcome(){
-  return !/^#\/(review|rate)\b/.test(location.hash || "");
+  var h = location.hash || "";
+  return h === "" || h === "#" || h === "#/";
 }
 try{ if(introWelcome()) INTRO.open(false); }catch(e){}
 
