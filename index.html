@@ -802,13 +802,22 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
   border-top:1px solid var(--line);font-size:15px;color:var(--muted)}
 .total b{font-size:19px;color:var(--gold2)}
 .sel{appearance:none;-webkit-appearance:none}
-.addwrap{display:flex;flex-direction:column;gap:8px;margin:14px 0 6px}
-.addbtn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:48px;
-  padding:0 15px;border-radius:var(--r2);border:1px solid var(--line);cursor:pointer;
-  background:var(--accentwash2);color:var(--cream);font:inherit;font-size:14px;font-weight:600;
-  transition:background .16s,border-color .16s}
-.addbtn b{color:var(--gold2);font-size:15px}
-.addbtn.added{border-color:var(--green);background:var(--accentwash)}
+.addhead{margin-top:20px}
+.addwrap{display:flex;flex-direction:column;gap:9px;margin:10px 0 6px}
+.arow{display:flex;align-items:center;gap:12px;min-height:58px;padding:0 13px;
+  border:1px solid var(--line);border-radius:var(--r2);background:var(--card2)}
+.arow .an{flex:1;min-width:0;font-size:15px;font-weight:650;color:var(--cream)}
+.arow .ap{font-size:15px;font-weight:700;color:var(--gold2);white-space:nowrap}
+.arow .add{flex:none;min-width:86px;min-height:38px;padding:0 16px;border-radius:10px;cursor:pointer;
+  border:1.5px solid var(--gold);background:var(--paper);color:#2A1A0D;
+  font:inherit;font-size:13.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+.arow .add:active{transform:scale(.97)}
+.arow .step{flex:none;display:flex;align-items:center;min-width:86px;min-height:38px;
+  border-radius:10px;overflow:hidden;border:1.5px solid var(--gold);background:var(--paper)}
+.arow .step button{width:30px;height:36px;border:0;cursor:pointer;background:transparent;
+  color:#2A1A0D;font:inherit;font-size:18px;font-weight:800;line-height:1}
+.arow .step button:active{background:rgba(0,0,0,.08)}
+.arow .step b{flex:1;text-align:center;font-size:14.5px;font-weight:800;color:#2A1A0D}
 .track{display:flex;flex-direction:column;margin:4px 0 20px}
 .tstep{display:flex;align-items:flex-start;gap:12px;padding:0 0 18px;position:relative;opacity:.42}
 .tstep::before{content:"";position:absolute;left:6px;top:16px;bottom:0;width:2px;background:var(--line2)}
@@ -828,6 +837,31 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
 .ridercard small{display:block;font-size:11.5px;color:var(--muted)}
 .callbtn{margin-left:auto;padding:9px 18px;border-radius:999px;text-decoration:none;font-size:13px;
   font-weight:700;background:var(--green);color:#0E1A06}
+.pinwrap{margin:2px 0 12px}
+.pinhead{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.pinhead b{flex:1;font-size:13px;font-weight:700;color:var(--cream)}
+.pinme{flex:none;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:8px 13px;
+  border-radius:999px;border:1px solid var(--gold);background:var(--accentwash2);color:var(--gold2)}
+.comap{position:relative;height:240px;border-radius:var(--r2);overflow:hidden;
+  border:1px solid var(--line);background:var(--soft2)}
+/* the pin is painted over the centre; the map moves underneath it */
+.comap::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;
+  transform:translate(-50%,-100%);pointer-events:none;z-index:500;
+  background:var(--hot);border:3px solid #fff;border-radius:50% 50% 50% 0;
+  rotate:-45deg;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.comap .leaflet-control-attribution{font-size:9px}
+.mapfail{display:grid;place-items:center;height:100%;padding:16px;text-align:center;
+  font-size:12.5px;color:var(--muted);line-height:1.6}
+.pinnote{font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.55}
+.pinlink{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:700;color:var(--green);
+  text-decoration:none;border-bottom:1px solid currentColor}
+.addr.nopin{color:var(--muted);opacity:.75;font-style:italic}
+.conn{font-size:12.5px;line-height:1.6;padding:11px 13px;border-radius:var(--r2);margin:0 0 14px;
+  border:1px solid var(--line)}
+.conn b{display:block;margin-bottom:3px}
+.conn.ok{color:var(--green);background:var(--accentwash2)}
+.conn.warn{color:var(--gold2);background:var(--accentwash2)}
+.conn.bad{color:var(--hot);background:rgba(228,112,90,.10);border-color:rgba(228,112,90,.40)}
 .adminbar{display:flex;align-items:center;gap:8px;margin:0 0 14px;flex-wrap:wrap}
 .pill{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
   padding:5px 11px;border-radius:999px;background:var(--accentwash);color:var(--gold2)}

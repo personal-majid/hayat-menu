@@ -520,11 +520,15 @@ function shopToast(m){
 function dishButtons(it){
   var cs = choices(it);
   if(!cs.length) return "";
-  return '<div class="addwrap">' + cs.map(function(c){
-    return '<button class="addbtn" data-add="' + esc(it.id) + '|' + esc(c.label) + '|' + c.price + '">' +
-      '<span>' + (c.label ? esc(c.label) : "Add to cart") + '</span>' +
-      '<b>' + rupee(c.price) + '</b></button>';
-  }).join("") + '</div>';
+  var one = cs.length === 1;
+  return '<h3 class="mini addhead">' + (one ? "Order it" : "Pick a size and order") + '</h3>' +
+    '<div class="addwrap">' + cs.map(function(c){
+      return '<button class="addbtn" data-add="' + esc(it.id) + '|' + esc(c.label) + '|' + c.price + '">' +
+        '<span class="plus">+</span>' +
+        '<span class="al">' + (c.label ? esc(c.label) : "Add to the order") + '</span>' +
+        '<b>' + rupee(c.price) + '</b>' +
+        '<span class="go">Add</span></button>';
+    }).join("") + '</div>';
 }
 
 /* ---------- routing ---------------------------------------- */
