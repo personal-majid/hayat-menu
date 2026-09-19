@@ -42,7 +42,8 @@ try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
 var DB = { orders:{}, riders:{}, seq:100 };
-var LIVE = false;              /* true once Firestore is connected */
+var LIVE  = false;             /* true only once the SERVER has answered */
+var FAULT = null;              /* why it is not live, in one word */
 
 /* ----- local backing ----- */
 function lsRead(){
@@ -77,21 +78,36 @@ async function connectFirebase(cfg){
   var db  = fsMod.getFirestore(app);
   FB = { db: db, api: fsMod };
 
-  fsMod.onSnapshot(fsMod.collection(db, "orders"), function(snap){
-    var next = {};
-    snap.forEach(function(d){ next[d.id] = Object.assign({ id:d.id }, d.data()); });
-    DB.orders = next; LIVE = true; fire();
-  }, function(err){ console.warn("orders listener", err); });
+  /* A snapshot straight from the local cache is NOT proof the database
+     exists — Firestore answers offline and queues the writes forever.
+     Only a snapshot the server actually sent counts as live. */
+  function watch(name, into){
+    fsMod.onSnapshot(fsMod.collection(db, name), function(snap){
+      var next = {};
+      snap.forEach(function(d){ next[d.id] = Object.assign({ id:d.id }, d.data()); });
+      DB[into] = next;
+      if(!snap.metadata.fromCache) LIVE = true;
+      fire();
+    }, function(err){ FAULT = err && (err.code || err.message); LIVE = false; fire(); });
+  }
+  watch("orders", "orders");
+  watch("riders", "riders");
 
-  fsMod.onSnapshot(fsMod.collection(db, "riders"), function(snap){
-    var next = {};
-    snap.forEach(function(d){ next[d.id] = Object.assign({ id:d.id }, d.data()); });
-    DB.riders = next; LIVE = true; fire();
-  }, function(err){ console.warn("riders listener", err); });
+  /* ask the REST endpoint once, so a missing database is named plainly
+     instead of showing up later as writes that quietly disappear */
+  fetch("https://firestore.googleapis.com/v1/projects/" + cfg.projectId +
+        "/databases/(default)/documents/riders?pageSize=1&key=" + cfg.apiKey)
+    .then(function(r){
+      if(r.status === 404) FAULT = "no-database";
+      else if(r.status === 403) FAULT = "rules-deny";
+      else if(r.ok) { FAULT = null; LIVE = true; }
+      fire();
+    }).catch(function(){});
 }
 
 var STORE = {
-  live: function(){ return LIVE; },
+  live:  function(){ return LIVE; },
+  fault: function(){ return FAULT; },
   onChange: function(f){ watchers.push(f);
     return function(){ watchers = watchers.filter(function(g){ return g!==f; }); }; },
 
@@ -284,27 +300,106 @@ function viewCheckout(main){
     '<input class="fld" id="coName"  placeholder="Your name" value="' + esc(saved.name||"") + '">' +
     '<input class="fld" id="coPhone" placeholder="Phone number" inputmode="tel" value="' + esc(saved.phone||"") + '">' +
     '<textarea class="fld" id="coAddr" placeholder="Address — house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
+    '<div class="pinwrap">' +
+      '<div class="pinhead"><b>Drop the pin on your gate</b>' +
+        '<button class="pinme" id="coHere">Use my location</button></div>' +
+      '<div id="comap" class="comap"></div>' +
+      '<div class="pinnote" id="coPinTxt">Drag the map so the pin sits on your door. ' +
+        'The rider follows this, not the address.</div>' +
+    '</div>' +
     '<input class="fld" id="coNote"  placeholder="Anything we should know? (optional)">' +
     '<div class="total"><span>' + cartCount() + ' item(s)</span><b>' + rupee(cartTotal()) + '</b></div>' +
     '<button class="shopbtn" id="coGo">Place the order</button>' +
     '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>' +
     '<button class="shopbtn ghost" data-go="#/cart">Back to the cart</button>');
 
+  mountMap(saved);
+
   el("coGo").onclick = function(){
     var name  = el("coName").value.trim(),
         phone = el("coPhone").value.trim(),
         addr  = el("coAddr").value.trim();
     if(!name || !phone || !addr){ shopToast("Name, phone and address, please."); return; }
-    try{ localStorage.setItem("hayat_me", JSON.stringify({name:name, phone:phone, addr:addr})); }catch(e){}
+    try{ localStorage.setItem("hayat_me", JSON.stringify(
+      { name:name, phone:phone, addr:addr, lat:PIN&&PIN.lat, lng:PIN&&PIN.lng })); }catch(e){}
 
-    var id = STORE.place({
+    var o = {
       name:name, phone:phone, addr:addr,
       note: el("coNote").value.trim(),
       lines: CART.slice(),
       total: cartTotal()
-    });
+    };
+    if(PIN){ o.lat = +PIN.lat.toFixed(6); o.lng = +PIN.lng.toFixed(6); }
+    var id = STORE.place(o);
     CART = []; saveCart();
     location.hash = "#/o/" + id;
+  };
+}
+
+/* ---------- the pin -----------------------------------------
+   Leaflet on OpenStreetMap tiles: free, no key, no billing.
+   An address in Makkaraparamba is a landmark, not a house number,
+   so the pin is what the rider actually follows.
+   ------------------------------------------------------------ */
+var PIN = null, MAP = null;
+var HOME = { lat: 11.0065785, lng: 76.1270507 };   /* the restaurant */
+
+function loadLeaflet(){
+  if(window.L) return Promise.resolve();
+  if(loadLeaflet._p) return loadLeaflet._p;
+  loadLeaflet._p = new Promise(function(done, fail){
+    var css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    document.head.appendChild(css);
+    var js = document.createElement("script");
+    js.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    js.onload = done;
+    js.onerror = function(){ fail(new Error("leaflet")); };
+    document.head.appendChild(js);
+  });
+  return loadLeaflet._p;
+}
+
+function pinText(msg){ var t = el("coPinTxt"); if(t) t.textContent = msg; }
+
+function mountMap(saved){
+  var box = el("comap");
+  if(!box) return;
+  PIN = (saved && saved.lat && saved.lng) ? { lat:saved.lat, lng:saved.lng } : null;
+
+  loadLeaflet().then(function(){
+    var at = PIN || HOME;
+    MAP = L.map(box, { zoomControl:true, attributionControl:true })
+           .setView([at.lat, at.lng], PIN ? 17 : 15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(MAP);
+
+    /* the pin is fixed to the centre of the box; the map moves under it */
+    MAP.on("move", function(){ PIN = MAP.getCenter(); });
+    MAP.on("moveend", function(){
+      PIN = MAP.getCenter();
+      pinText("Pin set \u00b7 " + PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5));
+    });
+    setTimeout(function(){ MAP.invalidateSize(); }, 200);
+  }).catch(function(){
+    box.innerHTML = '<div class="mapfail">The map could not load. ' +
+      'The address above is enough \u2014 we will call if we cannot find it.</div>';
+  });
+
+  var here = el("coHere");
+  if(here) here.onclick = function(){
+    if(!navigator.geolocation){ pinText("This browser will not share a location."); return; }
+    pinText("Finding you\u2026");
+    navigator.geolocation.getCurrentPosition(function(pos){
+      PIN = { lat:pos.coords.latitude, lng:pos.coords.longitude };
+      if(MAP) MAP.setView([PIN.lat, PIN.lng], 18);
+      pinText("Pin set \u00b7 " + PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5));
+    }, function(){
+      pinText("Could not get your location \u2014 drag the map instead.");
+    }, { enableHighAccuracy:true, timeout:10000 });
   };
 }
 
@@ -375,6 +470,7 @@ function paintAdmin(main){
   var done = orders.filter(function(o){ return o.status === "delivered"; });
 
   main.innerHTML = shell("Orders",
+    connBanner() +
     '<div class="adminbar">' +
       '<span class="pill">' + live.length + ' live</span>' +
       '<span class="pill quiet">' + done.length + ' delivered</span>' +
@@ -400,12 +496,19 @@ function paintAdmin(main){
   });
 }
 
+/* the pin if we have one, otherwise the words */
+function dirTo(o){
+  var d = (o.lat && o.lng) ? (o.lat + "," + o.lng) : o.addr;
+  return "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(d);
+}
+
 function riderMsg(o, r){
   return "Hayat — delivery " + o.id + "\n\n" +
     o.lines.map(function(l){ return l.q + " × " + l.name + (l.label ? " (" + l.label + ")" : ""); }).join("\n") +
     "\n\nTotal " + rupee(o.total) + " (collect on delivery)" +
     "\n\n" + o.name + " — " + o.phone +
     "\n" + o.addr +
+    (o.lat ? "\nPin: " + dirTo(o) : "") +
     (o.note ? "\nNote: " + o.note : "") +
     "\n\nYour page: " + base() + "#/drive/" + o.id;
 }
@@ -436,6 +539,8 @@ function orderCard(o){
     '<div class="who">' + esc(o.name) + ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a></div>' +
     '<div class="addr">' + esc(o.addr) + '</div>' +
     (o.note ? '<div class="addr note">' + esc(o.note) + '</div>' : '') +
+    (o.lat ? '<a class="pinlink" target="_blank" rel="noopener" href="' + esc(dirTo(o)) + '">\u25CE Pin dropped \u2014 open in Maps</a>'
+           : '<div class="addr nopin">No pin \u2014 address only</div>') +
     '<div class="items">' + (o.lines||[]).map(function(l){
       return l.q + "× " + esc(l.name) + (l.label ? " <i>" + esc(l.label) + "</i>" : "");
     }).join(" · ") + '</div>' +
@@ -444,12 +549,29 @@ function orderCard(o){
     action + '</div>';
 }
 
+/* Never let a broken database hide behind a normal-looking screen. */
+function connBanner(){
+  if(!C().firebase || !C().firebase.projectId)
+    return '<div class="conn warn">Demo mode \u2014 orders stay on this device only.</div>';
+  if(STORE.live()) return '<div class="conn ok">Live \u00b7 shared with every device</div>';
+  var f = STORE.fault();
+  if(f === "no-database")
+    return '<div class="conn bad"><b>The Firestore database has not been created.</b>' +
+           'Anything saved now disappears on refresh. Firebase console \u2192 ' +
+           'Firestore Database \u2192 Create database \u2192 test mode.</div>';
+  if(f === "rules-deny")
+    return '<div class="conn bad"><b>Firestore is refusing this app.</b>' +
+           'The security rules are blocking reads and writes.</div>';
+  return '<div class="conn warn">Connecting\u2026 nothing is saved to the cloud yet.</div>';
+}
+
 function viewRiders(main){
   gate(main, function(){ paintRiders(main); });
 }
 function paintRiders(main){
   var riders = STORE.riders();
   main.innerHTML = shell("Riders",
+    connBanner() +
     (riders.length ? '<div class="lines">' + riders.map(function(r){
         return '<div class="line"><div class="ln"><b>' + esc(r.name) + '</b>' +
           '<small>' + esc(r.phone) + '</small></div>' +
@@ -488,8 +610,7 @@ function viewDrive(main, id){
     (o.note ? '<div class="addr note">' + esc(o.note) + '</div>' : '') +
     '<div class="rowbtns">' +
       '<a class="shopbtn small" href="tel:' + esc(o.phone) + '">Call</a>' +
-      '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' +
-        encodeURIComponent(o.addr) + '">Directions</a>' +
+      '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' + esc(dirTo(o)) + '">Directions</a>' +
     '</div>' +
     '<div class="items">' + (o.lines||[]).map(function(l){
       return l.q + "× " + esc(l.name);
@@ -516,19 +637,50 @@ function shopToast(m){
   alert(m);
 }
 
-/* ---------- add-to-cart strip on a dish page --------------- */
+/* ---------- add to order, on a dish page ------------------- *
+   ADD until they tap it, then a stepper in the same footprint.
+   Nobody should have to open the cart to order a second one.    */
+function qtyOf(id, lbl){
+  var hit = CART.filter(function(l){ return l.k === id + "|" + lbl; })[0];
+  return hit ? hit.q : 0;
+}
+
+function addControl(id, lbl, price){
+  var q = qtyOf(id, lbl);
+  if(!q) return '<button class="add" data-add="' + esc(id) + '|' + esc(lbl) + '|' + price + '">Add</button>';
+  return '<span class="step">' +
+    '<button data-q="' + esc(id + "|" + lbl) + '|-1" aria-label="one less">&minus;</button>' +
+    '<b>' + q + '</b>' +
+    '<button data-q="' + esc(id + "|" + lbl) + '|1" aria-label="one more">+</button></span>';
+}
+
 function dishButtons(it){
   var cs = choices(it);
   if(!cs.length) return "";
-  var one = cs.length === 1;
-  return '<h3 class="mini addhead">' + (one ? "Order it" : "Pick a size and order") + '</h3>' +
+  return '<h3 class="mini addhead">' + (cs.length === 1 ? "Order it" : "Choose a size") + '</h3>' +
     '<div class="addwrap">' + cs.map(function(c){
-      return '<button class="addbtn" data-add="' + esc(it.id) + '|' + esc(c.label) + '|' + c.price + '">' +
-        '<span class="plus">+</span>' +
-        '<span class="al">' + (c.label ? esc(c.label) : "Add to the order") + '</span>' +
-        '<b>' + rupee(c.price) + '</b>' +
-        '<span class="go">Add</span></button>';
+      return '<div class="arow" data-row="' + esc(it.id) + '|' + esc(c.label) + '">' +
+        '<span class="an">' + (c.label ? esc(c.label) : esc(it.name)) + '</span>' +
+        '<span class="ap">' + rupee(c.price) + '</span>' +
+        addControl(it.id, c.label, c.price) + '</div>';
     }).join("") + '</div>';
+}
+
+/* redraw the rows in place, so the stepper appears where ADD was */
+function repaintRows(){
+  var rows = document.querySelectorAll("[data-row]");
+  if(!rows.length) return;
+  rows.forEach(function(row){
+    var parts = row.dataset.row.split("|");
+    var id = parts[0], lbl = parts.slice(1).join("|"), price = 0;
+    try{
+      (window.MENU||[]).forEach(function(c){ c.items.forEach(function(x){
+        if(x.id === id) choices(x).forEach(function(ch){ if(ch.label === lbl) price = ch.price; });
+      }); });
+    }catch(e){}
+    var ctrl = row.querySelector(".add, .step");
+    if(ctrl) ctrl.outerHTML = addControl(id, lbl, price);
+  });
 }
 
 /* ---------- routing ---------------------------------------- */
@@ -555,9 +707,7 @@ document.addEventListener("click", function(e){
     try{ (window.MENU||[]).forEach(function(c){
       c.items.forEach(function(x){ if(x.id === p[0]) it = x; }); }); }catch(err){}
     addLine(p[0], it ? it.name : p[0], p[1], Number(p[2]));
-    a.classList.add("added");
-    setTimeout(function(){ a.classList.remove("added"); }, 900);
-    shopToast("Added — " + cartCount() + " in the cart");
+    repaintRows();
     return;
   }
   var q = e.target.closest("[data-q]");
@@ -565,6 +715,7 @@ document.addEventListener("click", function(e){
     var parts = q.dataset.q.split("|");
     bump(parts.slice(0, parts.length-1).join("|"), Number(parts[parts.length-1]));
     if(/^#\/cart/.test(location.hash)) viewCart(document.getElementById("main"));
+    else repaintRows();
   }
 });
 
@@ -585,6 +736,7 @@ window.addEventListener("hashchange", paintFab);
 window.SHOP = {
   route: route,
   dishButtons: dishButtons,
+  repaintRows: repaintRows,
   paintFab: paintFab,
   store: STORE,
   flow: FLOW
