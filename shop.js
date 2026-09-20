@@ -493,16 +493,30 @@ function paintAdmin(main){
   var live = orders.filter(function(o){ return o.status !== "delivered"; });
   var done = orders.filter(function(o){ return o.status === "delivered"; });
 
+  var pinned = orders.filter(function(o){ return o.lat && o.lng; });
+
   main.innerHTML = shell("Orders",
     connBanner() +
     '<div class="adminbar">' +
       '<span class="pill">' + live.length + ' live</span>' +
       '<span class="pill quiet">' + done.length + ' delivered</span>' +
+      (pinned.length ? '<button class="linky" id="admapBtn">' +
+        (ADMAP ? "Hide the map" : "See them on a map") + '</button>' : '') +
       '<button class="linky" data-go="#/admin/riders">Riders (' + riders.length + ')</button>' +
     '</div>' +
+    (ADMAP && pinned.length ? '<div id="admap" class="admap"></div>' +
+      '<div class="admaplegend">' +
+        '<span class="lg s-placed">new</span>' +
+        '<span class="lg s-accepted">in the kitchen</span>' +
+        '<span class="lg s-on_way">on the way</span>' +
+        '<span class="lg s-delivered">delivered</span></div>' : '') +
     (orders.length ? orders.map(orderCard).join("")
                    : '<p class="shopsub">No orders yet. Place one from the menu to try it.</p>') +
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+
+  var mb = el("admapBtn");
+  if(mb) mb.onclick = function(){ ADMAP = !ADMAP; paintAdmin(main); };
+  if(ADMAP) drawAdminMap(pinned);
 
   main.querySelectorAll("[data-adv]").forEach(function(b){
     b.onclick = function(){
@@ -571,6 +585,61 @@ function orderCard(o){
     '<div class="orow"><span class="tot">' + rupee(o.total) + '</span>' +
       (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
     action + '</div>';
+}
+
+/* ---------- every live order on one map ---------------------
+   The office cares about one thing here: where the food has to go,
+   and which of those are still waiting. Colour carries the status;
+   the view survives a repaint so a status change does not yank the
+   map back to the start.
+   ------------------------------------------------------------ */
+var ADMAP = false, AMAP = null, AVIEW = null;
+
+function statusColour(s){
+  return s === "placed"    ? "#E4705A"
+       : s === "delivered" ? "#9A8A6C"
+       : s === "on_way"    ? "#8FBE43"
+                           : "#C9A24B";
+}
+
+function drawAdminMap(list){
+  var box = el("admap");
+  if(!box || !list.length) return;
+
+  loadLeaflet().then(function(){
+    try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
+    AMAP = L.map(box, { zoomControl:true });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(AMAP);
+
+    /* the restaurant, so the office can see how far each one is */
+    L.circleMarker([HOME.lat, HOME.lng], {
+      radius:7, color:"#FFFFFF", weight:2, fillColor:"#1B2410", fillOpacity:1
+    }).addTo(AMAP).bindPopup("Hayat \u2014 the kitchen");
+
+    var pts = [[HOME.lat, HOME.lng]];
+    list.forEach(function(o){
+      pts.push([o.lat, o.lng]);
+      L.circleMarker([o.lat, o.lng], {
+        radius: o.status === "delivered" ? 6 : 10,
+        color: "#FFFFFF", weight: 2,
+        fillColor: statusColour(o.status),
+        fillOpacity: o.status === "delivered" ? .5 : 1
+      }).addTo(AMAP).bindPopup(
+        "<b>" + esc(o.id) + "</b> \u00b7 " + esc(STEP[o.status].t) + "<br>" +
+        esc(o.name) + "<br>" + rupee(o.total) + "<br>" +
+        '<a href="' + esc(dirTo(o)) + '" target="_blank" rel="noopener">Directions</a>'
+      );
+    });
+
+    if(AVIEW) AMAP.setView(AVIEW.c, AVIEW.z);
+    else AMAP.fitBounds(pts, { padding:[30,30], maxZoom:16 });
+    AMAP.on("moveend", function(){ AVIEW = { c: AMAP.getCenter(), z: AMAP.getZoom() }; });
+    setTimeout(function(){ AMAP.invalidateSize(); }, 150);
+  }).catch(function(err){
+    box.innerHTML = '<div class="mapfail">The map is not loading here.<br><small>' +
+      esc(String(err && err.message || err)) + '</small></div>';
+  });
 }
 
 /* Never let a broken database hide behind a normal-looking screen. */
