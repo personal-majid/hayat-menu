@@ -981,7 +981,18 @@ window.CONFIG = {
      To set it exactly: open Google Maps, right-click the shop's
      front door, and click the numbers at the top of the menu
      that appears - that copies them. Paste below. */
-  shop: { lat: 11.0065785, lng: 76.1270507, zoom: 14 },
+  shop: {
+    lat: 11.0065785,
+    lng: 76.1270507,
+
+    /* How far around the shop a map shows before anything else
+       pulls at it. Three kilometres is most of what this kitchen
+       delivers to; a rider or a customer further out stretches
+       the view rather than falling off the edge of it. */
+    radiusKm: 3,
+
+    zoom: 14                /* only a fallback if a map cannot be framed */
+  },
 
   /* ---- TAKING PAYMENT --------------------------------------
      A UPI id turns every order into a QR the customer scans

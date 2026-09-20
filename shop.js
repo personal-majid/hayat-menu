@@ -1822,7 +1822,10 @@ function tameMap(map, box){
   home.setAttribute("aria-label", "Back to the restaurant");
   home.innerHTML = "\u2302";
   home.onclick = function(){
-    try{ map.setView([HOME.lat, HOME.lng], HOMEZOOM, { animate:true }); }catch(e){}
+    /* back to the standard picture: the shop and its three km */
+    try{ frameMap(map, []); }catch(e){
+      try{ map.setView([HOME.lat, HOME.lng], HOMEZOOM); }catch(err){}
+    }
   };
   box.appendChild(home);
 
@@ -2429,6 +2432,50 @@ try{ ADVIEW = localStorage.getItem("hayat_adview") || "board"; }catch(e){}
 
 /* Straight line from the kitchen. Roads are longer, so this reads low —
    but it sorts and compares correctly, which is what the office needs. */
+/* ------------------------------------------------------------
+   FRAMING A MAP
+
+   The office wants the same picture every time it looks: the
+   restaurant, and roughly three kilometres around it - which is
+   most of what this kitchen delivers to. Anything further out
+   pulls the frame with it rather than being left off the edge.
+
+   Degrees of longitude shrink as you leave the equator, so the
+   east-west half-width is divided by the cosine of the latitude
+   or the box comes out visibly taller than it is wide.
+   ------------------------------------------------------------ */
+function homeRadiusKm(){
+  var r = ((window.CONFIG || {}).shop || {}).radiusKm;
+  return (typeof r === "number" && r > 0) ? r : 3;
+}
+
+function homeBox(km){
+  var r = km || homeRadiusKm();
+  var dLat = r / 111;
+  var dLng = r / (111 * Math.max(0.2, Math.cos(HOME.lat * Math.PI / 180)));
+  return { s: HOME.lat - dLat, n: HOME.lat + dLat,
+           w: HOME.lng - dLng, e: HOME.lng + dLng };
+}
+
+/* pts is [[lat,lng], ...] - anything outside the default box
+   stretches it, so a rider halfway to the next town is still on
+   screen instead of just off it */
+function frameMap(map, pts){
+  var b = homeBox();
+  (pts || []).forEach(function(p){
+    if(!p || typeof p[0] !== "number" || typeof p[1] !== "number") return;
+    if(p[0] < b.s) b.s = p[0];
+    if(p[0] > b.n) b.n = p[0];
+    if(p[1] < b.w) b.w = p[1];
+    if(p[1] > b.e) b.e = p[1];
+  });
+  try{
+    map.fitBounds([[b.s, b.w], [b.n, b.e]], { padding:[46,46], maxZoom:17 });
+  }catch(e){
+    try{ map.setView([HOME.lat, HOME.lng], 14); }catch(err){}
+  }
+}
+
 function kmFrom(lat, lng){
   var R = 6371, rad = Math.PI / 180;
   var dLat = (lat - HOME.lat) * rad, dLng = (lng - HOME.lng) * rad;
@@ -2740,7 +2787,7 @@ function drawAdminMap(list, blind){
        where the Board / List / Map tabs float. Moved out of
        their way rather than asking the office to aim. */
     AMAP = LF.map(box, { zoomControl:false })
-             .setView([HOME.lat, HOME.lng], HOMEZOOM);
+             .setView([HOME.lat, HOME.lng], HOMEZOOM);   /* replaced by frameMap below */
     LF.control.zoom({ position:"topright" }).addTo(AMAP);
     tameMap(AMAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -2824,16 +2871,10 @@ function drawAdminMap(list, blind){
     });
 
     /* the kitchen sits in the middle: the office reads distance from it */
+    /* Three kilometres round the shop, stretched to hold anyone
+       further out. The office's view of its own patch, every time. */
     if(AVIEW) AMAP.setView(AVIEW.c, AVIEW.z);
-    else if(pts.length > 1){
-      var far = 0;
-      list.forEach(function(o){
-        far = Math.max(far, Math.abs(o.lat - HOME.lat), Math.abs(o.lng - HOME.lng));
-      });
-      far = Math.max(far, 0.004) * 1.25;
-      AMAP.fitBounds([[HOME.lat - far, HOME.lng - far],
-                      [HOME.lat + far, HOME.lng + far]], { maxZoom:16 });
-    } else AMAP.setView([HOME.lat, HOME.lng], 15);
+    else frameMap(AMAP, pts);
     AMAP.on("moveend", function(){ AVIEW = { c: AMAP.getCenter(), z: AMAP.getZoom() }; });
     watchSize(box, AMAP);
   }).catch(function(err){
@@ -3129,7 +3170,7 @@ function drawCustomerMap(list){
   loadLeaflet().then(function(){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
     var LF = window.L;
-    CMAP = LF.map(box, { zoomControl:false }).setView([HOME.lat, HOME.lng], HOMEZOOM);
+    CMAP = LF.map(box, { zoomControl:false });
     LF.control.zoom({ position:"topright" }).addTo(CMAP);
     tameMap(CMAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -3158,6 +3199,7 @@ function drawCustomerMap(list){
           (c.addr ? esc(c.addr) + "<br>" : "") +
           (solid ? "<i>doorstep from a delivery</i>" : "<i>pin they dropped</i>"));
     });
+    frameMap(CMAP, list.map(function(c){ return [c.lat, c.lng]; }));
     watchSize(box, CMAP);
   }).catch(function(){});
 }
