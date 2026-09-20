@@ -63,6 +63,60 @@ if(CH) { var _on = CH.onmessage; CH.onmessage = function(){ if(!LIVE) DB = lsRea
 
 /* ----- Firestore backing ----- */
 var FB = null;                 /* { db, api } once loaded */
+var AU = null;                 /* { auth, api } once loaded */
+
+/* ---------- who is holding this phone ----------------------
+   office    signed in with Google, and listed in staff/<uid>
+   rider     signed in silently, then proved a 6-digit code
+   guest     signed in silently, nothing more
+
+   Riders and customers never see a login screen. The silent
+   sign-in exists only so the rules can tell one phone from
+   another; without it every phone looks identical to the
+   database and no rule can protect anything.
+   ----------------------------------------------------------- */
+var ME = { uid:null, role:"guest", name:"", riderPhone:null, ready:false };
+var mewatch = [];
+function onMe(f){ mewatch.push(f); if(ME.ready) try{ f(); }catch(e){} }
+function meFire(){ mewatch.slice().forEach(function(f){ try{ f(); }catch(e){} }); fire(); }
+
+function digitsOnly(v){ return String(v || "").replace(/[^0-9]/g, ""); }
+
+/* six digits, never starting with a zero so it cannot be
+   mistyped as five, and never a run the eye will slip on */
+function sixDigits(){
+  var n = Math.floor(Math.random() * 900000) + 100000;
+  return String(n);
+}
+
+/* where this site lives, so an invite link works from any host */
+function siteRoot(){
+  return location.href.split("#")[0].replace(/[^\/]*$/, "");
+}
+function riderLink(id){ return siteRoot() + "rider.html#join=" + id; }
+
+/* the message the office sends a new rider on WhatsApp */
+function riderInvite(r){
+  var t = "*Hayat Fish and Mandi*\n\n" +
+          "You are set up as a rider" + (r.name ? ", " + r.name : "") + ".\n\n" +
+          "Open this once and add it to your home screen:\n" +
+          riderLink(r.id) + "\n\n" +
+          "Your code: *" + r.code + "*\n\n" +
+          "Type your number and that code the first time. " +
+          "After that it just opens.";
+  return "https://wa.me/" + digitsOnly(r.phone) + "?text=" + encodeURIComponent(t);
+}
+
+/* the phone this device claimed as a rider, remembered locally
+   so the rider types the code once and never again */
+function myRiderPhone(){
+  try{ return localStorage.getItem("hayat_rider_phone") || null; }catch(e){ return null; }
+}
+function setRiderPhone(p){
+  try{ p ? localStorage.setItem("hayat_rider_phone", p)
+         : localStorage.removeItem("hayat_rider_phone"); }catch(e){}
+  ME.riderPhone = p;
+}
 
 function orderId(){
   /* short, readable, and unique enough for a restaurant's day */
@@ -74,9 +128,43 @@ function orderId(){
 async function connectFirebase(cfg){
   var appMod  = await import("https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js");
   var fsMod   = await import("https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js");
+  var auMod   = await import("https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js");
   var app = appMod.initializeApp(cfg);
   var db  = fsMod.getFirestore(app);
+  var auth = auMod.getAuth(app);
   FB = { db: db, api: fsMod };
+  AU = { auth: auth, api: auMod };
+
+  /* Everyone gets an identity, quietly. A customer never notices;
+     the office replaces theirs with Google when they sign in. */
+  auMod.onAuthStateChanged(auth, function(user){
+    if(!user){
+      ME.uid = null; ME.role = "guest"; ME.name = ""; ME.ready = true;
+      meFire();
+      auMod.signInAnonymously(auth).catch(function(e){
+        FAULT = (e && e.code) || "no-anon-signin"; meFire();
+      });
+      return;
+    }
+    ME.uid  = user.uid;
+    ME.name = user.displayName || "";
+    ME.riderPhone = myRiderPhone();
+
+    if(user.isAnonymous){
+      ME.role = ME.riderPhone ? "rider" : "guest";
+      ME.ready = true; meFire(); return;
+    }
+
+    /* a real Google account: the office only if the console says so */
+    fsMod.getDoc(fsMod.doc(db, "staff", user.uid)).then(function(d){
+      var r = d.exists() ? (d.data().role || "") : "";
+      ME.role = (r === "office") ? "office" : "signed-in";
+      ME.name = (d.exists() && d.data().name) || ME.name;
+      ME.ready = true; meFire();
+    }).catch(function(){
+      ME.role = "signed-in"; ME.ready = true; meFire();
+    });
+  });
 
   /* A snapshot straight from the local cache is NOT proof the database
      exists — Firestore answers offline and queues the writes forever.
@@ -108,6 +196,41 @@ async function connectFirebase(cfg){
 var STORE = {
   live:  function(){ return LIVE; },
   fault: function(){ return FAULT; },
+
+  /* ---- who is holding this phone ---- */
+  me:      function(){ return ME; },
+  onMe:    onMe,
+  isOffice:function(){ return ME.role === "office"; },
+
+  signInOffice: function(){
+    if(!AU) return Promise.reject(new Error("offline"));
+    var p = new AU.api.GoogleAuthProvider();
+    return AU.api.signInWithPopup(AU.auth, p);
+  },
+  signOut: function(){
+    setRiderPhone(null);
+    if(!AU) return Promise.resolve();
+    return AU.api.signOut(AU.auth);
+  },
+
+  /* A rider proves the 6-digit code without ever reading it.
+     The write carries the code they typed; the rules compare it
+     with the stored one and only then accept the claim. */
+  claimRider: function(phone, code){
+    var id = digitsOnly(phone);
+    if(!FB) return Promise.reject(new Error("offline"));
+    if(!ME.uid) return Promise.reject(new Error("no-identity"));
+    return FB.api.updateDoc(FB.api.doc(FB.db, "riders", id), {
+      codeTry: String(code).trim(),
+      uid: ME.uid,
+      claimedAt: Date.now()
+    }).then(function(){
+      setRiderPhone(id);
+      ME.role = "rider";
+      meFire();
+      return id;
+    });
+  },
   onChange: function(f){ watchers.push(f);
     return function(){ watchers = watchers.filter(function(g){ return g!==f; }); }; },
 
@@ -215,9 +338,14 @@ var STORE = {
   },
   rider: function(id){ return DB.riders[id] || null; },
 
+  /* The document id IS the phone, digits only. That is what lets a
+     rider reach their own record without being able to list anyone
+     else's — they address it directly, they never search for it. */
   addRider: function(name, phone){
-    var id = "r" + Date.now().toString(36);
-    var r = { id:id, name:name, phone:phone };
+    var id = digitsOnly(phone);
+    if(!id) return null;
+    var r = { id:id, name:name, phone:phone,
+              code: sixDigits(), uid:null, claimedAt:null };
     if(FB){
       FB.api.setDoc(FB.api.doc(FB.db, "riders", id), r)
         .catch(function(e){ console.warn("addRider", e); });
@@ -225,15 +353,66 @@ var STORE = {
     } else { DB.riders[id] = r; lsWrite(); }
     return id;
   },
-  editRider: function(id, patch){
+
+  /* a fresh code, for a rider who lost the message or left */
+  newCode: function(id){
     var r = DB.riders[id];
-    if(!r) return;
-    Object.keys(patch).forEach(function(k){ r[k] = patch[k]; });
+    if(!r) return null;
+    var code = sixDigits();
+    r.code = code; r.uid = null; r.claimedAt = null;
     if(FB){
-      FB.api.updateDoc(FB.api.doc(FB.db, "riders", id), patch)
-        .catch(function(e){ console.warn("editRider", e); });
+      FB.api.updateDoc(FB.api.doc(FB.db, "riders", id),
+        { code:code, uid:null, claimedAt:null })
+        .catch(function(e){ console.warn("newCode", e); });
       fire();
     } else lsWrite();
+    return code;
+  },
+
+  invite: riderInvite,
+  /* A name change is a plain edit. A phone change is a move:
+     the phone is the document id, so the record is rewritten
+     under the new number and every order pointing at the old
+     one is repointed. The code survives, so a rider who has
+     already claimed does not have to claim again — but their
+     device did claim the OLD record, so they are asked once
+     more. That is the honest trade for changing the number. */
+  editRider: function(id, patch){
+    var r = DB.riders[id];
+    if(!r) return id;
+
+    var moved = patch.phone && digitsOnly(patch.phone) !== id;
+    if(!moved){
+      Object.keys(patch).forEach(function(k){ r[k] = patch[k]; });
+      if(FB){
+        FB.api.updateDoc(FB.api.doc(FB.db, "riders", id), patch)
+          .catch(function(e){ console.warn("editRider", e); });
+        fire();
+      } else lsWrite();
+      return id;
+    }
+
+    var nid = digitsOnly(patch.phone);
+    var moving = Object.assign({}, r, patch, { id:nid, uid:null, claimedAt:null });
+    DB.riders[nid] = moving;
+    delete DB.riders[id];
+
+    var repoint = Object.keys(DB.orders).filter(function(k){
+      return DB.orders[k].riderId === id;
+    });
+    repoint.forEach(function(k){ DB.orders[k].riderId = nid; });
+
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "riders", nid), moving)
+        .then(function(){ return FB.api.deleteDoc(FB.api.doc(FB.db, "riders", id)); })
+        .catch(function(e){ console.warn("editRider move", e); });
+      repoint.forEach(function(k){
+        FB.api.updateDoc(FB.api.doc(FB.db, "orders", k), { riderId:nid })
+          .catch(function(e){ console.warn("repoint", e); });
+      });
+      fire();
+    } else lsWrite();
+    return nid;
   },
   dropRider: function(id){
     if(DB.riders[id]) DB.riders[id].off = true;

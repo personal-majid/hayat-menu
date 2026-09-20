@@ -1,0 +1,31 @@
+rules_version = '2';
+
+/* ============================================================
+   HAYAT — STORAGE RULES
+
+   Dish photos live under  menu/<dish-id>/<file>.
+   Customers read them. Only the office uploads, and only
+   images, and nothing larger than 3 MB.
+   ============================================================ */
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isOffice() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/staff/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/staff/$(request.auth.uid)).data.role == "office";
+    }
+
+    match /menu/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOffice()
+        && request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /{everythingElse=**} {
+      allow read, write: if false;
+    }
+  }
+}

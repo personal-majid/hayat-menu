@@ -1,0 +1,83 @@
+=============================================================
+ HAYAT — FIREBASE SETUP
+ Console steps only you can do. Claude cannot: they need your
+ login, and Claude must never hold your password.
+=============================================================
+
+Project: h-menu
+Console: https://console.firebase.google.com/u/3/project/h-menu
+
+Who signs in how:
+
+   office     Google              you, and anyone you add
+   rider      phone + 6-digit code, sent by WhatsApp
+   customer   nothing at all      just their phone number
+
+Riders and customers sign in silently in the background, so
+they never see a login screen. That silent sign-in is what
+lets the rules tell one phone from another.
+
+
+--- 1. Google sign-in ---------------------------------- DONE
+
+  Authentication -> Sign-in method -> Google -> Enabled
+
+
+--- 2. Anonymous sign-in -------------------------------------
+
+  Authentication -> Sign-in method -> Add new provider
+    -> Anonymous -> Enable -> Save
+
+  This is free and silent. Nothing is emailed, nothing is
+  asked of the customer. It simply gives each phone an id
+  the rules can check.
+
+  You do NOT need Email/Password. Skip it.
+
+
+--- 3. Turn on Storage ---------------------------------------
+
+  Storage -> Get started
+
+  Your bucket is h-menu.firebasestorage.app - the newer kind,
+  so Firebase asks you to move to the Blaze plan. Blaze needs
+  a card on file but the free allowance still applies first;
+  dish photos will not come close to it.
+  Set a budget alert at $1 so there are no surprises.
+
+  Then Storage -> Rules -> paste storage.rules -> Publish
+
+
+--- 4. Sign in once, then claim yourself ---------------------
+
+  After I ship the new code:
+
+  a) open the admin page and sign in with Google
+  b) Authentication -> Users -> copy your User UID
+  c) Firestore -> Start collection -> collection id: staff
+       document id = that UID
+       name (string)  Majid
+       role (string)  office
+
+  Until that document exists you can sign in but change
+  nothing. That is deliberate.
+
+
+--- 5. Publish the Firestore rules -- LAST, NOT BEFORE -------
+
+  *** ORDER MATTERS ***
+
+  The new rules stop a phone from listing every order. The
+  code that is live today still does exactly that, so
+  publishing early would break the site for customers.
+
+  Only after steps 1-4 and after the new code is live:
+
+  Firestore -> Rules -> select all, delete,
+  paste the whole of firestore.rules -> Publish
+
+  That closes today's "allow read, write: if true", which
+  right now lets anyone on the internet read every customer
+  phone number and address you hold.
+
+=============================================================

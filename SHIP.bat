@@ -1,11 +1,11 @@
 @echo off
-REM  Unpacks the rider app, commits everything, pushes.
+REM  Unpacks the rider app, commits everything, pushes to GitHub.
 REM  Double-click this file. Nothing to type.
 
 cd /d "%~dp0"
 
 echo.
-echo === Hayat: shipping v65 + the rider app ===
+echo === Hayat: shipping v66 - v70 ===
 echo.
 
 if exist rider-app.tgz (
@@ -20,13 +20,13 @@ git status --short
 echo.
 
 git add -A
-git commit -m "v65: edit orders, discounts, cancel, call the restaurant + rider Android app"
+git commit -m "v66-v70: rider.html installs as an icon, bike markers on both maps, 5s pings, map closes on delivered, always-location ask, office can edit a rider"
 git push
 
 echo.
-echo === Done. ===
+echo === Done. GitHub Pages rebuilds in about a minute. ===
 echo.
-echo Now open GitHub -^> Actions -^> "Build rider APK" -^> Run workflow
-echo and download hayat-rider.apk when it turns green.
+echo For the rider APK: GitHub -^> Actions -^> "Build rider APK" -^> Run workflow
+echo then download hayat-rider.apk when it turns green.
 echo.
 pause

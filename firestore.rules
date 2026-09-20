@@ -1,0 +1,127 @@
+rules_version = '2';
+
+/* ============================================================
+   HAYAT — FIRESTORE RULES
+
+   Three kinds of visitor, three ways in:
+
+     office    signs in with Google. A document must exist at
+               staff/<their uid> with  role: "office".
+               That document can only be made in this console,
+               so nobody can promote themselves.
+
+     rider     signs in silently (anonymous), then proves a
+               6-digit code against their own record. The code
+               is never readable — the rules compare what the
+               rider typed with what is stored, and only on a
+               match stamp that phone onto the record.
+
+     customer  signs in silently (anonymous). No password, no
+               code. They may open and track only their own
+               orders.
+
+   A rider record's document id IS the phone number, digits
+   only, e.g. riders/919844326842 — so a rider can address
+   their own record without being able to list anyone else's.
+   ============================================================ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isOffice() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+        && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == "office";
+    }
+    function mine() {
+      return request.auth.uid;
+    }
+    /* the keys this write is actually changing */
+    function touching() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    /* ---- the menu ------------------------------------------
+       Every phone reads it. Only the office changes it. */
+    match /menu/{doc} {
+      allow read:  if true;
+      allow write: if isOffice();
+    }
+
+    /* ---- riders --------------------------------------------
+       Document id is the phone, digits only.
+
+       A rider claims their own record by sending the code they
+       were given. They cannot read the record first, so the
+       code cannot be looked up — only guessed, and six digits
+       is a million guesses. */
+    match /riders/{phone} {
+
+      allow get:    if isOffice() || (signedIn() && resource.data.uid == mine());
+      allow list:   if isOffice();
+      allow create: if isOffice();
+      allow delete: if isOffice();
+
+      allow update: if isOffice()
+        || (
+          signedIn()
+          && touching().hasOnly(['uid', 'codeTry', 'claimedAt'])
+          && request.resource.data.codeTry == resource.data.code
+          && request.resource.data.uid == mine()
+        );
+    }
+
+    /* ---- orders --------------------------------------------
+       A customer places an order and follows their own.
+       A rider sees the deliveries stamped with their phone.
+       The office sees everything.
+
+       Order ids carry a random suffix, so knowing one order
+       number tells you nothing about the next. */
+    match /orders/{id} {
+
+      allow get: if true;
+
+      allow list: if isOffice()
+        || (signedIn() && resource.data.custUid  == mine())
+        || (signedIn() && resource.data.riderUid == mine());
+
+      allow create: if signedIn()
+        && request.resource.data.status == "placed"
+        && request.resource.data.custUid == mine()
+        && request.resource.data.lines.size() > 0
+        && request.resource.data.lines.size() < 100;
+
+      /* the customer may only cancel, and only before it moves */
+      allow update: if isOffice()
+        || (
+          signedIn() && resource.data.riderUid == mine()
+          && touching().hasOnly(['status','rLat','rLng','rAt','at','log'])
+        )
+        || (
+          signedIn() && resource.data.custUid == mine()
+          && touching().hasOnly(['status','at','log','cancelBy','cancelWhy'])
+          && request.resource.data.status == 'cancelled'
+          && resource.data.status in ['placed','accepted']
+        );
+
+      allow delete: if isOffice();
+    }
+
+    /* ---- the staff list ------------------------------------
+       Read by the office so the app knows who you are.
+       Never writable from the website. */
+    match /staff/{uid} {
+      allow read:  if signedIn() && uid == mine();
+      allow write: if false;
+    }
+
+    /* ---- everything else is closed -------------------------- */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
