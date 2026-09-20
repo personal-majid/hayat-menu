@@ -54,15 +54,16 @@ function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} });
 try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
-var DB = { orders:{}, riders:{}, customers:{}, seq:100 };
+var DB = { orders:{}, riders:{}, customers:{}, verify:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
 var FAULT = null;              /* why it is not live, in one word */
 
 /* ----- local backing ----- */
 function lsRead(){
   try{ var d = JSON.parse(localStorage.getItem(KEY)) || {};
-    return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{}, seq:d.seq||100 }; }
-  catch(e){ return { orders:{}, riders:{}, customers:{}, seq:100 }; }
+    return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{},
+             verify:d.verify||{}, seq:d.seq||100 }; }
+  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, seq:100 }; }
 }
 function lsWrite(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
@@ -95,6 +96,37 @@ function onMe(f){ mewatch.push(f); if(ME.ready) try{ f(); }catch(e){} }
 function meFire(){ mewatch.slice().forEach(function(f){ try{ f(); }catch(e){} }); fire(); }
 
 function digitsOnly(v){ return String(v || "").replace(/[^0-9]/g, ""); }
+
+/* A name for this browser, so a customer who never signs in
+   still has an identity the office can link orders to. Made once
+   and kept; it is not a login and proves nothing on its own,
+   which is why the office does the approving. */
+function deviceId(){
+  try{
+    var d = localStorage.getItem("hayat_device");
+    if(!d){
+      d = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem("hayat_device", d);
+    }
+    return d;
+  }catch(e){ return null; }
+}
+
+/* who this browser is, signed in or not */
+function meId(){ return ME.uid || deviceId(); }
+
+/* What this browser has ordered. Kept locally, because somebody
+   who never signs in still deserves to find their own order. */
+function localOrderIds(){
+  try{ return JSON.parse(localStorage.getItem("hayat_mine")) || []; }catch(e){ return []; }
+}
+function rememberOrderId(id){
+  try{
+    var all = localOrderIds();
+    if(all.indexOf(id) < 0) all.push(id);
+    localStorage.setItem("hayat_mine", JSON.stringify(all.slice(-40)));
+  }catch(e){}
+}
 
 /* six digits, never starting with a zero so it cannot be
    mistyped as five, and never a run the eye will slip on */
@@ -207,6 +239,7 @@ async function connectFirebase(cfg){
   watch("orders", "orders");
   watch("riders", "riders");
   watch("customers", "customers");
+  watch("verify", "verify");
 
   /* ask the REST endpoint once, so a missing database is named plainly
      instead of showing up later as writes that quietly disappear */
@@ -295,13 +328,20 @@ var STORE = {
     return api.signInWithPopup(auth, prov).then(finish);
   },
 
-  /* the orders this person can see: theirs, on any device they
-     have signed in on */
+  /* The orders this person can see.
+
+     Two ways to own an order: signed in, and it carries your id -
+     which follows you to any phone; or this browser placed it,
+     which it wrote down at the time. The second is what makes
+     the app useful to somebody who never signs in at all. */
   myOrders: function(){
-    var me = ME.uid;
-    if(!me) return [];
+    var me = meId();
+    var here = localOrderIds();
     return Object.keys(DB.orders).map(function(k){ return DB.orders[k]; })
-      .filter(function(o){ return o.custUid && o.custUid === me; })
+      .filter(function(o){
+        if(me && o.custUid && o.custUid === me) return true;
+        return here.indexOf(o.id) >= 0;
+      })
       .sort(function(a,b){ return b.at - a.at; });
   },
 
@@ -348,10 +388,16 @@ var STORE = {
        an order with nothing in it must never reach the kitchen
        however it got here - a stale tab, a double tap, a cart
        emptied in another window. */
-    if(!o || !(o.lines || []).length) return null;
+    /* An empty order is a mistake - unless it is a ticket, which
+       is somebody saying "call me, I will tell you what I want".
+       Those are meant to arrive empty and be filled in by the
+       office. Everything else must carry what it is for. */
+    if(!o) return null;
+    if(o.kind !== "ticket" && !(o.lines || []).length) return null;
     var id = orderId();
     /* who placed it, so it can be found again on another phone */
-    o.custUid = ME.uid || null;
+    o.custUid = meId();
+    if(myVoice() === "customer") rememberOrderId(id);
     o.id = id; o.at = Date.now(); o.status = "placed";
     o.log = [{ s:"placed", at:o.at }];
     if(FB){
@@ -367,9 +413,15 @@ var STORE = {
   setStatus: function(id, s, extra){
     var o = DB.orders[id];
     if(!o) return null;
-    /* An order edited down to nothing cannot be accepted or sent.
-       Cancelling it is always allowed - that is how it is closed. */
-    if(s !== "cancelled" && !(o.lines || []).length) return null;
+    /* An order edited down to nothing cannot be sent out. A ticket
+       may be accepted while still empty - that is the office
+       picking up the phone - but nothing goes on a bike until
+       somebody has written down what it is. */
+    if(s === "cancelled") { /* always allowed */ }
+    else if(!(o.lines || []).length){
+      var justAccepting = (o.kind === "ticket" && s === "accepted");
+      if(!justAccepting) return null;
+    }
     o.status = s;
     if(extra) for(var k in extra) o[k] = extra[k];
     (o.log = o.log || []).push({ s:s, at:Date.now() });
@@ -484,6 +536,105 @@ var STORE = {
     return n;
   },
 
+  /* ---- proving a number on a new phone ---------------------
+     Somebody on a new device wants their old orders back. A
+     phone number alone cannot prove that - anyone can type any
+     number - so the shop decides, not the browser.
+
+     The customer asks. The office either recognises them and
+     approves, or WhatsApps them a code to read back. Either way
+     the office does the approving, and the office is what links
+     the orders to the new device afterwards - which is why no
+     new read permission is needed anywhere. */
+  askToSee: function(phone, uid){
+    var id = digitsOnly(phone);
+    if(!id) return null;
+    var row = { id:id, phone:phone, uid: uid || meId(),
+                at: Date.now(), ok:false, code:null, codeTry:null };
+    DB.verify[id] = row;
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "verify", id), row)
+        .catch(function(e){ console.warn("askToSee", e); });
+      fire();
+    } else lsWrite();
+    return row;
+  },
+
+  waiting: function(){
+    return Object.keys(DB.verify).map(function(k){ return DB.verify[k]; })
+      .filter(function(v){ return !v.ok; })
+      .sort(function(a,b){ return b.at - a.at; });
+  },
+
+  verifyRow: function(phone){
+    var id = digitsOnly(phone);
+    return id ? (DB.verify[id] || null) : null;
+  },
+
+  /* the office issues a code to read back over WhatsApp */
+  issueCode: function(id){
+    var v = DB.verify[id];
+    if(!v) return null;
+    var code = String(Math.floor(Math.random() * 9000) + 1000);
+    v.code = code; v.sentAt = Date.now();
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "verify", id),
+        { code:code, sentAt:v.sentAt })
+        .catch(function(e){ console.warn("issueCode", e); });
+      fire();
+    } else lsWrite();
+    return code;
+  },
+
+  /* the customer types it back; they never get to read it */
+  tryCode: function(id, code){
+    var v = DB.verify[id];
+    if(!v) return false;
+    if(FB){
+      return FB.api.updateDoc(FB.api.doc(FB.db, "verify", id),
+        { codeTry: String(code).trim(), triedAt: Date.now() })
+        .then(function(){ return true; })
+        .catch(function(){ return false; });
+    }
+    /* offline: compare here, because there are no rules to do it */
+    if(String(code).trim() === v.code){ v.ok = true; lsWrite(); return true; }
+    return false;
+  },
+
+  /* The office says yes, and links every order on that number to
+     the device that asked. Done here because the office may write
+     orders and a customer may not - so nobody needs a new read
+     permission for any of this to work. */
+  approveSight: function(id){
+    var v = DB.verify[id];
+    if(!v || !v.uid) return 0;
+    v.ok = true; v.okAt = Date.now();
+    var n = 0;
+    Object.keys(DB.orders).forEach(function(k){
+      var o = DB.orders[k];
+      if(digitsOnly(o.phone) !== id) return;
+      if(o.custUid === v.uid) return;
+      o.custUid = v.uid; n++;
+      if(FB) FB.api.updateDoc(FB.api.doc(FB.db, "orders", k), { custUid: v.uid })
+              .catch(function(e){ console.warn("link", e); });
+    });
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "verify", id), { ok:true, okAt:v.okAt })
+        .catch(function(e){ console.warn("approveSight", e); });
+      fire();
+    } else lsWrite();
+    return n;
+  },
+
+  dropSight: function(id){
+    delete DB.verify[id];
+    if(FB){
+      FB.api.deleteDoc(FB.api.doc(FB.db, "verify", id))
+        .catch(function(e){ console.warn("dropSight", e); });
+      fire();
+    } else lsWrite();
+  },
+
   /* ---- the customer book ----------------------------------
      Every order teaches us something about a customer, and the
      most valuable lesson arrives at the end: the rider is
@@ -511,12 +662,16 @@ var STORE = {
     if(!id) return null;
 
     var was = DB.customers[id] || { id:id, phone:o.phone, firstAt: o.at || Date.now() };
+    /* An empty field on a new order is not news - it is somebody
+       who did not retype what they already told us. Only real
+       values replace what the book already holds. */
     var now = Object.assign({}, was, {
       id: id,
-      phone: o.phone || was.phone,
-      name:  o.name || was.name || "",
-      addr:  o.addr || was.addr || "",
-      lastAt: Math.max(was.lastAt || 0, o.at || Date.now())
+      phone: (o.phone || was.phone),
+      name:  (o.name && o.name.trim()) || was.name || "",
+      addr:  (o.addr && o.addr.trim()) || was.addr || "",
+      lastAt: Math.max(was.lastAt || 0, o.at || Date.now()),
+      orders: (was.orders || 0) + (extra && extra.counted ? 1 : 0)
     }, extra || {});
 
     /* a position the rider stood at beats a pin dropped from a
@@ -1151,8 +1306,28 @@ function wireFinder(inputId, panelId, onPick, action){
   return draw;
 }
 
+/* A way in for somebody who will not read a menu. It sits
+   opposite the cart, disappears the moment there is anything in
+   that cart - at which point they clearly are reading the menu -
+   and never shows on the office or rider screens. */
+function paintCallFab(){
+  if(riderApp()) return;
+  var f = el("callfab");
+  if(!f){
+    f = document.createElement("button");
+    f.id = "callfab";
+    f.innerHTML = '<span class="ci">\u260E</span> Order food';
+    f.onclick = function(){ location.hash = "#/quick"; };
+    document.body.appendChild(f);
+  }
+  var h = location.hash || "";
+  f.hidden = cartCount() > 0 ||
+             /^#\/(admin|drive|o|quick|checkout|cart)\b/.test(h);
+}
+
 /* ---------- the floating cart button ----------------------- */
 function paintFab(){
+  paintCallFab();
   var f = el("cartfab");
   if(!f){
     f = document.createElement("button");
@@ -1215,6 +1390,101 @@ function wireSignIn(main, after){
   };
 }
 
+/* The customer's side of proving a number on a new phone. */
+function viewSeeOld(main){
+  var v = SEEKING ? STORE.verifyRow(SEEKING) : null;
+  var asked = !!v;
+  var sent  = !!(v && v.code);
+
+  main.innerHTML = shell("Your past orders",
+    (!asked
+      ? '<p class="revsub">On a new phone? Two ways to get your ' +
+        'orders back.</p>' +
+
+        /* Instant, if they ever signed in: nobody has to approve
+           anything, because Google already proved who they are. */
+        (STORE.live() && STORE.isGuest()
+          ? '<button class="shopbtn" id="soGoogle">Sign in with Google</button>' +
+            '<p class="opt">Instant, if you used it before.</p>' +
+            '<div class="orline"><span>or</span></div>'
+          : '') +
+
+        '<input class="fld big" id="soPhone" type="tel" inputmode="tel" ' +
+          'autocomplete="tel" placeholder="Phone number">' +
+        '<button class="shopbtn' + (STORE.live() ? " ghost" : "") + '" id="soGo">' +
+          'Ask the restaurant</button>' +
+        '<p class="opt">We will check it is you and confirm.</p>'
+
+      : '<div class="waitbox">' +
+          '<b>' + (sent ? "We sent you a code on WhatsApp"
+                        : "We are checking with the restaurant") + '</b>' +
+          '<small>' + (sent
+            ? "Type the four digits below."
+            : "Someone will approve it in a moment. If it is busy, give us a ring.") +
+          '</small>' +
+        '</div>' +
+        (sent
+          ? '<input class="fld big" id="soCode" inputmode="numeric" ' +
+              'autocomplete="one-time-code" maxlength="4" placeholder="4-digit code">' +
+            '<button class="shopbtn" id="soCheck">That is the code</button>'
+          : '<div class="waiting"><span></span><span></span><span></span></div>') +
+        '<button class="shopbtn ghost" id="soStop">Start again</button>') +
+
+    '<button class="shopbtn ghost" data-go="#/">Back</button>');
+
+  var gg = el("soGoogle");
+  if(gg) gg.onclick = function(){
+    gg.disabled = true; gg.textContent = "Opening\u2026";
+    STORE.signInGoogle().then(function(){
+      shopToast("Welcome back.");
+      location.hash = "#/orders";
+    }).catch(function(e){
+      gg.disabled = false; gg.textContent = "Sign in with Google";
+      var code = (e && e.code) || "";
+      if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
+      shopToast("That did not work \u2014 use your number instead.");
+    });
+  };
+
+  var go = el("soGo");
+  if(go) go.onclick = function(){
+    var ph = el("soPhone").value.trim();
+    if(!digitsOnly(ph)){ shopToast("A phone number, please."); return; }
+    STORE.askToSee(ph);
+    SEEKING = digitsOnly(ph);
+    shopToast("Asked. We will confirm in a moment.");
+    viewSeeOld(main);
+  };
+  if(el("soPhone")) onEnter(el("soPhone"), function(){ go.onclick(); });
+
+  var ck = el("soCheck");
+  if(ck) ck.onclick = function(){
+    var code = el("soCode").value.trim();
+    if(code.length < 4){ shopToast("Four digits."); return; }
+    Promise.resolve(STORE.tryCode(SEEKING, code)).then(function(){
+      shopToast("Checking\u2026");
+      setTimeout(function(){ viewSeeOld(main); }, 900);
+    });
+  };
+  if(el("soCode")) onEnter(el("soCode"), function(){ ck.onclick(); });
+
+  var st = el("soStop");
+  if(st) st.onclick = function(){
+    if(SEEKING) STORE.dropSight(SEEKING);
+    SEEKING = null;
+    viewSeeOld(main);
+  };
+
+  /* the moment the office says yes, their orders are theirs */
+  if(v && v.ok){
+    SEEKING = null;
+    shopToast("That is you \u2014 here are your orders.");
+    location.hash = "#/orders";
+  }
+}
+
+var SEEKING = null;
+
 function viewMyOrders(main){
   var mine = STORE.myOrders();
   var open = mine.filter(function(o){
@@ -1239,8 +1509,8 @@ function viewMyOrders(main){
   main.innerHTML = shell("Your orders",
     signInStrip() +
     (STORE.isGuest()
-      ? '<p class="shopsub">Sign in above and any order you place will be ' +
-        'here, on whichever phone you use.</p>'
+      ? '<p class="shopsub">Orders you place on this phone appear here.</p>' +
+        '<button class="shopbtn ghost" data-go="#/seen">Ordered before on another phone?</button>'
       : (open.length
           ? '<h3 class="mini">Still going</h3>' + open.map(card).join("")
           : '<p class="shopsub">Nothing on the way right now.</p>') +
@@ -1305,10 +1575,282 @@ function viewCart(main){
   wireSignIn(main, function(){ viewCart(main); });
 }
 
+/* What we already know about the person ordering.
+
+   Two sources, in order of trust. Their own last order, which
+   follows them to any phone they sign in on - and which their
+   browser is allowed to read, because it is theirs. Then this
+   device's memory, for the far commoner case of somebody
+   ordering again from the same phone.
+
+   Never the customer book. That is the office's record of
+   everyone, and a browser that could read it by typing a number
+   would hand a stranger's home address to anybody who guessed
+   their phone. The rules forbid it; so does this. */
+function knownMe(){
+  var mine = STORE.myOrders();
+  var last = mine[0];
+  var dev = {};
+  try{ dev = JSON.parse(localStorage.getItem("hayat_me")) || {}; }catch(e){}
+
+  if(!last) return dev;
+  return {
+    name:  last.name || dev.name || "",
+    phone: last.phone || dev.phone || "",
+    addr:  last.addr || dev.addr || "",
+    lat:   last.lat != null ? last.lat : dev.lat,
+    lng:   last.lng != null ? last.lng : dev.lng,
+    from:  "last order"
+  };
+}
+
+/* ------------------------------------------------------------
+   ORDER FOOD, WITHOUT READING A MENU
+
+   Plenty of people will not scroll a menu on a phone. They know
+   what they want, or they want to be asked. So: a number, a
+   place to send it, and the kitchen rings them back.
+
+   The ticket lands on the board empty and says so. The office
+   fills it in while they are on the phone, and the customer's
+   own page fills in with it, live - so they can see what was
+   written down without having to remember the call.
+   ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   THE FRONT DOOR
+
+   One file, two front doors.
+
+   The tablet on a table is a menu: the intro, the gallery, the
+   categories. Browsing is the job there, and a guest waiting for
+   their food should be looking at pictures of it.
+
+   A phone arriving from a WhatsApp link is not browsing. It is
+   hungry. It wants to know you are open, how long you take, and
+   how to order - in that order, without scrolling past eleven
+   categories to find out.
+   ------------------------------------------------------------ */
+function kiosk(){ return !!window.HAYAT_KIOSK; }
+
+function wantsLanding(){
+  if(riderApp() || kiosk()) return false;
+  try{ if(sessionStorage.getItem("hayat_browsing") === "1") return false; }catch(e){}
+  /* a desk is for looking; a phone in a hand is for ordering */
+  try{ return window.matchMedia("(max-width: 820px)").matches; }catch(e){ return false; }
+}
+
+function openNow(){
+  var h = C().hours;
+  if(!h || !h.open || !h.close) return { open:true, txt:"" };
+  var now = new Date(), mins = now.getHours() * 60 + now.getMinutes();
+  var toM = function(t){ var p = String(t).split(":"); return (+p[0]) * 60 + (+p[1] || 0); };
+  var a = toM(h.open), b = toM(h.close);
+  var on = (b > a) ? (mins >= a && mins < b) : (mins >= a || mins < b);
+  return { open: on, txt: on ? ("Open until " + h.close) : ("Opens at " + h.open) };
+}
+
+function viewLanding(main){
+  var me  = knownMe();
+  var shop = ((C().delivery || [])[0] || {}).number || C().whatsapp || "";
+  var st  = openNow();
+  var mine = STORE.myOrders();
+  var live = mine.filter(function(o){
+    return o.status !== "delivered" && o.status !== "cancelled";
+  })[0];
+  var last = mine.filter(function(o){
+    return o.status === "delivered" && (o.lines || []).length;
+  })[0];
+
+  main.innerHTML =
+    '<div class="land">' +
+
+      '<div class="landtop">' +
+        '<h1 class="landh">Hayat</h1>' +
+        '<p class="landsub">Fish and Mandi \u00b7 Makkaraparamba</p>' +
+        '<div class="landstate' + (st.open ? " on" : " off") + '">' +
+          '<span class="ldot"></span>' + esc(st.txt || (st.open ? "Open" : "Closed")) +
+        '</div>' +
+      '</div>' +
+
+      /* If something is already on its way, that is the only thing
+         they came here to see. */
+      (live
+        ? '<a class="landlive" href="#/o/' + esc(live.id) + '">' +
+            '<div><b>' + esc(STEP[live.status] ? STEP[live.status].t : "On its way") + '</b>' +
+            '<small>Order ' + esc(live.id) + ' \u00b7 tap to follow it</small></div>' +
+            '<span class="lgo">\u203A</span>' +
+          '</a>'
+        : '') +
+
+      '<div class="landdo">' +
+        '<button class="landbtn big" id="ldCall">' +
+          '<span class="lbi">\u260E</span>' +
+          '<span class="lbt"><b>Order food</b>' +
+          '<small>Tell us where you are \u2014 we call you straight back</small></span>' +
+        '</button>' +
+
+        '<button class="landbtn" id="ldMenu">' +
+          '<span class="lbi">\uD83C\uDF7D</span>' +
+          '<span class="lbt"><b>Browse the menu</b>' +
+          '<small>Pick it yourself and send the order</small></span>' +
+        '</button>' +
+
+        (last
+          ? '<button class="landbtn again" id="ldAgain">' +
+              '<span class="lbi">\u21BA</span>' +
+              '<span class="lbt"><b>The usual, again</b>' +
+              '<small>' + esc((last.lines || []).map(function(l){
+                return l.q + "\u00d7 " + l.name; }).join(", ")) + '</small></span>' +
+            '</button>'
+          : '') +
+      '</div>' +
+
+      '<div class="landfoot">' +
+        (shop ? callBtn(shop, "Call the restaurant", "landlink") : '') +
+        (mine.length ? '<a class="landlink" href="#/orders">Your orders</a>' : '') +
+      '</div>' +
+
+      installBar() +
+    '</div>';
+
+  var browse = function(){
+    try{ sessionStorage.setItem("hayat_browsing", "1"); }catch(e){}
+    REPAINT = null;
+    location.hash = "#/";
+    /* index.html owns the menu; nudge it to draw now that we have
+       stood aside */
+    try{ window.dispatchEvent(new HashChangeEvent("hashchange")); }catch(e){
+      try{ window.dispatchEvent(new Event("hashchange")); }catch(err){}
+    }
+  };
+
+  el("ldCall").onclick = function(){ location.hash = "#/quick"; };
+  el("ldMenu").onclick = browse;
+
+  var ag = el("ldAgain");
+  if(ag) ag.onclick = function(){
+    CART = (last.lines || []).map(function(l){
+      return { k: l.id + "|" + (l.label || ""), id: l.id, name: l.name,
+               label: l.label || "", price: l.price, q: l.q };
+    });
+    saveCart(); paintFab();
+    shopToast("Same as last time \u2014 check it and send.");
+    location.hash = "#/cart";
+  };
+
+  wireInstall(function(){ viewLanding(main); });
+}
+
+function viewQuick(main){
+  var form = knownMe();
+  var here = (form.lat != null && form.lng != null)
+    ? { lat: form.lat, lng: form.lng } : null;
+
+  /* Sharing a location redraws this form, and a redraw that reads
+     from anywhere but the boxes themselves throws away whatever
+     was typed before it. Read first, then draw. */
+  var grab = function(){
+    ["qName","qPhone","qAddr","qNote"].forEach(function(id){
+      var n = el(id);
+      if(n) form[id.slice(1).toLowerCase()] = n.value;
+    });
+  };
+
+  var draw = function(){
+    var saved = form;
+    main.innerHTML = shell("Order food",
+      '<p class="revsub">Your number is all we need. We will call you ' +
+      'straight back and take it from there.</p>' +
+
+      '<input class="fld big" id="qPhone" name="tel" type="tel" autocomplete="tel" ' +
+        'inputmode="tel" placeholder="Phone number" value="' + esc(saved.phone || "") + '">' +
+
+      '<p class="opt">The rest is optional \u2014 it just saves time on the call.</p>' +
+
+      '<input class="fld" id="qName" name="name" autocomplete="name" ' +
+        'placeholder="Your name (optional)" value="' + esc(saved.name || "") + '">' +
+      '<textarea class="fld" id="qAddr" name="street-address" autocomplete="street-address" ' +
+        'placeholder="Address (optional)">' + esc(saved.addr || "") + '</textarea>' +
+
+      /* If they will not type an address, their phone knows where
+         they are, and that is better than a description anyway. */
+      '<button class="spotcard' + (here ? " set" : "") + '" id="qHere">' +
+        '<span class="spi">\uD83D\uDCCD</span>' +
+        '<span class="spt"><b>' +
+          (here ? "Location shared" : "Share my location instead") + '</b>' +
+          '<small>' + (here
+            ? here.lat.toFixed(5) + ", " + here.lng.toFixed(5) + " \u00b7 the rider will find you"
+            : "Quicker than typing, and the rider follows it exactly") +
+          '</small></span>' +
+        '<span class="spgo">' + (here ? "Change" : "Share") + '</span>' +
+      '</button>' +
+
+      '<input class="fld" id="qNote" placeholder="Anything to tell the kitchen? (optional)" ' +
+        'value="' + esc(saved.note || "") + '">' +
+
+      '<button class="shopbtn" id="qGo">Ask us to call</button>' +
+      '<p class="opt tiny">We only ever use it for this order.</p>' +
+      '<button class="shopbtn ghost" data-go="#/">Browse the menu instead</button>');
+
+    el("qHere").onclick = function(){
+      grab();
+      var b = el("qHere");
+      b.querySelector(".spgo").textContent = "\u2026";
+      askGps().then(function(pos){
+        if(!pos || !pos.coords){
+          shopToast("Could not get your location \u2014 type the address instead.");
+          draw(); return;
+        }
+        here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        draw();
+        shopToast("Got it \u2014 that is enough for the rider.");
+      });
+    };
+
+    el("qGo").onclick = function(){
+      var name  = el("qName").value.trim(),
+          phone = el("qPhone").value.trim(),
+          addr  = el("qAddr").value.trim(),
+          note  = el("qNote").value.trim();
+
+      /* A number is the whole requirement. Everything else can be
+         settled on the call, which is the point of a ticket -
+         asking for more before we have even spoken is how you
+         lose somebody who is hungry and in a hurry. */
+      if(!digitsOnly(phone)){
+        shopToast("Just your number, and we will call you.");
+        el("qPhone").focus();
+        return;
+      }
+
+      var o = {
+        kind:  "ticket",
+        name:  name,
+        phone: phone,
+        addr:  addr || (here ? "Shared their location" : "\u2014 ask on the call"),
+        note:  note,
+        lines: [],
+        total: 0,
+        source: "ticket"
+      };
+      if(here){ o.lat = +here.lat.toFixed(6); o.lng = +here.lng.toFixed(6); }
+
+      var id = STORE.place(o);
+      if(!id){ shopToast("Something went wrong. Please call us."); return; }
+
+      try{ localStorage.setItem("hayat_me", JSON.stringify(
+        { name:name, phone:phone, addr:addr, lat:here && here.lat, lng:here && here.lng })); }catch(e){}
+
+      location.hash = "#/o/" + id;
+    };
+  };
+
+  draw();
+}
+
 function viewCheckout(main){
   if(!CART.length){ location.hash = "#/"; return; }
-  var saved = {};
-  try{ saved = JSON.parse(localStorage.getItem("hayat_me")) || {}; }catch(e){}
+  var saved = knownMe();
 
   main.innerHTML = shell("Where is it going?",
     /* A browser will offer the number it already has, in one tap,
@@ -1320,6 +1862,14 @@ function viewCheckout(main){
       'inputmode="tel" placeholder="Phone number" value="' + esc(saved.phone||"") + '">' +
     '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" ' +
       'placeholder="Address \u2014 house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
+
+    /* Filling somebody's boxes without telling them is unnerving.
+       One quiet line, and a way to clear it. */
+    ((saved.name || saved.addr)
+      ? '<p class="knownme">Filled in from your ' +
+        (saved.from === "last order" ? "last order" : "last visit") +
+        '. <button class="linky" id="coClear">Not you?</button></p>'
+      : '') +
     /* A card, not a map. Tapping opens a picker that fills the
        screen, where dragging actually works. */
     '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
@@ -1347,6 +1897,17 @@ function viewCheckout(main){
     '<button class="shopbtn ghost" data-go="#/cart">Back to the cart</button>');
 
   mountMap(saved);
+
+  var clr = el("coClear");
+  if(clr) clr.onclick = function(){
+    try{ localStorage.removeItem("hayat_me"); }catch(e){}
+    ["coName","coPhone","coAddr"].forEach(function(id){
+      var n = el(id); if(n) n.value = "";
+    });
+    PIN = null;
+    clr.parentNode.remove();
+    el("coName").focus();
+  };
 
   var gi = el("coIn");
   if(gi) gi.onclick = function(){
@@ -1674,6 +2235,11 @@ function viewOrder(main, id){
       (o.lat ? '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(mapsPin(o)) + '">Pin in Maps</a>' : '') +
     '</div>' +
+    (o.kind === "ticket" && !(o.lines || []).length
+      ? '<div class="ticket"><b>\u260E We are calling you back</b>' +
+        '<small>Tell us what you would like and it will appear here, ' +
+        'so you can check it without having to remember the call.</small></div>'
+      : '') +
     (isLater(o)
       ? '<div class="sched"><b>\u23F1 Coming ' + esc(whenWanted(o)) + '</b>' +
         '<small>We will start it in good time.</small></div>'
@@ -2063,8 +2629,59 @@ function viewAdmin(main){
   gate(main, function(){ paintAdmin(main); });
 }
 
+/* Somebody on a new phone asking for their own orders back.
+   The office decides: recognise them and approve, or WhatsApp a
+   code for them to read back. One tap either way - a wa.me link
+   fills the message in, it can never send it by itself. */
+function seenBar(){
+  var q = STORE.waiting();
+  if(!q.length) return "";
+  return '<div class="seenbar">' + q.map(function(v){
+    var c = STORE.customer(v.id);
+    return '<div class="seenrow">' +
+      '<div class="st"><b>' + esc(c && c.name ? c.name : prettyPhone(v.phone)) + '</b>' +
+        '<small>wants their past orders on a new phone' +
+        (c ? " \u00b7 " + custOrders(v.id).length + " on file" : " \u00b7 not in the book") +
+        (v.code ? " \u00b7 code " + esc(v.code) + " sent" : "") + '</small></div>' +
+      (v.code
+        ? '<a class="linky" target="_blank" rel="noopener" href="' +
+          esc(wa(v.phone, "Hayat \u2014 your code is " + v.code +
+               "\n\nType it into the app to see your past orders.")) +
+          '">Send again</a>'
+        : '<button class="linky" data-sendcode="' + esc(v.id) + '">WhatsApp a code</button>') +
+      '<button class="linky go" data-approve="' + esc(v.id) + '">Approve</button>' +
+      '<button class="linky warn" data-refuse="' + esc(v.id) + '">No</button>' +
+    '</div>';
+  }).join("") + '</div>';
+}
+
+function wireSeen(main){
+  main.querySelectorAll("[data-sendcode]").forEach(function(b){
+    b.onclick = function(){
+      var id = b.dataset.sendcode;
+      var code = STORE.issueCode(id);
+      var v = STORE.verifyRow(id);
+      if(!code || !v) return;
+      window.open(wa(v.phone, "Hayat \u2014 your code is " + code +
+        "\n\nType it into the app to see your past orders."), "_blank");
+      shopToast("Code " + code + " \u2014 tap send in WhatsApp.");
+    };
+  });
+  main.querySelectorAll("[data-approve]").forEach(function(b){
+    b.onclick = function(){
+      var n = STORE.approveSight(b.dataset.approve);
+      shopToast(n ? ("Approved \u2014 " + n + " order" + (n>1?"s":"") + " linked.")
+                  : "Approved.");
+    };
+  });
+  main.querySelectorAll("[data-refuse]").forEach(function(b){
+    b.onclick = function(){ STORE.dropSight(b.dataset.refuse); shopToast("Dismissed."); };
+  });
+}
+
 function paintAdmin(main){
   learnDoorsteps();
+  checkCodes();
   var orders = STORE.orders(), riders = STORE.riders();
   var gone   = orders.filter(function(o){ return o.status === "cancelled"; });
   var live   = orders.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; });
@@ -2128,6 +2745,7 @@ function paintAdmin(main){
          above the board and landed on the first column head. It
          is a status line: it belongs in a corner, not in the way. */
       connBanner() +
+      seenBar() +
     '</div>';
 
   main.querySelectorAll("[data-view]").forEach(function(b){
@@ -2149,6 +2767,8 @@ function paintAdmin(main){
   liveWatch(ADVIEW === "map" && shown.concat(blind).some(function(o){
     return o.status === "assigned" || o.status === "on_way";
   }), main);
+
+  wireSeen(main);
 
   /* the filters */
   main.querySelectorAll("[data-mf]").forEach(function(b){
@@ -2214,10 +2834,18 @@ function boardCard(o){
   var rider = o.riderId ? STORE.rider(o.riderId) : null;
   var riders = STORE.riders();
 
-  var empty = !(o.lines || []).length;
+  var empty  = !(o.lines || []).length;
+  var ticket = (o.kind === "ticket") && empty;
 
   var act = "";
-  if(empty){
+  if(ticket){
+    /* This is not a broken order. It is somebody asking to be
+       rung back, and the only useful next move is to ring them. */
+    act = '<div class="tkact">' +
+      callBtn(o.phone, "Call them", "mini go") +
+      '<a class="mini" href="#/admin/o/' + esc(o.id) + '">Write it down</a>' +
+    '</div>';
+  } else if(empty){
     act = '<p class="shopnote emptyord">No items. Sort it out with the customer.</p>';
   } else if(o.status === "accepted"){
     act = riders.length
@@ -2243,8 +2871,9 @@ function boardCard(o){
       '</div>'
     : '';
 
-  return '<div class="bcard' + (empty ? " empty" : "") +
+  return '<div class="bcard' + (ticket ? " ticket" : empty ? " empty" : "") +
       (isLater(o) ? " later" : "") + '">' +
+    (ticket ? '<div class="tkflag">\u260E Wants a call \u00b7 nothing written down yet</div>' : '') +
     '<div class="brow"><b>' + esc(o.id) + '</b>' +
       (isLater(o)
         ? '<span class="latertag">\u23F1 ' + esc(whenWanted(o)) + '</span>'
@@ -2329,6 +2958,24 @@ function msgAsk(o){
          "\n\nYou can also reply on the order page: " + base() + "#/o/" + o.id;
 }
 
+/* What the office read back to them on the phone, in writing.
+   A call is easy to mishear; this is the same thing they can
+   check afterwards. */
+function msgTaken(o){
+  var m = money(o);
+  return "Hayat \u2014 order " + o.id + "\n\n" +
+    "Thank you" + (o.name ? " " + o.name : "") + ". This is what we have:\n\n" +
+    (o.lines || []).map(function(l){
+      return "\u2022 " + l.q + " \u00d7 " + l.name +
+             (l.label ? " (" + l.label + ")" : "") + "  " + rupee(l.q * l.price);
+    }).join("\n") +
+    (m.off ? "\n\nLess " + discountLabel(o) + ": \u2212" + rupee(m.off) : "") +
+    "\n\nTotal " + rupee(m.total) + " (cash on delivery)" +
+    "\nTo: " + (o.addr || "") +
+    (o.wantAt ? "\nFor: " + whenWanted(o) : "") +
+    "\n\nFollow it here: " + base() + "#/o/" + o.id;
+}
+
 function msgChanged(o){
   var m = money(o);
   return "Hayat \u2014 order " + o.id + "\n\nWe have updated your order:\n" +
@@ -2373,7 +3020,10 @@ function orderCard(o){
   var empty = !(o.lines || []).length;
 
   var action = "";
-  if(empty)
+  if(o.kind === "ticket" && empty)
+    action = '<div class="tkact">' + callBtn(o.phone, "Call them", "shopbtn small") +
+      '<a class="shopbtn small ghost" href="#/admin/o/' + esc(o.id) + '">Write it down</a></div>';
+  else if(empty)
     /* nothing to cook: the only honest move is to sort it out
        with the customer, or close it */
     action = '<p class="shopnote emptyord">This order has no items. ' +
@@ -2903,15 +3553,41 @@ function connBanner(){
    Only the office may write the customer book, so the office is
    what moves them across - quietly, whenever it looks at the
    board. Each order is promoted once and then marked. */
+/* With Firestore live the rules do this comparison. Without it -
+   one machine, demo mode - somebody has to, and the office is the
+   only party allowed to see both halves. */
+function checkCodes(){
+  if(!STORE.isOffice() && STORE.live()) return;
+  STORE.waiting().forEach(function(v){
+    if(v.code && v.codeTry && String(v.codeTry) === String(v.code)){
+      STORE.approveSight(v.id);
+    }
+  });
+}
+
 function learnDoorsteps(){
   if(!STORE.isOffice() && STORE.live()) return;
   STORE.orders().forEach(function(o){
-    if(o.status !== "delivered" || !o.doorLat || o.doorLearned) return;
-    STORE.rememberCustomer(o, {
-      lat: o.doorLat, lng: o.doorLng,
-      locFrom: "delivered", locAt: o.doorAt || Date.now()
-    });
-    STORE.edit(o.id, { doorLearned: true });
+    if(o.doorLearned) return;
+
+    /* Everything the office has ever been told about this number,
+       gathered under one record. An order placed from the website
+       teaches us a name and an address; a delivered one teaches us
+       the doorstep, which is worth more. */
+    if(o.status === "delivered" && o.doorLat){
+      STORE.rememberCustomer(o, {
+        lat: o.doorLat, lng: o.doorLng,
+        locFrom: "delivered", locAt: o.doorAt || Date.now()
+      });
+      STORE.edit(o.id, { doorLearned: true });
+      return;
+    }
+
+    /* not delivered yet: still worth recording who they are */
+    if(!o.custLearned && digitsOnly(o.phone)){
+      STORE.rememberCustomer(o);
+      STORE.edit(o.id, { custLearned: true });
+    }
   });
 }
 
@@ -3387,6 +4063,14 @@ function paintEdit(main, id){
         (m.off ? ' \u2212 ' + rupee(m.off) + ' (' + esc(discountLabel(o)) + ')' : '') +
         ' = <b>' + rupee(m.total) + '</b></p>' +
 
+      (o.kind === "ticket" && !(o.lines||[]).length
+        ? '<div class="tkhead"><b>\u260E They asked us to call</b>' +
+          '<small>Ring them, tap the items in as they say them, then ' +
+          'send it back on WhatsApp so they can check it.</small>' +
+          '<div class="tkrow">' + callBtn(o.phone, "Call " + (o.name || "them"), "shopbtn small") +
+          '</div></div>'
+        : '') +
+
       /* One button, and the search opens over the middle of the
          screen. A box down here is a box you scroll past. */
       '<button class="shopbtn ghost findbtn" id="edFind">' +
@@ -3408,8 +4092,13 @@ function paintEdit(main, id){
       '<input class="fld" id="edNote"  placeholder="Note" value="' + esc(o.note||"") + '">' +
 
       '<button class="shopbtn" id="edSave">Save the changes</button>' +
-      '<a class="shopbtn ghost" id="edTell" target="_blank" rel="noopener" href="' +
-        esc(waCustomer(o, msgChanged(o))) + '">Tell the customer on WhatsApp</a>' +
+      /* A ticket has never been told anything yet, so the message
+         is the whole order rather than a list of changes. */
+      '<a class="shopbtn' + (o.kind === "ticket" ? "" : " ghost") +
+        '" id="edTell" target="_blank" rel="noopener" href="' +
+        esc(waCustomer(o, o.kind === "ticket" ? msgTaken(o) : msgChanged(o))) + '">' +
+        (o.kind === "ticket" ? "Send it to them on WhatsApp" : "Tell the customer on WhatsApp") +
+      '</a>' +
       '<button class="shopbtn ghost" data-go="#/admin">Back without saving</button>' +
       (o.status !== "cancelled" && o.status !== "delivered"
         ? '<button class="shopbtn danger" id="edCancel">Cancel this order</button>' : '') +
@@ -3476,6 +4165,10 @@ function paintEdit(main, id){
       note:  el("edNote").value.trim(),
       discount: { type: d.type, value: +(el("edDisc").value || 0) }
     });
+    /* A correction typed here is usually the office fixing what
+       the customer got wrong, so it belongs in the book too -
+       otherwise the same bad address comes back next time. */
+    STORE.rememberCustomer(STORE.order(id));
     location.hash = "#/admin";
   };
 
@@ -3801,11 +4494,15 @@ function gpsState(){
   });
 }
 
+/* Resolves with the position itself, not just a yes. Asking a
+   second time to actually get the coordinates is how this stalled
+   once: the permission prompt is one thing, the fix is another,
+   and the second request can sit there for a long time. */
 function askGps(){
   return new Promise(function(done){
     if(!navigator.geolocation) return done(false);
     navigator.geolocation.getCurrentPosition(
-      function(){ GPSOK = true;  done(true); },
+      function(pos){ GPSOK = true;  done(pos); },
       function(){ GPSOK = false; done(false); },
       { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
   });
@@ -4314,7 +5011,11 @@ function theOffer(){
 /* true when there is something worth showing a person */
 function canOfferInstall(){
   if(installed() || installDismissed()) return false;
-  return !!theOffer() || (isApple() && riderApp());
+  /* Android hands us a prompt to open. Apple never will - Safari
+     has no install prompt and never has - so there the offer is
+     the two steps, written out, for the customer as well as the
+     rider. Nobody gets left without a way to keep this. */
+  return !!theOffer() || isApple();
 }
 
 function installBar(){
@@ -4330,10 +5031,17 @@ function installBar(){
       '<button class="gx" id="getAppNo" aria-label="Not now">\u00d7</button>' +
     '</div>';
   }
-  /* an iPhone: no prompt exists, so say the two steps plainly */
+  /* an iPhone: no prompt exists, so say the two steps plainly.
+     Only Safari can do it, so say that too rather than let
+     somebody tap Share in Chrome and find nothing there. */
+  var safari = /safari/i.test(navigator.userAgent) &&
+               !/crios|fxios|edgios/i.test(navigator.userAgent);
   return '<div class="getapp ios" id="getApp">' +
-    '<div class="gt"><b>Add this to your home screen</b>' +
-      '<small>Tap <b>Share</b>, then <b>Add to Home Screen</b>.</small></div>' +
+    '<div class="gt"><b>' + (rider ? "Keep the rider app" : "Add Hayat to your phone") + '</b>' +
+      '<small>' + (safari
+        ? "Tap <b>Share</b> at the bottom, then <b>Add to Home Screen</b>."
+        : "Open this page in <b>Safari</b>, then Share \u2192 Add to Home Screen.") +
+      '</small></div>' +
     '<button class="gx" id="getAppNo" aria-label="Not now">\u00d7</button>' +
   '</div>';
 }
@@ -4397,6 +5105,13 @@ function route(p, main){
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
+  if(!p.length && wantsLanding()){
+    REPAINT = function(){ viewLanding(main); };
+    REPAINT();
+    return true;
+  }
+  if(p[0] === "quick")    { REPAINT = function(){ if(isTyping()) return; viewQuick(main); }; REPAINT(); return true; }
+  if(p[0] === "seen")     { REPAINT = function(){ if(isTyping()) return; viewSeeOld(main); }; REPAINT(); return true; }
   if(p[0] === "orders")   { REPAINT = function(){ viewMyOrders(main); }; REPAINT(); return true; }
   if(p[0] === "cart")     { viewCart(main); return true; }
   if(p[0] === "checkout") { viewCheckout(main); return true; }

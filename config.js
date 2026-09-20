@@ -201,6 +201,12 @@ window.CONFIG = {
      and forget it. */
   adminCode: "112233",
 
+  /* ---- WHEN YOU ARE OPEN -----------------------------------
+     Shown on the phone landing page, so somebody arriving at
+     half past eleven at night knows before they start typing.
+     24-hour clock. Leave it out and nothing is claimed. */
+  hours: { open: "11:00", close: "23:30" },
+
   reviewLink: "https://maps.google.com/?cid=6866265905315816486",
 
   /* ---- 4a. REVIEWS ----------------------------------------- *

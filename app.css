@@ -1709,3 +1709,149 @@ a.ln:hover b{color:var(--gold)}
   border-radius:var(--r2);padding:13px 15px;margin:14px 0 0;background:var(--soft3)}
 .sched b{display:block;font-size:var(--t-h3);color:var(--cream)}
 .sched small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+
+
+/* we filled your boxes, and here is how to undo that */
+.knownme{font-size:var(--t-small);color:var(--muted);
+  margin:-6px 0 14px;text-align:left}
+.knownme .linky{padding:0;min-height:0;border:0;background:none;
+  text-decoration:underline;font-size:inherit}
+
+
+/* ============================================================
+   ORDER FOOD WITHOUT READING A MENU
+   ============================================================ */
+#callfab{position:fixed;left:16px;bottom:16px;z-index:60;
+  display:flex;align-items:center;gap:9px;
+  border:1px solid var(--line2);border-radius:999px;
+  background:var(--gold);color:var(--onaccent);
+  font:700 var(--t-body)/1 inherit;letter-spacing:.01em;
+  padding:15px 20px;cursor:pointer;box-shadow:var(--shadow)}
+#callfab[hidden]{display:none}
+#callfab .ci{font-size:16px;line-height:1}
+@media (max-width:520px){
+  #callfab{left:12px;bottom:12px;padding:14px 17px;font-size:var(--t-small)}
+}
+
+/* the customer's own page, while nothing is written down yet */
+.ticket{border:1px solid var(--line);border-left:3px solid var(--gold);
+  border-radius:var(--r2);padding:14px 15px;margin:0 0 14px;background:var(--soft3)}
+.ticket b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.ticket small{display:block;font-size:var(--t-small);color:var(--muted);
+  margin-top:3px;line-height:1.5}
+
+/* on the board */
+.bcard.ticket{border-color:var(--gold);border-style:solid}
+.tkflag{font-size:var(--t-tiny);font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--gold);margin:0 0 8px}
+.tkact{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 0}
+.tkact .mini,.tkact .shopbtn{margin:0;width:auto;flex:1 1 auto}
+.mini.go{background:var(--gold);color:var(--onaccent);border-color:transparent}
+
+/* on the edit screen */
+.tkhead{border:1px solid var(--line);border-left:3px solid var(--gold);
+  border-radius:var(--r2);padding:14px 15px;margin:0 0 16px;background:var(--soft3)}
+.tkhead b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.tkhead small{display:block;font-size:var(--t-small);color:var(--muted);
+  margin-top:3px;line-height:1.5}
+.tkrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.tkrow .shopbtn{margin:0;width:auto}
+
+
+/* ============================================================
+   THE PHONE FRONT DOOR
+   Not a menu. Somebody hungry, holding a phone, who wants to
+   know you are open and how to order - in that order.
+   ============================================================ */
+.land{max-width:560px;margin:0 auto;padding:26px 18px 40px}
+.landtop{text-align:center;margin:0 0 26px}
+.landh{font-size:40px;line-height:1;margin:0;letter-spacing:-.02em;color:var(--cream)}
+.landsub{margin:8px 0 0;font-size:var(--t-body);color:var(--muted)}
+.landstate{display:inline-flex;align-items:center;gap:8px;margin:14px 0 0;
+  border:1px solid var(--line);border-radius:999px;padding:7px 14px;
+  font-size:var(--t-small);font-weight:600}
+.landstate.on{color:var(--green);border-color:rgba(91,140,42,.35)}
+.landstate.off{color:var(--hot);border-color:rgba(228,112,90,.35)}
+.ldot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.landstate.on .ldot{box-shadow:0 0 0 3px rgba(91,140,42,.22)}
+
+.landlive{display:flex;align-items:center;gap:12px;text-decoration:none;
+  border:1px solid var(--line);border-left:3px solid var(--green);
+  border-radius:var(--r2);padding:15px 16px;margin:0 0 16px;
+  background:var(--soft3);color:var(--cream)}
+.landlive b{display:block;font-size:var(--t-h3)}
+.landlive small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.lgo{margin-left:auto;font-size:26px;color:var(--muted);line-height:1}
+
+.landdo{display:flex;flex-direction:column;gap:11px}
+.landbtn{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  border:1px solid var(--line2);border-radius:var(--r);
+  background:var(--card);color:var(--cream);font:inherit;
+  padding:18px 18px;cursor:pointer;transition:border-color .15s}
+.landbtn:hover{border-color:var(--gold)}
+.landbtn.big{background:var(--gold);color:var(--onaccent);border-color:transparent}
+.landbtn.big small{color:rgba(255,255,255,.82)}
+.landbtn.again{border-style:dashed}
+.lbi{font-size:24px;line-height:1;flex:0 0 auto}
+.lbt{flex:1;min-width:0}
+.lbt b{display:block;font-size:17px;line-height:1.25}
+.lbt small{display:block;font-size:var(--t-small);color:var(--muted);
+  margin-top:3px;line-height:1.45;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.landfoot{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+  margin:22px 0 16px}
+.landlink{border:1px solid var(--line);border-radius:999px;
+  padding:10px 16px;font-size:var(--t-small);font-weight:600;
+  color:var(--cream);text-decoration:none;background:transparent;cursor:pointer}
+.landlink:hover{border-color:var(--gold);color:var(--gold)}
+
+/* the landing is the whole page: no menu chrome behind it */
+body:has(.land) nav#nav,
+body:has(.land) footer,
+body:has(.land) #cartfab,
+body:has(.land) #callfab{display:none !important}
+
+
+/* one field that matters, and the rest clearly optional */
+.fld.big{font-size:19px;padding:17px 16px;font-weight:600;letter-spacing:.01em}
+.opt{font-size:var(--t-small);color:var(--muted);margin:-4px 0 12px;text-align:left}
+.opt.tiny{font-size:var(--t-tiny);text-align:center;margin:10px 0 0}
+
+
+/* ============================================================
+   PROVING A NUMBER ON A NEW PHONE
+   ============================================================ */
+.seenbar{position:fixed;left:50%;transform:translateX(-50%);
+  top:64px;z-index:680;width:min(640px,calc(100vw - 32px));
+  display:flex;flex-direction:column;gap:6px}
+.seenrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--card);border:1px solid var(--line2);
+  border-left:3px solid var(--gold);border-radius:var(--r2);
+  padding:11px 14px;box-shadow:var(--shadow)}
+.st{flex:1;min-width:150px}
+.st b{display:block;font-size:var(--t-body);color:var(--cream)}
+.st small{display:block;font-size:var(--t-tiny);color:var(--muted);margin-top:2px}
+@media (max-width:860px){
+  .seenbar{top:auto;bottom:80px;left:12px;right:12px;transform:none;width:auto}
+}
+
+/* the customer, waiting */
+.waitbox{border:1px solid var(--line);border-left:3px solid var(--gold);
+  border-radius:var(--r2);padding:15px 16px;margin:0 0 14px;background:var(--soft3)}
+.waitbox b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.waitbox small{display:block;font-size:var(--t-small);color:var(--muted);
+  margin-top:3px;line-height:1.5}
+.waiting{display:flex;gap:7px;justify-content:center;margin:18px 0 20px}
+.waiting span{width:9px;height:9px;border-radius:50%;background:var(--gold);
+  opacity:.3;animation:wdot 1.2s ease-in-out infinite}
+.waiting span:nth-child(2){animation-delay:.18s}
+.waiting span:nth-child(3){animation-delay:.36s}
+@keyframes wdot{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){ .waiting span{animation:none} }
+
+
+/* one path or the other */
+.orline{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted)}
+.orline::before,.orline::after{content:"";flex:1;height:1px;background:var(--line)}
+.orline span{font-size:var(--t-tiny);text-transform:uppercase;letter-spacing:.12em}

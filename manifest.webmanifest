@@ -1,35 +1,53 @@
 {
   "id": "hayat-menu",
-  "name": "Hayat Fish and Mandi Restaurant — Menu",
-  "short_name": "Hayat Menu",
-  "description": "Authentic Yemeni mandi, alfaham and fresh seafood in Makkaraparamba, Malappuram.",
+  "name": "Hayat Fish and Mandi",
+  "short_name": "Hayat",
+  "description": "Mandi, alfaham and fresh seafood. Order for delivery in Makkaraparamba.",
   "start_url": "./",
   "scope": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "display_override": [
-    "fullscreen",
-    "standalone"
+    "standalone",
+    "minimal-ui"
   ],
-  "orientation": "any",
-  "background_color": "#140C06",
-  "theme_color": "#140C06",
+  "orientation": "portrait",
+  "background_color": "#EDF2DD",
+  "theme_color": "#243510",
   "lang": "en",
   "icons": [
     {
       "src": "assets/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "assets/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "assets/icon-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "food",
+    "shopping"
+  ],
+  "shortcuts": [
+    {
+      "name": "Order food",
+      "short_name": "Order",
+      "url": "./#/quick"
+    },
+    {
+      "name": "Your orders",
+      "short_name": "Orders",
+      "url": "./#/orders"
     }
   ]
 }

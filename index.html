@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#243510">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hayat">
+<!-- iOS has no install prompt at all; these are what make a
+     home-screen copy open as an app rather than a Safari tab. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="Authentic Yemeni mandi, alfaham, shawaya and fresh seafood in Makkaraparamba, Malappuram. Dine-in, takeaway, home delivery and catering.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/apple-icon.png">
@@ -15,7 +20,8 @@
 <meta property="og:image" content="assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/mark.png">
-<link rel="apple-touch-icon" href="assets/mark.png">
+<!-- mark.png is 122x200 and was overriding the real 180x180 icon
+     above, which is why this looked wrong on an iPhone. -->
 <title>Hayat Fish and Mandi Restaurant — Menu</title>
 <link rel="stylesheet" href="app.css">
 <script>
@@ -1020,6 +1026,12 @@ window.CONFIG = {
      and forget it. */
   adminCode: "112233",
 
+  /* ---- WHEN YOU ARE OPEN -----------------------------------
+     Shown on the phone landing page, so somebody arriving at
+     half past eleven at night knows before they start typing.
+     24-hour clock. Leave it out and nothing is claimed. */
+  hours: { open: "11:00", close: "23:30" },
+
   reviewLink: "https://maps.google.com/?cid=6866265905315816486",
 
   /* ---- 4a. REVIEWS ----------------------------------------- *
@@ -1778,6 +1790,9 @@ var MODE = (function(){
   return (C.defaultMode === "tablet") ? "tablet" : "guest";
 })();
 const KIOSK = (MODE === "tablet");
+/* shop.js needs to know which front door this is: the tablet on a
+   table wants the menu, a phone off a WhatsApp link wants to order. */
+window.HAYAT_KIOSK = KIOSK;
 /* #/us was only a marker — drop straight into the menu */
 if(/#\/us\b/.test(location.hash)) location.hash = "#/";
 var IG_OK = null;                      /* null = unknown, true/false after probe */

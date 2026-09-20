@@ -61,6 +61,32 @@ service cloud.firestore {
       allow write: if isOffice();
     }
 
+    /* ---- proving a number on a new phone --------------------
+       A customer may ask, and may offer a code back. They may
+       never read the document, so they cannot read the code they
+       are supposed to be guessing. The office does the approving,
+       and the office is what links the orders afterwards - which
+       is why nothing here grants a customer any new read. */
+    match /verify/{phone} {
+      allow get, list: if isOffice();
+
+      allow create: if signedIn()
+        && request.resource.data.uid == mine()
+        && request.resource.data.ok == false
+        && request.resource.data.code == null;
+
+      allow update: if isOffice()
+        /* or the customer offering a code, and nothing else */
+        || (
+          signedIn()
+          && resource.data.uid == mine()
+          && touching().hasOnly(['codeTry','triedAt'])
+        );
+
+      allow delete: if isOffice()
+        || (signedIn() && resource.data.uid == mine());
+    }
+
     /* ---- the customer book ---------------------------------
        Names, addresses and doorsteps. The most sensitive thing
        this database holds, so only the office may read it at
