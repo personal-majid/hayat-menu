@@ -856,7 +856,34 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
 .pinlink{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:700;color:var(--green);
   text-decoration:none;border-bottom:1px solid currentColor}
 .addr.nopin{color:var(--muted);opacity:.75;font-style:italic}
-.admap{height:280px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--line);
+.tabs{display:flex;gap:6px;margin:0 0 12px;padding:4px;border-radius:999px;
+  background:var(--soft2);border:1px solid var(--line)}
+.tab{flex:1;min-height:38px;border:0;border-radius:999px;cursor:pointer;font:inherit;
+  font-size:13px;font-weight:700;color:var(--muted);background:transparent}
+.tab.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.board{display:flex;gap:10px;overflow-x:auto;padding:0 0 10px;margin:0 0 6px;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.col{flex:0 0 240px;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px}
+.colhead{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;
+  background:var(--soft2);border:1px solid var(--line)}
+.colhead b{flex:1;font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--cream)}
+.colhead .cnt{min-width:22px;text-align:center;font-size:12px;font-weight:800;color:var(--gold2)}
+.colempty{text-align:center;color:var(--muted);opacity:.5;padding:10px 0;font-size:14px}
+.bcard{border:1px solid var(--line);border-radius:12px;padding:11px;background:var(--card2)}
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.brow b{font-size:13.5px;color:var(--cream)}
+.btime{margin-left:auto;font-size:11px;color:var(--muted)}
+.bname{font-size:13px;color:var(--cream);margin-bottom:2px}
+.baddr{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:6px}
+.btot{font-size:14px;font-weight:800;color:var(--gold2)}
+.mini{width:100%;min-height:36px;border-radius:9px;border:1px solid transparent;cursor:pointer;
+  font:inherit;font-size:12.5px;font-weight:700;margin-top:4px;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.ghostmini{background:var(--soft);border-color:var(--line);color:var(--cream)}
+.sel.mini{padding:0 10px;color:var(--cream);background:var(--soft2);border:1px solid var(--line)}
+.pinlink.mini2{font-size:11.5px;margin:0 0 6px}
+.admap{height:340px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--line);
   background:var(--soft2);margin:0 0 8px}
 .admaplegend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
 .lg{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;

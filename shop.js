@@ -490,34 +490,98 @@ function viewAdmin(main){
 
 function paintAdmin(main){
   var orders = STORE.orders(), riders = STORE.riders();
-  var live = orders.filter(function(o){ return o.status !== "delivered"; });
-  var done = orders.filter(function(o){ return o.status === "delivered"; });
-
+  var live   = orders.filter(function(o){ return o.status !== "delivered"; });
+  var done   = orders.filter(function(o){ return o.status === "delivered"; });
   var pinned = orders.filter(function(o){ return o.lat && o.lng; });
 
   main.innerHTML = shell("Orders",
     connBanner() +
+    '<div class="tabs">' +
+      ['board','list','map'].map(function(v){
+        return '<button class="tab' + (ADVIEW===v ? " on" : "") + '" data-view="' + v + '">' +
+          (v==="board" ? "Board" : v==="list" ? "List" : "Map") + '</button>';
+      }).join("") +
+    '</div>' +
     '<div class="adminbar">' +
       '<span class="pill">' + live.length + ' live</span>' +
       '<span class="pill quiet">' + done.length + ' delivered</span>' +
-      (pinned.length ? '<button class="linky" id="admapBtn">' +
-        (ADMAP ? "Hide the map" : "See them on a map") + '</button>' : '') +
       '<button class="linky" data-go="#/admin/riders">Riders (' + riders.length + ')</button>' +
     '</div>' +
-    (ADMAP && pinned.length ? '<div id="admap" class="admap"></div>' +
-      '<div class="admaplegend">' +
-        '<span class="lg s-placed">new</span>' +
-        '<span class="lg s-accepted">in the kitchen</span>' +
-        '<span class="lg s-on_way">on the way</span>' +
-        '<span class="lg s-delivered">delivered</span></div>' : '') +
-    (orders.length ? orders.map(orderCard).join("")
-                   : '<p class="shopsub">No orders yet. Place one from the menu to try it.</p>') +
+
+    (ADVIEW === "map"
+      ? '<div id="admap" class="admap"></div>' +
+        '<div class="admaplegend">' +
+          '<span class="lg s-placed">new</span>' +
+          '<span class="lg s-accepted">kitchen</span>' +
+          '<span class="lg s-on_way">on the way</span>' +
+          '<span class="lg s-delivered">delivered</span>' +
+        '</div>' +
+        (pinned.length ? '' : '<p class="shopsub">No order has a pin yet.</p>')
+
+      : ADVIEW === "board"
+      ? (orders.length ? boardHtml(orders)
+                       : '<p class="shopsub">No orders yet.</p>')
+
+      : (orders.length ? orders.map(orderCard).join("")
+                       : '<p class="shopsub">No orders yet.</p>')) +
+
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
 
-  var mb = el("admapBtn");
-  if(mb) mb.onclick = function(){ ADMAP = !ADMAP; paintAdmin(main); };
-  if(ADMAP) drawAdminMap(pinned);
+  main.querySelectorAll("[data-view]").forEach(function(b){
+    b.onclick = function(){
+      ADVIEW = b.dataset.view;
+      try{ localStorage.setItem("hayat_adview", ADVIEW); }catch(e){}
+      paintAdmin(main);
+    };
+  });
 
+  if(ADVIEW === "map") drawAdminMap(pinned);
+  wireCards(main);
+}
+
+/* ---- the board: one column per step, newest at the top ---- */
+function boardHtml(orders){
+  return '<div class="board">' + FLOW.map(function(st){
+    var col = orders.filter(function(o){ return o.status === st; });
+    return '<div class="col">' +
+      '<div class="colhead"><b>' + esc(STEP[st].t) + '</b>' +
+        '<span class="cnt">' + col.length + '</span></div>' +
+      (col.length ? col.map(boardCard).join("")
+                  : '<div class="colempty">\u2014</div>') +
+    '</div>';
+  }).join("") + '</div>';
+}
+
+function boardCard(o){
+  var at = FLOW.indexOf(o.status), next = FLOW[at+1];
+  var rider = o.riderId ? STORE.rider(o.riderId) : null;
+  var riders = STORE.riders();
+
+  var act = "";
+  if(o.status === "accepted"){
+    act = riders.length
+      ? '<select class="fld sel mini" data-assign="' + o.id + '">' +
+          '<option value="">Assign\u2026</option>' +
+          riders.map(function(r){ return '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>'; }).join("") +
+        '</select>'
+      : '<button class="mini ghostmini" data-go="#/admin/riders">Add a rider</button>';
+  } else if(next){
+    act = '<button class="mini" data-adv="' + o.id + '|' + next + '">' +
+          esc(STEP[next].t) + '</button>';
+  }
+
+  return '<div class="bcard">' +
+    '<div class="brow"><b>' + esc(o.id) + '</b><span class="btime">' + when(o.at) + '</span></div>' +
+    '<div class="bname">' + esc(o.name) + '</div>' +
+    '<div class="baddr">' + esc(o.addr) + '</div>' +
+    (o.lat ? '<a class="pinlink mini2" target="_blank" rel="noopener" href="' + esc(dirTo(o)) + '">\u25CE Pin</a>' : '') +
+    '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
+      (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
+    act + '</div>';
+}
+
+/* both views use the same buttons, so they are wired in one place */
+function wireCards(main){
   main.querySelectorAll("[data-adv]").forEach(function(b){
     b.onclick = function(){
       var p = b.dataset.adv.split("|");
@@ -593,7 +657,9 @@ function orderCard(o){
    the view survives a repaint so a status change does not yank the
    map back to the start.
    ------------------------------------------------------------ */
-var ADMAP = false, AMAP = null, AVIEW = null;
+var AMAP = null, AVIEW = null;
+var ADVIEW = "board";
+try{ ADVIEW = localStorage.getItem("hayat_adview") || "board"; }catch(e){}
 
 function statusColour(s){
   return s === "placed"    ? "#E4705A"
@@ -604,7 +670,8 @@ function statusColour(s){
 
 function drawAdminMap(list){
   var box = el("admap");
-  if(!box || !list.length) return;
+  if(!box) return;
+  list = list || [];
 
   loadLeaflet().then(function(){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
@@ -632,8 +699,17 @@ function drawAdminMap(list){
       );
     });
 
+    /* the kitchen sits in the middle: the office reads distance from it */
     if(AVIEW) AMAP.setView(AVIEW.c, AVIEW.z);
-    else AMAP.fitBounds(pts, { padding:[30,30], maxZoom:16 });
+    else if(pts.length > 1){
+      var far = 0;
+      list.forEach(function(o){
+        far = Math.max(far, Math.abs(o.lat - HOME.lat), Math.abs(o.lng - HOME.lng));
+      });
+      far = Math.max(far, 0.004) * 1.25;
+      AMAP.fitBounds([[HOME.lat - far, HOME.lng - far],
+                      [HOME.lat + far, HOME.lng + far]], { maxZoom:16 });
+    } else AMAP.setView([HOME.lat, HOME.lng], 15);
     AMAP.on("moveend", function(){ AVIEW = { c: AMAP.getCenter(), z: AMAP.getZoom() }; });
     setTimeout(function(){ AMAP.invalidateSize(); }, 150);
   }).catch(function(err){
