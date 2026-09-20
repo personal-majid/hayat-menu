@@ -965,6 +965,64 @@ body.ridework .note p{font-size:15px}
 body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
   box-shadow:0 10px 26px rgba(0,0,0,.35)}
 
+/* ---- an order still waiting for a rider ----
+   The one pin on the map that is a job rather than a fact. */
+.omark.wants .dot{box-shadow:0 0 0 4px rgba(228,112,90,.30);
+  animation:wantpulse 1.9s ease-in-out infinite}
+.omark.wants .tag{background:var(--hot);color:#fff;border-color:transparent;font-weight:700}
+@keyframes wantpulse{
+  0%,100%{box-shadow:0 0 0 3px rgba(228,112,90,.30)}
+  50%    {box-shadow:0 0 0 8px rgba(228,112,90,.08)}
+}
+@media (prefers-reduced-motion:reduce){
+  .omark.wants .dot{animation:none}
+}
+.wantsr{color:#E4705A}
+.mpick{margin:7px 0}
+.mpick .fld{margin:0;width:100%}
+
+/* ---- a rider, and whether they are working ---- */
+.rline{gap:11px}
+.rdot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:var(--muted)}
+.rline.s-busy  .rdot{background:var(--green);box-shadow:0 0 0 3px rgba(143,190,67,.25)}
+.rline.s-free  .rdot{background:var(--gold)}
+.rline.s-quiet .rdot{background:var(--hot)}
+.rline.s-off   .rdot{background:var(--muted);opacity:.5}
+.rline.s-gone  .rdot{background:transparent;border:2px dashed var(--line2)}
+.rline .pend{color:var(--gold)}
+.linky.go{background:var(--gold);color:var(--onaccent);border-color:transparent;
+  border-radius:999px;padding:0 12px;font-weight:700}
+
+/* ---- the rider's own switch ---- */
+.avail{display:flex;align-items:center;gap:13px;width:100%;
+  border:1px solid var(--line);border-radius:var(--r2);
+  padding:14px 15px;margin:0 0 14px;cursor:pointer;
+  background:var(--soft3);color:var(--cream);font:inherit;text-align:left}
+.avail.on{border-left:3px solid var(--green)}
+.avail.off{border-left:3px solid var(--muted)}
+.adot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:var(--muted)}
+.avail.on .adot{background:var(--green);box-shadow:0 0 0 4px rgba(143,190,67,.22)}
+.at{flex:1;min-width:0}
+.at b{display:block;font-size:var(--t-h3)}
+.at small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.asw{position:relative;width:46px;height:27px;border-radius:999px;flex:0 0 auto;
+  background:var(--soft2);border:1px solid var(--line2);transition:background .18s}
+.avail.on .asw{background:var(--green);border-color:transparent}
+.asw::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;
+  border-radius:50%;background:var(--cream);transition:transform .18s}
+.avail.on .asw::after{transform:translateX(19px);background:#fff}
+
+/* ---- how much to trust that dot ----
+   A position a web page sent twenty minutes ago looks exactly
+   like one sent now unless we say otherwise. Fading it is the
+   difference between "he is nearly there" and "we last heard
+   from him before the screen went off". */
+.omark.bike.f-live  .bikedot{box-shadow:0 0 0 3px rgba(143,190,67,.55)}
+.omark.bike.f-stale .bikedot{opacity:.7;filter:grayscale(.4)}
+.omark.bike.f-stale .tag{opacity:.8}
+.omark.bike.f-cold  .bikedot{opacity:.45;filter:grayscale(1)}
+.omark.bike.f-cold  .tag{opacity:.6;text-decoration:line-through}
+
 /* ---- the money ---- */
 .paid{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   border:1px solid var(--line);border-radius:var(--r2);
@@ -1099,8 +1157,10 @@ body.deskwork .shopwrap{max-width:none;height:100%;padding:0}
 .conbody{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
   padding:66px 16px 0;overflow:hidden}
 .conbody.nomargin{padding:0}
-.conscroll{flex:1 1 auto;min-height:0;overflow-y:auto;
-  -webkit-overflow-scrolling:touch;padding-bottom:88px}
+.conscroll{flex:1 1 auto;min-height:0;height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;padding-bottom:96px;
+  scrollbar-width:thin}
 
 /* ---- the map takes whatever is left, and no less ---- */
 .conbody.nomargin .admap{flex:1 1 auto;height:auto !important;min-height:0;
@@ -1114,19 +1174,36 @@ body.deskwork .shopwrap{max-width:none;height:100%;padding:0}
   padding:8px 16px;margin:0;box-shadow:var(--shadow)}
 
 /* ---- the board fills the frame; each column scrolls itself ---- */
-.conbody .board{flex:1 1 auto;min-height:0;display:flex;gap:12px;
-  overflow-x:auto;overflow-y:hidden;padding-bottom:12px;margin:0}
-.conbody .col{display:flex;flex-direction:column;min-height:0;
+/* Nothing here may grow the page. The board is exactly as tall
+   as the frame; each column scrolls its own cards. A busy
+   column must never push the others off the bottom. */
+.conbody .board{flex:1 1 auto;min-height:0;height:100%;
+  display:flex;gap:12px;align-items:stretch;
+  overflow-x:auto;overflow-y:hidden;padding:0 0 10px;margin:0}
+.conbody .col{display:flex;flex-direction:column;
+  min-height:0;height:100%;overflow:hidden;
   flex:1 1 0;min-width:270px}
-.conbody .colhead{flex:0 0 auto}
-.conbody .col > :not(.colhead){flex:0 0 auto}
-.conbody .col{overflow:hidden}
-.conbody .colbody{flex:1 1 auto;min-height:0;overflow-y:auto;
-  -webkit-overflow-scrolling:touch;padding-bottom:80px}
+.conbody .colhead{flex:0 0 auto;margin:0 0 8px}
+.conbody .colbody{flex:1 1 auto;min-height:0;
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:0 2px 96px 0;                 /* room past the dock */
+  scrollbar-width:thin}
 
 /* ---- the floating dock, always the same corner ---- */
-body.deskwork .conn{position:absolute;left:12px;right:12px;top:62px;z-index:655;
-  margin:0;box-shadow:var(--shadow)}
+/* The banner used to float at a fixed offset and landed straight
+   on the first column head. It is a status line, not a control:
+   it belongs in the flow, above the work, taking its own room. */
+/* A corner chip, not a band. It reports; it does not compete
+   with the work for room, and it cannot land on a column head. */
+body.deskwork .conn{position:fixed;left:16px;bottom:16px;z-index:690;
+  margin:0;max-width:min(46vw,420px);
+  padding:9px 14px;border-radius:999px;
+  box-shadow:var(--shadow);font-size:var(--t-small)}
+body.deskwork .conn.bad{max-width:min(70vw,560px);border-radius:var(--r2)}
+@media (max-width:860px){
+  body.deskwork .conn{left:12px;right:auto;bottom:74px;max-width:70vw}
+}
 .condock{position:fixed;right:16px;bottom:16px;z-index:700;display:flex;gap:10px}
 .dockbtn{position:relative;width:52px;height:52px;border-radius:50%;
   border:1px solid var(--line2);background:var(--card);color:var(--cream);

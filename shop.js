@@ -497,6 +497,25 @@ var STORE = {
     return id;
   },
 
+  /* A rider saying whether they are working.
+
+     The office should never have to guess. A rider who has gone
+     home is not "quiet", they are off, and an order assigned to
+     them is an order nobody is carrying. */
+  setAvailable: function(id, on){
+    var r = DB.riders[id];
+    if(!r) return null;
+    r.avail = !!on;
+    r.availAt = Date.now();
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "riders", id),
+        { avail: !!on, availAt: r.availAt })
+        .catch(function(e){ console.warn("setAvailable", e); });
+      fire();
+    } else lsWrite();
+    return r.avail;
+  },
+
   /* a fresh code, for a rider who lost the message or left */
   newCode: function(id){
     var r = DB.riders[id];
@@ -703,6 +722,25 @@ function callBtn(phone, text, cls){
   return '<button class="' + c + ' shownum" data-num="' + esc(phone) + '">' +
          esc(text || "Call") + '</button>';
 }
+
+/* Assigning from inside a map popup.
+
+   Leaflet builds a popup when it is opened, long after the view
+   was painted, so nothing wired at paint time can reach it. One
+   delegated listener covers every popup there will ever be. */
+document.addEventListener("change", function(e){
+  var sel = e.target;
+  if(!sel || !sel.dataset || !sel.dataset.massign) return;
+  if(!sel.value) return;
+  var id = sel.dataset.massign;
+  var o = STORE.setStatus(id, "assigned", { riderId: sel.value });
+  var r = STORE.rider(sel.value);
+  if(o && r){
+    shopToast(r.name + " is on " + id + ".");
+    window.open(wa(r.phone, riderMsg(o, r)), "_blank");
+  }
+  try{ AMAP && AMAP.closePopup(); }catch(err){}
+});
 
 /* one delegated handler for every one of them */
 document.addEventListener("click", function(e){
@@ -1331,15 +1369,19 @@ function viewOrder(main, id){
       ? '<div id="trackmap" class="comap trackmap"></div>' +
         '<p class="pinnote" id="trackNote">' +
           (function(){
-            if(!o.lat) return "Updated " + when(o.rAt);
+            if(!o.lat) return "Updated " + staleness(o.rAt).txt;
             var R = 6371, rad = Math.PI/180;
             var dLat = (o.rLat - o.lat) * rad, dLng = (o.rLng - o.lng) * rad;
             var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
                     Math.cos(o.lat*rad)*Math.cos(o.rLat*rad)*Math.sin(dLng/2)*Math.sin(dLng/2);
             var km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return (km < 0.2 ? "Almost at your door"
-                  : km < 1   ? Math.round(km*1000) + " m away"
-                             : km.toFixed(1) + " km away") + " \u00b7 " + when(o.rAt);
+            var f = staleness(o.rAt);
+            var where = (km < 0.2 ? "Almost at your door"
+                       : km < 1   ? Math.round(km*1000) + " m away"
+                                  : km.toFixed(1) + " km away");
+            /* do not claim a distance from a fix that has gone cold */
+            if(f.state !== "live") return "Last seen " + f.txt;
+            return where + " \u00b7 " + f.txt;
           })() + '</p>'
       : '') +
 
@@ -1411,6 +1453,25 @@ function drawTrackMap(o){
     TMAP.fitBounds([dest, [o.rLat, o.rLng]], { padding:[40,40], maxZoom:16 });
     watchSize(box, TMAP);
   }).catch(function(){});
+}
+
+/* How long ago a position was sent, and whether it can still be
+   believed.
+
+   A web page loses its GPS when the phone sleeps, so the dot on
+   the office map stops moving while the rider keeps riding. A
+   frozen dot that looks live is worse than no dot: the shop
+   tells a customer "two minutes away" from a fix taken twenty
+   minutes ago. So anything older than a minute says so. */
+var FRESH_MS = 60000;
+
+function staleness(at){
+  if(!at) return { state:"none", txt:"no position yet" };
+  var age = Date.now() - at;
+  if(age < FRESH_MS)   return { state:"live",  txt:"just now" };
+  if(age < 5 * 60000)  return { state:"stale", txt:Math.round(age/60000) + " min ago" };
+  if(age < 60 * 60000) return { state:"cold",  txt:Math.round(age/60000) + " min ago" };
+  return { state:"cold", txt:when(at) };
 }
 
 /* ============================================================
@@ -1523,6 +1584,33 @@ var VOICE = {
 
 /* how many messages an order carries, for the board */
 /* the money, at a glance, on a card */
+/* A rider's real state, from what they said and what their
+   phone has actually been doing. "Available" a week ago with no
+   position since is not available. */
+function riderState(r){
+  if(!r) return { k:"gone", t:"unknown" };
+  if(!r.uid && !r.claimedAt) return { k:"gone", t:"not signed in" };
+  if(r.avail === false)      return { k:"off",  t:"off duty" };
+
+  var carrying = STORE.orders().filter(function(o){
+    return o.riderId === r.id &&
+           (o.status === "assigned" || o.status === "on_way");
+  });
+  if(carrying.length){
+    var newest = carrying.reduce(function(a,o){
+      return (o.rAt || 0) > (a.rAt || 0) ? o : a;
+    }, carrying[0]);
+    var f = staleness(newest.rAt);
+    return { k: f.state === "live" ? "busy" : "quiet",
+             t: carrying.length + (carrying.length > 1 ? " deliveries" : " delivery") +
+                " · " + f.txt,
+             lat: newest.rLat, lng: newest.rLng, at: newest.rAt,
+             jobs: carrying };
+  }
+  return { k:"free", t: r.avail ? "free" : "free · not marked available",
+           jobs: [] };
+}
+
 function payTag(o){
   if(o.status !== "delivered" && !o.paid) return "";
   return o.paid
@@ -1710,8 +1798,6 @@ function paintAdmin(main){
         '</div>' +
       '</div>' +
 
-      connBanner() +
-
       '<div class="conbody' + (ADVIEW === "map" ? " nomargin" : "") + '">' +
         (ADVIEW === "map"
           ? '<div id="admap" class="admap"></div>' +
@@ -1739,6 +1825,11 @@ function paintAdmin(main){
         '<button class="dockbtn" data-go="#/admin/riders" title="Riders">' +
           '\uD83C\uDFCD<span class="dockn">' + riders.length + '</span></button>' +
       '</div>' +
+
+      /* Out of the flow entirely. It used to sit in the column
+         above the board and landed on the first column head. It
+         is a status line: it belongs in a corner, not in the way. */
+      connBanner() +
     '</div>';
 
   main.querySelectorAll("[data-view]").forEach(function(b){
@@ -2056,11 +2147,19 @@ function shortName(n){
   return w.length > 10 ? w.slice(0, 9) + "\u2026" : w;
 }
 
+/* Waiting for a rider is the one state the office has to act on,
+   so it gets a colour of its own and a ring that pulses. Every
+   other pin is information; this one is a job. */
 function statusColour(s){
   return s === "placed"    ? "#E4705A"
+       : s === "accepted"  ? "#F2A33C"
        : s === "delivered" ? "#9A8A6C"
        : s === "on_way"    ? "#8FBE43"
                            : "#C9A24B";
+}
+
+function needsRider(o){
+  return (o.status === "placed" || o.status === "accepted") && !o.riderId;
 }
 
 function drawAdminMap(list){
@@ -2092,9 +2191,10 @@ function drawAdminMap(list){
       return o.rLat && (o.status === "assigned" || o.status === "on_way");
     }).forEach(function(o){
       var r = o.riderId ? STORE.rider(o.riderId) : null;
+      var fresh = staleness(o.rAt);
       pts.push([o.rLat, o.rLng]);
       LF.marker([o.rLat, o.rLng], { zIndexOffset: 500, icon: LF.divIcon({
-        className: "omark bike",
+        className: "omark bike f-" + fresh.state,
         html: '<span class="bikedot">\uD83C\uDFCD</span>' +
               '<span class="tag">' + esc(r ? shortName(r.name) : "Rider") +
               ' \u00b7 ' + esc(o.id) + '</span>',
@@ -2102,24 +2202,50 @@ function drawAdminMap(list){
         .addTo(AMAP).bindPopup(
           "<b>" + esc(r ? r.name : "Rider") + "</b><br>" +
           "carrying " + esc(o.id) + "<br>" +
-          "last seen " + when(o.rAt) + "<br>" +
+          "last seen " + esc(fresh.txt) +
+          (fresh.state === "live" ? "" : " \u2014 the phone may have slept") + "<br>" +
           '<a href="#/admin/o/' + esc(o.id) + '">Open the order</a>');
     });
 
     list.forEach(function(o){
       pts.push([o.lat, o.lng]);
+      var wants = needsRider(o);
+
+      /* Assigning from the pin, because the map is where you can
+         see which rider is nearest to it. Walking back to the
+         board to do the same thing is the long way round. */
+      var free = STORE.riders().filter(function(r){
+        return r.avail !== false && (r.uid || r.claimedAt);
+      });
+      var picker = "";
+      if(wants){
+        picker = free.length
+          ? '<div class="mpick"><select class="fld sel mini" data-massign="' + esc(o.id) + '">' +
+              '<option value="">Send a rider\u2026</option>' +
+              free.map(function(r){
+                var st = riderState(r);
+                return '<option value="' + esc(r.id) + '">' + esc(r.name) +
+                       ' \u00b7 ' + esc(st.t) + '</option>';
+              }).join("") +
+            '</select></div>'
+          : '<div class="mpick"><a href="#/admin/riders">No rider is available</a></div>';
+      }
+
       LF.marker([o.lat, o.lng], {
+        zIndexOffset: wants ? 400 : 0,
         icon: LF.divIcon({
-          className: "omark",
+          className: "omark" + (wants ? " wants" : ""),
           html: '<span class="dot" style="background:' + statusColour(o.status) + '"></span>' +
-                '<span class="tag">' + esc(shortName(o.name)) + ' \u00b7 ' +
-                rupee(o.total) + '</span>',
+                '<span class="tag">' + (wants ? '\u25CF ' : '') +
+                esc(shortName(o.name)) + ' \u00b7 ' + rupee(o.total) + '</span>',
           iconSize: null, iconAnchor: [7, 7]
         })
       }).addTo(AMAP).bindPopup(
-        "<b>" + esc(o.id) + "</b> \u00b7 " + esc(STEP[o.status].t) + "<br>" +
+        "<b>" + esc(o.id) + "</b> \u00b7 " + esc(STEP[o.status].t) +
+        (wants ? ' \u00b7 <b class="wantsr">no rider yet</b>' : "") + "<br>" +
         esc(o.name) + "<br>" + rupee(o.total) +
         (distLabel(o) ? " \u00b7 " + distLabel(o) + " away" : "") + "<br>" +
+        picker +
         '<a href="#/admin/o/' + esc(o.id) + '"><b>Open the order</b></a><br>' +
         '<a href="' + esc(mapsFromShop(o)) + '" target="_blank" rel="noopener">Google Maps</a>' +
         ' &middot; ' +
@@ -2298,8 +2424,26 @@ function paintRiders(main){
             '<button class="linky" data-save="' + esc(r.id) + '">Save</button>' +
             '<button class="linky" data-rcancel="1">Cancel</button></div>';
         }
-        return '<div class="line"><div class="ln"><b>' + esc(r.name) + '</b>' +
-          '<small>' + esc(r.phone) + '</small></div>' +
+        var st = riderState(r);
+        return '<div class="line rline s-' + st.k + '">' +
+          '<span class="rdot" title="' + esc(st.t) + '"></span>' +
+          '<div class="ln"><b>' + esc(r.name) + '</b>' +
+            '<small>' + esc(prettyPhone(r.phone)) + ' \u00b7 ' + esc(st.t) + '</small>' +
+            (r.uid || r.claimedAt ? '' :
+              '<small class="pend">Has not signed in \u2014 code ' +
+              esc(r.code || "?") + '</small>') +
+          '</div>' +
+          /* where they are, if their phone has said recently */
+          (st.lat
+            ? '<a class="linky" target="_blank" rel="noopener" ' +
+              'href="https://www.google.com/maps/search/?api=1&query=' +
+              st.lat + ',' + st.lng + '" title="Where they were last seen">Locate</a>'
+            : '') +
+          (r.uid || r.claimedAt
+            ? '<a class="linky" href="' + esc(riderInvite(r)) + '" target="_blank" ' +
+              'rel="noopener" title="Send the link again">Resend</a>'
+            : '<a class="linky go" href="' + esc(riderInvite(r)) + '" target="_blank" ' +
+              'rel="noopener">Send code</a>') +
           '<button class="linky" data-edit="' + esc(r.id) + '">Edit</button>' +
           '<button class="linky warn" data-drop="' + esc(r.id) + '">Remove</button></div>';
       }).join("") + '</div>'
@@ -2659,10 +2803,24 @@ function viewDriveHome(main){
     return o.riderId === me.id && o.status === "delivered";
   }).length;
 
+  var on = me.avail !== false;
+
   main.innerHTML = shell("Your deliveries",
     '<div class="adminbar"><span class="pill">' + mine.length + ' to go</span>' +
       '<span class="pill quiet">' + done + ' done</span>' +
       '<button class="linky" id="rvOut">Not ' + esc(me.name) + '?</button></div>' +
+
+    /* One switch, and the shop knows. A rider who has finished
+       for the day should not have to answer the phone to say so. */
+    '<button class="avail ' + (on ? "on" : "off") + '" id="rvAvail" ' +
+      'aria-pressed="' + (on ? "true" : "false") + '">' +
+      '<span class="adot"></span>' +
+      '<span class="at"><b>' + (on ? "Available" : "Off duty") + '</b>' +
+      '<small>' + (on ? "The shop can send you deliveries."
+                      : "The shop will not assign you anything.") + '</small></span>' +
+      '<span class="asw"></span>' +
+    '</button>' +
+
     readyPanel() +
     (mine.length ? mine.map(function(o){
         return '<a class="jobcard" href="#/drive/' + esc(o.id) + '">' +
@@ -2679,6 +2837,13 @@ function viewDriveHome(main){
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
 
   el("rvOut").onclick = function(){ setRiderPhone(""); viewDriveHome(main); };
+
+  el("rvAvail").onclick = function(){
+    var now = STORE.setAvailable(me.id, me.avail === false);
+    shopToast(now ? "You are available." : "Marked off duty.");
+    viewDriveHome(main);
+  };
+
   paintReady();
 
   armSound();
@@ -2723,9 +2888,12 @@ function viewDrive(main, id){
     '<div class="gpsrow"><span class="gpsdot' + (o.rAt ? " on" : "") + '" id="gpsDot"></span>' +
       '<span id="gpsTxt">' + esc((function(){
         if(!next) return "Not sharing";
-        if(!o.rAt) return native() ? "Starting\u2026" : "Sharing while this is open";
-        return "Position shared \u00b7 " + when(o.rAt) +
-               (native() ? " \u00b7 keeps going with the screen off" : "");
+        if(!o.rAt) return native() ? "Starting\u2026" : "Sharing while this screen is on";
+        var f = staleness(o.rAt);
+        if(native()) return "Position shared " + f.txt + " \u00b7 keeps going with the screen off";
+        return f.state === "live"
+          ? "Position shared just now \u00b7 keep this screen on"
+          : "Last sent " + f.txt + " \u2014 the screen slept, tap to resume";
       })()) + '</span></div>' +
     noteThread(o, "Held up? Cannot find the door? Say so here\u2026") +
     '<button class="shopbtn ghost" data-go="#/drive">Your other deliveries</button>');
