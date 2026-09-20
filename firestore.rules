@@ -61,6 +61,17 @@ service cloud.firestore {
       allow write: if isOffice();
     }
 
+    /* ---- the customer book ---------------------------------
+       Names, addresses and doorsteps. The most sensitive thing
+       this database holds, so only the office may read it at
+       all - not riders, and certainly not customers. A rider
+       learns a doorstep by delivering to it; they write that
+       through the order, never here. */
+    match /customers/{phone} {
+      allow read:  if isOffice();
+      allow write: if isOffice();
+    }
+
     /* ---- riders --------------------------------------------
        Document id is the phone, digits only.
 

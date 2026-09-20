@@ -41,14 +41,15 @@ function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} });
 try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
-var DB = { orders:{}, riders:{}, seq:100 };
+var DB = { orders:{}, riders:{}, customers:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
 var FAULT = null;              /* why it is not live, in one word */
 
 /* ----- local backing ----- */
 function lsRead(){
-  try{ return JSON.parse(localStorage.getItem(KEY)) || { orders:{}, riders:{}, seq:100 }; }
-  catch(e){ return { orders:{}, riders:{}, seq:100 }; }
+  try{ var d = JSON.parse(localStorage.getItem(KEY)) || {};
+    return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{}, seq:d.seq||100 }; }
+  catch(e){ return { orders:{}, riders:{}, customers:{}, seq:100 }; }
 }
 function lsWrite(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
@@ -192,6 +193,7 @@ async function connectFirebase(cfg){
   }
   watch("orders", "orders");
   watch("riders", "riders");
+  watch("customers", "customers");
 
   /* ask the REST endpoint once, so a missing database is named plainly
      instead of showing up later as writes that quietly disappear */
@@ -360,6 +362,22 @@ var STORE = {
     (o.log = o.log || []).push({ s:s, at:Date.now() });
 
     /* The job is over: stop holding on to where the rider was. */
+    /* The rider is standing at the door right now and their phone
+       knows where that is. This is the only moment in the whole
+       flow when the address is a fact rather than a description,
+       so it is the only moment worth learning from. */
+    if(s === "delivered"){
+      var fresh = staleness(o.rAt);
+      if(o.rLat && fresh.state === "live"){
+        /* The doorstep rides on the order, not straight into the
+           book. A rider may write to their own delivery; nobody
+           but the office may touch the customer records. The
+           office promotes it the next time it looks. */
+        o.doorLat = o.rLat; o.doorLng = o.rLng; o.doorAt = Date.now();
+      }
+      if(ME.role === "office" || !LIVE) learnDoorsteps();
+    }
+
     var done = (s === "delivered" || s === "cancelled");
     if(done){ o.rLat = null; o.rLng = null; o.rAt = null; }
 
@@ -451,6 +469,58 @@ var STORE = {
       fire();
     } else lsWrite();
     return n;
+  },
+
+  /* ---- the customer book ----------------------------------
+     Every order teaches us something about a customer, and the
+     most valuable lesson arrives at the end: the rider is
+     standing at their door, and the phone in their pocket knows
+     exactly where that is.
+
+     So a delivered order writes the doorstep back. Next time
+     the same number rings, the office already knows where to
+     send somebody - no pin to drop, no landmark to describe.
+
+     Keyed by phone, digits only, because that is the one thing
+     a caller always gives you. */
+  customer: function(phone){
+    var id = digitsOnly(phone);
+    return id ? (DB.customers[id] || null) : null;
+  },
+  customers: function(){
+    return Object.keys(DB.customers).map(function(k){ return DB.customers[k]; })
+      .sort(function(a,b){ return (b.lastAt || 0) - (a.lastAt || 0); });
+  },
+
+  /* what we know, merged with what we just learned */
+  rememberCustomer: function(o, extra){
+    var id = digitsOnly(o && o.phone);
+    if(!id) return null;
+
+    var was = DB.customers[id] || { id:id, phone:o.phone, firstAt: o.at || Date.now() };
+    var now = Object.assign({}, was, {
+      id: id,
+      phone: o.phone || was.phone,
+      name:  o.name || was.name || "",
+      addr:  o.addr || was.addr || "",
+      lastAt: Math.max(was.lastAt || 0, o.at || Date.now())
+    }, extra || {});
+
+    /* a position the rider stood at beats a pin dropped from a
+       sofa, so it is only overwritten by another delivery */
+    if(!extra || !extra.lat){
+      if(was.locFrom !== "delivered" && o.lat){
+        now.lat = o.lat; now.lng = o.lng; now.locFrom = "pin";
+      }
+    }
+
+    DB.customers[id] = now;
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "customers", id), now, { merge:true })
+        .catch(function(e){ console.warn("rememberCustomer", e); });
+      fire();
+    } else lsWrite();
+    return now;
   },
 
   /* ---- the money ------------------------------------------
@@ -1217,21 +1287,26 @@ function viewCheckout(main){
       'inputmode="tel" placeholder="Phone number" value="' + esc(saved.phone||"") + '">' +
     '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" ' +
       'placeholder="Address \u2014 house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
-    '<div class="pinwrap">' +
-      '<div class="pinhead"><b>Drop the pin on your gate</b>' +
-        '<button class="pinme" id="coHere">Use my location</button></div>' +
-      '<div id="comap" class="comap"></div>' +
-      '<div class="pinnote" id="coPinTxt">Drag the map so the pin sits on your door. ' +
-        'The rider follows this, not the address.</div>' +
-    '</div>' +
+    /* A card, not a map. Tapping opens a picker that fills the
+       screen, where dragging actually works. */
+    '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
+      '<span class="spi">\uD83D\uDCCD</span>' +
+      '<span class="spt"><b id="coSpotT">' +
+        (PIN ? "Your spot is set" : "Show us where to bring it") + '</b>' +
+        '<small id="coSpotS">' +
+        (PIN ? PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5)
+             : "The rider follows this, not the address.") +
+        '</small></span>' +
+      '<span class="spgo">' + (PIN ? "Change" : "Set on map") + '</span>' +
+    '</button>' +
     '<input class="fld" id="coNote"  placeholder="Anything we should know? (optional)">' +
     '<div class="total"><span>' + cartCount() + ' item(s)</span><b>' + rupee(cartTotal()) + '</b></div>' +
     (STORE.live() && STORE.isGuest()
-      ? '<div class="youare guest">' +
-          '<div class="yt"><b>One tap before you order</b>' +
-            '<small>So this order comes back to you on any phone, ' +
-            'and we know who to call.</small></div>' +
-          '<button class="shopbtn small" id="coIn">Sign in with Google</button>' +
+      ? '<div class="youare guest soft">' +
+          '<div class="yt"><b>Want this order on every phone you own?</b>' +
+            '<small>One tap, and you can follow it from anywhere. ' +
+            'Or skip it \u2014 we will WhatsApp you the link either way.</small></div>' +
+          '<button class="shopbtn small ghost" id="coIn">Sign in with Google</button>' +
         '</div>'
       : '') +
     '<button class="shopbtn" id="coGo">Place the order</button>' +
@@ -1255,16 +1330,11 @@ function viewCheckout(main){
   };
 
   el("coGo").onclick = function(){
-    /* Browsing and filling the cart ask nothing of anybody. The
-       line is here, at the point where an order becomes a promise
-       the kitchen has to keep: we want to be able to hand it back
-       to them later, on whatever phone they pick up next. */
-    if(STORE.live() && STORE.isGuest()){
-      shopToast("Sign in first, so you can follow this order.");
-      var g = el("coIn");
-      if(g){ g.scrollIntoView({ behavior:"smooth", block:"center" }); g.focus(); }
-      return;
-    }
+    /* Signing in is an offer, not a toll. Somebody hungry at ten
+       at night should be able to order dinner without an account,
+       and the WhatsApp link we send them reaches their order
+       either way. The offer sits above this button, where they
+       can take it or ignore it. */
     var name  = el("coName").value.trim(),
         phone = el("coPhone").value.trim(),
         addr  = el("coAddr").value.trim();
@@ -1371,50 +1441,114 @@ function watchSize(box, map){
 
 function pinText(msg){ var t = el("coPinTxt"); if(t) t.textContent = msg; }
 
-function mountMap(saved){
-  var box = el("comap");
-  if(!box) return;
-  PIN = (saved && saved.lat && saved.lng) ? { lat:saved.lat, lng:saved.lng } : null;
+/* ------------------------------------------------------------
+   PICKING A SPOT ON A MAP
+
+   The inline picker fought itself. Every map on a scrolling page
+   is taught to ignore one finger, so the page can still scroll -
+   but on a picker, dragging IS the whole point, and the thing
+   would not move.
+
+   A map that fills the screen has no such conflict: there is
+   nothing behind it to scroll. So the picker opens as a sheet,
+   takes every gesture, and hands back one point.
+   ------------------------------------------------------------ */
+var PICK = null;
+
+function openPinPicker(start, onPick){
+  closePinPicker();
+
+  var wrap = document.createElement("div");
+  wrap.className = "picker";
+  wrap.innerHTML =
+    '<div class="pkmap" id="pkMap"></div>' +
+    '<div class="pkcross" aria-hidden="true"><span></span></div>' +
+    '<div class="pkbar">' +
+      '<button class="pkx" id="pkX" aria-label="Close">\u00d7</button>' +
+      '<div class="pkt" id="pkTxt">Move the map so the pin sits on your door</div>' +
+      '<button class="pkme" id="pkMe" title="Use my location">\u25CE</button>' +
+    '</div>' +
+    '<div class="pkfoot">' +
+      '<button class="shopbtn" id="pkGo">Confirm this spot</button>' +
+    '</div>';
+  document.body.appendChild(wrap);
+  document.body.classList.add("pkopen");
+  PICK = wrap;
+
+  var at = (start && start.lat) ? start : HOME;
+  var here = { lat: at.lat, lng: at.lng };
+
+  el("pkX").onclick = closePinPicker;
+  el("pkGo").onclick = function(){
+    closePinPicker();
+    onPick(here);
+  };
 
   loadLeaflet().then(function(){
-    var at = PIN || HOME;
-    /* a container Leaflet has already claimed cannot be reused */
-    try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
-    var LF = window.L;                 /* never the bare L: see note above */
-    MAP = LF.map(box, { zoomControl:true, attributionControl:true })
-           .setView([at.lat, at.lng], PIN ? 17 : 15);
-    tameMap(MAP, box);
+    var LF = window.L;
+    var box = el("pkMap");
+    var map = LF.map(box, { zoomControl:false, attributionControl:true })
+                .setView([at.lat, at.lng], start && start.lat ? 18 : 16);
+    LF.control.zoom({ position:"bottomleft" }).addTo(map);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap"
-    }).addTo(MAP);
+      maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(map);
 
-    /* the pin is fixed to the centre of the box; the map moves under it */
-    MAP.on("move", function(){ PIN = MAP.getCenter(); });
-    MAP.on("moveend", function(){
-      PIN = MAP.getCenter();
-      pinText("Pin set \u00b7 " + PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5));
+    /* Full screen: every gesture is the map's. No taming here -
+       that is what broke it. */
+    map.on("move", function(){ here = map.getCenter(); });
+    map.on("moveend", function(){
+      here = map.getCenter();
+      var t = el("pkTxt");
+      if(t) t.textContent = here.lat.toFixed(5) + ", " + here.lng.toFixed(5);
     });
-    watchSize(box, MAP);
-  }).catch(function(err){
-    /* say what actually went wrong — a blanket message hides real faults */
-    box.innerHTML = '<div class="mapfail">The map is not loading here.<br>' +
-      'Use <b>my location</b> above, or just the address \u2014 we will call if ' +
-      'we cannot find it.<br><small>' + esc(String(err && err.message || err)) +
-      '</small></div>';
-  });
 
-  var here = el("coHere");
-  if(here) here.onclick = function(){
-    if(!navigator.geolocation){ pinText("This browser will not share a location."); return; }
-    pinText("Finding you\u2026");
-    navigator.geolocation.getCurrentPosition(function(pos){
-      PIN = { lat:pos.coords.latitude, lng:pos.coords.longitude };
-      if(MAP) MAP.setView([PIN.lat, PIN.lng], 18);
-      pinText("Pin set \u00b7 " + PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5));
-    }, function(){
-      pinText("Could not get your location \u2014 drag the map instead.");
-    }, { enableHighAccuracy:true, timeout:10000 });
+    var me = el("pkMe");
+    if(me) me.onclick = function(){
+      if(!navigator.geolocation) return;
+      me.classList.add("busy");
+      navigator.geolocation.getCurrentPosition(function(pos){
+        me.classList.remove("busy");
+        map.setView([pos.coords.latitude, pos.coords.longitude], 18);
+      }, function(){
+        me.classList.remove("busy");
+        shopToast("Could not get your location.");
+      }, { enableHighAccuracy:true, timeout:12000 });
+    };
+
+    setTimeout(function(){ try{ map.invalidateSize(); }catch(e){} }, 60);
+  }).catch(function(){
+    var t = el("pkTxt");
+    if(t) t.textContent = "The map is not loading. Close this and use the address.";
+  });
+}
+
+function closePinPicker(){
+  if(!PICK) return;
+  try{ PICK.remove(); }catch(e){}
+  PICK = null;
+  document.body.classList.remove("pkopen");
+}
+
+/* The checkout no longer carries a map of its own - it carries a
+   card that opens the full-screen picker, where a single finger
+   moves the map because nothing else on screen wants that gesture. */
+function mountMap(saved){
+  PIN = (saved && saved.lat && saved.lng) ? { lat:saved.lat, lng:saved.lng } : null;
+
+  var card = el("coSpot");
+  if(!card) return;
+
+  card.onclick = function(){
+    openPinPicker(PIN, function(spot){
+      PIN = { lat: spot.lat, lng: spot.lng };
+      card.classList.add("set");
+      var t = el("coSpotT"), sm = el("coSpotS");
+      if(t) t.textContent = "Your spot is set";
+      if(sm) sm.textContent = PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5);
+      var go = card.querySelector(".spgo");
+      if(go) go.textContent = "Change";
+      shopToast("Thank you \u2014 the rider will find you.");
+    });
   };
 }
 
@@ -1875,6 +2009,7 @@ function viewAdmin(main){
 }
 
 function paintAdmin(main){
+  learnDoorsteps();
   var orders = STORE.orders(), riders = STORE.riders();
   var gone   = orders.filter(function(o){ return o.status === "cancelled"; });
   var live   = orders.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; });
@@ -1926,6 +2061,9 @@ function paintAdmin(main){
       /* No way out to the customer's menu. This is a till, and a
          till does not have a browse button on it. */
       '<div class="condock">' +
+        '<button class="dockbtn wide" data-go="#/admin/call" title="Take an order by phone">' +
+          '\u260E<span class="dlab">Phone order</span></button>' +
+        '<button class="dockbtn" data-go="#/admin/who" title="Customers">\uD83D\uDC64</button>' +
         '<button class="dockbtn" data-go="#/admin/riders" title="Riders">' +
           '\uD83C\uDFCD<span class="dockn">' + riders.length + '</span></button>' +
       '</div>' +
@@ -1966,6 +2104,14 @@ function paintAdmin(main){
       paintAdmin(main);
     };
   });
+  var hb = el("mfHeat");
+  if(hb) hb.onclick = function(){
+    HEAT = !HEAT;
+    try{ localStorage.setItem("hayat_mapheat", HEAT ? "1" : "0"); }catch(e){}
+    AVIEW = null;
+    paintAdmin(main);
+  };
+
   main.querySelectorAll("[data-mr]").forEach(function(b){
     b.onclick = function(){
       MFILT.range = b.dataset.mr;
@@ -2372,8 +2518,96 @@ function mapFilterBar(list){
         return '<button class="mftime' + (MFILT.range === r.k ? " on" : "") +
           '" data-mr="' + r.k + '">' + esc(r.t) + '</button>';
       }).join("") +
+      '<span class="mfsep"></span>' +
+      '<button class="mftime heat' + (HEAT ? " on" : "") + '" id="mfHeat" ' +
+        'title="Group orders into neighbourhoods">' +
+        (HEAT ? "Pins" : "Concentration") + '</button>' +
     '</div>' +
     '<div class="mftally">' + esc(mapTally(list)) + '</div>' +
+    (HEAT ? heatTop(list) : '') +
+  '</div>';
+}
+
+/* ------------------------------------------------------------
+   WHERE THE MONEY COMES FROM
+
+   Two hundred pins tell you nothing. The same two hundred orders
+   grouped into the streets they came from tell you where to put
+   a leaflet, which road is worth a second rider, and which
+   direction is quietly carrying the business.
+
+   Squares of roughly 400 metres, because that is about a
+   neighbourhood here. Each one sized by how many orders and
+   shaded by what they were worth.
+   ------------------------------------------------------------ */
+var HEAT = false;
+try{ HEAT = localStorage.getItem("hayat_mapheat") === "1"; }catch(e){}
+
+function clusters(list){
+  var CELL = 0.0036;          /* ~400m of latitude */
+  var bins = {};
+  list.forEach(function(o){
+    if(!o.lat) return;
+    var gy = Math.floor(o.lat / CELL), gx = Math.floor(o.lng / CELL);
+    var k = gy + ":" + gx;
+    var b = bins[k] || (bins[k] = { n:0, sum:0, lat:0, lng:0 });
+    b.n++; b.sum += (o.total || 0);
+    b.lat += o.lat; b.lng += o.lng;
+  });
+  var out = Object.keys(bins).map(function(k){
+    var b = bins[k];
+    return { n:b.n, sum:b.sum, lat:b.lat / b.n, lng:b.lng / b.n,
+             avg: Math.round(b.sum / b.n) };
+  });
+  out.sort(function(a,b){ return b.sum - a.sum; });
+  return out;
+}
+
+function heatColour(share){
+  /* one hue, four steps: readable, and colour-blind safe */
+  return share > 0.66 ? "#C0491F"
+       : share > 0.40 ? "#E4705A"
+       : share > 0.18 ? "#E8A33C"
+                      : "#C9A24B";
+}
+
+function drawClusters(map, list){
+  var LF = window.L;
+  var cells = clusters(list);
+  if(!cells.length) return;
+  var top = cells[0].sum || 1;
+
+  cells.forEach(function(c){
+    var share = c.sum / top;
+    var r = 16 + Math.sqrt(c.n) * 11;
+    LF.circleMarker([c.lat, c.lng], {
+      radius: Math.min(r, 62),
+      color: "#fff", weight: 1.5, opacity: .85,
+      fillColor: heatColour(share), fillOpacity: .45
+    }).addTo(map).bindPopup(
+      "<b>" + c.n + (c.n === 1 ? " order" : " orders") + "</b><br>" +
+      rupee(c.sum) + " in total<br>" +
+      rupee(c.avg) + " on average"
+    );
+
+    LF.marker([c.lat, c.lng], { icon: LF.divIcon({
+      className: "heatlab",
+      html: '<span>' + c.n + '</span><small>' + rupee(c.sum) + '</small>',
+      iconSize:null, iconAnchor:[0,0] }) }).addTo(map);
+  });
+}
+
+/* the three places worth knowing about, in words */
+function heatTop(list){
+  var cells = clusters(list).slice(0, 3);
+  if(!cells.length) return "";
+  var all = list.reduce(function(n,o){ return n + (o.total || 0); }, 0) || 1;
+  return '<div class="heattop">' +
+    cells.map(function(c, i){
+      return '<span class="ht"><b>#' + (i+1) + '</b> ' + c.n +
+        (c.n === 1 ? " order" : " orders") + ' \u00b7 ' + rupee(c.sum) +
+        ' \u00b7 ' + Math.round(c.sum / all * 100) + '%</span>';
+    }).join("") +
   '</div>';
 }
 
@@ -2393,6 +2627,8 @@ function drawAdminMap(list){
     tameMap(AMAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(AMAP);
+
+    if(HEAT) drawClusters(AMAP, list);
 
     /* the restaurant, so the office can see how far each one is */
     LF.circleMarker([HOME.lat, HOME.lng], {
@@ -2424,6 +2660,7 @@ function drawAdminMap(list){
 
     list.forEach(function(o){
       pts.push([o.lat, o.lng]);
+      if(HEAT) return;          /* the clusters are the picture now */
       var wants = needsRider(o);
 
       /* Assigning from the pin, because the map is where you can
@@ -2503,6 +2740,330 @@ function connBanner(){
   return '<div class="conn warn">Connecting\u2026 nothing is saved to the cloud yet.</div>';
 }
 
+/* Delivered orders carry a doorstep the rider's phone recorded.
+   Only the office may write the customer book, so the office is
+   what moves them across - quietly, whenever it looks at the
+   board. Each order is promoted once and then marked. */
+function learnDoorsteps(){
+  if(!STORE.isOffice() && STORE.live()) return;
+  STORE.orders().forEach(function(o){
+    if(o.status !== "delivered" || !o.doorLat || o.doorLearned) return;
+    STORE.rememberCustomer(o, {
+      lat: o.doorLat, lng: o.doorLng,
+      locFrom: "delivered", locAt: o.doorAt || Date.now()
+    });
+    STORE.edit(o.id, { doorLearned: true });
+  });
+}
+
+/* ------------------------------------------------------------
+   THE CUSTOMER BOOK
+
+   Everyone who has ever ordered, wherever they came from, with
+   what we know about where they live. Two ways to read it: a
+   list to search when the phone rings, and a map to look at
+   when you are deciding where to put a leaflet.
+   ------------------------------------------------------------ */
+var CQ = "";        /* what the office is searching for */
+var CVIEW = "list";
+
+function custStats(c){
+  var mine = STORE.orders().filter(function(o){
+    return digitsOnly(o.phone) === c.id && o.status !== "cancelled";
+  });
+  var spend = mine.reduce(function(n,o){ return n + (o.total || 0); }, 0);
+  return { n: mine.length, spend: spend, last: mine[0] };
+}
+
+function viewCustomers(main){
+  gate(main, function(){ paintCustomers(main); });
+}
+
+function paintCustomers(main){
+  learnDoorsteps();
+  var all = STORE.customers();
+  var q = CQ.trim().toLowerCase();
+  /* "".indexOf("") is 0, so an all-letters search matched every
+     phone number in the book. Only compare numbers when the
+     office actually typed some. */
+  var qd = digitsOnly(q);
+  var list = q
+    ? all.filter(function(c){
+        if((c.name || "").toLowerCase().indexOf(q) >= 0) return true;
+        if((c.addr || "").toLowerCase().indexOf(q) >= 0) return true;
+        return qd ? digitsOnly(c.phone).indexOf(qd) >= 0 : false;
+      })
+    : all;
+
+  var placed = list.filter(function(c){ return c.lat && c.lng; });
+
+  main.innerHTML =
+    '<div class="console">' +
+      '<div class="conbar">' +
+        '<div class="tabs">' +
+          '<button class="tab' + (CVIEW==="list"?" on":"") + '" data-cv="list">List</button>' +
+          '<button class="tab' + (CVIEW==="map" ?" on":"") + '" data-cv="map">Map</button>' +
+        '</div>' +
+        '<div class="adminbar">' +
+          '<span class="pill">' + all.length + ' customers</span>' +
+          '<span class="pill quiet">' + placed.length + ' located</span>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="conbody' + (CVIEW === "map" ? " nomargin" : "") + '">' +
+        (CVIEW === "map"
+          ? '<div id="custmap" class="admap"></div>' +
+            '<div class="mapfilt"><div class="mftally">' +
+              esc(placed.length + (placed.length === 1 ? " customer" : " customers") +
+                  " we can find again") + '</div></div>'
+          : '<div class="conscroll">' +
+              '<input class="fld cfind" id="cFind" autocomplete="off" ' +
+                'placeholder="Search a number, a name, a place\u2026" value="' + esc(CQ) + '">' +
+              (list.length
+                ? '<div class="lines">' + list.map(custRow).join("") + '</div>'
+                : '<p class="shopsub">' + (q ? "Nobody matches that." : "Nobody yet.") + '</p>') +
+            '</div>') +
+      '</div>' +
+
+      '<div class="condock">' +
+        '<button class="dockbtn" data-go="#/admin/call" title="Order by phone">\u260E</button>' +
+        '<button class="dockbtn" data-go="#/admin" title="Orders">\u25A6</button>' +
+      '</div>' +
+    '</div>';
+
+  main.querySelectorAll("[data-cv]").forEach(function(b){
+    b.onclick = function(){ CVIEW = b.dataset.cv; paintCustomers(main); };
+  });
+
+  var f = el("cFind");
+  if(f){
+    f.oninput = function(){
+      CQ = f.value;
+      var at = f.selectionStart;
+      paintCustomers(main);
+      var n = el("cFind");
+      if(n){ n.focus(); try{ n.setSelectionRange(at, at); }catch(e){} }
+    };
+  }
+
+  main.querySelectorAll("[data-again]").forEach(function(b){
+    b.onclick = function(){
+      var c = STORE.customer(b.dataset.again);
+      if(!c) return;
+      CALL = { lines: [], phone: c.phone, name: c.name || "", addr: c.addr || "",
+               lat: c.lat, lng: c.lng };
+      location.hash = "#/admin/call";
+    };
+  });
+
+  if(CVIEW === "map") drawCustomerMap(placed);
+}
+
+function custRow(c){
+  var st = custStats(c);
+  var where = c.locFrom === "delivered" ? "doorstep known"
+            : c.lat ? "pin saved"
+                    : "no location yet";
+  return '<div class="line cline' + (c.lat ? "" : " noloc") + '">' +
+    '<div class="ln"><b>' + esc(c.name || prettyPhone(c.phone)) + '</b>' +
+      '<small>' + esc(prettyPhone(c.phone)) +
+        (c.name ? '' : '') + ' \u00b7 ' + esc(where) + '</small>' +
+      (c.addr ? '<small class="caddr">' + esc(c.addr) + '</small>' : '') +
+    '</div>' +
+    '<div class="cstat"><b>' + st.n + '</b><small>' +
+      (st.n === 1 ? "order" : "orders") + '</small></div>' +
+    '<div class="cstat"><b>' + rupee(st.spend) + '</b><small>spent</small></div>' +
+    (c.lat
+      ? '<a class="linky" target="_blank" rel="noopener" ' +
+        'href="https://www.google.com/maps/search/?api=1&query=' + c.lat + ',' + c.lng +
+        '">Map</a>'
+      : '') +
+    callBtn(c.phone, "Call", "linky") +
+    '<button class="linky go" data-again="' + esc(c.id) + '">Order</button>' +
+  '</div>';
+}
+
+var CMAP = null;
+function drawCustomerMap(list){
+  var box = el("custmap");
+  if(!box) return;
+  loadLeaflet().then(function(){
+    try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
+    var LF = window.L;
+    CMAP = LF.map(box, { zoomControl:true }).setView([HOME.lat, HOME.lng], HOMEZOOM);
+    tameMap(CMAP, box);
+    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(CMAP);
+
+    LF.circleMarker([HOME.lat, HOME.lng], {
+      radius:7, color:"#FFFFFF", weight:2, fillColor:"#1B2410", fillOpacity:1
+    }).addTo(CMAP).bindPopup("Hayat \u2014 the kitchen");
+
+    list.forEach(function(c){
+      var st = custStats(c);
+      /* a doorstep the rider actually stood on is worth more than
+         a pin somebody dropped, so it is drawn as the solid one */
+      var solid = c.locFrom === "delivered";
+      LF.marker([c.lat, c.lng], { icon: LF.divIcon({
+        className: "omark cust" + (solid ? " sure" : ""),
+        html: '<span class="dot" style="background:' +
+                (solid ? "#5B8C2A" : "#C9A24B") + '"></span>' +
+              '<span class="tag">' + esc(shortName(c.name || c.phone)) +
+              (st.n > 1 ? ' \u00b7 ' + st.n : '') + '</span>',
+        iconSize:null, iconAnchor:[7,7] }) })
+        .addTo(CMAP).bindPopup(
+          "<b>" + esc(c.name || prettyPhone(c.phone)) + "</b><br>" +
+          esc(prettyPhone(c.phone)) + "<br>" +
+          st.n + (st.n === 1 ? " order" : " orders") + " \u00b7 " + rupee(st.spend) + "<br>" +
+          (c.addr ? esc(c.addr) + "<br>" : "") +
+          (solid ? "<i>doorstep from a delivery</i>" : "<i>pin they dropped</i>"));
+    });
+    watchSize(box, CMAP);
+  }).catch(function(){});
+}
+
+/* ------------------------------------------------------------
+   AN ORDER TAKEN OVER THE PHONE
+
+   Most of this restaurant's business arrives as a ringing
+   phone, not as a tap on a website. Those orders were invisible
+   to everything here - no board card, no rider, no record that
+   the customer exists. So the office can write one down.
+
+   And because the book remembers, a number that has ordered
+   before fills in its own name, address and doorstep the moment
+   it is typed. The person on the phone is not asked again for
+   something they already told us.
+   ------------------------------------------------------------ */
+var CALL = { lines: [] };
+
+function viewCall(main){
+  gate(main, function(){ paintCall(main); });
+}
+
+function paintCall(main){
+  var known = CALL.phone ? STORE.customer(CALL.phone) : null;
+  var sub = CALL.lines.reduce(function(n,l){ return n + l.q * l.price; }, 0);
+
+  main.innerHTML = shell("Order by phone",
+    '<div class="callwrap">' +
+
+      '<input class="fld" id="clPhone" inputmode="tel" autocomplete="off" ' +
+        'placeholder="Their phone number" value="' + esc(CALL.phone || "") + '">' +
+
+      (known
+        ? '<div class="knownbox">' +
+            '<div class="kt"><b>' + esc(known.name || "This number has ordered before") + '</b>' +
+            '<small>' + esc(known.addr || "no address saved") +
+            (known.locFrom === "delivered"
+              ? ' \u00b7 doorstep known from a delivery'
+              : known.lat ? ' \u00b7 pin saved' : '') +
+            '</small></div>' +
+            '<button class="linky" id="clUse">Use it</button>' +
+          '</div>'
+        : '') +
+
+      '<input class="fld" id="clName" autocomplete="off" placeholder="Name" value="' +
+        esc(CALL.name || "") + '">' +
+      '<textarea class="fld" id="clAddr" placeholder="Address \u2014 house, landmark, area">' +
+        esc(CALL.addr || "") + '</textarea>' +
+      '<input class="fld" id="clNote" autocomplete="off" placeholder="Note for the kitchen (optional)" value="' +
+        esc(CALL.note || "") + '">' +
+
+      '<h3 class="mini">What did they ask for?</h3>' +
+      (CALL.lines.length
+        ? '<div class="lines">' + CALL.lines.map(function(l, i){
+            return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
+              (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
+              '<div class="qty">' +
+                '<button data-cq="' + i + '|-1">\u2212</button>' +
+                '<span>' + l.q + '</span>' +
+                '<button data-cq="' + i + '|1">+</button>' +
+              '</div>' +
+              '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
+          }).join("") + '</div>' +
+          '<div class="total"><span>Total</span><b>' + rupee(sub) + '</b></div>'
+        : '<p class="shopsub">Nothing added yet.</p>') +
+
+      '<button class="shopbtn ghost findbtn" id="clFind">' +
+        '<span class="fi">\uD83D\uDD0D</span> Add from the menu</button>' +
+
+      '<button class="shopbtn" id="clGo">Put it on the board</button>' +
+      '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>' +
+    '</div>', true);
+
+  /* typing a number is the lookup; no button to press */
+  var ph = el("clPhone");
+  ph.oninput = function(){
+    CALL.phone = ph.value;
+    var hit = STORE.customer(ph.value);
+    if(hit && digitsOnly(ph.value).length >= 10 && !CALL.name && !CALL.addr) useKnown(hit);
+    else paintCall(main);
+  };
+
+  function useKnown(k){
+    CALL.name = k.name || "";
+    CALL.addr = k.addr || "";
+    if(k.lat){ CALL.lat = k.lat; CALL.lng = k.lng; }
+    paintCall(main);
+    shopToast("Filled in from their last order.");
+  }
+  var use = el("clUse");
+  if(use) use.onclick = function(){ useKnown(known); };
+
+  ["clName","clAddr","clNote"].forEach(function(id){
+    var n = el(id);
+    if(n) n.oninput = function(){ CALL[id.slice(2).toLowerCase()] = n.value; };
+  });
+
+  el("clFind").onclick = function(){
+    openFinder(function(did, lbl, price){
+      var it = dishById(did);
+      var k = did + "|" + lbl;
+      var hit = CALL.lines.filter(function(l){ return l.k === k; })[0];
+      if(hit) hit.q += 1;
+      else CALL.lines.push({ k:k, id:did, name: it ? label(it.name) : did,
+                             label:lbl, price:price, q:1 });
+      paintCall(main);
+    }, "Add");
+  };
+
+  main.querySelectorAll("[data-cq]").forEach(function(b){
+    b.onclick = function(){
+      var p = b.dataset.cq.split("|"), i = +p[0], d = +p[1];
+      CALL.lines[i].q += d;
+      CALL.lines = CALL.lines.filter(function(l){ return l.q > 0; });
+      paintCall(main);
+    };
+  });
+
+  el("clGo").onclick = function(){
+    if(!CALL.lines.length){ shopToast("Add what they ordered first."); return; }
+    if(!digitsOnly(CALL.phone)){ shopToast("A phone number, please."); return; }
+    if(!CALL.addr){ shopToast("Where is it going?"); return; }
+
+    var o = {
+      name: CALL.name || "",
+      phone: CALL.phone,
+      addr: CALL.addr,
+      note: CALL.note || "",
+      lines: CALL.lines.slice(),
+      total: sub,
+      source: "phone",
+      custUid: null
+    };
+    if(CALL.lat){ o.lat = CALL.lat; o.lng = CALL.lng; }
+
+    var id = STORE.place(o);
+    if(!id){ shopToast("Something went wrong."); return; }
+    STORE.setStatus(id, "accepted");      /* the office took it, so it is accepted */
+    STORE.rememberCustomer(STORE.order(id));
+    CALL = { lines: [] };
+    shopToast("Order " + id + " is on the board.");
+    location.hash = "#/admin";
+  };
+}
+
 /* ---- the office editing one order -------------------------- */
 function viewEdit(main, id){
   gate(main, function(){ paintEdit(main, id); });
@@ -2512,6 +3073,7 @@ function paintEdit(main, id){
   var o = STORE.order(id);
   if(!o){
     main.innerHTML = shell("Not found", '<p class="shopsub">That order is gone.</p>' +
+      '<button class="shopbtn ghost" data-go="#/admin/who">The customer book</button>' +
       '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>', true);
     return;
   }
@@ -3484,7 +4046,8 @@ document.addEventListener("focusout", function(){
 function route(p, main){
   REPAINT = null;
   /* the board owns the window; every other office page does not */
-  deskMode(p[0] === "admin", p[0] === "admin" && p[1] !== "o" && p[1] !== "riders");
+  deskMode(p[0] === "admin",
+           p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" && p[1] !== "call");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -3495,6 +4058,8 @@ function route(p, main){
   if(p[0] === "drive")    { REPAINT = function(){ viewDrive(main, p[1]); }; REPAINT(); return true; }
   if(p[0] === "admin"){
     if(p[1] === "riders") { REPAINT = function(){ if(REDIT) return; viewRiders(main); }; REPAINT(); return true; }
+    if(p[1] === "call")   { REPAINT = function(){ if(isTyping()) return; viewCall(main); }; REPAINT(); return true; }
+    if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
     if(p[1] === "o" && p[2]) { REPAINT = function(){ viewEdit(main, p[2]); }; REPAINT(); return true; }
     REPAINT = function(){ viewAdmin(main); }; REPAINT(); return true;
   }

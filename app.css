@@ -1561,3 +1561,99 @@ body.palopen{overflow:hidden}
   /* clear of the floating dock */
   .mapfilt{right:76px}
 }
+
+
+/* ============================================================
+   THE CUSTOMER BOOK
+   ============================================================ */
+.cfind{margin:0 0 14px;position:sticky;top:0;z-index:3}
+.cline{gap:12px;flex-wrap:wrap}
+.cline .ln{flex:1 1 200px;min-width:0}
+.caddr{color:var(--muted);opacity:.85}
+.cline.noloc{border-left:3px solid var(--line2)}
+.cstat{flex:0 0 auto;text-align:right;min-width:62px}
+.cstat b{display:block;font-size:var(--t-h3);color:var(--cream);line-height:1.2}
+.cstat small{display:block;font-size:var(--t-tiny);color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em}
+
+/* a doorstep the rider stood on, against a pin someone dropped */
+.omark.cust.sure .dot{box-shadow:0 0 0 3px rgba(91,140,42,.30)}
+.omark.cust .tag{font-weight:600}
+
+/* taking an order down the phone */
+.callwrap{max-width:720px}
+.knownbox{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-left:3px solid var(--green);
+  border-radius:var(--r2);padding:12px 14px;margin:0 0 14px;background:var(--soft3)}
+.kt{flex:1;min-width:0}
+.kt b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.kt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+
+/* a dock button that says what it is */
+.dockbtn.wide{width:auto;padding:0 18px 0 15px;border-radius:26px;gap:8px}
+.dlab{font-size:var(--t-small);font-weight:700;letter-spacing:.02em;white-space:nowrap}
+@media (max-width:620px){
+  .dockbtn.wide{width:52px;padding:0}
+  .dlab{display:none}
+}
+
+
+/* ============================================================
+   THE FULL-SCREEN PIN PICKER
+   Nothing behind it wants a gesture, so one finger moves the map.
+   ============================================================ */
+.picker{position:fixed;inset:0;z-index:950;background:var(--bg)}
+body.pkopen{overflow:hidden}
+.pkmap{position:absolute;inset:0}
+.pkcross{position:absolute;inset:0;z-index:5;pointer-events:none;
+  display:flex;align-items:center;justify-content:center}
+.pkcross span{position:relative;width:26px;height:26px;border-radius:50%;
+  background:var(--hot);border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.4);
+  transform:translateY(-13px)}
+.pkcross span::after{content:"";position:absolute;left:50%;top:100%;
+  width:2px;height:13px;background:#fff;transform:translateX(-50%);
+  box-shadow:0 1px 3px rgba(0,0,0,.4)}
+
+.pkbar{position:absolute;left:12px;right:12px;top:12px;z-index:10;
+  display:flex;align-items:center;gap:8px}
+.pkx,.pkme{flex:0 0 auto;width:42px;height:42px;border-radius:50%;
+  border:1px solid var(--line2);background:var(--card);color:var(--cream);
+  font-size:20px;line-height:1;cursor:pointer;box-shadow:var(--shadow)}
+.pkme.busy{opacity:.5}
+.pkt{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:11px 15px;box-shadow:var(--shadow);
+  font-size:var(--t-small);font-weight:600;color:var(--cream);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pkfoot{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+  z-index:10}
+.pkfoot .shopbtn{margin:0;min-height:56px;font-size:16px;box-shadow:var(--shadow)}
+
+/* the card that opens it */
+.spotcard{display:flex;align-items:center;gap:12px;width:100%;
+  border:1px solid var(--line);border-left:3px solid var(--gold);
+  border-radius:var(--r2);padding:14px 15px;margin:0 0 14px;
+  background:var(--soft3);color:var(--cream);font:inherit;text-align:left;cursor:pointer}
+.spotcard.set{border-left-color:var(--green)}
+.spi{font-size:20px;line-height:1;flex:0 0 auto}
+.spt{flex:1;min-width:0}
+.spt b{display:block;font-size:var(--t-h3)}
+.spt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.spgo{flex:0 0 auto;border:1px solid var(--line2);border-radius:999px;
+  padding:8px 14px;font-size:var(--t-small);font-weight:700;white-space:nowrap}
+.spotcard:hover .spgo{background:var(--gold);color:var(--onaccent);border-color:transparent}
+
+/* ---- concentration ---- */
+.mfsep{width:1px;align-self:stretch;background:var(--line);margin:0 3px}
+.mftime.heat.on{background:var(--hot);color:#fff}
+.heatlab{pointer-events:none;transform:translate(-50%,-50%);text-align:center;
+  font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.65);white-space:nowrap}
+.heatlab span{display:block;font-size:15px;line-height:1}
+.heatlab small{display:block;font-size:10px;opacity:.9;font-weight:700}
+.heattop{display:flex;flex-wrap:wrap;gap:6px}
+.ht{background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:6px 12px;box-shadow:var(--shadow);font-size:var(--t-tiny);
+  color:var(--cream);font-weight:600;white-space:nowrap}
+.ht b{color:var(--hot)}
+
+/* a softer offer, for something optional */
+.youare.guest.soft{border-left-color:var(--line2);background:transparent}
