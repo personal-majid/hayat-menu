@@ -341,6 +341,9 @@ function viewCheckout(main){
    An address in Makkaraparamba is a landmark, not a house number,
    so the pin is what the rider actually follows.
    ------------------------------------------------------------ */
+/* index.html declares  let L  for the language code. A top-level let
+   shadows window.L for every later script, so Leaflet is ALWAYS reached
+   as window.L here — a bare L is the string "en". */
 var PIN = null, MAP = null;
 var HOME = { lat: 11.0065785, lng: 76.1270507 };   /* the restaurant */
 
@@ -391,9 +394,10 @@ function mountMap(saved){
     var at = PIN || HOME;
     /* a container Leaflet has already claimed cannot be reused */
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
-    MAP = L.map(box, { zoomControl:true, attributionControl:true })
+    var LF = window.L;                 /* never the bare L: see note above */
+    MAP = LF.map(box, { zoomControl:true, attributionControl:true })
            .setView([at.lat, at.lng], PIN ? 17 : 15);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap"
     }).addTo(MAP);
@@ -675,19 +679,20 @@ function drawAdminMap(list){
 
   loadLeaflet().then(function(){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
-    AMAP = L.map(box, { zoomControl:true });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    var LF = window.L;
+    AMAP = LF.map(box, { zoomControl:true });
+    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(AMAP);
 
     /* the restaurant, so the office can see how far each one is */
-    L.circleMarker([HOME.lat, HOME.lng], {
+    LF.circleMarker([HOME.lat, HOME.lng], {
       radius:7, color:"#FFFFFF", weight:2, fillColor:"#1B2410", fillOpacity:1
     }).addTo(AMAP).bindPopup("Hayat \u2014 the kitchen");
 
     var pts = [[HOME.lat, HOME.lng]];
     list.forEach(function(o){
       pts.push([o.lat, o.lng]);
-      L.circleMarker([o.lat, o.lng], {
+      LF.circleMarker([o.lat, o.lng], {
         radius: o.status === "delivered" ? 6 : 10,
         color: "#FFFFFF", weight: 2,
         fillColor: statusColour(o.status),
