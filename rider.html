@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#243510">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hayat Rider">
+<link rel="manifest" href="rider.webmanifest">
+<link rel="icon" href="assets/mark.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<title>Hayat Rider</title>
+<!--
+  The rider's front door, and the reason it exists.
+
+  Android decides which app a page belongs to when the page loads,
+  from the manifest linked above. Changing that link later with
+  script does nothing, and the menu's own manifest would otherwise
+  claim every page on this site. So the rider gets a page of its
+  own, its own manifest, and its own id.
+
+  Opened in a browser it explains how to install.
+  Opened as the installed app it goes straight to work.
+-->
+<style>
+  :root{color-scheme:light}
+  html,body{margin:0;min-height:100%;background:#EDF2DD;color:#1B2410;
+    font:15px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+    gap:18px;padding:30px 22px;max-width:420px;margin:0 auto;text-align:center}
+  img.mark{width:86px;height:86px;margin:0 auto}
+  h1{font-size:21px;margin:0}
+  p{color:#5F6E4B;font-size:13.5px;margin:0}
+  .go{display:block;text-decoration:none;text-align:center;font-weight:800;font-size:15px;
+    padding:15px;border-radius:12px;background:linear-gradient(135deg,#5B8C2A,#3F6B18);color:#fff}
+  .how{text-align:left;background:#fff;border:1px solid rgba(36,53,15,.14);
+    border-radius:12px;padding:14px 16px}
+  .how b{display:block;font-size:12px;letter-spacing:.6px;text-transform:uppercase;
+    color:#3F6B18;margin-bottom:6px}
+  .how ol{margin:0;padding-left:18px;font-size:13px;color:#3A472C}
+  .how li{margin:4px 0}
+  .quiet{font-size:11.5px;color:#7A8768}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="mark" src="assets/icon-192.png" alt="">
+  <h1>Hayat Rider</h1>
+  <p>Your deliveries, on your phone.</p>
+
+  <a class="go" href="./#/drive">Open my deliveries</a>
+
+  <div class="how" id="howAndroid">
+    <b>Keep it on your home screen</b>
+    <ol>
+      <li>Tap the <b style="display:inline">⋮</b> menu, top right</li>
+      <li>Choose <b style="display:inline">Install app</b> — or Add to Home screen</li>
+      <li>It appears with the other apps, as Hayat Rider</li>
+    </ol>
+  </div>
+
+  <div class="how" id="howIos" hidden>
+    <b>Keep it on your home screen</b>
+    <ol>
+      <li>Tap the Share button at the bottom</li>
+      <li>Scroll down to <b style="display:inline">Add to Home Screen</b></li>
+      <li>Tap Add</li>
+    </ol>
+  </div>
+
+  <p class="quiet">Sign in once with the number the restaurant registered for you.</p>
+</div>
+
+<script>
+  /* Launched from the home screen there is nothing to explain — go to work. */
+  var installed = false;
+  try{
+    installed = window.matchMedia("(display-mode: standalone)").matches ||
+                window.navigator.standalone === true;
+  }catch(e){}
+  if(installed) location.replace("./#/drive");
+
+  /* iPhones install a different way, so show the right three steps. */
+  try{
+    if(/iPad|iPhone|iPod/.test(navigator.userAgent)){
+      document.getElementById("howAndroid").hidden = true;
+      document.getElementById("howIos").hidden = false;
+    }
+  }catch(e){}
+
+  /* The service worker is what makes it installable at all. */
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js", { updateViaCache:"none" }).catch(function(){});
+  }
+</script>
+</body>
+</html>

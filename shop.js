@@ -137,8 +137,14 @@ var STORE = {
     o.status = s;
     if(extra) for(var k in extra) o[k] = extra[k];
     (o.log = o.log || []).push({ s:s, at:Date.now() });
+
+    /* The job is over: stop holding on to where the rider was. */
+    var done = (s === "delivered" || s === "cancelled");
+    if(done){ o.rLat = null; o.rLng = null; o.rAt = null; }
+
     if(FB){
       var patch = { status:s, log:o.log };
+      if(done){ patch.rLat = null; patch.rLng = null; patch.rAt = null; }
       if(extra) for(var j in extra) patch[j] = extra[j];
       FB.api.updateDoc(FB.api.doc(FB.db, "orders", id), patch)
         .catch(function(e){ console.warn("setStatus", e); });
@@ -218,6 +224,16 @@ var STORE = {
       DB.riders[id] = r; fire();
     } else { DB.riders[id] = r; lsWrite(); }
     return id;
+  },
+  editRider: function(id, patch){
+    var r = DB.riders[id];
+    if(!r) return;
+    Object.keys(patch).forEach(function(k){ r[k] = patch[k]; });
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "riders", id), patch)
+        .catch(function(e){ console.warn("editRider", e); });
+      fire();
+    } else lsWrite();
   },
   dropRider: function(id){
     if(DB.riders[id]) DB.riders[id].off = true;
@@ -576,7 +592,18 @@ function viewOrder(main, id){
     /* once the rider is moving, show them moving */
     (o.rLat && at >= 2 && o.status !== "delivered"
       ? '<div id="trackmap" class="comap trackmap"></div>' +
-        '<p class="pinnote" id="trackNote">Updated ' + when(o.rAt) + '</p>'
+        '<p class="pinnote" id="trackNote">' +
+          (function(){
+            if(!o.lat) return "Updated " + when(o.rAt);
+            var R = 6371, rad = Math.PI/180;
+            var dLat = (o.rLat - o.lat) * rad, dLng = (o.rLng - o.lng) * rad;
+            var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                    Math.cos(o.lat*rad)*Math.cos(o.rLat*rad)*Math.sin(dLng/2)*Math.sin(dLng/2);
+            var km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return (km < 0.2 ? "Almost at your door"
+                  : km < 1   ? Math.round(km*1000) + " m away"
+                             : km.toFixed(1) + " km away") + " \u00b7 " + when(o.rAt);
+          })() + '</p>'
       : '') +
 
     '<div class="lines">' + (o.lines||[]).map(function(l){
@@ -629,9 +656,14 @@ function drawTrackMap(o){
       html:'<span class="dot" style="background:#E4705A"></span><span class="tag">You</span>',
       iconSize:null, iconAnchor:[7,7] }) }).addTo(TMAP);
 
-    var ride = LF.marker([o.rLat, o.rLng], { icon: LF.divIcon({ className:"omark",
-      html:'<span class="dot rider"></span><span class="tag">Rider</span>',
-      iconSize:null, iconAnchor:[7,7] }) }).addTo(TMAP);
+    var r = o.riderId ? STORE.rider(o.riderId) : null;
+    var ride = LF.marker([o.rLat, o.rLng], { zIndexOffset:500, icon: LF.divIcon({
+      className:"omark bike",
+      html:'<span class="bikedot">\uD83C\uDFCD</span>' +
+           '<span class="tag">' + esc(r ? shortName(r.name) : "Rider") + '</span>',
+      iconSize:null, iconAnchor:[14,14] }) }).addTo(TMAP)
+      .bindPopup("<b>" + esc(r ? r.name : "Your rider") + "</b><br>" +
+                 "last seen " + when(o.rAt));
     TDOTS = ride;
 
     TMAP.fitBounds([dest, [o.rLat, o.rLng]], { padding:[40,40], maxZoom:16 });
@@ -713,7 +745,23 @@ function paintAdmin(main){
 
   if(ADVIEW === "map") drawAdminMap(pinned);
   pinned.forEach(measureRoad);
+  /* a rider's dot only has to be chased while a ride is under way */
+  liveWatch(ADVIEW === "map" && pinned.some(function(o){
+    return o.status === "assigned" || o.status === "on_way";
+  }), main);
   wireCards(main);
+}
+
+/* Firestore already pushes a change the moment it happens, so this is
+   only a safety net for a connection that fell asleep. It runs while a
+   ride is live and the map is open, and stops the moment it is not. */
+var LIVETIMER = null;
+function liveWatch(on, main){
+  if(on && !LIVETIMER){
+    LIVETIMER = setInterval(function(){ paintAdmin(main); }, 15000);
+  } else if(!on && LIVETIMER){
+    clearInterval(LIVETIMER); LIVETIMER = null;
+  }
 }
 
 /* ---- the board: one column per step, newest at the top ---- */
@@ -817,6 +865,19 @@ function msgAccepted(o){
          "\n" + orderLine(o) + "\nTotal " + rupee(o.total) +
          "\n\nTrack it here: " + base() + "#/o/" + o.id;
 }
+function msgChanged(o){
+  var m = money(o);
+  return "Hayat \u2014 order " + o.id + "\n\nWe have updated your order:\n" +
+    (o.lines||[]).map(function(l){
+      return "  " + l.q + " \u00d7 " + l.name + (l.label ? " (" + l.label + ")" : "") +
+             "  " + rupee(l.q * l.price);
+    }).join("\n") +
+    (m.off ? "\n\nSubtotal " + rupee(m.sub) + "\nDiscount \u2212" + rupee(m.off) +
+             " (" + discountLabel(o) + ")" : "") +
+    "\n\nTotal " + rupee(m.total) + " (cash on delivery)" +
+    "\n\nThe latest is always here: " + base() + "#/o/" + o.id;
+}
+
 function msgRiderHere(o){
   return "Hayat \u2014 order " + o.id + "\n\nI am outside with your order." +
          "\nPlease collect " + rupee(o.total) + ".";
@@ -968,6 +1029,26 @@ function drawAdminMap(list){
     }).addTo(AMAP).bindPopup("Hayat \u2014 the kitchen");
 
     var pts = [[HOME.lat, HOME.lng]];
+
+    /* a rider on the road, only while the ride is actually live */
+    list.filter(function(o){
+      return o.rLat && (o.status === "assigned" || o.status === "on_way");
+    }).forEach(function(o){
+      var r = o.riderId ? STORE.rider(o.riderId) : null;
+      pts.push([o.rLat, o.rLng]);
+      LF.marker([o.rLat, o.rLng], { zIndexOffset: 500, icon: LF.divIcon({
+        className: "omark bike",
+        html: '<span class="bikedot">\uD83C\uDFCD</span>' +
+              '<span class="tag">' + esc(r ? shortName(r.name) : "Rider") +
+              ' \u00b7 ' + esc(o.id) + '</span>',
+        iconSize: null, iconAnchor: [14, 14] }) })
+        .addTo(AMAP).bindPopup(
+          "<b>" + esc(r ? r.name : "Rider") + "</b><br>" +
+          "carrying " + esc(o.id) + "<br>" +
+          "last seen " + when(o.rAt) + "<br>" +
+          '<a href="#/admin/o/' + esc(o.id) + '">Open the order</a>');
+    });
+
     list.forEach(function(o){
       pts.push([o.lat, o.lng]);
       LF.marker([o.lat, o.lng], {
@@ -982,6 +1063,7 @@ function drawAdminMap(list){
         "<b>" + esc(o.id) + "</b> \u00b7 " + esc(STEP[o.status].t) + "<br>" +
         esc(o.name) + "<br>" + rupee(o.total) +
         (distLabel(o) ? " \u00b7 " + distLabel(o) + " away" : "") + "<br>" +
+        '<a href="#/admin/o/' + esc(o.id) + '"><b>Open the order</b></a><br>' +
         '<a href="' + esc(mapsFromShop(o)) + '" target="_blank" rel="noopener">Google Maps</a>' +
         ' &middot; ' +
         '<a href="' + esc(waCustomer(o, msgOnWay(o))) + '" target="_blank" rel="noopener">WhatsApp</a>'
@@ -1069,6 +1151,8 @@ function paintEdit(main, id){
       '<input class="fld" id="edNote"  placeholder="Note" value="' + esc(o.note||"") + '">' +
 
       '<button class="shopbtn" id="edSave">Save the changes</button>' +
+      '<a class="shopbtn ghost" id="edTell" target="_blank" rel="noopener" href="' +
+        esc(waCustomer(o, msgChanged(o))) + '">Tell the customer on WhatsApp</a>' +
       '<button class="shopbtn ghost" data-go="#/admin">Back without saving</button>' +
       (o.status !== "cancelled" && o.status !== "delivered"
         ? '<button class="shopbtn danger" id="edCancel">Cancel this order</button>' : '') +
@@ -1111,6 +1195,9 @@ function paintEdit(main, id){
   };
 }
 
+/* the id of the rider whose row is open for editing, or null */
+var REDIT = null;
+
 function viewRiders(main){
   gate(main, function(){ paintRiders(main); });
 }
@@ -1119,8 +1206,17 @@ function paintRiders(main){
   main.innerHTML = shell("Riders",
     connBanner() +
     (riders.length ? '<div class="lines">' + riders.map(function(r){
+        if(REDIT === r.id){
+          return '<div class="line redit"><div class="ln">' +
+            '<input class="fld" id="e_' + esc(r.id) + '_n" value="' + esc(r.name) + '">' +
+            '<input class="fld" id="e_' + esc(r.id) + '_p" value="' + esc(r.phone) + '" inputmode="tel">' +
+            '</div>' +
+            '<button class="linky" data-save="' + esc(r.id) + '">Save</button>' +
+            '<button class="linky" data-rcancel="1">Cancel</button></div>';
+        }
         return '<div class="line"><div class="ln"><b>' + esc(r.name) + '</b>' +
           '<small>' + esc(r.phone) + '</small></div>' +
+          '<button class="linky" data-edit="' + esc(r.id) + '">Edit</button>' +
           '<button class="linky warn" data-drop="' + esc(r.id) + '">Remove</button></div>';
       }).join("") + '</div>'
      : '<p class="shopsub">No riders yet.</p>') +
@@ -1134,8 +1230,29 @@ function paintRiders(main){
     if(!n || !p){ shopToast("Name and phone, please."); return; }
     STORE.addRider(n, p);
   };
+  main.querySelectorAll("[data-edit]").forEach(function(b){
+    b.onclick = function(){ REDIT = b.dataset.edit; paintRiders(main); };
+  });
+  main.querySelectorAll("[data-rcancel]").forEach(function(b){
+    b.onclick = function(){ REDIT = null; paintRiders(main); };
+  });
+  main.querySelectorAll("[data-save]").forEach(function(b){
+    b.onclick = function(){
+      var id = b.dataset.save;
+      var n = el("e_" + id + "_n").value.trim();
+      var p = el("e_" + id + "_p").value.trim();
+      if(!n || !p){ shopToast("Name and phone, please."); return; }
+      var was = STORE.rider(id);
+      var moved = was && digits(was.phone) !== digits(p);
+      STORE.editRider(id, { name:n, phone:p });
+      REDIT = null;
+      paintRiders(main);
+      shopToast(moved ? "Saved. They sign in with the new number now."
+                      : "Rider updated.");
+    };
+  });
   main.querySelectorAll("[data-drop]").forEach(function(b){
-    b.onclick = function(){ STORE.dropRider(b.dataset.drop); };
+    b.onclick = function(){ REDIT = null; STORE.dropRider(b.dataset.drop); };
   });
 }
 
@@ -1152,13 +1269,144 @@ function paintRiders(main){
    the honest limit of a web app. Nothing is sent when there is no
    live job, and nothing is kept once the job is delivered.
    ============================================================ */
-/* On the rider's pages the page installs as "Hayat Rider", not as the
-   menu — same site, its own icon and its own start page. */
-function riderManifest(on){
-  var link = document.querySelector('link[rel="manifest"]');
-  if(!link) return;
-  if(!riderManifest._was) riderManifest._was = link.getAttribute("href");
-  link.setAttribute("href", on ? "rider.webmanifest" : riderManifest._was);
+/* ---- the alarm -------------------------------------------
+   A rider is not staring at the screen. When a job lands their
+   phone has to make a noise they cannot miss, and keep making it
+   until they look.
+
+   A browser will not make a sound until the person has tapped
+   something, so the audio is armed on the sign-in tap and kept
+   alive from then on. The tone is generated, not a file — one
+   less thing to load on a bad connection.
+
+   None of this reaches a phone with the app fully closed. That
+   needs a push server, which needs a paid Firebase plan. Until
+   then the office's WhatsApp message is what wakes them.
+   ---------------------------------------------------------- */
+var AC = null, RINGING = false, RINGSTOP = null;
+
+function armSound(){
+  try{
+    if(!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if(AC.state === "suspended") AC.resume();
+  }catch(e){}
+}
+
+function beep(at, freq, len){
+  if(!AC) return;
+  var osc = AC.createOscillator(), gain = AC.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(freq, at);
+  /* a hard edge carries across a road; a soft tail stops it grating */
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.exponentialRampToValueAtTime(0.35, at + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + len);
+  osc.connect(gain); gain.connect(AC.destination);
+  osc.start(at); osc.stop(at + len + 0.02);
+}
+
+function ring(){
+  if(RINGING) return;
+  RINGING = true;
+  armSound();
+
+  var round = function(){
+    if(!RINGING || !AC) return;
+    var t = AC.currentTime;
+    /* two rising pairs, like a doorbell that means business */
+    beep(t,        880, 0.18);
+    beep(t + 0.22, 1175, 0.18);
+    beep(t + 0.60, 880, 0.18);
+    beep(t + 0.82, 1175, 0.30);
+    try{ navigator.vibrate && navigator.vibrate([300,120,300,120,500]); }catch(e){}
+  };
+  round();
+  RINGSTOP = setInterval(round, 2600);   /* until they look at it */
+}
+
+function hush(){
+  RINGING = false;
+  if(RINGSTOP){ clearInterval(RINGSTOP); RINGSTOP = null; }
+  try{ navigator.vibrate && navigator.vibrate(0); }catch(e){}
+}
+
+/* the phone's own notification, for when the app is behind something */
+function nudge(o){
+  try{
+    if(!("Notification" in window) || Notification.permission !== "granted") return;
+    var n = new Notification("New delivery \u00b7 " + o.id, {
+      body: o.name + "\n" + o.addr + "\n" + rupee(o.total) + " to collect",
+      icon: "assets/icon-192.png",
+      badge: "assets/icon-192.png",
+      tag: "job-" + o.id,
+      requireInteraction: true,
+      vibrate: [300,120,300,120,500]
+    });
+    n.onclick = function(){
+      window.focus();
+      location.hash = "#/drive/" + o.id;
+      hush();
+      n.close();
+    };
+  }catch(e){}
+}
+
+/* ---- watching for work ---- */
+var SEEN = null;
+function seenJobs(){
+  if(SEEN) return SEEN;
+  try{ SEEN = JSON.parse(localStorage.getItem("hayat_seen") || "[]"); }
+  catch(e){ SEEN = []; }
+  return SEEN;
+}
+function markSeen(ids){
+  SEEN = ids;
+  try{ localStorage.setItem("hayat_seen", JSON.stringify(ids.slice(-60))); }catch(e){}
+}
+
+function checkForWork(){
+  var me = whoAmI();
+  if(!me) return;
+  var mine = STORE.orders().filter(function(o){
+    return o.riderId === me.id && (o.status === "assigned" || o.status === "on_way");
+  });
+  var ids = mine.map(function(o){ return o.id; });
+  var known = seenJobs();
+  var fresh = mine.filter(function(o){ return known.indexOf(o.id) < 0; });
+
+  if(fresh.length){
+    ring();
+    fresh.forEach(nudge);
+    showAlert(fresh);
+  }
+  markSeen(known.concat(ids.filter(function(i){ return known.indexOf(i) < 0; })));
+}
+
+/* the banner that will not be ignored */
+function showAlert(jobs){
+  var o = jobs[0];
+  var box = el("jobalert");
+  if(!box){
+    box = document.createElement("div");
+    box.id = "jobalert";
+    document.body.appendChild(box);
+  }
+  box.innerHTML =
+    '<div class="jacard">' +
+      '<div class="jah">New delivery</div>' +
+      '<div class="jaid">' + esc(o.id) + '</div>' +
+      '<div class="janame">' + esc(o.name) + '</div>' +
+      '<div class="jaaddr">' + esc(o.addr) + '</div>' +
+      '<div class="jatot">' + rupee(o.total) + ' to collect</div>' +
+      (jobs.length > 1 ? '<div class="jamore">and ' + (jobs.length-1) + ' more</div>' : '') +
+      '<button class="shopbtn" id="jaGo">Open it</button>' +
+      '<button class="shopbtn ghost" id="jaLater">Later</button>' +
+    '</div>';
+  box.hidden = false;
+  el("jaGo").onclick = function(){
+    hush(); box.hidden = true; location.hash = "#/drive/" + o.id;
+  };
+  el("jaLater").onclick = function(){ hush(); box.hidden = true; };
 }
 
 function riderPhone(){
@@ -1189,6 +1437,10 @@ function viewDriveHome(main){
         'Ask the office to add it.</p>' : '') +
       '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
     el("rvGo").onclick = function(){
+      /* this tap is the only chance the browser gives us to unlock sound */
+      armSound();
+      try{ if("Notification" in window && Notification.permission === "default")
+             Notification.requestPermission(); }catch(e){}
       setRiderPhone(el("rvPhone").value.trim());
       viewDriveHome(main);
     };
@@ -1221,6 +1473,9 @@ function viewDriveHome(main){
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
 
   el("rvOut").onclick = function(){ setRiderPhone(""); viewDriveHome(main); };
+
+  armSound();
+  checkForWork();
 }
 
 /* ---- one job ---- */
@@ -1261,25 +1516,47 @@ function viewDrive(main, id){
 
   if(next) el("dvGo").onclick = function(){ STORE.setStatus(id, next); };
 
+  hush();                       /* they are looking at it now */
   if(o.status === "assigned" || o.status === "on_way") startPing(id);
   else stopPing();
 }
 
 /* ---- the position, while the job is open ---- */
-var PINGID = null, PINGJOB = null;
+var PINGID = null, PINGJOB = null, WAKE = null;
+
+/* Android and iOS both stop a browser's GPS when the screen sleeps.
+   Holding a wake lock while a delivery is live is the only thing a web
+   app can do about it. A real always-on tracker needs the native app
+   and a foreground service. */
+function holdScreen(){
+  try{
+    if(navigator.wakeLock && !WAKE){
+      navigator.wakeLock.request("screen").then(function(w){
+        WAKE = w;
+        w.addEventListener("release", function(){ WAKE = null; });
+      }).catch(function(){});
+    }
+  }catch(e){}
+}
+function releaseScreen(){
+  try{ if(WAKE){ WAKE.release(); WAKE = null; } }catch(e){}
+}
+
 function stopPing(){
   if(PINGID != null){ try{ navigator.geolocation.clearWatch(PINGID); }catch(e){} }
   PINGID = null; PINGJOB = null;
+  releaseScreen();
 }
 function startPing(id){
   if(PINGJOB === id) return;
   stopPing();
   if(!navigator.geolocation) return;
   PINGJOB = id;
+  holdScreen();
   var last = 0;
   PINGID = navigator.geolocation.watchPosition(function(pos){
     var now = Date.now();
-    if(now - last < 8000) return;         /* eight seconds is plenty */
+    if(now - last < 5000) return;         /* five seconds, as agreed */
     last = now;
     STORE.ping(id, pos.coords.latitude, pos.coords.longitude);
     var d = el("gpsDot"), t = el("gpsTxt");
@@ -1363,20 +1640,25 @@ var REPAINT = null;
 function route(p, main){
   REPAINT = null;
   deskMode(p[0] === "admin");
-  riderManifest(p[0] === "drive");
+  if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
   if(p[0] === "cart")     { viewCart(main); return true; }
   if(p[0] === "checkout") { viewCheckout(main); return true; }
   if(p[0] === "o")        { REPAINT = function(){ viewOrder(main, p[1]); }; REPAINT(); return true; }
   if(p[0] === "drive")    { REPAINT = function(){ viewDrive(main, p[1]); }; REPAINT(); return true; }
   if(p[0] === "admin"){
-    if(p[1] === "riders") { REPAINT = function(){ viewRiders(main); }; REPAINT(); return true; }
+    if(p[1] === "riders") { REPAINT = function(){ if(REDIT) return; viewRiders(main); }; REPAINT(); return true; }
     if(p[1] === "o" && p[2]) { REPAINT = function(){ viewEdit(main, p[2]); }; REPAINT(); return true; }
     REPAINT = function(){ viewAdmin(main); }; REPAINT(); return true;
   }
   return false;
 }
-STORE.onChange(function(){ if(REPAINT) REPAINT(); });
+STORE.onChange(function(){
+  if(REPAINT) REPAINT();
+  /* a rider signed in on this phone gets told about work wherever
+     they are in the app, not only on the deliveries page */
+  try{ if(riderPhone()) checkForWork(); }catch(e){}
+});
 
 document.addEventListener("click", function(e){
   var a = e.target.closest("[data-add]");
@@ -1399,6 +1681,9 @@ document.addEventListener("click", function(e){
 });
 
 window.addEventListener("hashchange", paintFab);
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible" && PINGJOB) holdScreen();
+});
 
 /* ---------- boot ------------------------------------------- */
 (function(){

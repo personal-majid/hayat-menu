@@ -1,8 +1,9 @@
 {
+  "id": "hayat-rider",
   "name": "Hayat Rider",
   "short_name": "Hayat Rider",
   "description": "Deliveries for Hayat Fish and Mandi Restaurant.",
-  "start_url": "./#/drive",
+  "start_url": "rider.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

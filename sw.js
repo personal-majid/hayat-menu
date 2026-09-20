@@ -1,9 +1,9 @@
 /* Hayat menu — offline cache.
    Bump CACHE below whenever you upload changes, so tablets pick them up. */
-const CACHE = "hayat-v65";
+const CACHE = "hayat-v70";
 const CORE = [
   "./","./index.html","./config.js","./menu-data.js","./lang.js",
-  "./assets/icons.js","./shop.js","./rider.webmanifest","./assets/logo.png","./assets/mark.png",
+  "./assets/icons.js","./shop.js","./rider.webmanifest","./rider.html","./assets/logo.png","./assets/mark.png",
   "./assets/icon-192.png","./assets/icon-512.png","./manifest.webmanifest"
 ];
 

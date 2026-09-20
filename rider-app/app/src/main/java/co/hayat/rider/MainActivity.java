@@ -45,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
 
     askForLocation();
 
+    /* A sleeping screen is a stopped GPS, in a WebView exactly as in a
+       browser. Holding the screen on is the honest fix for a wrapper. */
+    getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
     web = new WebView(this);
     setContentView(web);
 
@@ -80,13 +84,37 @@ public class MainActivity extends AppCompatActivity {
     web.loadUrl(getString(R.string.start_url));
   }
 
+  /*  Android splits this in two on purpose, and will refuse the second
+   *  ask if both arrive together: first "while using the app", then,
+   *  separately, "all the time". Riders should say yes to both, or the
+   *  customer's map freezes the moment they look at WhatsApp.          */
   private void askForLocation() {
-    boolean has = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                  == PackageManager.PERMISSION_GRANTED;
-    if (!has) {
+    boolean fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                   == PackageManager.PERMISSION_GRANTED;
+    if (!fine) {
       ActivityCompat.requestPermissions(this, new String[]{
           Manifest.permission.ACCESS_FINE_LOCATION,
           Manifest.permission.ACCESS_COARSE_LOCATION }, 1);
+      return;                       // the second ask waits for this answer
+    }
+    askForAlways();
+  }
+
+  private void askForAlways() {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return;
+    boolean bg = ContextCompat.checkSelfPermission(this,
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    if (!bg) {
+      ActivityCompat.requestPermissions(this, new String[]{
+          Manifest.permission.ACCESS_BACKGROUND_LOCATION }, 2);
+    }
+  }
+
+  @Override public void onRequestPermissionsResult(
+      int code, String[] perms, int[] results) {
+    super.onRequestPermissionsResult(code, perms, results);
+    if (code == 1 && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+      askForAlways();
     }
   }
 
