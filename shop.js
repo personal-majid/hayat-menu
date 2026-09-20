@@ -2875,15 +2875,12 @@ function boardCard(o){
 
   /* Before it is accepted the office may still want to talk to the
      customer - a missing item, an address that reads oddly, a price
-     to agree. Those three sit on the card, not behind Accept. */
-  var before = (o.status === "placed")
-    ? '<div class="preact">' +
-        '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
-          esc(waCustomer(o, msgAsk(o))) + '" title="Ask the customer something">Message</a>' +
-        callBtn(o.phone, "Call", "qbtn") +
-        '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">Edit' + noteTag(o) + '</a>' +
-      '</div>'
-    : '';
+     to agree. That is the same WhatsApp button, carrying a
+     different sentence; it is not a second row of the same three
+     buttons, which is what the card used to show. */
+  var waText = (o.status === "placed") ? msgAsk(o)
+             : (o.status === "accepted") ? msgAccepted(o)
+             : msgOnWay(o);
 
   return '<div class="bcard' + (ticket ? " ticket" : empty ? " empty" : "") +
       (isLater(o) ? " later" : "") + '">' +
@@ -2901,7 +2898,7 @@ function boardCard(o){
       (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
     '<div class="quick">' +
       '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
-        esc(waCustomer(o, o.status === "placed" ? msgAccepted(o) : msgOnWay(o))) +
+        esc(waCustomer(o, waText)) +
         '" title="Message the customer">WhatsApp</a>' +
       (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
         '" title="Route from the shop">Maps</a>' : '') +
@@ -2909,7 +2906,7 @@ function boardCard(o){
       '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit' +
         noteTag(o) + '</a>' +
     '</div>' +
-    before + act + '</div>';
+    act + '</div>';
 }
 
 /* both views use the same buttons, so they are wired in one place */
@@ -3570,8 +3567,15 @@ function connBanner(){
 /* With Firestore live the rules do this comparison. Without it -
    one machine, demo mode - somebody has to, and the office is the
    only party allowed to see both halves. */
+/* Somebody sitting at the office board IS the office, whether
+   they signed in with a Firebase staff account or opened the
+   door with the passcode. Only checking the signed-in role
+   meant a passcode admin silently learned nothing: the customer
+   book never filled and codes were never approved. */
+function atTheDesk(){ return STORE.isOffice() || unlocked(); }
+
 function checkCodes(){
-  if(!STORE.isOffice() && STORE.live()) return;
+  if(!atTheDesk() && STORE.live()) return;
   STORE.waiting().forEach(function(v){
     if(v.code && v.codeTry && String(v.codeTry) === String(v.code)){
       STORE.approveSight(v.id);
@@ -3580,7 +3584,7 @@ function checkCodes(){
 }
 
 function learnDoorsteps(){
-  if(!STORE.isOffice() && STORE.live()) return;
+  if(!atTheDesk() && STORE.live()) return;
   STORE.orders().forEach(function(o){
     if(o.doorLearned) return;
 
@@ -4867,6 +4871,9 @@ function deskMode(on, board){
   try{
     document.body.classList.toggle("deskwork", !!on);
     document.body.classList.toggle("deskboard", !!on && !!board);
+    /* the same flag on <html>, so the no-scroll rule does not
+       depend on :has() being understood */
+    document.documentElement.classList.toggle("deskboard", !!on && !!board);
   }catch(e){}
 }
 

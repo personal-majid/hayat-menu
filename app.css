@@ -1120,6 +1120,12 @@ body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
    no band of chrome: the board, the list or the map owns every
    pixel and the controls float on top of it. */
 /* Only the board freezes the window. */
+/* Two ways of saying the same thing on purpose. :has() is the
+   tidy one, but Safari before 15.4 - which is a lot of iPads
+   still in use - ignores the whole rule, and the board scrolls.
+   deskMode() also puts the class straight on <html>, and that
+   line works everywhere. */
+html.deskboard{overflow:hidden;height:100%}
 html:has(body.deskboard){overflow:hidden;height:100%}
 body.deskboard{overflow:hidden;height:100%;margin:0}
 body.deskwork:not(.deskboard){overflow-y:auto}
