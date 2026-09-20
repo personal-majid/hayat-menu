@@ -1336,7 +1336,11 @@ function paintFab(){
     document.body.appendChild(f);
   }
   var n = cartCount();
-  f.hidden = (n === 0) || /^#\/(admin|drive|o)\b/.test(location.hash||"");
+  /* On the cart and the checkout it is not a way forward, it is
+     a way back to where they already are - and on the address
+     screen it reads as a second button competing with Place. */
+  f.hidden = (n === 0) ||
+    /^#\/(admin|drive|o|cart|checkout)\b/.test(location.hash||"");
   f.innerHTML = '<span class="b">' + n + '</span> View cart · ' + rupee(cartTotal());
   /* the button floats over the page, so the page has to end above it */
   try{ document.body.classList.toggle("hascart", !f.hidden); }catch(e){}
@@ -1862,102 +1866,132 @@ function viewQuick(main){
   draw();
 }
 
+/* ------------------------------------------------------------
+   CHECKOUT
+
+   Two different people arrive here. Somebody ordering for the
+   first time has to be asked where they live. Somebody ordering
+   for the fourth time has already told us, twice, and asking
+   again is just a form standing between them and dinner.
+
+   So the second kind sees what we already know, one line, with a
+   way to change it, and one button. No sign-in offer - a phone
+   number is enough to order and always was, and the Google popup
+   was rendering as a black rectangle anyway; it lives on the
+   "find my old orders on a new phone" screen, which is the only
+   place it earns its keep.
+   ------------------------------------------------------------ */
 function viewCheckout(main){
   if(!CART.length){ location.hash = "#/"; return; }
   var saved = knownMe();
 
-  main.innerHTML = shell("Where is it going?",
-    /* A browser will offer the number it already has, in one tap,
-       but only if the field says what it is. name and autocomplete
-       are what turn three fields into a single autofill. */
-    '<input class="fld" id="coName" name="name" autocomplete="name" ' +
-      'placeholder="Your name" value="' + esc(saved.name||"") + '">' +
-    '<input class="fld" id="coPhone" name="tel" type="tel" autocomplete="tel" ' +
-      'inputmode="tel" placeholder="Phone number" value="' + esc(saved.phone||"") + '">' +
-    '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" ' +
-      'placeholder="Address \u2014 house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
+  /* Known means we could send a rider right now without asking
+     anything. A pin counts instead of an address - it is better
+     than an address. */
+  var known = !!(digitsOnly(saved.phone) && ((saved.addr || "").trim() ||
+                 (saved.lat != null && saved.lng != null)));
 
-    /* Filling somebody's boxes without telling them is unnerving.
-       One quiet line, and a way to clear it. */
-    ((saved.name || saved.addr)
-      ? '<p class="knownme">Filled in from your ' +
-        (saved.from === "last order" ? "last order" : "last visit") +
-        '. <button class="linky" id="coClear">Not you?</button></p>'
-      : '') +
-    /* A card, not a map. Tapping opens a picker that fills the
-       screen, where dragging actually works. */
-    '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
-      '<span class="spi">\uD83D\uDCCD</span>' +
-      '<span class="spt"><b id="coSpotT">' +
-        (PIN ? "Your spot is set" : "Show us where to bring it") + '</b>' +
-        '<small id="coSpotS">' +
-        (PIN ? PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5)
-             : "The rider follows this, not the address.") +
-        '</small></span>' +
-      '<span class="spgo">' + (PIN ? "Change" : "Set on map") + '</span>' +
-    '</button>' +
-    '<input class="fld" id="coNote"  placeholder="Anything we should know? (optional)">' +
-    '<div class="total"><span>' + cartCount() + ' item(s)</span><b>' + rupee(cartTotal()) + '</b></div>' +
-    (STORE.live() && STORE.isGuest()
-      ? '<div class="youare guest soft">' +
-          '<div class="yt"><b>Want this order on every phone you own?</b>' +
-            '<small>One tap, and you can follow it from anywhere. ' +
-            'Or skip it \u2014 we will WhatsApp you the link either way.</small></div>' +
-          '<button class="shopbtn small ghost" id="coIn">Sign in with Google</button>' +
-        '</div>'
-      : '') +
-    '<button class="shopbtn" id="coGo">Place the order</button>' +
-    '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>' +
-    '<button class="shopbtn ghost" data-go="#/cart">Back to the cart</button>');
+  if(known && !CO_EDIT) return drawKnown();
+  return drawForm();
 
-  mountMap(saved);
+  /* ---- the repeat order: everything we know, and Place ------ */
+  function drawKnown(){
+    if(saved.lat != null && saved.lng != null && !PIN){
+      PIN = { lat: saved.lat, lng: saved.lng };
+    }
+    var where = (saved.addr || "").trim() ||
+                (PIN ? "The spot you pinned last time" : "");
 
-  var clr = el("coClear");
-  if(clr) clr.onclick = function(){
-    try{ localStorage.removeItem("hayat_me"); }catch(e){}
-    ["coName","coPhone","coAddr"].forEach(function(id){
-      var n = el(id); if(n) n.value = "";
-    });
-    PIN = null;
-    clr.parentNode.remove();
-    el("coName").focus();
-  };
+    main.innerHTML = shell("Send it",
+      '<div class="cosum">' +
+        '<span>' + cartCount() + ' item(s)</span>' +
+        '<b>' + rupee(cartTotal()) + '</b>' +
+      '</div>' +
 
-  var gi = el("coIn");
-  if(gi) gi.onclick = function(){
-    gi.disabled = true; gi.textContent = "Opening\u2026";
-    STORE.signInGoogle().then(function(){
-      shopToast("Thank you. You can order now.");
+      '<div class="coto">' +
+        '<div class="cotol">Deliver to</div>' +
+        '<div class="cotow">' + esc(where) + '</div>' +
+        (saved.name ? '<div class="coton">' + esc(saved.name) + ' \u00b7 ' +
+                      esc(saved.phone) + '</div>'
+                    : '<div class="coton">' + esc(saved.phone) + '</div>') +
+        '<button class="linky cotoc" id="coChange">Change this</button>' +
+      '</div>' +
+
+      '<input class="fld" id="coNote" placeholder="Anything we should know? (optional)">' +
+      '<button class="shopbtn big" id="coGo">Place the order</button>' +
+      '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>');
+
+    el("coChange").onclick = function(){
+      CO_EDIT = true;
       viewCheckout(main);
-    }).catch(function(e){
-      gi.disabled = false; gi.textContent = "Sign in with Google";
-      var code = (e && e.code) || "";
-      if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
-      shopToast("That did not work. Try again.");
-    });
-  };
+    };
+    el("coGo").onclick = function(){
+      send(saved.name || "", saved.phone, saved.addr || "");
+    };
+  }
 
-  el("coGo").onclick = function(){
-    /* Signing in is an offer, not a toll. Somebody hungry at ten
-       at night should be able to order dinner without an account,
-       and the WhatsApp link we send them reaches their order
-       either way. The offer sits above this button, where they
-       can take it or ignore it. */
-    var name  = el("coName").value.trim(),
-        phone = el("coPhone").value.trim(),
-        addr  = el("coAddr").value.trim();
+  /* ---- the first order, or a correction -------------------- */
+  function drawForm(){
+    main.innerHTML = shell("Where is it going?",
+      /* A browser will offer the number it already has, in one tap,
+         but only if the field says what it is. name and autocomplete
+         are what turn three fields into a single autofill. */
+      '<input class="fld big" id="coPhone" name="tel" type="tel" autocomplete="tel" ' +
+        'inputmode="tel" placeholder="Phone number" value="' + esc(saved.phone||"") + '">' +
+      '<input class="fld" id="coName" name="name" autocomplete="name" ' +
+        'placeholder="Your name (optional)" value="' + esc(saved.name||"") + '">' +
+      '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" ' +
+        'placeholder="Address \u2014 house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
+
+      /* A card, not a map. Tapping opens a picker that fills the
+         screen, where dragging actually works. */
+      '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
+        '<span class="spi">\uD83D\uDCCD</span>' +
+        '<span class="spt"><b id="coSpotT">' +
+          (PIN ? "Your spot is set" : "Show us where to bring it") + '</b>' +
+          '<small id="coSpotS">' +
+          (PIN ? PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5)
+               : "The rider follows this, not the address.") +
+          '</small></span>' +
+        '<span class="spgo">' + (PIN ? "Change" : "Set on map") + '</span>' +
+      '</button>' +
+
+      '<input class="fld" id="coNote"  placeholder="Anything we should know? (optional)">' +
+      '<div class="total"><span>' + cartCount() + ' item(s)</span><b>' +
+        rupee(cartTotal()) + '</b></div>' +
+      '<button class="shopbtn big" id="coGo">Place the order</button>' +
+      '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>');
+
+    mountMap(saved);
+
+    el("coGo").onclick = function(){
+      var name  = el("coName").value.trim(),
+          phone = el("coPhone").value.trim(),
+          addr  = el("coAddr").value.trim();
+      /* The number is the whole account. Everything else can be
+         sorted out on the phone, but without a number nobody can
+         be called back. */
+      if(!digitsOnly(phone)){ shopToast("We need a phone number."); return; }
+      if(!addr && !PIN){ shopToast("An address or a pin on the map, please."); return; }
+      send(name, phone, addr);
+    };
+  }
+
+  /* ---- one way out, used by both --------------------------- */
+  function send(name, phone, addr){
     if(!CART.length){
       shopToast("Your cart is empty.");
       location.hash = "#/cart";
       return;
     }
-    if(!name || !phone || !addr){ shopToast("Name, phone and address, please."); return; }
     try{ localStorage.setItem("hayat_me", JSON.stringify(
-      { name:name, phone:phone, addr:addr, lat:PIN&&PIN.lat, lng:PIN&&PIN.lng })); }catch(e){}
+      { name:name, phone:phone, addr:addr,
+        lat:PIN&&PIN.lat, lng:PIN&&PIN.lng })); }catch(e){}
 
+    var note = el("coNote");
     var o = {
       name:name, phone:phone, addr:addr,
-      note: el("coNote").value.trim(),
+      note: note ? note.value.trim() : "",
       lines: CART.slice(),
       total: cartTotal()
     };
@@ -1965,9 +1999,14 @@ function viewCheckout(main){
     var id = STORE.place(o);
     if(!id){ shopToast("Something went wrong. Nothing was ordered."); return; }
     CART = []; saveCart();
+    CO_EDIT = false;
     location.hash = "#/o/" + id;
-  };
+  }
 }
+
+/* set while they are correcting a remembered address, so the
+   short screen does not immediately draw over the long one */
+var CO_EDIT = false;
 
 /* ---------- the pin -----------------------------------------
    Leaflet on OpenStreetMap tiles: free, no key, no billing.
@@ -3574,39 +3613,59 @@ function connBanner(){
    book never filled and codes were never approved. */
 function atTheDesk(){ return STORE.isOffice() || unlocked(); }
 
+var CHECKING = false;
+
 function checkCodes(){
   if(!atTheDesk() && STORE.live()) return;
+  /* same trap as learnDoorsteps: approving redraws the board, and
+     the redraw calls this again */
+  if(CHECKING) return;
+  CHECKING = true;
+  try{
   STORE.waiting().forEach(function(v){
     if(v.code && v.codeTry && String(v.codeTry) === String(v.code)){
       STORE.approveSight(v.id);
     }
   });
+  } finally { CHECKING = false; }
 }
+
+/* Writing to the book redraws the board, and redrawing the board
+   runs this function. Marking the order only AFTER the write meant
+   the redraw arrived while the order still looked unlearned, and it
+   learned it again, for ever - Firestore gave up with "too much
+   recursion". The flag goes down first, and this will not re-enter
+   itself while it is still running. */
+var LEARNING = false;
 
 function learnDoorsteps(){
   if(!atTheDesk() && STORE.live()) return;
-  STORE.orders().forEach(function(o){
-    if(o.doorLearned) return;
+  if(LEARNING) return;
+  LEARNING = true;
+  try{
+    STORE.orders().forEach(function(o){
+      if(o.doorLearned) return;
 
-    /* Everything the office has ever been told about this number,
-       gathered under one record. An order placed from the website
-       teaches us a name and an address; a delivered one teaches us
-       the doorstep, which is worth more. */
-    if(o.status === "delivered" && o.doorLat){
-      STORE.rememberCustomer(o, {
-        lat: o.doorLat, lng: o.doorLng,
-        locFrom: "delivered", locAt: o.doorAt || Date.now()
-      });
-      STORE.edit(o.id, { doorLearned: true });
-      return;
-    }
+      /* Everything the office has ever been told about this number,
+         gathered under one record. An order placed from the website
+         teaches us a name and an address; a delivered one teaches us
+         the doorstep, which is worth more. */
+      if(o.status === "delivered" && o.doorLat){
+        STORE.edit(o.id, { doorLearned: true });
+        STORE.rememberCustomer(o, {
+          lat: o.doorLat, lng: o.doorLng,
+          locFrom: "delivered", locAt: o.doorAt || Date.now()
+        });
+        return;
+      }
 
-    /* not delivered yet: still worth recording who they are */
-    if(!o.custLearned && digitsOnly(o.phone)){
-      STORE.rememberCustomer(o);
-      STORE.edit(o.id, { custLearned: true });
-    }
-  });
+      /* not delivered yet: still worth recording who they are */
+      if(!o.custLearned && digitsOnly(o.phone)){
+        STORE.edit(o.id, { custLearned: true });
+        STORE.rememberCustomer(o);
+      }
+    });
+  } finally { LEARNING = false; }
 }
 
 /* ------------------------------------------------------------

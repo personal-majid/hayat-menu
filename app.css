@@ -1861,3 +1861,21 @@ body:has(.land) #callfab{display:none !important}
 .orline{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted)}
 .orline::before,.orline::after{content:"";flex:1;height:1px;background:var(--line)}
 .orline span{font-size:var(--t-tiny);text-transform:uppercase;letter-spacing:.12em}
+
+/* ---- checkout ---------------------------------------------
+   The repeat order. Somebody who has told us where they live
+   twice already should see what we remembered, not a form. */
+.cosum{display:flex;justify-content:space-between;align-items:baseline;
+  padding:14px 2px 10px;font-size:15px}
+.cosum b{font-size:22px;letter-spacing:-.01em}
+
+.coto{border:1px solid var(--line,#2b241c);border-radius:14px;
+  padding:14px 15px 12px;margin:2px 0 14px;background:var(--card,#1a1510)}
+.cotol{font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  opacity:.55;margin-bottom:5px}
+.cotow{font-size:16px;line-height:1.4}
+.coton{font-size:13px;opacity:.65;margin-top:5px}
+.cotoc{margin-top:9px;font-size:13px}
+
+/* the one button on the page should look like the one button */
+.shopbtn.big{min-height:58px;font-size:17px;font-weight:650;border-radius:15px}
