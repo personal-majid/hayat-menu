@@ -44,9 +44,19 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
 
-    /* ---- the menu ------------------------------------------
-       Every phone reads it. Only the office changes it. */
-    match /menu/{doc} {
+    /* ---- the menus -----------------------------------------
+       There can be many: the everyday one, a Ramadan one, a
+       draft being built. Each is a single document holding the
+       whole card, so a customer's phone reads one document and
+       not a hundred.
+
+         menus/_active        points at the one customers see
+         menus/<id>           a whole menu, live or draft
+
+       Drafts are readable by anyone who has the test link. A
+       menu is not a secret; the point of the link is to look
+       at it on a real phone before it goes live. */
+    match /menus/{doc} {
       allow read:  if true;
       allow write: if isOffice();
     }
@@ -99,13 +109,22 @@ service cloud.firestore {
       allow update: if isOffice()
         || (
           signedIn() && resource.data.riderUid == mine()
-          && touching().hasOnly(['status','rLat','rLng','rAt','at','log'])
+          && touching().hasOnly(['status','rLat','rLng','rAt','at','log','notes'])
         )
         || (
           signedIn() && resource.data.custUid == mine()
-          && touching().hasOnly(['status','at','log','cancelBy','cancelWhy'])
+          && touching().hasOnly(['status','at','log','cancelBy','cancelWhy','notes'])
           && request.resource.data.status == 'cancelled'
           && resource.data.status in ['placed','accepted']
+        )
+        /* anyone on this order may add to the thread, and only
+           add: the list may grow, never shrink, so no one can
+           quietly delete what was said */
+        || (
+          signedIn()
+          && (resource.data.custUid == mine() || resource.data.riderUid == mine())
+          && touching().hasOnly(['notes'])
+          && request.resource.data.notes.size() > resource.data.notes.size()
         );
 
       allow delete: if isOffice();

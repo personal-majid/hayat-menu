@@ -107,16 +107,28 @@ function riderInvite(r){
   return "https://wa.me/" + digitsOnly(r.phone) + "?text=" + encodeURIComponent(t);
 }
 
-/* the phone this device claimed as a rider, remembered locally
-   so the rider types the code once and never again */
-function myRiderPhone(){
-  try{ return localStorage.getItem("hayat_rider_phone") || null; }catch(e){ return null; }
+/* Which of the three is speaking.
+
+   When Firebase is connected this comes from who is signed in,
+   so a rider cannot post as the restaurant however they reach
+   the page. With no Firebase there is no identity to check at
+   all — the whole thing is one device in demo mode — so the
+   console you are standing in is the only answer available. */
+function myVoice(){
+  if(LIVE || ME.uid){
+    if(ME.role === "office") return "office";
+    if(ME.role === "rider")  return "rider";
+    return "customer";
+  }
+  try{ if(sessionStorage.getItem("hayat_admin") === "1") return "office"; }catch(e){}
+  if(riderPhone()) return "rider";
+  return "customer";
 }
-function setRiderPhone(p){
-  try{ p ? localStorage.setItem("hayat_rider_phone", p)
-         : localStorage.removeItem("hayat_rider_phone"); }catch(e){}
-  ME.riderPhone = p;
-}
+
+/* The phone this device claimed as a rider lives in one place
+   only: riderPhone() / setRiderPhone(), defined with the rider
+   console further down. Declaring a second pair here shadowed
+   those and quietly broke the rider's identity. One store. */
 
 function orderId(){
   /* short, readable, and unique enough for a restaurant's day */
@@ -148,7 +160,7 @@ async function connectFirebase(cfg){
     }
     ME.uid  = user.uid;
     ME.name = user.displayName || "";
-    ME.riderPhone = myRiderPhone();
+    ME.riderPhone = riderPhone() || null;
 
     if(user.isAnonymous){
       ME.role = ME.riderPhone ? "rider" : "guest";
@@ -330,6 +342,29 @@ var STORE = {
         .catch(function(e){ console.warn("ping", e); });
       fire();
     } else lsWrite();
+  },
+
+  /* ---- the conversation on an order ----------------------
+     One thread, three voices. The office, the rider and the
+     customer all write into the same list, and all three see
+     it. Nothing is deleted: an order's history should read
+     the same to everyone later. */
+  say: function(id, text){
+    var o = DB.orders[id];
+    var t = String(text || "").trim().slice(0, 600);
+    if(!o || !t) return null;
+
+    var n = { by: myVoice(), at: Date.now(), text: t,
+              name: (ME.name || "").slice(0, 40) };
+
+    o.notes = (o.notes || []).concat([n]);
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "orders", id),
+        { notes: FB.api.arrayUnion(n) })
+        .catch(function(e){ console.warn("say", e); });
+      fire();
+    } else lsWrite();
+    return n;
   },
 
   riders: function(){
@@ -803,10 +838,13 @@ function viewOrder(main, id){
       (o.lat ? '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(mapsPin(o)) + '">Pin in Maps</a>' : '') +
     '</div>' +
+    noteThread(o, "Anything we should know? Gate code, landmark\u2026") +
     (canCancel
       ? '<button class="shopbtn ghost danger" id="obCancel">Cancel this order</button>'
       : '<p class="shopnote">To change anything now, please call us.</p>') +
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+
+  wireNotes(main, id, function(){ viewOrder(main, id); });
 
   var cb = el("obCancel");
   if(cb) cb.onclick = function(){
@@ -848,6 +886,66 @@ function drawTrackMap(o){
     TMAP.fitBounds([dest, [o.rLat, o.rLng]], { padding:[40,40], maxZoom:16 });
     watchSize(box, TMAP);
   }).catch(function(){});
+}
+
+/* ============================================================
+   THE THREAD ON AN ORDER
+   ------------------------------------------------------------
+   The same component in all three consoles. Who is speaking is
+   decided by who is signed in, never by which page you are on,
+   so a rider cannot post as the restaurant.
+   ============================================================ */
+var VOICE = {
+  office:   { t:"Restaurant", c:"vo" },
+  rider:    { t:"Rider",      c:"vr" },
+  customer: { t:"Customer",   c:"vc" }
+};
+
+/* how many messages an order carries, for the board */
+function noteTag(o){
+  var n = (o.notes || []).length;
+  return n ? '<span class="nbadge" title="' + n + ' message' + (n>1?'s':'') +
+             '">\uD83D\uDCAC ' + n + '</span>' : '';
+}
+
+function noteThread(o, placeholder){
+  var notes = (o.notes || []).slice().sort(function(a,b){ return a.at - b.at; });
+  return '<div class="notes">' +
+    '<div class="noteshead">Messages</div>' +
+    (notes.length
+      ? notes.map(function(n){
+          var v = VOICE[n.by] || VOICE.customer;
+          return '<div class="note ' + v.c + '">' +
+            '<div class="nwho"><b>' + esc(v.t) + '</b>' +
+            (n.name ? ' <span class="nrole">' + esc(n.name) + '</span>' : '') +
+            '<span class="nat">' + when(n.at) + '</span></div>' +
+            '<p>' + esc(n.text) + '</p></div>';
+        }).join("")
+      : '<p class="shopnote nonotes">Nothing here yet.</p>') +
+    '<div class="notebox">' +
+      '<textarea class="fld" id="noteTxt" rows="2" placeholder="' +
+        esc(placeholder || "Write a message\u2026") + '"></textarea>' +
+      '<button class="shopbtn small" id="noteAdd">Send</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function wireNotes(main, id, after){
+  var box = el("noteTxt"), btn = el("noteAdd");
+  if(!box || !btn) return;
+  var send = function(){
+    var t = box.value.trim();
+    if(!t){ box.focus(); return; }
+    STORE.say(id, t);
+    box.value = "";
+    if(after) after();
+  };
+  btn.onclick = send;
+  box.addEventListener("keydown", function(e){
+    /* Enter sends, Shift+Enter makes a new line - what everyone
+       already expects from every chat they use */
+    if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+  });
 }
 
 /* ============================================================
@@ -989,7 +1087,8 @@ function boardCard(o){
       (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
         '" title="Route from the shop">Maps</a>' : '') +
       '<a class="qbtn" href="tel:' + esc(o.phone) + '" title="Call">Call</a>' +
-      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit</a>' +
+      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit' +
+        noteTag(o) + '</a>' +
     '</div>' +
     act + '</div>';
 }
@@ -1119,7 +1218,7 @@ function orderCard(o){
       (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
         '">Open in Maps</a>' : '') +
       '<a class="qbtn" href="tel:' + esc(o.phone) + '">Call</a>' +
-      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">Edit</a>' +
+      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">Edit' + noteTag(o) + '</a>' +
     '</div>' +
     action + '</div>';
 }
@@ -1335,7 +1434,10 @@ function paintEdit(main, id){
       '<button class="shopbtn ghost" data-go="#/admin">Back without saving</button>' +
       (o.status !== "cancelled" && o.status !== "delivered"
         ? '<button class="shopbtn danger" id="edCancel">Cancel this order</button>' : '') +
+      noteThread(o, "A note for the rider or the customer\u2026") +
     '</div>', true);
+
+  wireNotes(main, id, function(){ paintEdit(main, id); });
 
   /* quantities change in place so the total is always honest */
   main.querySelectorAll("[data-eq]").forEach(function(b){
@@ -1593,6 +1695,8 @@ function riderPhone(){
 }
 function setRiderPhone(p){
   try{ p ? localStorage.setItem("hayat_rider", p) : localStorage.removeItem("hayat_rider"); }catch(e){}
+  ME.riderPhone = p || null;
+  if(ME.role !== "office") ME.role = p ? "rider" : "guest";
 }
 function digits(p){ return String(p || "").replace(/\D/g, "").slice(-10); }
 
@@ -1691,7 +1795,10 @@ function viewDrive(main, id){
           : '<p class="shopnote">Done. Thank you.</p>') +
     '<div class="gpsrow"><span class="gpsdot" id="gpsDot"></span>' +
       '<span id="gpsTxt">' + (next ? "Sharing your position while this is open" : "Not sharing") + '</span></div>' +
+    noteThread(o, "Held up? Cannot find the door? Say so here\u2026") +
     '<button class="shopbtn ghost" data-go="#/drive">Your other deliveries</button>');
+
+  wireNotes(main, id, function(){ viewDrive(main, id); });
 
   if(next) el("dvGo").onclick = function(){ STORE.setStatus(id, next); };
 
