@@ -1,0 +1,16 @@
+{
+  "name": "Hayat Rider",
+  "short_name": "Hayat Rider",
+  "description": "Deliveries for Hayat Fish and Mandi Restaurant.",
+  "start_url": "./#/drive",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDF2DD",
+  "theme_color": "#243510",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

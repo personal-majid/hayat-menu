@@ -147,6 +147,62 @@ var STORE = {
     return o;
   },
 
+  /* the office corrected something: lines, discount, address, phone */
+  edit: function(id, patch){
+    var o = DB.orders[id];
+    if(!o) return null;
+    for(var k in patch) o[k] = patch[k];
+    o.total = money(o).total;
+    o.editedAt = Date.now();
+    if(FB){
+      patch.total = o.total; patch.editedAt = o.editedAt;
+      FB.api.updateDoc(FB.api.doc(FB.db, "orders", id), patch)
+        .catch(function(e){ console.warn("edit", e); });
+      fire();
+    } else lsWrite();
+    return o;
+  },
+
+  cancel: function(id, by, why){
+    var o = DB.orders[id];
+    if(!o) return null;
+    o.status = "cancelled";
+    o.cancelBy = by; o.cancelWhy = why || "";
+    (o.log = o.log || []).push({ s:"cancelled", at:Date.now() });
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "orders", id),
+        { status:"cancelled", cancelBy:by, cancelWhy:o.cancelWhy, log:o.log })
+        .catch(function(e){ console.warn("cancel", e); });
+      fire();
+    } else lsWrite();
+    return o;
+  },
+
+  /* a measured road distance, written once */
+  setRoad: function(id, km, min){
+    var o = DB.orders[id];
+    if(!o) return;
+    o.roadKm = +km.toFixed(2); o.roadMin = min;
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "orders", id), { roadKm:o.roadKm, roadMin:o.roadMin })
+        .catch(function(e){ console.warn("setRoad", e); });
+      fire();
+    } else lsWrite();
+  },
+
+  /* the rider's phone, dropped onto the order every few seconds */
+  ping: function(id, lat, lng){
+    var o = DB.orders[id];
+    if(!o) return;
+    o.rLat = +lat.toFixed(6); o.rLng = +lng.toFixed(6); o.rAt = Date.now();
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "orders", id),
+        { rLat:o.rLat, rLng:o.rLng, rAt:o.rAt })
+        .catch(function(e){ console.warn("ping", e); });
+      fire();
+    } else lsWrite();
+  },
+
   riders: function(){
     return Object.keys(DB.riders).map(function(k){ return DB.riders[k]; })
       .filter(function(r){ return !r.off; });
@@ -180,8 +236,26 @@ var STEP = {
   accepted:  { t:"Accepted",      s:"The kitchen has started." },
   assigned:  { t:"Rider assigned",s:"Picking it up from us." },
   on_way:    { t:"On the way",    s:"Almost with you." },
-  delivered: { t:"Delivered",     s:"Enjoy it." }
+  delivered: { t:"Delivered",     s:"Enjoy it." },
+  /* cancelled is not a step along the way: it is where the order stops */
+  cancelled: { t:"Cancelled",     s:"This order was cancelled." }
 };
+
+/* what an order costs once a discount is applied */
+function money(o){
+  var sub = (o.lines || []).reduce(function(n,l){ return n + l.q * l.price; }, 0);
+  var d = o.discount || null, off = 0;
+  if(d && d.value > 0){
+    off = (d.type === "pct") ? sub * Math.min(d.value, 100) / 100 : Math.min(d.value, sub);
+  }
+  off = Math.round(off);
+  return { sub: sub, off: off, total: Math.max(0, sub - off) };
+}
+function discountLabel(o){
+  var d = o.discount;
+  if(!d || !d.value) return "";
+  return d.type === "pct" ? d.value + "% off" : rupee(d.value) + " off";
+}
 
 /* ---------- small helpers --------------------------------- */
 var C = function(){ return window.CONFIG || {}; };
@@ -383,6 +457,24 @@ function loadLeaflet(){
   return loadLeaflet._p;
 }
 
+/* A map built while its box is still zero-wide draws nothing and stays
+   blank — a phone rotating, a panel mid-open, a tab restored in the
+   background. Re-measure whenever the box changes size. */
+function watchSize(box, map){
+  var kick = function(){ try{ map.invalidateSize(); }catch(e){} };
+  setTimeout(kick, 60);
+  setTimeout(kick, 400);
+  setTimeout(kick, 1200);
+  try{
+    if(window.ResizeObserver){
+      var ro = new ResizeObserver(kick);
+      ro.observe(box);
+      map.on("unload", function(){ try{ ro.disconnect(); }catch(e){} });
+    }
+  }catch(e){}
+  window.addEventListener("orientationchange", kick);
+}
+
 function pinText(msg){ var t = el("coPinTxt"); if(t) t.textContent = msg; }
 
 function mountMap(saved){
@@ -408,7 +500,7 @@ function mountMap(saved){
       PIN = MAP.getCenter();
       pinText("Pin set \u00b7 " + PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5));
     });
-    setTimeout(function(){ MAP.invalidateSize(); }, 200);
+    watchSize(box, MAP);
   }).catch(function(err){
     /* say what actually went wrong — a blanket message hides real faults */
     box.innerHTML = '<div class="mapfail">The map is not loading here.<br>' +
@@ -441,6 +533,29 @@ function viewOrder(main, id){
   }
   var at = FLOW.indexOf(o.status);
   var rider = o.riderId ? STORE.rider(o.riderId) : null;
+  var m = money(o);
+  var shop = ((C().delivery || [])[0] || {}).number || C().whatsapp || "";
+
+  /* Cancelling is theirs to do only while nothing has been cooked or
+     sent. After that it is a phone call, not a button. */
+  var canCancel = (o.status === "placed" || o.status === "accepted");
+
+  if(o.status === "cancelled"){
+    main.innerHTML = shell("Order " + esc(o.id),
+      '<div class="revwrap" style="text-align:center;padding:34px 10px">' +
+        '<div style="font-size:40px">\u2298</div>' +
+        '<h3 class="revh">This order was cancelled</h3>' +
+        '<p class="revsub">' + (o.cancelBy === "customer" ? "You cancelled it."
+            : "We cancelled it.") + (o.cancelWhy ? ' ' + esc(o.cancelWhy) : '') + '</p>' +
+      '</div>' +
+      '<div class="rowbtns">' +
+        (shop ? '<a class="shopbtn small" href="tel:' + esc(shop) + '">Call the restaurant</a>' : '') +
+        '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
+          esc(wa(C().whatsapp, "Hayat \u2014 about order " + o.id + "\n\n")) + '">WhatsApp</a>' +
+      '</div>' +
+      '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+    return;
+  }
 
   main.innerHTML = shell("Order " + esc(o.id),
     '<div class="track">' + FLOW.map(function(s,i){
@@ -458,15 +573,70 @@ function viewOrder(main, id){
         '<a class="callbtn" href="tel:' + esc(rider.phone) + '">Call</a></div>'
       : '') +
 
+    /* once the rider is moving, show them moving */
+    (o.rLat && at >= 2 && o.status !== "delivered"
+      ? '<div id="trackmap" class="comap trackmap"></div>' +
+        '<p class="pinnote" id="trackNote">Updated ' + when(o.rAt) + '</p>'
+      : '') +
+
     '<div class="lines">' + (o.lines||[]).map(function(l){
       return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
         (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
         '<div class="lq">×' + l.q + '</div>' +
         '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
     }).join("") + '</div>' +
-    '<div class="total"><span>Total</span><b>' + rupee(o.total) + '</b></div>' +
+    (m.off ? '<div class="total sub"><span>Subtotal</span><b>' + rupee(m.sub) + '</b></div>' +
+             '<div class="total sub off"><span>' + esc(discountLabel(o)) + '</span><b>\u2212 ' +
+             rupee(m.off) + '</b></div>' : '') +
+    '<div class="total"><span>Total</span><b>' + rupee(m.total) + '</b></div>' +
     '<p class="shopnote">' + esc(o.addr) + '</p>' +
+    '<div class="rowbtns">' +
+      (shop ? '<a class="shopbtn small" href="tel:' + esc(shop) + '">Call us</a>' : '') +
+      '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
+        esc(wa(C().whatsapp, "Hayat \u2014 about order " + o.id + "\n\n")) + '">WhatsApp</a>' +
+      (o.lat ? '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
+        esc(mapsPin(o)) + '">Pin in Maps</a>' : '') +
+    '</div>' +
+    (canCancel
+      ? '<button class="shopbtn ghost danger" id="obCancel">Cancel this order</button>'
+      : '<p class="shopnote">To change anything now, please call us.</p>') +
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+
+  var cb = el("obCancel");
+  if(cb) cb.onclick = function(){
+    if(!window.confirm("Cancel order " + o.id + "?")) return;
+    STORE.cancel(o.id, "customer", "");
+    viewOrder(main, id);
+  };
+
+  if(o.rLat && at >= 2 && o.status !== "delivered") drawTrackMap(o);
+}
+
+/* the customer's own little map: their pin, and the rider closing in */
+var TMAP = null, TDOTS = null;
+function drawTrackMap(o){
+  var box = el("trackmap");
+  if(!box || !o.rLat) return;
+  loadLeaflet().then(function(){
+    var LF = window.L;
+    try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
+    TMAP = LF.map(box, { zoomControl:false, attributionControl:true, dragging:true });
+    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(TMAP);
+
+    var dest = (o.lat && o.lng) ? [o.lat, o.lng] : [HOME.lat, HOME.lng];
+    LF.marker(dest, { icon: LF.divIcon({ className:"omark",
+      html:'<span class="dot" style="background:#E4705A"></span><span class="tag">You</span>',
+      iconSize:null, iconAnchor:[7,7] }) }).addTo(TMAP);
+
+    var ride = LF.marker([o.rLat, o.rLng], { icon: LF.divIcon({ className:"omark",
+      html:'<span class="dot rider"></span><span class="tag">Rider</span>',
+      iconSize:null, iconAnchor:[7,7] }) }).addTo(TMAP);
+    TDOTS = ride;
+
+    TMAP.fitBounds([dest, [o.rLat, o.rLng]], { padding:[40,40], maxZoom:16 });
+    watchSize(box, TMAP);
+  }).catch(function(){});
 }
 
 /* ============================================================
@@ -494,9 +664,10 @@ function viewAdmin(main){
 
 function paintAdmin(main){
   var orders = STORE.orders(), riders = STORE.riders();
-  var live   = orders.filter(function(o){ return o.status !== "delivered"; });
+  var gone   = orders.filter(function(o){ return o.status === "cancelled"; });
+  var live   = orders.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; });
   var done   = orders.filter(function(o){ return o.status === "delivered"; });
-  var pinned = orders.filter(function(o){ return o.lat && o.lng; });
+  var pinned = orders.filter(function(o){ return o.lat && o.lng && o.status !== "cancelled"; });
 
   main.innerHTML = shell("Orders",
     connBanner() +
@@ -509,6 +680,7 @@ function paintAdmin(main){
     '<div class="adminbar">' +
       '<span class="pill">' + live.length + ' live</span>' +
       '<span class="pill quiet">' + done.length + ' delivered</span>' +
+      (gone.length ? '<span class="pill gone">' + gone.length + ' cancelled</span>' : '') +
       '<button class="linky" data-go="#/admin/riders">Riders (' + riders.length + ')</button>' +
     '</div>' +
 
@@ -523,13 +695,13 @@ function paintAdmin(main){
         (pinned.length ? '' : '<p class="shopsub">No order has a pin yet.</p>')
 
       : ADVIEW === "board"
-      ? (orders.length ? boardHtml(orders)
+      ? (orders.length ? boardHtml(orders.filter(function(o){ return o.status !== "cancelled"; }))
                        : '<p class="shopsub">No orders yet.</p>')
 
       : (orders.length ? orders.map(orderCard).join("")
                        : '<p class="shopsub">No orders yet.</p>')) +
 
-    '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+    '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>', true);
 
   main.querySelectorAll("[data-view]").forEach(function(b){
     b.onclick = function(){
@@ -540,6 +712,7 @@ function paintAdmin(main){
   });
 
   if(ADVIEW === "map") drawAdminMap(pinned);
+  pinned.forEach(measureRoad);
   wireCards(main);
 }
 
@@ -578,9 +751,19 @@ function boardCard(o){
     '<div class="brow"><b>' + esc(o.id) + '</b><span class="btime">' + when(o.at) + '</span></div>' +
     '<div class="bname">' + esc(o.name) + '</div>' +
     '<div class="baddr">' + esc(o.addr) + '</div>' +
-    (o.lat ? '<a class="pinlink mini2" target="_blank" rel="noopener" href="' + esc(dirTo(o)) + '">\u25CE Pin</a>' : '') +
+    (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' from us</div>' : '') +
     '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
+      (discountLabel(o) ? '<span class="offtag">' + esc(discountLabel(o)) + '</span>' : '') +
       (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
+    '<div class="quick">' +
+      '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
+        esc(waCustomer(o, o.status === "placed" ? msgAccepted(o) : msgOnWay(o))) +
+        '" title="Message the customer">WhatsApp</a>' +
+      (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
+        '" title="Route from the shop">Maps</a>' : '') +
+      '<a class="qbtn" href="tel:' + esc(o.phone) + '" title="Call">Call</a>' +
+      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit</a>' +
+    '</div>' +
     act + '</div>';
 }
 
@@ -600,6 +783,43 @@ function wireCards(main){
       if(o && r) window.open(wa(r.phone, riderMsg(o, r)), "_blank");
     };
   });
+}
+
+/* ---- handing off to the apps people already have ------------
+   Google Maps for anything to do with getting there, WhatsApp for
+   anything to do with talking. Both open the real app on a phone.
+   ------------------------------------------------------------ */
+function mapsPin(o){
+  var q = (o.lat && o.lng) ? (o.lat + "," + o.lng) : o.addr;
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+function mapsFromShop(o){
+  var d = (o.lat && o.lng) ? (o.lat + "," + o.lng) : o.addr;
+  return "https://www.google.com/maps/dir/?api=1" +
+         "&origin=" + encodeURIComponent(HOME.lat + "," + HOME.lng) +
+         "&destination=" + encodeURIComponent(d) + "&travelmode=driving";
+}
+function waCustomer(o, text){ return wa(o.phone, text); }
+
+function orderLine(o){
+  return (o.lines || []).map(function(l){
+    return l.q + " \u00d7 " + l.name + (l.label ? " (" + l.label + ")" : "");
+  }).join(", ");
+}
+function msgOnWay(o){
+  return "Hayat \u2014 order " + o.id + "\n\n" + orderLine(o) +
+         "\nTotal " + rupee(o.total) + " (cash on delivery)" +
+         "\n\nYour food is on the way." +
+         "\nFollow it here: " + base() + "#/o/" + o.id;
+}
+function msgAccepted(o){
+  return "Hayat \u2014 order " + o.id + "\n\nWe have your order and the kitchen has started." +
+         "\n" + orderLine(o) + "\nTotal " + rupee(o.total) +
+         "\n\nTrack it here: " + base() + "#/o/" + o.id;
+}
+function msgRiderHere(o){
+  return "Hayat \u2014 order " + o.id + "\n\nI am outside with your order." +
+         "\nPlease collect " + rupee(o.total) + ".";
 }
 
 /* the pin if we have one, otherwise the words */
@@ -643,15 +863,24 @@ function orderCard(o){
       '<span class="status s-' + o.status + '">' + esc(STEP[o.status].t) + '</span>' +
       '<span class="otime">' + when(o.at) + '</span></div>' +
     '<div class="who">' + esc(o.name) + ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a></div>' +
-    '<div class="addr">' + esc(o.addr) + '</div>' +
+    '<div class="addr">' + esc(o.addr) +
+      (distLabel(o) ? ' <b class="dist">\u00b7 ' + esc(distLabel(o)) + '</b>' : '') + '</div>' +
     (o.note ? '<div class="addr note">' + esc(o.note) + '</div>' : '') +
-    (o.lat ? '<a class="pinlink" target="_blank" rel="noopener" href="' + esc(dirTo(o)) + '">\u25CE Pin dropped \u2014 open in Maps</a>'
-           : '<div class="addr nopin">No pin \u2014 address only</div>') +
+    (o.lat ? '' : '<div class="addr nopin">No pin \u2014 address only</div>') +
     '<div class="items">' + (o.lines||[]).map(function(l){
       return l.q + "× " + esc(l.name) + (l.label ? " <i>" + esc(l.label) + "</i>" : "");
     }).join(" · ") + '</div>' +
     '<div class="orow"><span class="tot">' + rupee(o.total) + '</span>' +
+      (discountLabel(o) ? '<span class="offtag">' + esc(discountLabel(o)) + '</span>' : '') +
       (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
+    '<div class="quick">' +
+      '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
+        esc(waCustomer(o, o.status === "placed" ? msgAccepted(o) : msgOnWay(o))) + '">WhatsApp</a>' +
+      (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
+        '">Open in Maps</a>' : '') +
+      '<a class="qbtn" href="tel:' + esc(o.phone) + '">Call</a>' +
+      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">Edit</a>' +
+    '</div>' +
     action + '</div>';
 }
 
@@ -664,6 +893,55 @@ function orderCard(o){
 var AMAP = null, AVIEW = null;
 var ADVIEW = "board";
 try{ ADVIEW = localStorage.getItem("hayat_adview") || "board"; }catch(e){}
+
+/* Straight line from the kitchen. Roads are longer, so this reads low —
+   but it sorts and compares correctly, which is what the office needs. */
+function kmFrom(lat, lng){
+  var R = 6371, rad = Math.PI / 180;
+  var dLat = (lat - HOME.lat) * rad, dLng = (lng - HOME.lng) * rad;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+          Math.cos(HOME.lat*rad)*Math.cos(lat*rad)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function distLabel(o){
+  /* a measured road distance beats the straight line whenever we have one */
+  if(o.roadKm) return o.roadKm.toFixed(1) + " km" + (o.roadMin ? " \u00b7 " + o.roadMin + " min" : "");
+  if(!o.lat || !o.lng) return "";
+  var km = kmFrom(o.lat, o.lng);
+  return (km < 1 ? Math.round(km * 1000) + " m" : km.toFixed(1) + " km") + " \u2248";
+}
+
+/* ---- real road distance, once, when the order arrives --------
+   Straight line is free and instant but always reads short. If a
+   routing service is named in config.js we ask it once per order
+   and keep the answer on the order for good.
+
+   Google's own Distance Matrix needs a billing account on the
+   project, so it is not the default. Any service that answers with
+   a distance in metres works; the reader below handles OSRM's
+   shape, which several free hosts speak.
+   ------------------------------------------------------------ */
+function measureRoad(o){
+  var r = (C().routing) || {};
+  if(!r.enabled || !o.lat || !o.lng || o.roadKm || o.roadTried) return;
+  o.roadTried = true;
+
+  var base = r.osrm || "https://router.project-osrm.org";
+  var url = base + "/route/v1/driving/" +
+            HOME.lng + "," + HOME.lat + ";" + o.lng + "," + o.lat +
+            "?overview=false";
+
+  fetch(url).then(function(x){ return x.json(); }).then(function(j){
+    var leg = j && j.routes && j.routes[0];
+    if(!leg) return;
+    STORE.setRoad(o.id, leg.distance / 1000, Math.round(leg.duration / 60));
+  }).catch(function(){ /* the straight line still stands */ });
+}
+/* first name, or the first word, for a map label */
+function shortName(n){
+  var w = String(n || "").trim().split(/\s+/)[0] || "?";
+  return w.length > 10 ? w.slice(0, 9) + "\u2026" : w;
+}
 
 function statusColour(s){
   return s === "placed"    ? "#E4705A"
@@ -692,15 +970,21 @@ function drawAdminMap(list){
     var pts = [[HOME.lat, HOME.lng]];
     list.forEach(function(o){
       pts.push([o.lat, o.lng]);
-      LF.circleMarker([o.lat, o.lng], {
-        radius: o.status === "delivered" ? 6 : 10,
-        color: "#FFFFFF", weight: 2,
-        fillColor: statusColour(o.status),
-        fillOpacity: o.status === "delivered" ? .5 : 1
+      LF.marker([o.lat, o.lng], {
+        icon: LF.divIcon({
+          className: "omark",
+          html: '<span class="dot" style="background:' + statusColour(o.status) + '"></span>' +
+                '<span class="tag">' + esc(shortName(o.name)) + ' \u00b7 ' +
+                rupee(o.total) + '</span>',
+          iconSize: null, iconAnchor: [7, 7]
+        })
       }).addTo(AMAP).bindPopup(
         "<b>" + esc(o.id) + "</b> \u00b7 " + esc(STEP[o.status].t) + "<br>" +
-        esc(o.name) + "<br>" + rupee(o.total) + "<br>" +
-        '<a href="' + esc(dirTo(o)) + '" target="_blank" rel="noopener">Directions</a>'
+        esc(o.name) + "<br>" + rupee(o.total) +
+        (distLabel(o) ? " \u00b7 " + distLabel(o) + " away" : "") + "<br>" +
+        '<a href="' + esc(mapsFromShop(o)) + '" target="_blank" rel="noopener">Google Maps</a>' +
+        ' &middot; ' +
+        '<a href="' + esc(waCustomer(o, msgOnWay(o))) + '" target="_blank" rel="noopener">WhatsApp</a>'
       );
     });
 
@@ -716,7 +1000,7 @@ function drawAdminMap(list){
                       [HOME.lat + far, HOME.lng + far]], { maxZoom:16 });
     } else AMAP.setView([HOME.lat, HOME.lng], 15);
     AMAP.on("moveend", function(){ AVIEW = { c: AMAP.getCenter(), z: AMAP.getZoom() }; });
-    setTimeout(function(){ AMAP.invalidateSize(); }, 150);
+    watchSize(box, AMAP);
   }).catch(function(err){
     box.innerHTML = '<div class="mapfail">The map is not loading here.<br><small>' +
       esc(String(err && err.message || err)) + '</small></div>';
@@ -737,6 +1021,94 @@ function connBanner(){
     return '<div class="conn bad"><b>Firestore is refusing this app.</b>' +
            'The security rules are blocking reads and writes.</div>';
   return '<div class="conn warn">Connecting\u2026 nothing is saved to the cloud yet.</div>';
+}
+
+/* ---- the office editing one order -------------------------- */
+function viewEdit(main, id){
+  gate(main, function(){ paintEdit(main, id); });
+}
+
+function paintEdit(main, id){
+  var o = STORE.order(id);
+  if(!o){
+    main.innerHTML = shell("Not found", '<p class="shopsub">That order is gone.</p>' +
+      '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>', true);
+    return;
+  }
+  var m = money(o), d = o.discount || { type:"pct", value:0 };
+
+  main.innerHTML = shell("Edit " + esc(o.id),
+    '<div class="editwrap">' +
+      '<h3 class="mini">What they ordered</h3>' +
+      '<div class="lines">' + (o.lines||[]).map(function(l,i){
+        return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
+          (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
+          '<div class="qty">' +
+            '<button data-eq="' + i + '|-1">&minus;</button><span>' + l.q + '</span>' +
+            '<button data-eq="' + i + '|1">+</button></div>' +
+          '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
+      }).join("") + '</div>' +
+      (o.lines && o.lines.length ? '' : '<p class="shopsub">Every line was removed.</p>') +
+
+      '<h3 class="mini">Discount</h3>' +
+      '<div class="disc">' +
+        '<button class="dtab' + (d.type==="pct"?" on":"") + '" data-dt="pct">%</button>' +
+        '<button class="dtab' + (d.type==="rs"?" on":"") + '" data-dt="rs">\u20B9</button>' +
+        '<input class="fld" id="edDisc" inputmode="numeric" placeholder="0" value="' +
+          (d.value || "") + '">' +
+      '</div>' +
+      '<p class="shopnote" style="text-align:left;margin:4px 0 0">' +
+        'Subtotal ' + rupee(m.sub) +
+        (m.off ? ' \u2212 ' + rupee(m.off) + ' (' + esc(discountLabel(o)) + ')' : '') +
+        ' = <b>' + rupee(m.total) + '</b></p>' +
+
+      '<h3 class="mini">Where it goes</h3>' +
+      '<input class="fld" id="edName"  placeholder="Name" value="' + esc(o.name) + '">' +
+      '<input class="fld" id="edPhone" placeholder="Phone" inputmode="tel" value="' + esc(o.phone) + '">' +
+      '<textarea class="fld" id="edAddr" placeholder="Address">' + esc(o.addr) + '</textarea>' +
+      '<input class="fld" id="edNote"  placeholder="Note" value="' + esc(o.note||"") + '">' +
+
+      '<button class="shopbtn" id="edSave">Save the changes</button>' +
+      '<button class="shopbtn ghost" data-go="#/admin">Back without saving</button>' +
+      (o.status !== "cancelled" && o.status !== "delivered"
+        ? '<button class="shopbtn danger" id="edCancel">Cancel this order</button>' : '') +
+    '</div>', true);
+
+  /* quantities change in place so the total is always honest */
+  main.querySelectorAll("[data-eq]").forEach(function(b){
+    b.onclick = function(){
+      var p = b.dataset.eq.split("|"), i = +p[0], step = +p[1];
+      var lines = (o.lines||[]).slice();
+      lines[i] = Object.assign({}, lines[i], { q: lines[i].q + step });
+      lines = lines.filter(function(l){ return l.q > 0; });
+      STORE.edit(id, { lines: lines });
+      paintEdit(main, id);
+    };
+  });
+  main.querySelectorAll("[data-dt]").forEach(function(b){
+    b.onclick = function(){
+      STORE.edit(id, { discount: { type: b.dataset.dt, value: +(el("edDisc").value || 0) } });
+      paintEdit(main, id);
+    };
+  });
+
+  el("edSave").onclick = function(){
+    STORE.edit(id, {
+      name:  el("edName").value.trim(),
+      phone: el("edPhone").value.trim(),
+      addr:  el("edAddr").value.trim(),
+      note:  el("edNote").value.trim(),
+      discount: { type: d.type, value: +(el("edDisc").value || 0) }
+    });
+    location.hash = "#/admin";
+  };
+
+  var cx = el("edCancel");
+  if(cx) cx.onclick = function(){
+    var why = window.prompt("Why is it cancelled? (optional)") || "";
+    STORE.cancel(id, "office", why);
+    location.hash = "#/admin";
+  };
 }
 
 function viewRiders(main){
@@ -769,42 +1141,171 @@ function paintRiders(main){
 
 /* ============================================================
    RIDER
+   ------------------------------------------------------------
+   The rider signs in once with the phone number the office
+   registered, and from then on this phone shows only their own
+   jobs. Installed from the browser menu it opens like an app.
+
+   While a job is open the phone posts its position every few
+   seconds so the customer's map moves. A browser stops that the
+   moment the screen locks — that is the rule on every phone, and
+   the honest limit of a web app. Nothing is sent when there is no
+   live job, and nothing is kept once the job is delivered.
    ============================================================ */
+/* On the rider's pages the page installs as "Hayat Rider", not as the
+   menu — same site, its own icon and its own start page. */
+function riderManifest(on){
+  var link = document.querySelector('link[rel="manifest"]');
+  if(!link) return;
+  if(!riderManifest._was) riderManifest._was = link.getAttribute("href");
+  link.setAttribute("href", on ? "rider.webmanifest" : riderManifest._was);
+}
+
+function riderPhone(){
+  try{ return localStorage.getItem("hayat_rider") || ""; }catch(e){ return ""; }
+}
+function setRiderPhone(p){
+  try{ p ? localStorage.setItem("hayat_rider", p) : localStorage.removeItem("hayat_rider"); }catch(e){}
+}
+function digits(p){ return String(p || "").replace(/\D/g, "").slice(-10); }
+
+function whoAmI(){
+  var mine = digits(riderPhone());
+  if(!mine) return null;
+  return STORE.riders().filter(function(r){ return digits(r.phone) === mine; })[0] || null;
+}
+
+/* ---- the sign-in and the job list ---- */
+function viewDriveHome(main){
+  var me = whoAmI();
+
+  if(!me){
+    main.innerHTML = shell("Rider",
+      '<p class="revsub">Sign in with the number the restaurant registered for you.</p>' +
+      '<input class="fld" id="rvPhone" placeholder="Your phone number" inputmode="tel" value="' +
+        esc(riderPhone()) + '">' +
+      '<button class="shopbtn" id="rvGo">Sign in</button>' +
+      (riderPhone() ? '<p class="shopnote">That number is not on the rider list. ' +
+        'Ask the office to add it.</p>' : '') +
+      '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+    el("rvGo").onclick = function(){
+      setRiderPhone(el("rvPhone").value.trim());
+      viewDriveHome(main);
+    };
+    return;
+  }
+
+  var mine = STORE.orders().filter(function(o){
+    return o.riderId === me.id && o.status !== "delivered" && o.status !== "cancelled";
+  });
+  var done = STORE.orders().filter(function(o){
+    return o.riderId === me.id && o.status === "delivered";
+  }).length;
+
+  main.innerHTML = shell("Your deliveries",
+    '<div class="adminbar"><span class="pill">' + mine.length + ' to go</span>' +
+      '<span class="pill quiet">' + done + ' done</span>' +
+      '<button class="linky" id="rvOut">Not ' + esc(me.name) + '?</button></div>' +
+    (mine.length ? mine.map(function(o){
+        return '<a class="jobcard" href="#/drive/' + esc(o.id) + '">' +
+          '<div class="brow"><b>' + esc(o.id) + '</b>' +
+            '<span class="status s-' + o.status + '">' + esc(STEP[o.status].t) + '</span>' +
+            '<span class="btime">' + when(o.at) + '</span></div>' +
+          '<div class="bname">' + esc(o.name) + '</div>' +
+          '<div class="baddr">' + esc(o.addr) + '</div>' +
+          (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' from the shop</div>' : '') +
+          '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
+            '<span class="rname">collect on delivery</span></div></a>';
+      }).join("")
+      : '<p class="shopsub">Nothing assigned to you right now.</p>') +
+    '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+
+  el("rvOut").onclick = function(){ setRiderPhone(""); viewDriveHome(main); };
+}
+
+/* ---- one job ---- */
 function viewDrive(main, id){
+  if(!id) return viewDriveHome(main);
+
   var o = STORE.order(id);
   if(!o){
-    main.innerHTML = shell("Not found", '<p class="shopsub">No order with that number on this device.</p>');
+    main.innerHTML = shell("Not found",
+      '<p class="shopsub">No order with that number.</p>' +
+      '<button class="shopbtn ghost" data-go="#/drive">Your deliveries</button>');
     return;
   }
   var at = FLOW.indexOf(o.status), next = FLOW[at+1];
 
   main.innerHTML = shell("Delivery " + esc(o.id),
     '<div class="who big">' + esc(o.name) + '</div>' +
-    '<div class="addr">' + esc(o.addr) + '</div>' +
+    '<div class="addr">' + esc(o.addr) +
+      (distLabel(o) ? ' <b class="dist">\u00b7 ' + esc(distLabel(o)) + '</b>' : '') + '</div>' +
     (o.note ? '<div class="addr note">' + esc(o.note) + '</div>' : '') +
     '<div class="rowbtns">' +
-      '<a class="shopbtn small" href="tel:' + esc(o.phone) + '">Call</a>' +
-      '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' + esc(dirTo(o)) + '">Directions</a>' +
+      '<a class="shopbtn small" target="_blank" rel="noopener" href="' + esc(mapsPin(o)) +
+        '">Navigate</a>' +
+      '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
+        esc(waCustomer(o, msgRiderHere(o))) + '">WhatsApp</a>' +
+      '<a class="shopbtn small ghost" href="tel:' + esc(o.phone) + '">Call</a>' +
     '</div>' +
     '<div class="items">' + (o.lines||[]).map(function(l){
-      return l.q + "× " + esc(l.name);
-    }).join(" · ") + '</div>' +
+      return l.q + "\u00d7 " + esc(l.name) + (l.label ? " <i>" + esc(l.label) + "</i>" : "");
+    }).join(" \u00b7 ") + '</div>' +
     '<div class="total"><span>Collect</span><b>' + rupee(o.total) + '</b></div>' +
     '<div class="status big s-' + o.status + '">' + esc(STEP[o.status].t) + '</div>' +
     (next ? '<button class="shopbtn" id="dvGo">' + esc(STEP[next].t) + '</button>'
-          : '<p class="shopnote">Done. Thank you.</p>'));
+          : '<p class="shopnote">Done. Thank you.</p>') +
+    '<div class="gpsrow"><span class="gpsdot" id="gpsDot"></span>' +
+      '<span id="gpsTxt">' + (next ? "Sharing your position while this is open" : "Not sharing") + '</span></div>' +
+    '<button class="shopbtn ghost" data-go="#/drive">Your other deliveries</button>');
 
   if(next) el("dvGo").onclick = function(){ STORE.setStatus(id, next); };
+
+  if(o.status === "assigned" || o.status === "on_way") startPing(id);
+  else stopPing();
+}
+
+/* ---- the position, while the job is open ---- */
+var PINGID = null, PINGJOB = null;
+function stopPing(){
+  if(PINGID != null){ try{ navigator.geolocation.clearWatch(PINGID); }catch(e){} }
+  PINGID = null; PINGJOB = null;
+}
+function startPing(id){
+  if(PINGJOB === id) return;
+  stopPing();
+  if(!navigator.geolocation) return;
+  PINGJOB = id;
+  var last = 0;
+  PINGID = navigator.geolocation.watchPosition(function(pos){
+    var now = Date.now();
+    if(now - last < 8000) return;         /* eight seconds is plenty */
+    last = now;
+    STORE.ping(id, pos.coords.latitude, pos.coords.longitude);
+    var d = el("gpsDot"), t = el("gpsTxt");
+    if(d) d.classList.add("on");
+    if(t) t.textContent = "Position shared \u00b7 " + when(now);
+  }, function(){
+    var t = el("gpsTxt");
+    if(t) t.textContent = "Location is off \u2014 the customer cannot see you move";
+  }, { enableHighAccuracy:true, maximumAge:5000, timeout:20000 });
 }
 
 /* ============================================================
    chrome
    ============================================================ */
-function shell(title, body){
+function shell(title, body, wide){
   return '<div class="backbar">' +
       '<button class="back" data-go="#/"><span class="a">‹</span>Menu</button>' +
       '<span class="crumbtxt">' + esc(title) + '</span></div>' +
-    '<div class="shopwrap"><h2 class="shoph">' + esc(title) + '</h2>' + body + '</div>';
+    '<div class="shopwrap' + (wide ? " wide" : "") + '">' +
+      '<h2 class="shoph">' + esc(title) + '</h2>' + body + '</div>';
+}
+
+/* The office runs on a desktop all day. It gets the whole window:
+   no category rail, no menu chrome, just the work. */
+function deskMode(on){
+  try{ document.body.classList.toggle("deskwork", !!on); }catch(e){}
 }
 function shopToast(m){
   try{ if(window.toast) return window.toast(m); }catch(e){}
@@ -861,12 +1362,16 @@ function repaintRows(){
 var REPAINT = null;
 function route(p, main){
   REPAINT = null;
+  deskMode(p[0] === "admin");
+  riderManifest(p[0] === "drive");
+  if(p[0] !== "drive") stopPing();      /* never track off the job page */
   if(p[0] === "cart")     { viewCart(main); return true; }
   if(p[0] === "checkout") { viewCheckout(main); return true; }
   if(p[0] === "o")        { REPAINT = function(){ viewOrder(main, p[1]); }; REPAINT(); return true; }
   if(p[0] === "drive")    { REPAINT = function(){ viewDrive(main, p[1]); }; REPAINT(); return true; }
   if(p[0] === "admin"){
     if(p[1] === "riders") { REPAINT = function(){ viewRiders(main); }; REPAINT(); return true; }
+    if(p[1] === "o" && p[2]) { REPAINT = function(){ viewEdit(main, p[2]); }; REPAINT(); return true; }
     REPAINT = function(){ viewAdmin(main); }; REPAINT(); return true;
   }
   return false;

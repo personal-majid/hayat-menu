@@ -106,6 +106,26 @@ window.CONFIG = {
     autoAdvance: true          // move to the next clip when one ends
   },
 
+  /* ---- 0ad. ROAD DISTANCE ----------------------------------- *
+     Off by default: every order shows the straight-line distance
+     from the shop, marked with a tilde, which costs nothing.
+
+     Turn this on and each order is measured once against a real
+     road network, and the answer is stored on the order.
+
+       enabled: true
+
+     Google's own Distance Matrix needs a billing account on the
+     project, so it is not what runs here. The default below is the
+     public OSRM demo server: free, no key, but it asks that heavy
+     users run their own. If orders ever outgrow it, point osrm at
+     your own instance and nothing else changes.
+     --------------------------------------------------------- */
+  routing: {
+    enabled: false,
+    osrm: "https://router.project-osrm.org"
+  },
+
   /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
   instagram: "zaman_yemenmandi",          // <-- CHANGE THIS
 
