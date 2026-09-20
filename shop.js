@@ -908,6 +908,110 @@ function findRowHtml(r, action){
   '</button>';
 }
 
+/* ------------------------------------------------------------
+   THE SEARCH PALETTE
+
+   A search box at the foot of a long form is a search box you
+   scroll past. This opens over the page, in the middle of the
+   screen, with the caret already in it - so adding a dish is
+   one tap, type, one tap, and it stays open for the next one.
+
+   Escape closes it. So does the backdrop. The arrow keys move
+   through the results, because the office runs on a desktop
+   with a keyboard and should not have to reach for the mouse.
+   ------------------------------------------------------------ */
+var PAL = null;
+
+function openFinder(onPick, action){
+  closeFinder();
+
+  var wrap = document.createElement("div");
+  wrap.className = "palette";
+  wrap.innerHTML =
+    '<div class="palbox" role="dialog" aria-label="Search the menu">' +
+      '<div class="palhead">' +
+        '<input class="palin" id="palIn" autocomplete="off" ' +
+          'placeholder="Search the menu\u2026 chicken, mandi, juice">' +
+        '<button class="palx" id="palX" aria-label="Close">\u00d7</button>' +
+      '</div>' +
+      '<div class="palout" id="palOut">' +
+        '<p class="shopnote fnone">Start typing a dish.</p>' +
+      '</div>' +
+      '<div class="palfoot"><span>\u2191\u2193 to move \u00b7 Enter to add \u00b7 Esc to close</span></div>' +
+    '</div>';
+  document.body.appendChild(wrap);
+  document.body.classList.add("palopen");
+  PAL = wrap;
+
+  var box = wrap.querySelector("#palIn");
+  var out = wrap.querySelector("#palOut");
+  var at  = 0;
+
+  function rows(){ return [].slice.call(out.querySelectorAll("[data-find]")); }
+  function mark(){
+    rows().forEach(function(r, i){
+      r.classList.toggle("on", i === at);
+      if(i === at && r.scrollIntoView) r.scrollIntoView({ block:"nearest" });
+    });
+  }
+
+  function draw(){
+    var q = box.value.trim();
+    if(!q){
+      out.innerHTML = '<p class="shopnote fnone">Start typing a dish.</p>';
+      return;
+    }
+    var hits = findDishes(q, 40);
+    out.innerHTML = hits.length
+      ? hits.map(function(r){ return findRowHtml(r, action || "Add"); }).join("")
+      : '<p class="shopnote fnone">Nothing matches \u201c' + esc(q) + '\u201d.</p>';
+    at = 0; mark();
+    rows().forEach(function(r, i){
+      r.onmouseenter = function(){ at = i; mark(); };
+      r.onclick = function(){ take(r); };
+    });
+  }
+
+  function take(r){
+    var parts = r.dataset.find.split("|");
+    var price = +parts[parts.length - 1];
+    var lbl   = parts.slice(1, -1).join("|");
+    onPick(parts[0], lbl, price, r);
+    /* stay open: nobody adds exactly one thing to an order */
+    r.classList.add("done");
+    var tag = r.querySelector(".fadd");
+    if(tag) tag.textContent = "Added \u2713";
+    box.focus();
+    box.select();
+  }
+
+  var job = null;
+  box.addEventListener("input", function(){
+    clearTimeout(job); job = setTimeout(draw, 100);
+  });
+  box.addEventListener("keydown", function(e){
+    var list = rows();
+    if(e.key === "Escape"){ e.preventDefault(); closeFinder(); return; }
+    if(e.key === "ArrowDown"){ e.preventDefault(); at = Math.min(at + 1, list.length - 1); mark(); return; }
+    if(e.key === "ArrowUp"){ e.preventDefault(); at = Math.max(at - 1, 0); mark(); return; }
+    if(e.key === "Enter"){ e.preventDefault(); if(list[at]) take(list[at]); return; }
+  });
+
+  wrap.querySelector("#palX").onclick = closeFinder;
+  wrap.addEventListener("mousedown", function(e){
+    if(e.target === wrap) closeFinder();
+  });
+
+  setTimeout(function(){ box.focus(); }, 30);
+}
+
+function closeFinder(){
+  if(!PAL) return;
+  try{ PAL.remove(); }catch(e){}
+  PAL = null;
+  document.body.classList.remove("palopen");
+}
+
 /* Wires a search box to a results panel. onPick gets
    (dishId, sizeLabel, price, row). */
 function wireFinder(inputId, panelId, onPick, action){
@@ -1049,22 +1153,22 @@ function viewMyOrders(main){
    is - making them walk back through the categories to find it
    is the slowest possible way to take their money. */
 function cartFinder(){
-  return '<div class="finder cartfind">' +
-    '<input class="fld" id="ctFind" autocomplete="off" ' +
-      'placeholder="Search the menu\u2026 chicken, mandi, juice">' +
-    '<div class="findpanel" id="ctFindOut"></div>' +
-  '</div>';
+  return '<button class="shopbtn ghost findbtn" id="ctFind">' +
+    '<span class="fi">\uD83D\uDD0D</span> Search the menu' +
+  '</button>';
 }
 
 function wireCartFinder(main){
-  wireFinder("ctFind", "ctFindOut", function(did, lbl, price, btn){
-    var it = dishById(did);
-    addLine(did, it ? label(it.name) : did, lbl, price);
-    btn.classList.add("done");
-    btn.querySelector(".fadd").textContent = "Added \u2713";
-    paintFab();
-    setTimeout(function(){ viewCart(main); }, 260);
-  }, "Add");
+  var b = el("ctFind");
+  if(!b) return;
+  b.onclick = function(){
+    openFinder(function(did, lbl, price){
+      var it = dishById(did);
+      addLine(did, it ? label(it.name) : did, lbl, price);
+      paintFab();
+      viewCart(main);       /* the list behind keeps up */
+    }, "Add");
+  };
 }
 
 function viewCart(main){
@@ -2327,14 +2431,11 @@ function paintEdit(main, id){
         (m.off ? ' \u2212 ' + rupee(m.off) + ' (' + esc(discountLabel(o)) + ')' : '') +
         ' = <b>' + rupee(m.total) + '</b></p>' +
 
-      /* Adding a dish has to be one search and one tap. Anything
-         slower and the phone gets picked up instead. */
-      '<h3 class="mini">Add something</h3>' +
-      '<div class="finder">' +
-        '<input class="fld" id="edFind" autocomplete="off" ' +
-          'placeholder="Search the menu\u2026 chicken, mandi, juice">' +
-        '<div class="findpanel" id="edFindOut"></div>' +
-      '</div>' +
+      /* One button, and the search opens over the middle of the
+         screen. A box down here is a box you scroll past. */
+      '<button class="shopbtn ghost findbtn" id="edFind">' +
+        '<span class="fi">\uD83D\uDD0D</span> Add something from the menu' +
+      '</button>' +
 
       '<h3 class="mini">Where it goes</h3>' +
       '<input class="fld" id="edName"  placeholder="Name" value="' + esc(o.name) + '">' +
@@ -2373,18 +2474,22 @@ function paintEdit(main, id){
     };
   });
 
-  wireFinder("edFind", "edFindOut", function(did, lbl, price){
-    var it = dishById(did);
-    var lines = (o.lines || []).slice();
-    var k = did + "|" + lbl;
-    var hit = lines.filter(function(l){ return (l.id + "|" + (l.label||"")) === k; })[0];
-    if(hit) hit.q += 1;
-    else lines.push({ k:k, id:did, name: it ? label(it.name) : did,
-                      label:lbl, price:price, q:1 });
-    STORE.edit(id, { lines: lines });
-    shopToast((it ? label(it.name) : "Item") + " added.");
-    paintEdit(main, id);
-  }, "Add");
+  el("edFind").onclick = function(){
+    openFinder(function(did, lbl, price){
+      var live  = STORE.order(id);
+      var lines = (live.lines || []).slice();
+      var it    = dishById(did);
+      var k     = did + "|" + lbl;
+      var hit = lines.filter(function(l){ return (l.id + "|" + (l.label||"")) === k; })[0];
+      if(hit) hit.q += 1;
+      else lines.push({ k:k, id:did, name: it ? label(it.name) : did,
+                        label:lbl, price:price, q:1 });
+      STORE.edit(id, { lines: lines });
+      /* the form behind is repainted so the total is honest even
+         while the palette is still open */
+      paintEdit(main, id);
+    }, "Add");
+  };
 
   el("edSave").onclick = function(){
     STORE.edit(id, {
@@ -3197,6 +3302,60 @@ window.addEventListener("hashchange", paintFab);
 document.addEventListener("visibilitychange", function(){
   if(document.visibilityState === "visible" && PINGJOB) holdScreen();
 });
+
+/* ------------------------------------------------------------
+   THE RIDER APP DRIVES ITSELF
+
+   In the customer's app, index.html owns the router and calls
+   SHOP.route for the ordering screens. rider.html has no menu
+   and no router of its own, so when shop.js finds itself there
+   it takes the wheel - and answers only to rider routes. A
+   delivery app that can be navigated to a biryani page is not
+   a delivery app.
+   ------------------------------------------------------------ */
+function riderApp(){ return !!window.HAYAT_RIDER_APP; }
+
+if(riderApp()){
+  (function(){
+    var main = document.getElementById("main");
+
+    var bar = '<div class="ridebar"><b>Hayat \u00b7 deliveries</b></div>';
+
+    function paint(){
+      var h = (location.hash || "").replace(/^#\/?/, "");
+      var p = h.split("/").filter(Boolean);
+
+      /* a rider app has exactly two screens */
+      if(p[0] === "drive" && p[1]){
+        REPAINT = function(){ viewDrive(main, p[1]); };
+      } else {
+        REPAINT = function(){ viewDriveHome(main); };
+        if(p[0] !== "drive"){ location.replace("#/drive"); }
+      }
+      stopPing();
+      repaintNow();
+
+      /* the bar sits above whatever was just drawn */
+      if(main.firstChild && !main.querySelector(".ridebar")){
+        main.insertAdjacentHTML("afterbegin", bar);
+      }
+    }
+
+    window.addEventListener("hashchange", paint);
+    document.addEventListener("DOMContentLoaded", paint);
+    if(document.readyState !== "loading") paint();
+
+    /* data-go is how every button in shop.js navigates */
+    document.addEventListener("click", function(e){
+      var g = e.target.closest && e.target.closest("[data-go]");
+      if(!g) return;
+      e.preventDefault();
+      var to = g.dataset.go;
+      /* anything pointing back at the menu means nothing here */
+      location.hash = /^#\/drive/.test(to) ? to : "#/drive";
+    });
+  })();
+}
 
 /* ---------- boot ------------------------------------------- */
 (function(){

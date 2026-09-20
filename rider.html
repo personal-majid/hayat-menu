@@ -1,98 +1,125 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="garden">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#243510">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Hayat Rider">
-<link rel="manifest" href="rider.webmanifest">
-<link rel="icon" href="assets/mark.png">
-<link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>Hayat Rider</title>
-<!--
-  The rider's front door, and the reason it exists.
 
-  Android decides which app a page belongs to when the page loads,
-  from the manifest linked above. Changing that link later with
-  script does nothing, and the menu's own manifest would otherwise
-  claim every page on this site. So the rider gets a page of its
-  own, its own manifest, and its own id.
+<!-- Its own manifest, its own id. Installing this does not
+     install the customer's menu, and installing the menu does
+     not install this. -->
+<link rel="manifest" href="rider.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="stylesheet" href="app.css">
 
-  Opened in a browser it explains how to install.
-  Opened as the installed app it goes straight to work.
--->
+<!-- ============================================================
+     THE RIDER APP
+
+     A rider's phone has no business downloading a menu, a photo
+     gallery, an intro video and eleven languages to find out
+     which house to go to. This page carries the delivery screens
+     and nothing else: the shared stylesheet, the shop's settings,
+     a QR encoder for the payment code, and shop.js.
+
+     No menu data. No category markup. No intro. Nothing the
+     customer's app needs and the rider does not.
+     ============================================================ -->
+
 <style>
-  :root{color-scheme:light}
-  html,body{margin:0;min-height:100%;background:#EDF2DD;color:#1B2410;
-    font:15px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
-    gap:18px;padding:30px 22px;max-width:420px;margin:0 auto;text-align:center}
-  img.mark{width:86px;height:86px;margin:0 auto}
-  h1{font-size:21px;margin:0}
-  p{color:#5F6E4B;font-size:13.5px;margin:0}
-  .go{display:block;text-decoration:none;text-align:center;font-weight:800;font-size:15px;
-    padding:15px;border-radius:12px;background:linear-gradient(135deg,#5B8C2A,#3F6B18);color:#fff}
-  .how{text-align:left;background:#fff;border:1px solid rgba(36,53,15,.14);
-    border-radius:12px;padding:14px 16px}
-  .how b{display:block;font-size:12px;letter-spacing:.6px;text-transform:uppercase;
-    color:#3F6B18;margin-bottom:6px}
-  .how ol{margin:0;padding-left:18px;font-size:13px;color:#3A472C}
-  .how li{margin:4px 0}
-  .quiet{font-size:11.5px;color:#7A8768}
+  /* the frame this app lives in */
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-text-size-adjust:100%}
+  body{min-height:100dvh}
+  #main{max-width:620px;margin:0 auto;padding:0 16px 28px}
+
+  .ridebar{display:flex;align-items:center;gap:10px;
+    padding:14px 0 12px;border-bottom:1px solid var(--line);margin:0 0 16px}
+  .ridebar b{font-size:var(--t-small);letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted);font-weight:700}
+  .ridebar .sp{margin-left:auto}
+
+  /* a rider reads this at arm's length, often in the sun */
+  #main .who.big{font-size:23px;line-height:1.2;letter-spacing:-.01em}
+  #main .addr{font-size:16px;line-height:1.45}
+  #main .shopbtn{min-height:54px;font-size:16px;border-radius:14px}
+  #main .shopbtn.small{min-height:48px;font-size:15px}
+  #main .total b{font-size:22px}
+  #main .status.big{font-size:15px;padding:13px 16px;letter-spacing:.06em}
+  #main .items{font-size:15px;line-height:1.6}
+  #main .notebox .fld{min-height:52px;font-size:16px}
+  #main #dvGo{position:sticky;bottom:12px;z-index:40;
+    box-shadow:0 10px 26px rgba(0,0,0,.35)}
+
+  .boot{padding:40px 0;text-align:center;color:var(--muted)}
+
+  /* the install prompt, for a rider opening the link in a browser */
+  .install{border:1px solid var(--line);border-left:3px solid var(--gold);
+    border-radius:var(--r2);padding:15px 16px;margin:0 0 16px;background:var(--soft3)}
+  .install b{display:block;font-size:var(--t-h3);color:var(--cream);margin:0 0 6px}
+  .install p{margin:0 0 4px;font-size:var(--t-body);color:var(--muted);line-height:1.5}
+  .install .hide{margin-top:10px}
 </style>
 </head>
-<body>
-<div class="wrap">
-  <img class="mark" src="assets/icon-192.png" alt="">
-  <h1>Hayat Rider</h1>
-  <p>Your deliveries, on your phone.</p>
+<body class="ridework">
 
-  <a class="go" href="./#/drive">Open my deliveries</a>
-
-  <div class="how" id="howAndroid">
-    <b>Keep it on your home screen</b>
-    <ol>
-      <li>Tap the <b style="display:inline">⋮</b> menu, top right</li>
-      <li>Choose <b style="display:inline">Install app</b> — or Add to Home screen</li>
-      <li>It appears with the other apps, as Hayat Rider</li>
-    </ol>
-  </div>
-
-  <div class="how" id="howIos" hidden>
-    <b>Keep it on your home screen</b>
-    <ol>
-      <li>Tap the Share button at the bottom</li>
-      <li>Scroll down to <b style="display:inline">Add to Home Screen</b></li>
-      <li>Tap Add</li>
-    </ol>
-  </div>
-
-  <p class="quiet">Sign in once with the number the restaurant registered for you.</p>
-</div>
+<div id="main"><p class="boot">Opening your deliveries&hellip;</p></div>
 
 <script>
-  /* Launched from the home screen there is nothing to explain — go to work. */
-  var installed = false;
-  try{
-    installed = window.matchMedia("(display-mode: standalone)").matches ||
-                window.navigator.standalone === true;
-  }catch(e){}
-  if(installed) location.replace("./#/drive");
+  /* shop.js reads a language code and a toast from its host page.
+     In the customer's app those come from the menu; here they are
+     these six lines, which is all a rider ever needed. */
+  window.L = "en";
+  window.T = {};
+  window.HAYAT_RIDER_APP = true;
 
-  /* iPhones install a different way, so show the right three steps. */
-  try{
-    if(/iPad|iPhone|iPod/.test(navigator.userAgent)){
-      document.getElementById("howAndroid").hidden = true;
-      document.getElementById("howIos").hidden = false;
+  window.toast = function(msg){
+    var t = document.getElementById("ridetoast");
+    if(!t){
+      t = document.createElement("div");
+      t.id = "ridetoast";
+      t.className = "toast";
+      document.body.appendChild(t);
     }
-  }catch(e){}
+    t.textContent = msg;
+    t.classList.add("on");
+    clearTimeout(window.__toastJob);
+    window.__toastJob = setTimeout(function(){ t.classList.remove("on"); }, 2600);
+  };
 
-  /* The service worker is what makes it installable at all. */
-  if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("sw.js", { updateViaCache:"none" }).catch(function(){});
-  }
+  /* Anyone who opened the link in a browser rather than installing
+     it still works - they just get told, once, that there is a
+     better way. Installed apps never see this. */
+  (function(){
+    var installed = false;
+    try{
+      installed = window.matchMedia("(display-mode: standalone)").matches ||
+                  window.navigator.standalone === true;
+    }catch(e){}
+    if(installed) return;
+    window.addEventListener("load", function(){
+      var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      var box = document.createElement("div");
+      box.className = "install";
+      box.innerHTML =
+        "<b>Add this to your home screen</b>" +
+        "<p>" + (isIOS
+          ? "Tap Share, then <b>Add to Home Screen</b>."
+          : "Tap the three dots, then <b>Install app</b> or <b>Add to Home screen</b>.") +
+        "</p>" +
+        "<p>Then open it from the icon. Location keeps working while " +
+        "the app is in front, which it cannot do in a browser tab.</p>" +
+        "<button class='shopbtn ghost small hide' id='hideInstall'>Not now</button>";
+      var main = document.getElementById("main");
+      main.insertBefore(box, main.firstChild);
+      document.getElementById("hideInstall").onclick = function(){ box.remove(); };
+    });
+  })();
 </script>
+
+<script src="config.js"></script>
+<script src="assets/qr.js"></script>
+<script src="shop.js"></script>
 </body>
 </html>
