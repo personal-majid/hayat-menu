@@ -214,13 +214,89 @@ var STORE = {
   onMe:    onMe,
   isOffice:function(){ return ME.role === "office"; },
 
-  signInOffice: function(){
-    if(!AU) return Promise.reject(new Error("offline"));
-    var p = new AU.api.GoogleAuthProvider();
-    return AU.api.signInWithPopup(AU.auth, p);
+  /* the names for the dropdown - codes are never sent here */
+  crew: function(){
+    if(!FB) return Promise.resolve([]);
+    return FB.api.getDoc(FB.api.doc(FB.db, "crew", "_list"))
+      .then(function(d){ return (d.exists() && d.data().people) || []; })
+      .catch(function(){ return []; });
   },
+
+  /* Signing in to the office: pick a name, type the code.
+     The browser never learns the code. It offers one, and the
+     rules accept the sign-in only if it matches the one stored
+     beside that name. A wrong code is simply a refused write. */
+  signInOffice: function(who, code){
+    if(!FB || !AU) return Promise.reject(new Error("offline"));
+    if(!ME.uid) return Promise.reject(new Error("no-identity"));
+    return FB.api.setDoc(FB.api.doc(FB.db, "staff", ME.uid), {
+      crew: String(who),
+      code: String(code).trim(),
+      role: "office",
+      at: Date.now()
+    }).then(function(){
+      ME.role = "office";
+      ME.name = String(who);
+      try{ sessionStorage.setItem("hayat_admin", "1"); }catch(e){}
+      meFire();
+      return true;
+    });
+  },
+
+  /* A customer signing in with Google.
+
+     Their orders are already tied to the quiet anonymous identity
+     this browser was given. linkWithPopup keeps that same identity
+     and simply attaches Google to it, so nothing they have ordered
+     is orphaned - the orders do not move, the account grows.
+
+     If that Google account was already linked on another phone,
+     Firebase refuses the link. Then we sign in to the older
+     account instead, which is the one carrying their history. */
+  signInGoogle: function(){
+    if(!AU) return Promise.reject(new Error("offline"));
+    var api = AU.api, auth = AU.auth;
+    var prov = new api.GoogleAuthProvider();
+    var user = auth.currentUser;
+
+    var finish = function(res){
+      ME.uid  = res.user.uid;
+      ME.name = res.user.displayName || "";
+      meFire();
+      return res.user;
+    };
+
+    if(user && user.isAnonymous){
+      return api.linkWithPopup(user, prov).then(finish).catch(function(e){
+        var code = e && e.code;
+        if(code === "auth/credential-already-in-use" ||
+           code === "auth/email-already-in-use" ||
+           code === "auth/provider-already-linked"){
+          return api.signInWithPopup(auth, prov).then(finish);
+        }
+        throw e;
+      });
+    }
+    return api.signInWithPopup(auth, prov).then(finish);
+  },
+
+  /* the orders this person can see: theirs, on any device they
+     have signed in on */
+  myOrders: function(){
+    var me = ME.uid;
+    if(!me) return [];
+    return Object.keys(DB.orders).map(function(k){ return DB.orders[k]; })
+      .filter(function(o){ return o.custUid && o.custUid === me; })
+      .sort(function(a,b){ return b.at - a.at; });
+  },
+
+  signedInName: function(){ return ME.name || ""; },
+  isGuest: function(){ return !ME.name; },
   signOut: function(){
     setRiderPhone(null);
+    ME.role = "guest"; ME.name = "";
+    try{ sessionStorage.removeItem("hayat_admin"); }catch(e){}
+    meFire();
     if(!AU) return Promise.resolve();
     return AU.api.signOut(AU.auth);
   },
@@ -253,7 +329,14 @@ var STORE = {
   order: function(id){ return DB.orders[id] || null; },
 
   place: function(o){
+    /* The last line of defence. The checkout guards this too, but
+       an order with nothing in it must never reach the kitchen
+       however it got here - a stale tab, a double tap, a cart
+       emptied in another window. */
+    if(!o || !(o.lines || []).length) return null;
     var id = orderId();
+    /* who placed it, so it can be found again on another phone */
+    o.custUid = ME.uid || null;
     o.id = id; o.at = Date.now(); o.status = "placed";
     o.log = [{ s:"placed", at:o.at }];
     if(FB){
@@ -269,6 +352,9 @@ var STORE = {
   setStatus: function(id, s, extra){
     var o = DB.orders[id];
     if(!o) return null;
+    /* An order edited down to nothing cannot be accepted or sent.
+       Cancelling it is always allowed - that is how it is closed. */
+    if(s !== "cancelled" && !(o.lines || []).length) return null;
     o.status = s;
     if(extra) for(var k in extra) o[k] = extra[k];
     (o.log = o.log || []).push({ s:s, at:Date.now() });
@@ -365,6 +451,28 @@ var STORE = {
       fire();
     } else lsWrite();
     return n;
+  },
+
+  /* ---- the money ------------------------------------------
+     Marked by a person, never guessed. UPI cannot tell a web
+     page that it was paid, so whoever saw the money says so. */
+  setPaid: function(id, paid, mode){
+    var o = DB.orders[id];
+    if(!o) return null;
+    var who = myVoice();
+    var patch = {
+      paid: !!paid,
+      payMode: paid ? (mode || "cash") : null,
+      paidAt: paid ? Date.now() : null,
+      paidBy: paid ? who : null
+    };
+    for(var k in patch) o[k] = patch[k];
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "orders", id), patch)
+        .catch(function(e){ console.warn("setPaid", e); });
+      fire();
+    } else lsWrite();
+    return patch;
   },
 
   riders: function(){
@@ -552,6 +660,252 @@ function choices(it){
   return out;
 }
 
+/* ============================================================
+   THE DISH FINDER
+   ------------------------------------------------------------
+   One flat list of everything that can be ordered, built once
+   from the menu: every dish crossed with every size it comes
+   in. Both the customer and the office search the same list,
+   because a dish the office cannot find is a dish that never
+   gets added to an order.
+   ============================================================ */
+var FIND = null;
+
+/* ------------------------------------------------------------
+   CALLING SOMEBODY
+
+   tel: is right on a phone and wrong on a desktop, where it
+   throws up "choose an app" for software nobody has installed.
+   On a desktop the useful thing is the number itself, big
+   enough to read out and one click to copy.
+   ------------------------------------------------------------ */
+function canDial(){
+  try{
+    if(navigator.maxTouchPoints > 1) return true;
+    return window.matchMedia("(hover:none) and (pointer:coarse)").matches;
+  }catch(e){ return false; }
+}
+
+function prettyPhone(v){
+  var d = digitsOnly(v);
+  if(d.length === 12 && d.indexOf("91") === 0)
+    return "+91 " + d.slice(2,7) + " " + d.slice(7);
+  if(d.length === 10) return d.slice(0,5) + " " + d.slice(5);
+  return v;
+}
+
+/* a call control that does the right thing on whatever it is on */
+function callBtn(phone, text, cls){
+  if(!phone) return "";
+  var c = cls || "shopbtn small";
+  if(canDial())
+    return '<a class="' + c + '" href="tel:' + esc(phone) + '">' + esc(text || "Call") + '</a>';
+  return '<button class="' + c + ' shownum" data-num="' + esc(phone) + '">' +
+         esc(text || "Call") + '</button>';
+}
+
+/* one delegated handler for every one of them */
+document.addEventListener("click", function(e){
+  var b = e.target.closest && e.target.closest("[data-num]");
+  if(!b) return;
+  e.preventDefault();
+  var num = b.dataset.num;
+  if(b.classList.contains("showing")){
+    try{
+      navigator.clipboard.writeText(num);
+      shopToast("Number copied.");
+    }catch(err){ shopToast(prettyPhone(num)); }
+    return;
+  }
+  b.classList.add("showing");
+  b.textContent = prettyPhone(num);
+  b.title = "Click to copy";
+});
+
+/* ------------------------------------------------------------
+   UPI
+
+   upi://pay?... is a plain deep link every Indian payment app
+   understands. Drawn as a QR the customer scans it from their
+   own phone; tapped on a phone it opens their app directly.
+
+   Free, no gateway, no percentage. The one thing it cannot do
+   is tell this page the money arrived - so it never claims to.
+   ------------------------------------------------------------ */
+function upiCfg(){
+  var u = (C().upi) || {};
+  return (u.id && String(u.id).indexOf("@") > 0) ? u : null;
+}
+
+function upiLink(o){
+  var u = upiCfg();
+  if(!u) return "";
+  var m = money(o);
+  return "upi://pay" +
+    "?pa=" + encodeURIComponent(u.id) +
+    "&pn=" + encodeURIComponent(u.name || "Hayat") +
+    "&am=" + encodeURIComponent(String(m.total)) +
+    "&cu=INR" +
+    "&tn=" + encodeURIComponent("Order " + o.id);
+}
+
+function payBlock(o, who){
+  var u = upiCfg();
+  var m = money(o);
+
+  if(o.paid){
+    return '<div class="paid on">' +
+      '<span class="pdot">\u2713</span>' +
+      '<div class="pt"><b>Paid</b><small>' +
+        esc(o.payMode === "upi" ? "By UPI" : "Cash") + ' \u00b7 ' + when(o.paidAt) +
+        (o.paidBy ? ' \u00b7 ' + esc((VOICE[o.paidBy]||{}).t || o.paidBy) : '') +
+      '</small></div>' +
+      (who === "customer" ? '' :
+        '<button class="linky" data-paid="' + esc(o.id) + '|0">Not paid</button>') +
+    '</div>';
+  }
+
+  var qr = "";
+  if(u){
+    var link = upiLink(o);
+    try{
+      qr = '<div class="upi">' +
+        '<img class="upiqr" alt="Scan to pay ' + esc(rupee(m.total)) + '" src="' +
+          esc(window.qrSvg(link, 320)) + '">' +
+        '<div class="upit"><b>' + esc(rupee(m.total)) + '</b>' +
+          '<small>Scan with Google Pay, PhonePe or Paytm</small>' +
+          (canDial() ? '<a class="shopbtn small" href="' + esc(link) + '">Open my UPI app</a>' : '') +
+        '</div>' +
+      '</div>';
+    }catch(e){ qr = ""; }
+  }
+
+  return '<div class="paid off">' +
+    '<div class="pt"><b>Not paid yet</b><small>' +
+      (u ? "Scan the code, or hand over cash." : "Cash on delivery.") + '</small></div>' +
+    (who === "customer" ? '' :
+      '<div class="prow">' +
+        '<button class="shopbtn small" data-paid="' + esc(o.id) + '|1|cash">Cash taken</button>' +
+        (u ? '<button class="shopbtn small ghost" data-paid="' + esc(o.id) + '|1|upi">Paid by UPI</button>' : '') +
+      '</div>') +
+  '</div>' + qr;
+}
+
+/* one handler for every Paid button anywhere */
+function wirePaid(main, after){
+  main.querySelectorAll("[data-paid]").forEach(function(b){
+    b.onclick = function(){
+      var p = b.dataset.paid.split("|");
+      STORE.setPaid(p[0], p[1] === "1", p[2]);
+      shopToast(p[1] === "1" ? "Marked paid." : "Marked unpaid.");
+      if(after) after();
+    };
+  });
+}
+
+function dishById(id){
+  var menu = (window.MENU || []);
+  for(var i = 0; i < menu.length; i++){
+    var items = menu[i].items || [];
+    for(var j = 0; j < items.length; j++){
+      if(items[j].id === id) return items[j];
+    }
+  }
+  return null;
+}
+
+function findIndex(){
+  if(FIND) return FIND;
+  FIND = [];
+  var menu = (window.MENU || []);
+  menu.forEach(function(cat){
+    (cat.items || []).forEach(function(it){
+      choices(it).forEach(function(c){
+        FIND.push({
+          id: it.id,
+          name: label(it.name),
+          sub: it.sub ? label(it.sub) : "",
+          cat: label(cat.name),
+          catId: cat.id,
+          label: c.label,
+          price: c.price,
+          hay: (label(it.name) + " " + (it.sub ? label(it.sub) : "") + " " +
+                label(cat.name) + " " + c.label).toLowerCase()
+        });
+      });
+    });
+  });
+  return FIND;
+}
+
+/* Words in any order, each one has to appear somewhere. Typing
+   "mandi chicken" finds Chicken Mandi, which is how people
+   actually remember a dish. */
+function findDishes(q, cap){
+  var words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+  if(!words.length) return [];
+  var hits = findIndex().filter(function(r){
+    return words.every(function(w){ return r.hay.indexOf(w) >= 0; });
+  });
+  /* a name that starts with what they typed belongs at the top */
+  var first = words[0];
+  hits.sort(function(a,b){
+    var an = a.name.toLowerCase().indexOf(first) === 0 ? 0 : 1;
+    var bn = b.name.toLowerCase().indexOf(first) === 0 ? 0 : 1;
+    if(an !== bn) return an - bn;
+    return a.name.localeCompare(b.name);
+  });
+  return hits.slice(0, cap || 24);
+}
+
+function findRowHtml(r, action){
+  return '<button class="findrow" data-find="' + esc(r.id + "|" + r.label + "|" + r.price) + '">' +
+    '<span class="fnd">' +
+      '<b>' + esc(r.name) + '</b>' +
+      (r.label ? '<span class="fsize">' + esc(r.label) + '</span>' : '') +
+      '<small>' + esc(r.cat) + '</small>' +
+    '</span>' +
+    '<span class="fpr">' + rupee(r.price) + '</span>' +
+    '<span class="fadd">' + esc(action || "Add") + '</span>' +
+  '</button>';
+}
+
+/* Wires a search box to a results panel. onPick gets
+   (dishId, sizeLabel, price, row). */
+function wireFinder(inputId, panelId, onPick, action){
+  var box = el(inputId), panel = el(panelId);
+  if(!box || !panel) return;
+
+  var draw = function(){
+    var q = box.value.trim();
+    if(!q){ panel.innerHTML = ""; panel.classList.remove("on"); return; }
+    var hits = findDishes(q);
+    panel.classList.add("on");
+    panel.innerHTML = hits.length
+      ? hits.map(function(r){ return findRowHtml(r, action); }).join("")
+      : '<p class="shopnote fnone">Nothing matches \u201c' + esc(q) + '\u201d.</p>';
+    panel.querySelectorAll("[data-find]").forEach(function(b){
+      b.onclick = function(){
+        var parts = b.dataset.find.split("|");
+        var price = +parts[parts.length - 1];
+        var lbl   = parts.slice(1, -1).join("|");
+        onPick(parts[0], lbl, price, b);
+      };
+    });
+  };
+
+  var job = null;
+  box.addEventListener("input", function(){
+    clearTimeout(job);
+    job = setTimeout(draw, 110);      /* let them finish the word */
+  });
+  box.addEventListener("focus", draw);
+  box.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){ box.value = ""; draw(); box.blur(); }
+  });
+  return draw;
+}
+
 /* ---------- the floating cart button ----------------------- */
 function paintFab(){
   var f = el("cartfab");
@@ -571,14 +925,122 @@ function paintFab(){
 /* ============================================================
    CUSTOMER
    ============================================================ */
+
+/* ------------------------------------------------------------
+   YOUR ORDERS
+
+   Someone who closes the tab has lost their order, and the only
+   free way to hand it back on a new phone is an account they
+   already have. Nearly every Android here has Google on it, so
+   that is one tap and no SMS to pay for.
+
+   It is only ever for finding your own orders. No lookup by
+   phone number: a stranger who knew a customer's number would
+   otherwise be reading their home address.
+   ------------------------------------------------------------ */
+function signInStrip(){
+  if(!STORE.live()) return "";
+  if(!STORE.isGuest())
+    return '<div class="youare"><span>Signed in as <b>' +
+      esc(STORE.signedInName()) + '</b></span>' +
+      '<a class="linky" href="#/orders">Your orders</a></div>';
+  return '<div class="youare guest">' +
+    '<div class="yt"><b>Keep your orders</b>' +
+      '<small>Sign in once and you can follow them from any phone.</small></div>' +
+    '<button class="shopbtn small" id="gIn">Sign in with Google</button>' +
+  '</div>';
+}
+
+function wireSignIn(main, after){
+  var b = el("gIn");
+  if(!b) return;
+  b.onclick = function(){
+    b.disabled = true;
+    b.textContent = "Opening\u2026";
+    STORE.signInGoogle().then(function(){
+      shopToast("Signed in. Your orders will follow you now.");
+      if(after) after();
+    }).catch(function(e){
+      b.disabled = false;
+      b.textContent = "Sign in with Google";
+      var code = (e && e.code) || "";
+      if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
+      shopToast("That did not work. You can still use the link we send you.");
+    });
+  };
+}
+
+function viewMyOrders(main){
+  var mine = STORE.myOrders();
+  var open = mine.filter(function(o){
+    return o.status !== "delivered" && o.status !== "cancelled";
+  });
+  var past = mine.filter(function(o){
+    return o.status === "delivered" || o.status === "cancelled";
+  });
+
+  var card = function(o){
+    return '<a class="jobcard" href="#/o/' + esc(o.id) + '">' +
+      '<div class="brow"><b>' + esc(o.id) + '</b>' +
+        '<span class="status s-' + o.status + '">' + esc(STEP[o.status].t) + '</span>' +
+        '<span class="btime">' + when(o.at) + '</span></div>' +
+      '<div class="baddr">' + (o.lines||[]).map(function(l){
+        return l.q + "\u00d7 " + esc(l.name);
+      }).join(" \u00b7 ") + '</div>' +
+      '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
+        noteTag(o) + '</div></a>';
+  };
+
+  main.innerHTML = shell("Your orders",
+    signInStrip() +
+    (STORE.isGuest()
+      ? '<p class="shopsub">Sign in above and any order you place will be ' +
+        'here, on whichever phone you use.</p>'
+      : (open.length
+          ? '<h3 class="mini">Still going</h3>' + open.map(card).join("")
+          : '<p class="shopsub">Nothing on the way right now.</p>') +
+        (past.length ? '<h3 class="mini">Before this</h3>' + past.slice(0,20).map(card).join("") : '')
+    ) +
+    '<button class="shopbtn ghost" data-go="#/">Browse the menu</button>');
+
+  wireSignIn(main, function(){ viewMyOrders(main); });
+}
+
+/* Search sits at the top of the cart. Someone who has just
+   added one thing usually knows exactly what the second thing
+   is - making them walk back through the categories to find it
+   is the slowest possible way to take their money. */
+function cartFinder(){
+  return '<div class="finder cartfind">' +
+    '<input class="fld" id="ctFind" autocomplete="off" ' +
+      'placeholder="Search the menu\u2026 chicken, mandi, juice">' +
+    '<div class="findpanel" id="ctFindOut"></div>' +
+  '</div>';
+}
+
+function wireCartFinder(main){
+  wireFinder("ctFind", "ctFindOut", function(did, lbl, price, btn){
+    var it = dishById(did);
+    addLine(did, it ? label(it.name) : did, lbl, price);
+    btn.classList.add("done");
+    btn.querySelector(".fadd").textContent = "Added \u2713";
+    paintFab();
+    setTimeout(function(){ viewCart(main); }, 260);
+  }, "Add");
+}
+
 function viewCart(main){
   if(!CART.length){
     main.innerHTML = shell("Your cart",
       '<p class="shopsub">Nothing in it yet.</p>' +
-      '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+      cartFinder() +
+      '<button class="shopbtn ghost" data-go="#/">Browse the menu</button>');
+    wireCartFinder(main);
     return;
   }
   main.innerHTML = shell("Your cart",
+    signInStrip() +
+    cartFinder() +
     '<div class="lines">' + CART.map(function(l){
       return '<div class="line">' +
         '<div class="ln"><b>' + esc(l.name) + '</b>' +
@@ -592,7 +1054,10 @@ function viewCart(main){
     }).join("") + '</div>' +
     '<div class="total"><span>Total</span><b>' + rupee(cartTotal()) + '</b></div>' +
     '<button class="shopbtn" data-go="#/checkout">Checkout</button>' +
-    '<button class="shopbtn ghost" data-go="#/">Add something else</button>');
+    '<button class="shopbtn ghost" data-go="#/">Browse the menu</button>');
+
+  wireCartFinder(main);
+  wireSignIn(main, function(){ viewCart(main); });
 }
 
 function viewCheckout(main){
@@ -601,9 +1066,15 @@ function viewCheckout(main){
   try{ saved = JSON.parse(localStorage.getItem("hayat_me")) || {}; }catch(e){}
 
   main.innerHTML = shell("Where is it going?",
-    '<input class="fld" id="coName"  placeholder="Your name" value="' + esc(saved.name||"") + '">' +
-    '<input class="fld" id="coPhone" placeholder="Phone number" inputmode="tel" value="' + esc(saved.phone||"") + '">' +
-    '<textarea class="fld" id="coAddr" placeholder="Address — house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
+    /* A browser will offer the number it already has, in one tap,
+       but only if the field says what it is. name and autocomplete
+       are what turn three fields into a single autofill. */
+    '<input class="fld" id="coName" name="name" autocomplete="name" ' +
+      'placeholder="Your name" value="' + esc(saved.name||"") + '">' +
+    '<input class="fld" id="coPhone" name="tel" type="tel" autocomplete="tel" ' +
+      'inputmode="tel" placeholder="Phone number" value="' + esc(saved.phone||"") + '">' +
+    '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" ' +
+      'placeholder="Address \u2014 house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
     '<div class="pinwrap">' +
       '<div class="pinhead"><b>Drop the pin on your gate</b>' +
         '<button class="pinme" id="coHere">Use my location</button></div>' +
@@ -613,16 +1084,53 @@ function viewCheckout(main){
     '</div>' +
     '<input class="fld" id="coNote"  placeholder="Anything we should know? (optional)">' +
     '<div class="total"><span>' + cartCount() + ' item(s)</span><b>' + rupee(cartTotal()) + '</b></div>' +
+    (STORE.live() && STORE.isGuest()
+      ? '<div class="youare guest">' +
+          '<div class="yt"><b>One tap before you order</b>' +
+            '<small>So this order comes back to you on any phone, ' +
+            'and we know who to call.</small></div>' +
+          '<button class="shopbtn small" id="coIn">Sign in with Google</button>' +
+        '</div>'
+      : '') +
     '<button class="shopbtn" id="coGo">Place the order</button>' +
     '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>' +
     '<button class="shopbtn ghost" data-go="#/cart">Back to the cart</button>');
 
   mountMap(saved);
 
+  var gi = el("coIn");
+  if(gi) gi.onclick = function(){
+    gi.disabled = true; gi.textContent = "Opening\u2026";
+    STORE.signInGoogle().then(function(){
+      shopToast("Thank you. You can order now.");
+      viewCheckout(main);
+    }).catch(function(e){
+      gi.disabled = false; gi.textContent = "Sign in with Google";
+      var code = (e && e.code) || "";
+      if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
+      shopToast("That did not work. Try again.");
+    });
+  };
+
   el("coGo").onclick = function(){
+    /* Browsing and filling the cart ask nothing of anybody. The
+       line is here, at the point where an order becomes a promise
+       the kitchen has to keep: we want to be able to hand it back
+       to them later, on whatever phone they pick up next. */
+    if(STORE.live() && STORE.isGuest()){
+      shopToast("Sign in first, so you can follow this order.");
+      var g = el("coIn");
+      if(g){ g.scrollIntoView({ behavior:"smooth", block:"center" }); g.focus(); }
+      return;
+    }
     var name  = el("coName").value.trim(),
         phone = el("coPhone").value.trim(),
         addr  = el("coAddr").value.trim();
+    if(!CART.length){
+      shopToast("Your cart is empty.");
+      location.hash = "#/cart";
+      return;
+    }
     if(!name || !phone || !addr){ shopToast("Name, phone and address, please."); return; }
     try{ localStorage.setItem("hayat_me", JSON.stringify(
       { name:name, phone:phone, addr:addr, lat:PIN&&PIN.lat, lng:PIN&&PIN.lng })); }catch(e){}
@@ -635,6 +1143,7 @@ function viewCheckout(main){
     };
     if(PIN){ o.lat = +PIN.lat.toFixed(6); o.lng = +PIN.lng.toFixed(6); }
     var id = STORE.place(o);
+    if(!id){ shopToast("Something went wrong. Nothing was ordered."); return; }
     CART = []; saveCart();
     location.hash = "#/o/" + id;
   };
@@ -649,7 +1158,20 @@ function viewCheckout(main){
    shadows window.L for every later script, so Leaflet is ALWAYS reached
    as window.L here — a bare L is the string "en". */
 var PIN = null, MAP = null;
-var HOME = { lat: 11.0065785, lng: 76.1270507 };   /* the restaurant */
+/* Where Hayat Fish and Mandi actually is. Every map opens here,
+   every distance is measured from here, and the recentre button
+   comes back here.
+
+   To set it exactly: open Google Maps, right-click the shop's
+   front door, click the numbers at the top of the menu - that
+   copies "11.0065785, 76.1270507" - and paste it into
+   config.js as  shop: { lat: ..., lng: ... }. */
+var HOME = (function(){
+  var c = ((window.CONFIG || {}).shop) || null;
+  if(c && typeof c.lat === "number" && typeof c.lng === "number") return c;
+  return { lat: 11.0065785, lng: 76.1270507 };
+})();
+var HOMEZOOM = (((window.CONFIG || {}).shop) || {}).zoom || 14;
 
 function loadLeaflet(){
   if(window.L) return Promise.resolve();
@@ -719,6 +1241,7 @@ function mountMap(saved){
     var LF = window.L;                 /* never the bare L: see note above */
     MAP = LF.map(box, { zoomControl:true, attributionControl:true })
            .setView([at.lat, at.lng], PIN ? 17 : 15);
+    tameMap(MAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap"
@@ -779,7 +1302,7 @@ function viewOrder(main, id){
             : "We cancelled it.") + (o.cancelWhy ? ' ' + esc(o.cancelWhy) : '') + '</p>' +
       '</div>' +
       '<div class="rowbtns">' +
-        (shop ? '<a class="shopbtn small" href="tel:' + esc(shop) + '">Call the restaurant</a>' : '') +
+        callBtn(shop, "Call the restaurant") +
         '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
           esc(wa(C().whatsapp, "Hayat \u2014 about order " + o.id + "\n\n")) + '">WhatsApp</a>' +
       '</div>' +
@@ -800,7 +1323,7 @@ function viewOrder(main, id){
 
     (rider && at >= 2
       ? '<div class="ridercard"><div><b>' + esc(rider.name) + '</b><small>Your rider</small></div>' +
-        '<a class="callbtn" href="tel:' + esc(rider.phone) + '">Call</a></div>'
+        callBtn(rider.phone, "Call", "callbtn") + '</div>'
       : '') +
 
     /* once the rider is moving, show them moving */
@@ -832,12 +1355,13 @@ function viewOrder(main, id){
     '<div class="total"><span>Total</span><b>' + rupee(m.total) + '</b></div>' +
     '<p class="shopnote">' + esc(o.addr) + '</p>' +
     '<div class="rowbtns">' +
-      (shop ? '<a class="shopbtn small" href="tel:' + esc(shop) + '">Call us</a>' : '') +
+      callBtn(shop, "Call us") +
       '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(wa(C().whatsapp, "Hayat \u2014 about order " + o.id + "\n\n")) + '">WhatsApp</a>' +
       (o.lat ? '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(mapsPin(o)) + '">Pin in Maps</a>' : '') +
     '</div>' +
+    payBlock(o, "customer") +
     noteThread(o, "Anything we should know? Gate code, landmark\u2026") +
     (canCancel
       ? '<button class="shopbtn ghost danger" id="obCancel">Cancel this order</button>'
@@ -865,6 +1389,7 @@ function drawTrackMap(o){
     var LF = window.L;
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
     TMAP = LF.map(box, { zoomControl:false, attributionControl:true, dragging:true });
+    tameMap(TMAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(TMAP);
 
@@ -889,6 +1414,101 @@ function drawTrackMap(o){
 }
 
 /* ============================================================
+   MAKING A MAP BEHAVE INSIDE A SCROLLING PAGE
+   ------------------------------------------------------------
+   A Leaflet map swallows every gesture that lands on it. On a
+   phone that means the page stops scrolling the moment your
+   thumb crosses the map, which feels broken - because it is.
+
+   So we do what Google's own embeds do:
+
+     one finger   scrolls the page, and a hint says why
+     two fingers  move the map
+     wheel        scrolls the page
+     ctrl + wheel zooms the map
+
+   Nothing is taken away. Everything is still reachable, it
+   just stops fighting the page.
+   ============================================================ */
+function tameMap(map, box){
+  if(!map || !box) return;
+  var LB = (window.L && window.L.Browser) || {};
+  var touch = !!(LB.mobile || ("ontouchstart" in window) || navigator.maxTouchPoints > 0);
+
+  /* ---- the hint that appears only when it is needed ---- */
+  var hint = document.createElement("div");
+  hint.className = "maphint";
+  hint.textContent = touch ? "Use two fingers to move the map"
+                           : "Hold ctrl and scroll to zoom";
+  box.appendChild(hint);
+  var hideJob = null;
+  function flash(){
+    hint.classList.add("on");
+    clearTimeout(hideJob);
+    hideJob = setTimeout(function(){ hint.classList.remove("on"); }, 1400);
+  }
+  function calm(){ clearTimeout(hideJob); hint.classList.remove("on"); }
+
+  /* ---- the wheel ---- */
+  map.scrollWheelZoom.disable();
+  box.addEventListener("wheel", function(e){
+    if(e.ctrlKey || e.metaKey){
+      if(!map.scrollWheelZoom.enabled()) map.scrollWheelZoom.enable();
+      calm();
+    } else {
+      if(map.scrollWheelZoom.enabled()) map.scrollWheelZoom.disable();
+      flash();          /* the page scrolls; say why the map did not */
+    }
+  }, { passive:true });
+
+  /* ---- fingers ---- */
+  if(touch){
+    map.dragging.disable();
+    box.addEventListener("touchstart", function(e){
+      if(e.touches.length > 1){ map.dragging.enable(); calm(); }
+      else { map.dragging.disable(); }
+    }, { passive:true });
+    box.addEventListener("touchmove", function(e){
+      if(e.touches.length === 1) flash();
+    }, { passive:true });
+    box.addEventListener("touchend", function(){
+      if(!map._hayatHold) map.dragging.disable();
+    }, { passive:true });
+  }
+
+  /* ---- back to the shop, always in reach ---- */
+  var home = document.createElement("button");
+  home.type = "button";
+  home.className = "maphome";
+  home.title = "Back to the restaurant";
+  home.setAttribute("aria-label", "Back to the restaurant");
+  home.innerHTML = "\u2302";
+  home.onclick = function(){
+    try{ map.setView([HOME.lat, HOME.lng], HOMEZOOM, { animate:true }); }catch(e){}
+  };
+  box.appendChild(home);
+
+  /* ---- a way to give the map the whole gesture, deliberately ---- */
+  var hold = document.createElement("button");
+  hold.type = "button";
+  hold.className = "maphold";
+  hold.textContent = "Move the map";
+  hold.setAttribute("aria-pressed", "false");
+  hold.onclick = function(){
+    map._hayatHold = !map._hayatHold;
+    hold.classList.toggle("on", map._hayatHold);
+    hold.setAttribute("aria-pressed", map._hayatHold ? "true" : "false");
+    hold.textContent = map._hayatHold ? "Done" : "Move the map";
+    box.classList.toggle("held", map._hayatHold);
+    if(map._hayatHold){ map.dragging.enable(); map.scrollWheelZoom.enable(); calm(); }
+    else { if(touch) map.dragging.disable(); map.scrollWheelZoom.disable(); }
+  };
+  box.appendChild(hold);
+
+  return map;
+}
+
+/* ============================================================
    THE THREAD ON AN ORDER
    ------------------------------------------------------------
    The same component in all three consoles. Who is speaking is
@@ -902,11 +1522,24 @@ var VOICE = {
 };
 
 /* how many messages an order carries, for the board */
+/* the money, at a glance, on a card */
+function payTag(o){
+  if(o.status !== "delivered" && !o.paid) return "";
+  return o.paid
+    ? '<span class="ptag on">\u2713 paid</span>'
+    : '<span class="ptag off">unpaid</span>';
+}
+
 function noteTag(o){
   var n = (o.notes || []).length;
   return n ? '<span class="nbadge" title="' + n + ' message' + (n>1?'s':'') +
              '">\uD83D\uDCAC ' + n + '</span>' : '';
 }
+
+/* What someone has typed but not yet sent, kept per order.
+   Belt and braces beside isTyping(): if a repaint does slip
+   through, the words are still there afterwards. */
+var DRAFT = {};
 
 function noteThread(o, placeholder){
   var notes = (o.notes || []).slice().sort(function(a,b){ return a.at - b.at; });
@@ -924,7 +1557,8 @@ function noteThread(o, placeholder){
       : '<p class="shopnote nonotes">Nothing here yet.</p>') +
     '<div class="notebox">' +
       '<textarea class="fld" id="noteTxt" rows="2" placeholder="' +
-        esc(placeholder || "Write a message\u2026") + '"></textarea>' +
+        esc(placeholder || "Write a message\u2026") + '">' +
+        esc(DRAFT[o.id] || "") + '</textarea>' +
       '<button class="shopbtn small" id="noteAdd">Send</button>' +
     '</div>' +
   '</div>';
@@ -933,11 +1567,22 @@ function noteThread(o, placeholder){
 function wireNotes(main, id, after){
   var box = el("noteTxt"), btn = el("noteAdd");
   if(!box || !btn) return;
+
+  /* if they were mid-sentence when something redrew the page,
+     put the caret back where they left it */
+  if(DRAFT[id]){
+    try{ box.setSelectionRange(box.value.length, box.value.length); }catch(e){}
+  }
+  box.addEventListener("input", function(){
+    if(box.value) DRAFT[id] = box.value; else delete DRAFT[id];
+  });
+
   var send = function(){
     var t = box.value.trim();
     if(!t){ box.focus(); return; }
     STORE.say(id, t);
     box.value = "";
+    delete DRAFT[id];
     if(after) after();
   };
   btn.onclick = send;
@@ -953,18 +1598,82 @@ function wireNotes(main, id, after){
    ============================================================ */
 function unlocked(){ try{ return sessionStorage.getItem("hayat_admin")==="1"; }catch(e){ return false; } }
 
+/* ------------------------------------------------------------
+   The office door.
+
+   With Firebase up: pick your name, type your code. The code
+   is checked by the security rules, not by this file, so
+   reading this source tells an attacker nothing.
+
+   With Firebase down: the old passcode, so the demo still runs
+   on one machine with no network. That path can only ever reach
+   this browser's own data, which is why it is safe to keep.
+   ------------------------------------------------------------ */
 function gate(main, then){
-  if(unlocked()) return then();
+  if(unlocked() || STORE.isOffice()) return then();
+
+  if(!STORE.live()){
+    main.innerHTML = shell("Staff only",
+      '<input class="fld" id="pw" type="password" placeholder="Passcode" inputmode="numeric">' +
+      '<button class="shopbtn" id="pwGo">Unlock</button>' +
+      '<p class="shopnote">Offline. This unlocks the copy held on this ' +
+      'device only \u2014 nothing here reaches the restaurant.</p>');
+    var unlock = function(){
+      if(el("pw").value === PASS){
+        try{ sessionStorage.setItem("hayat_admin","1"); }catch(e){}
+        then();
+      } else shopToast("Wrong passcode.");
+    };
+    el("pwGo").onclick = unlock;
+    onEnter(el("pw"), unlock);
+    el("pw").focus();
+    return;
+  }
+
   main.innerHTML = shell("Staff only",
-    '<input class="fld" id="pw" type="password" placeholder="Passcode" inputmode="numeric">' +
-    '<button class="shopbtn" id="pwGo">Unlock</button>' +
-    '<p class="shopnote">Temporary. A real login replaces this before go-live.</p>');
-  el("pwGo").onclick = function(){
-    if(el("pw").value === PASS){
-      try{ sessionStorage.setItem("hayat_admin","1"); }catch(e){}
-      then();
-    } else shopToast("Wrong passcode.");
-  };
+    '<div id="crewWrap"><p class="shopsub">Loading\u2026</p></div>');
+
+  STORE.crew().then(function(people){
+    if(!people.length){
+      el("crewWrap").innerHTML =
+        '<p class="shopsub">No staff have been set up yet.</p>' +
+        '<p class="shopnote">Firebase console \u2192 Firestore \u2192 crew ' +
+        '\u2192 add a person, and crew/_list to show them here.</p>';
+      return;
+    }
+    el("crewWrap").innerHTML =
+      '<select class="fld" id="crewWho">' +
+        people.map(function(p){
+          return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>';
+        }).join("") +
+      '</select>' +
+      '<input class="fld" id="crewCode" type="password" inputmode="numeric" ' +
+        'autocomplete="off" placeholder="Your code">' +
+      '<button class="shopbtn" id="crewGo">Sign in</button>' +
+      '<p class="shopnote" id="crewNote">Ask Majid if you do not have a code.</p>';
+
+    var busy = false;
+    var go = function(){
+      if(busy) return;
+      var who = el("crewWho").value, code = el("crewCode").value.trim();
+      if(!code){ el("crewCode").focus(); return; }
+      busy = true;
+      el("crewGo").textContent = "Checking\u2026";
+      STORE.signInOffice(who, code).then(function(){
+        then();
+      }).catch(function(){
+        busy = false;
+        el("crewGo").textContent = "Sign in";
+        el("crewCode").value = "";
+        el("crewCode").focus();
+        el("crewNote").textContent = "That code did not match. Try again.";
+      });
+    };
+    el("crewGo").onclick = go;
+    onEnter(el("crewCode"), go);
+    onEnter(el("crewWho"), go);
+    el("crewCode").focus();
+  });
 }
 
 function viewAdmin(main){
@@ -978,42 +1687,66 @@ function paintAdmin(main){
   var done   = orders.filter(function(o){ return o.status === "delivered"; });
   var pinned = orders.filter(function(o){ return o.lat && o.lng && o.status !== "cancelled"; });
 
-  main.innerHTML = shell("Orders",
-    connBanner() +
-    '<div class="tabs">' +
-      ['board','list','map'].map(function(v){
-        return '<button class="tab' + (ADVIEW===v ? " on" : "") + '" data-view="' + v + '">' +
-          (v==="board" ? "Board" : v==="list" ? "List" : "Map") + '</button>';
-      }).join("") +
-    '</div>' +
-    '<div class="adminbar">' +
-      '<span class="pill">' + live.length + ' live</span>' +
-      '<span class="pill quiet">' + done.length + ' delivered</span>' +
-      (gone.length ? '<span class="pill gone">' + gone.length + ' cancelled</span>' : '') +
-      '<button class="linky" data-go="#/admin/riders">Riders (' + riders.length + ')</button>' +
-    '</div>' +
-
-    (ADVIEW === "map"
-      ? '<div id="admap" class="admap"></div>' +
-        '<div class="admaplegend">' +
-          '<span class="lg s-placed">new</span>' +
-          '<span class="lg s-accepted">kitchen</span>' +
-          '<span class="lg s-on_way">on the way</span>' +
-          '<span class="lg s-delivered">delivered</span>' +
+  /* The office is a console, not a page. It fills the window and
+     never scrolls as a whole: the board scrolls inside its columns,
+     the list inside itself, and the map simply takes what is left.
+     Nothing important slides off the top while you work. */
+  main.innerHTML =
+    '<div class="console">' +
+      /* The controls float over the work rather than sitting in a
+         band above it. A kitchen screen has one job on it, and
+         every row of chrome is a row of orders nobody can see. */
+      '<div class="conbar">' +
+        '<div class="tabs">' +
+          ['board','list','map'].map(function(v){
+            return '<button class="tab' + (ADVIEW===v ? " on" : "") + '" data-view="' + v + '">' +
+              (v==="board" ? "Board" : v==="list" ? "List" : "Map") + '</button>';
+          }).join("") +
         '</div>' +
-        (pinned.length ? '' : '<p class="shopsub">No order has a pin yet.</p>')
+        '<div class="adminbar">' +
+          '<span class="pill">' + live.length + ' live</span>' +
+          '<span class="pill quiet">' + done.length + '</span>' +
+          (gone.length ? '<span class="pill gone">' + gone.length + '</span>' : '') +
+        '</div>' +
+      '</div>' +
 
-      : ADVIEW === "board"
-      ? (orders.length ? boardHtml(orders.filter(function(o){ return o.status !== "cancelled"; }))
-                       : '<p class="shopsub">No orders yet.</p>')
+      connBanner() +
 
-      : (orders.length ? orders.map(orderCard).join("")
-                       : '<p class="shopsub">No orders yet.</p>')) +
+      '<div class="conbody' + (ADVIEW === "map" ? " nomargin" : "") + '">' +
+        (ADVIEW === "map"
+          ? '<div id="admap" class="admap"></div>' +
+            '<div class="admaplegend">' +
+              '<span class="lg s-placed">new</span>' +
+              '<span class="lg s-accepted">kitchen</span>' +
+              '<span class="lg s-on_way">on the way</span>' +
+              '<span class="lg s-delivered">delivered</span>' +
+            '</div>' +
+            (pinned.length ? '' : '<p class="shopsub floatnote">No order has a pin yet.</p>')
 
-    '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>', true);
+          : ADVIEW === "board"
+          ? (orders.length ? boardHtml(orders.filter(function(o){ return o.status !== "cancelled"; }))
+                           : '<p class="shopsub">No orders yet.</p>')
+
+          : '<div class="conscroll">' +
+            (orders.length ? orders.map(orderCard).join("")
+                           : '<p class="shopsub">No orders yet.</p>') + '</div>') +
+      '</div>' +
+
+      /* the two things you reach for, always in the same corner */
+      /* No way out to the customer's menu. This is a till, and a
+         till does not have a browse button on it. */
+      '<div class="condock">' +
+        '<button class="dockbtn" data-go="#/admin/riders" title="Riders">' +
+          '\uD83C\uDFCD<span class="dockn">' + riders.length + '</span></button>' +
+      '</div>' +
+    '</div>';
 
   main.querySelectorAll("[data-view]").forEach(function(b){
     b.onclick = function(){
+      /* Opening the map is a fresh look, so it starts on the
+         restaurant. Panning about while it is already open is
+         remembered, so a repaint does not yank it back. */
+      if(b.dataset.view === "map" && ADVIEW !== "map") AVIEW = null;
       ADVIEW = b.dataset.view;
       try{ localStorage.setItem("hayat_adview", ADVIEW); }catch(e){}
       paintAdmin(main);
@@ -1045,11 +1778,15 @@ function liveWatch(on, main){
 function boardHtml(orders){
   return '<div class="board">' + FLOW.map(function(st){
     var col = orders.filter(function(o){ return o.status === st; });
+    /* the head stays put, the cards under it scroll on their own,
+       so a busy column never pushes the others off the screen */
     return '<div class="col">' +
       '<div class="colhead"><b>' + esc(STEP[st].t) + '</b>' +
         '<span class="cnt">' + col.length + '</span></div>' +
-      (col.length ? col.map(boardCard).join("")
-                  : '<div class="colempty">\u2014</div>') +
+      '<div class="colbody">' +
+        (col.length ? col.map(boardCard).join("")
+                    : '<div class="colempty">\u2014</div>') +
+      '</div>' +
     '</div>';
   }).join("") + '</div>';
 }
@@ -1059,8 +1796,12 @@ function boardCard(o){
   var rider = o.riderId ? STORE.rider(o.riderId) : null;
   var riders = STORE.riders();
 
+  var empty = !(o.lines || []).length;
+
   var act = "";
-  if(o.status === "accepted"){
+  if(empty){
+    act = '<p class="shopnote emptyord">No items. Sort it out with the customer.</p>';
+  } else if(o.status === "accepted"){
     act = riders.length
       ? '<select class="fld sel mini" data-assign="' + o.id + '">' +
           '<option value="">Assign\u2026</option>' +
@@ -1072,12 +1813,25 @@ function boardCard(o){
           esc(STEP[next].t) + '</button>';
   }
 
-  return '<div class="bcard">' +
+  /* Before it is accepted the office may still want to talk to the
+     customer - a missing item, an address that reads oddly, a price
+     to agree. Those three sit on the card, not behind Accept. */
+  var before = (o.status === "placed")
+    ? '<div class="preact">' +
+        '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
+          esc(waCustomer(o, msgAsk(o))) + '" title="Ask the customer something">Message</a>' +
+        callBtn(o.phone, "Call", "qbtn") +
+        '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">Edit' + noteTag(o) + '</a>' +
+      '</div>'
+    : '';
+
+  return '<div class="bcard' + (empty ? " empty" : "") + '">' +
     '<div class="brow"><b>' + esc(o.id) + '</b><span class="btime">' + when(o.at) + '</span></div>' +
     '<div class="bname">' + esc(o.name) + '</div>' +
     '<div class="baddr">' + esc(o.addr) + '</div>' +
     (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' from us</div>' : '') +
     '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
+      payTag(o) +
       (discountLabel(o) ? '<span class="offtag">' + esc(discountLabel(o)) + '</span>' : '') +
       (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
     '<div class="quick">' +
@@ -1086,11 +1840,11 @@ function boardCard(o){
         '" title="Message the customer">WhatsApp</a>' +
       (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
         '" title="Route from the shop">Maps</a>' : '') +
-      '<a class="qbtn" href="tel:' + esc(o.phone) + '" title="Call">Call</a>' +
+      callBtn(o.phone, "Call", "qbtn") +
       '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit' +
         noteTag(o) + '</a>' +
     '</div>' +
-    act + '</div>';
+    before + act + '</div>';
 }
 
 /* both views use the same buttons, so they are wired in one place */
@@ -1143,6 +1897,16 @@ function msgAccepted(o){
          "\n" + orderLine(o) + "\nTotal " + rupee(o.total) +
          "\n\nTrack it here: " + base() + "#/o/" + o.id;
 }
+/* Before accepting: a question, not a confirmation. Nothing here
+   promises the customer anything the kitchen has not agreed to. */
+function msgAsk(o){
+  return "Hayat \u2014 order " + o.id + "\n\n" +
+         "Hello" + (o.name ? " " + o.name : "") + ", we have your order and " +
+         "wanted to check one thing before we start.\n\n" +
+         orderLine(o) + "\nTotal " + rupee(o.total) +
+         "\n\nYou can also reply on the order page: " + base() + "#/o/" + o.id;
+}
+
 function msgChanged(o){
   var m = money(o);
   return "Hayat \u2014 order " + o.id + "\n\nWe have updated your order:\n" +
@@ -1184,8 +1948,15 @@ function orderCard(o){
   var riders = STORE.riders();
   var rider = o.riderId ? STORE.rider(o.riderId) : null;
 
+  var empty = !(o.lines || []).length;
+
   var action = "";
-  if(o.status === "placed")
+  if(empty)
+    /* nothing to cook: the only honest move is to sort it out
+       with the customer, or close it */
+    action = '<p class="shopnote emptyord">This order has no items. ' +
+             'Call or message the customer, or cancel it.</p>';
+  else if(o.status === "placed")
     action = '<button class="shopbtn small" data-adv="' + o.id + '|accepted">Accept</button>';
   else if(o.status === "accepted")
     action = riders.length
@@ -1201,7 +1972,10 @@ function orderCard(o){
     '<div class="orow"><b>' + esc(o.id) + '</b>' +
       '<span class="status s-' + o.status + '">' + esc(STEP[o.status].t) + '</span>' +
       '<span class="otime">' + when(o.at) + '</span></div>' +
-    '<div class="who">' + esc(o.name) + ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a></div>' +
+    '<div class="who">' + esc(o.name) + ' \u00b7 ' +
+      (canDial() ? '<a href="tel:' + esc(o.phone) + '">' + esc(prettyPhone(o.phone)) + '</a>'
+                 : '<b class="numtxt" data-num="' + esc(o.phone) + '">' +
+                   esc(prettyPhone(o.phone)) + '</b>') + '</div>' +
     '<div class="addr">' + esc(o.addr) +
       (distLabel(o) ? ' <b class="dist">\u00b7 ' + esc(distLabel(o)) + '</b>' : '') + '</div>' +
     (o.note ? '<div class="addr note">' + esc(o.note) + '</div>' : '') +
@@ -1209,7 +1983,7 @@ function orderCard(o){
     '<div class="items">' + (o.lines||[]).map(function(l){
       return l.q + "× " + esc(l.name) + (l.label ? " <i>" + esc(l.label) + "</i>" : "");
     }).join(" · ") + '</div>' +
-    '<div class="orow"><span class="tot">' + rupee(o.total) + '</span>' +
+    '<div class="orow"><span class="tot">' + rupee(o.total) + '</span>' + payTag(o) +
       (discountLabel(o) ? '<span class="offtag">' + esc(discountLabel(o)) + '</span>' : '') +
       (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
     '<div class="quick">' +
@@ -1217,7 +1991,7 @@ function orderCard(o){
         esc(waCustomer(o, o.status === "placed" ? msgAccepted(o) : msgOnWay(o))) + '">WhatsApp</a>' +
       (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
         '">Open in Maps</a>' : '') +
-      '<a class="qbtn" href="tel:' + esc(o.phone) + '">Call</a>' +
+      callBtn(o.phone, "Call", "qbtn") +
       '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">Edit' + noteTag(o) + '</a>' +
     '</div>' +
     action + '</div>';
@@ -1297,7 +2071,12 @@ function drawAdminMap(list){
   loadLeaflet().then(function(){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
     var LF = window.L;
-    AMAP = LF.map(box, { zoomControl:true });
+    /* Always open on the restaurant. Whatever happened last time,
+       wherever yesterday's orders were, the office looks at its
+       own kitchen first and moves out from there. */
+    AMAP = LF.map(box, { zoomControl:true })
+             .setView([HOME.lat, HOME.lng], HOMEZOOM);
+    tameMap(AMAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(AMAP);
 
@@ -1422,6 +2201,15 @@ function paintEdit(main, id){
         (m.off ? ' \u2212 ' + rupee(m.off) + ' (' + esc(discountLabel(o)) + ')' : '') +
         ' = <b>' + rupee(m.total) + '</b></p>' +
 
+      /* Adding a dish has to be one search and one tap. Anything
+         slower and the phone gets picked up instead. */
+      '<h3 class="mini">Add something</h3>' +
+      '<div class="finder">' +
+        '<input class="fld" id="edFind" autocomplete="off" ' +
+          'placeholder="Search the menu\u2026 chicken, mandi, juice">' +
+        '<div class="findpanel" id="edFindOut"></div>' +
+      '</div>' +
+
       '<h3 class="mini">Where it goes</h3>' +
       '<input class="fld" id="edName"  placeholder="Name" value="' + esc(o.name) + '">' +
       '<input class="fld" id="edPhone" placeholder="Phone" inputmode="tel" value="' + esc(o.phone) + '">' +
@@ -1434,10 +2222,12 @@ function paintEdit(main, id){
       '<button class="shopbtn ghost" data-go="#/admin">Back without saving</button>' +
       (o.status !== "cancelled" && o.status !== "delivered"
         ? '<button class="shopbtn danger" id="edCancel">Cancel this order</button>' : '') +
+      payBlock(o, "office") +
       noteThread(o, "A note for the rider or the customer\u2026") +
     '</div>', true);
 
   wireNotes(main, id, function(){ paintEdit(main, id); });
+  wirePaid(main, function(){ paintEdit(main, id); });
 
   /* quantities change in place so the total is always honest */
   main.querySelectorAll("[data-eq]").forEach(function(b){
@@ -1456,6 +2246,19 @@ function paintEdit(main, id){
       paintEdit(main, id);
     };
   });
+
+  wireFinder("edFind", "edFindOut", function(did, lbl, price){
+    var it = dishById(did);
+    var lines = (o.lines || []).slice();
+    var k = did + "|" + lbl;
+    var hit = lines.filter(function(l){ return (l.id + "|" + (l.label||"")) === k; })[0];
+    if(hit) hit.q += 1;
+    else lines.push({ k:k, id:did, name: it ? label(it.name) : did,
+                      label:lbl, price:price, q:1 });
+    STORE.edit(id, { lines: lines });
+    shopToast((it ? label(it.name) : "Item") + " added.");
+    paintEdit(main, id);
+  }, "Add");
 
   el("edSave").onclick = function(){
     STORE.edit(id, {
@@ -1506,11 +2309,15 @@ function paintRiders(main){
     '<button class="shopbtn" id="rAdd">Add rider</button>' +
     '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>');
 
-  el("rAdd").onclick = function(){
+  var addRider = function(){
     var n = el("rName").value.trim(), p = el("rPhone").value.trim();
     if(!n || !p){ shopToast("Name and phone, please."); return; }
-    STORE.addRider(n, p);
+    var id = STORE.addRider(n, p);
+    if(id){ el("rName").value = ""; el("rPhone").value = ""; }
   };
+  el("rAdd").onclick = addRider;
+  onEnter(el("rName"),  addRider);
+  onEnter(el("rPhone"), addRider);
   main.querySelectorAll("[data-edit]").forEach(function(b){
     b.onclick = function(){ REDIT = b.dataset.edit; paintRiders(main); };
   });
@@ -1706,6 +2513,114 @@ function whoAmI(){
   return STORE.riders().filter(function(r){ return digits(r.phone) === mine; })[0] || null;
 }
 
+/* ------------------------------------------------------------
+   IS THIS PHONE ACTUALLY READY TO WORK
+
+   A web app is only asked for GPS the first time it needs it,
+   which without this panel was halfway through a delivery, with
+   a customer waiting. That is the worst possible moment. So the
+   rider is asked at sign-in instead, told plainly why, and shown
+   whether it worked.
+   ------------------------------------------------------------ */
+var GPSOK = null;          /* null unknown, true granted, false refused */
+
+function gpsState(){
+  return new Promise(function(done){
+    if(!navigator.geolocation) return done("none");
+    if(!navigator.permissions || !navigator.permissions.query) return done("ask");
+    navigator.permissions.query({ name:"geolocation" })
+      .then(function(r){ done(r.state); })      /* granted | prompt | denied */
+      .catch(function(){ done("ask"); });
+  });
+}
+
+function askGps(){
+  return new Promise(function(done){
+    if(!navigator.geolocation) return done(false);
+    navigator.geolocation.getCurrentPosition(
+      function(){ GPSOK = true;  done(true); },
+      function(){ GPSOK = false; done(false); },
+      { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+  });
+}
+
+function readyPanel(){
+  var inApp = !!native();
+  return '<div class="ready" id="readyBox">' +
+    (inApp
+      ? '<div class="rdrow ok"><span class="rdi">\uD83D\uDEF5</span>' +
+        '<div class="rdt"><b>Hayat rider app</b>' +
+        '<small>Your position keeps going with the screen off.</small></div></div>'
+      : '<div class="rdrow warn"><span class="rdi">\uD83C\uDF10</span>' +
+        '<div class="rdt"><b>Running in the browser</b>' +
+        '<small>Position stops when the screen sleeps. The app fixes that.</small></div></div>') +
+    '<div class="rdrow" id="rdGps"><span class="rdi">\uD83D\uDCCD</span>' +
+      '<div class="rdt"><b>Location</b><small>Checking\u2026</small></div>' +
+      '<button class="linky" id="rdGpsGo" hidden>Allow</button></div>' +
+    '<div class="rdrow" id="rdBell"><span class="rdi">\uD83D\uDD14</span>' +
+      '<div class="rdt"><b>Alerts</b><small>Checking\u2026</small></div>' +
+      '<button class="linky" id="rdBellGo" hidden>Allow</button></div>' +
+  '</div>';
+}
+
+function paintReady(){
+  var row = el("rdGps"), note = row && row.querySelector("small"),
+      btn = el("rdGpsGo");
+  if(!row) return;
+
+  gpsState().then(function(st){
+    if(st === "none"){
+      row.className = "rdrow bad";
+      note.textContent = "This phone cannot share a position.";
+      btn.hidden = true;
+    } else if(st === "granted" || GPSOK === true){
+      row.className = "rdrow ok";
+      note.textContent = "Shared while a delivery is open.";
+      btn.hidden = true;
+    } else if(st === "denied" || GPSOK === false){
+      row.className = "rdrow bad";
+      note.textContent = "Blocked. Open the site settings and allow location.";
+      btn.hidden = false;
+      btn.textContent = "Try again";
+    } else {
+      row.className = "rdrow warn";
+      note.textContent = "Needed so the shop and the customer can see you.";
+      btn.hidden = false;
+      btn.textContent = "Allow";
+    }
+  });
+
+  if(btn) btn.onclick = function(){
+    btn.textContent = "Waiting\u2026";
+    askGps().then(function(){ paintReady(); });
+  };
+
+  var brow = el("rdBell"), bnote = brow && brow.querySelector("small"),
+      bbtn = el("rdBellGo");
+  if(brow){
+    var has = ("Notification" in window);
+    var pm = has ? Notification.permission : "denied";
+    if(!has || pm === "denied"){
+      brow.className = "rdrow bad";
+      bnote.textContent = has ? "Blocked. New jobs will not ring."
+                              : "This phone cannot show alerts.";
+      bbtn.hidden = true;
+    } else if(pm === "granted"){
+      brow.className = "rdrow ok";
+      bnote.textContent = "You will hear a new delivery.";
+      bbtn.hidden = true;
+    } else {
+      brow.className = "rdrow warn";
+      bnote.textContent = "So a new delivery reaches you.";
+      bbtn.hidden = false;
+      bbtn.textContent = "Allow";
+      bbtn.onclick = function(){
+        try{ Notification.requestPermission().then(function(){ paintReady(); }); }catch(e){}
+      };
+    }
+  }
+}
+
 /* ---- the sign-in and the job list ---- */
 function viewDriveHome(main){
   var me = whoAmI();
@@ -1719,14 +2634,21 @@ function viewDriveHome(main){
       (riderPhone() ? '<p class="shopnote">That number is not on the rider list. ' +
         'Ask the office to add it.</p>' : '') +
       '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
-    el("rvGo").onclick = function(){
-      /* this tap is the only chance the browser gives us to unlock sound */
+    var signIn = function(){
+      /* This tap is the only gesture the browser will let us spend.
+         Sound, alerts and location all have to be asked for here,
+         while a finger is still on the screen - not later, in the
+         middle of a delivery. */
       armSound();
       try{ if("Notification" in window && Notification.permission === "default")
              Notification.requestPermission(); }catch(e){}
       setRiderPhone(el("rvPhone").value.trim());
+      askGps().then(function(){ viewDriveHome(main); });
       viewDriveHome(main);
     };
+    el("rvGo").onclick = signIn;
+    onEnter(el("rvPhone"), signIn);
+    el("rvPhone").focus();
     return;
   }
 
@@ -1741,6 +2663,7 @@ function viewDriveHome(main){
     '<div class="adminbar"><span class="pill">' + mine.length + ' to go</span>' +
       '<span class="pill quiet">' + done + ' done</span>' +
       '<button class="linky" id="rvOut">Not ' + esc(me.name) + '?</button></div>' +
+    readyPanel() +
     (mine.length ? mine.map(function(o){
         return '<a class="jobcard" href="#/drive/' + esc(o.id) + '">' +
           '<div class="brow"><b>' + esc(o.id) + '</b>' +
@@ -1756,6 +2679,7 @@ function viewDriveHome(main){
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
 
   el("rvOut").onclick = function(){ setRiderPhone(""); viewDriveHome(main); };
+  paintReady();
 
   armSound();
   checkForWork();
@@ -1784,23 +2708,38 @@ function viewDrive(main, id){
         '">Navigate</a>' +
       '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(waCustomer(o, msgRiderHere(o))) + '">WhatsApp</a>' +
-      '<a class="shopbtn small ghost" href="tel:' + esc(o.phone) + '">Call</a>' +
+      callBtn(o.phone, "Call", "shopbtn small ghost") +
     '</div>' +
     '<div class="items">' + (o.lines||[]).map(function(l){
       return l.q + "\u00d7 " + esc(l.name) + (l.label ? " <i>" + esc(l.label) + "</i>" : "");
     }).join(" \u00b7 ") + '</div>' +
     '<div class="total"><span>Collect</span><b>' + rupee(o.total) + '</b></div>' +
     '<div class="status big s-' + o.status + '">' + esc(STEP[o.status].t) + '</div>' +
+    payBlock(o, "rider") +
     (next ? '<button class="shopbtn" id="dvGo">' + esc(STEP[next].t) + '</button>'
           : '<p class="shopnote">Done. Thank you.</p>') +
-    '<div class="gpsrow"><span class="gpsdot" id="gpsDot"></span>' +
-      '<span id="gpsTxt">' + (next ? "Sharing your position while this is open" : "Not sharing") + '</span></div>' +
+    /* Read from the order, not set by hand, so a repaint cannot
+       quietly undo it - that is how the last one went wrong. */
+    '<div class="gpsrow"><span class="gpsdot' + (o.rAt ? " on" : "") + '" id="gpsDot"></span>' +
+      '<span id="gpsTxt">' + esc((function(){
+        if(!next) return "Not sharing";
+        if(!o.rAt) return native() ? "Starting\u2026" : "Sharing while this is open";
+        return "Position shared \u00b7 " + when(o.rAt) +
+               (native() ? " \u00b7 keeps going with the screen off" : "");
+      })()) + '</span></div>' +
     noteThread(o, "Held up? Cannot find the door? Say so here\u2026") +
     '<button class="shopbtn ghost" data-go="#/drive">Your other deliveries</button>');
 
   wireNotes(main, id, function(){ viewDrive(main, id); });
+  wirePaid(main, function(){ viewDrive(main, id); });
 
-  if(next) el("dvGo").onclick = function(){ STORE.setStatus(id, next); };
+  if(next) el("dvGo").onclick = function(){
+    STORE.setStatus(id, next);
+    /* the money is the last thing on their mind and the first
+       thing the shop will ask about, so say it once, here */
+    if(next === "delivered" && !STORE.order(id).paid)
+      shopToast("Delivered. Now mark how it was paid.");
+  };
 
   hush();                       /* they are looking at it now */
   if(o.status === "assigned" || o.status === "on_way") startPing(id);
@@ -1831,11 +2770,54 @@ function releaseScreen(){
 function stopPing(){
   if(PINGID != null){ try{ navigator.geolocation.clearWatch(PINGID); }catch(e){} }
   PINGID = null; PINGJOB = null;
+
+  /* the notification must go the moment the delivery does - a
+     tracker that outlives the job is the thing riders rightly
+     resent about every app like this */
+  if(NATIVEJOB){ clearInterval(NATIVEJOB); NATIVEJOB = null; }
+  var N = native();
+  if(N){ try{ N.stop(); }catch(e){} }
+
   releaseScreen();
 }
+/* The native tracker, if this is the rider app rather than a
+   browser tab. It is the only thing that keeps a position
+   flowing once the screen sleeps. */
+function native(){
+  try{ return (window.HayatTrack && typeof window.HayatTrack.start === "function")
+         ? window.HayatTrack : null; }catch(e){ return null; }
+}
+
+var NATIVEJOB = null;
+
 function startPing(id){
   if(PINGJOB === id) return;
   stopPing();
+
+  /* ---- the app: hand the job to the foreground service ---- */
+  var N = native();
+  if(N){
+    PINGJOB = id;
+    try{ N.start(id); }catch(e){}
+    var seen = 0;
+    NATIVEJOB = setInterval(function(){
+      var raw = "";
+      try{ raw = N.fix() || ""; }catch(e){}
+      if(!raw){
+        var t = el("gpsTxt");
+        if(t && !STORE.order(id).rAt) t.textContent = "Waiting for a fix\u2026";
+        return;
+      }
+      var p = raw.split(",");
+      var at = +p[2];
+      if(at === seen) return;          /* nothing new since last look */
+      seen = at;
+      STORE.ping(id, +p[0], +p[1]);   /* the repaint draws the rest */
+    }, 5000);
+    return;
+  }
+
+  /* ---- a browser: the best a web page is allowed to do ---- */
   if(!navigator.geolocation) return;
   PINGJOB = id;
   holdScreen();
@@ -1845,9 +2827,6 @@ function startPing(id){
     if(now - last < 5000) return;         /* five seconds, as agreed */
     last = now;
     STORE.ping(id, pos.coords.latitude, pos.coords.longitude);
-    var d = el("gpsDot"), t = el("gpsTxt");
-    if(d) d.classList.add("on");
-    if(t) t.textContent = "Position shared \u00b7 " + when(now);
   }, function(){
     var t = el("gpsTxt");
     if(t) t.textContent = "Location is off \u2014 the customer cannot see you move";
@@ -1870,6 +2849,33 @@ function shell(title, body, wide){
 function deskMode(on){
   try{ document.body.classList.toggle("deskwork", !!on); }catch(e){}
 }
+
+/* The rider is not browsing a restaurant. They are working, on a
+   phone, one-handed, often in the sun. Everything that belongs to
+   the customer's menu - the category rail, the search, the footer,
+   the cart button - is noise on their screen, so it goes away. */
+function rideMode(on){
+  try{ document.body.classList.toggle("ridework", !!on); }catch(e){}
+}
+/* Enter should submit. Every single-field form in this app is
+   someone standing up, one-handed, wanting to be done - making
+   them reach for a button is a small rudeness repeated all day. */
+function onEnter(node, run){
+  if(!node) return;
+  node.addEventListener("keydown", function(e){
+    if(e.key !== "Enter") return;
+    if(e.shiftKey && node.tagName === "TEXTAREA") return;
+    e.preventDefault();
+    /* Let go of the field before acting. Submitting leaves the
+       caret sitting in the input, and the repaint guard quite
+       rightly refuses to redraw a page somebody is typing into -
+       so without this the list never refreshes and the keyboard
+       stays up over the result. */
+    try{ node.blur(); }catch(err){}
+    run();
+  });
+}
+
 function shopToast(m){
   try{ if(window.toast) return window.toast(m); }catch(e){}
   alert(m);
@@ -1921,13 +2927,66 @@ function repaintRows(){
   });
 }
 
+/* ------------------------------------------------------------
+   THE CUSTOMER SIDE IS A WEBSITE, NOT AN APP TO INSTALL
+
+   A customer ordering dinner should not be asked to install
+   anything. Chrome offers it anyway once a site has a manifest
+   and a service worker, so we decline on the customer's behalf.
+
+   The rider is the opposite case and keeps its own front door
+   at rider.html, which stays installable - that one IS a tool
+   somebody uses every day, and an icon is the point of it.
+   ------------------------------------------------------------ */
+window.addEventListener("beforeinstallprompt", function(e){
+  var onRider = /rider\.html/.test(location.pathname) ||
+                /^#\/drive\b/.test(location.hash || "");
+  if(onRider) return;              /* let the rider be installed */
+  e.preventDefault();
+});
+
 /* ---------- routing ---------------------------------------- */
+
+/* Something is being typed right now.
+
+   The rider's page repaints every time their position is sent,
+   which is every five seconds. A repaint replaces the whole
+   view, so a half-written message was being thrown away and
+   the keyboard closed with it. Nothing may redraw the page
+   while a field has focus; the next event repaints instead. */
+function isTyping(){
+  try{
+    var a = document.activeElement;
+    if(!a) return false;
+    var t = (a.tagName || "").toLowerCase();
+    return t === "textarea" || t === "select" ||
+           (t === "input" && !/^(button|submit|checkbox|radio)$/i.test(a.type || "text"));
+  }catch(e){ return false; }
+}
+
 var REPAINT = null;
+var MISSED  = false;
+
+/* every repaint goes through here, so the rule holds everywhere */
+function repaintNow(){
+  if(!REPAINT) return;
+  if(isTyping()){ MISSED = true; return; }
+  MISSED = false;
+  REPAINT();
+}
+
+/* when they finish typing, catch up on whatever was held back */
+document.addEventListener("focusout", function(){
+  setTimeout(function(){ if(MISSED && !isTyping()) repaintNow(); }, 60);
+}, true);
+
 function route(p, main){
   REPAINT = null;
   deskMode(p[0] === "admin");
+  rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
+  if(p[0] === "orders")   { REPAINT = function(){ viewMyOrders(main); }; REPAINT(); return true; }
   if(p[0] === "cart")     { viewCart(main); return true; }
   if(p[0] === "checkout") { viewCheckout(main); return true; }
   if(p[0] === "o")        { REPAINT = function(){ viewOrder(main, p[1]); }; REPAINT(); return true; }
@@ -1940,7 +2999,7 @@ function route(p, main){
   return false;
 }
 STORE.onChange(function(){
-  if(REPAINT) REPAINT();
+  repaintNow();
   /* a rider signed in on this phone gets told about work wherever
      they are in the app, not only on the deliveries page */
   try{ if(riderPhone()) checkForWork(); }catch(e){}

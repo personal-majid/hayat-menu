@@ -127,7 +127,7 @@ window.CONFIG = {
   },
 
   /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
-  instagram: "zaman_yemenmandi",          // <-- CHANGE THIS
+  instagram: "hayat_fish_n_mandi",
 
   /* ---- 2. HOME DELIVERY NUMBERS ---------------------------- *
      Three lines shown on the Home Delivery panel.
@@ -154,6 +154,31 @@ window.CONFIG = {
   address:    "NH966, near Punarppa UP School, Makkaraparamba, Kerala 676507",
   hours:      "Open daily · 12 pm – 11 pm",
   mapsLink:   "https://www.google.com/maps/dir/?api=1&destination=11.0065785,76.1270507",
+
+  /* ---- WHERE THE RESTAURANT IS -----------------------------
+     Every map opens here, every delivery distance is measured
+     from here, and the ⌂ button on a map comes back here.
+
+     To set it exactly: open Google Maps, right-click the shop's
+     front door, and click the numbers at the top of the menu
+     that appears - that copies them. Paste below. */
+  shop: { lat: 11.0065785, lng: 76.1270507, zoom: 14 },
+
+  /* ---- TAKING PAYMENT --------------------------------------
+     A UPI id turns every order into a QR the customer scans
+     with Google Pay, PhonePe or Paytm. It costs nothing, needs
+     no gateway and no account beyond the one the shop has.
+
+     Put the shop's UPI id below - it looks like an email
+     address, e.g. "hayatmandi@okicici" or "9844326842@ybl".
+     Leave it empty and the app simply stays cash-only.
+
+     One honest limit: UPI cannot tell this website that money
+     arrived. There is no callback without a paid gateway. So
+     the rider or the office always confirms it by hand after
+     seeing the payment on their own phone. */
+  upi: { id: "", name: "Hayat Fish and Mandi" },
+
   reviewLink: "https://maps.google.com/?cid=6866265905315816486",
 
   /* ---- 4a. REVIEWS ----------------------------------------- *

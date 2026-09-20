@@ -6,11 +6,18 @@
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
   <uses-permission android:name="android.permission.CALL_PHONE"/>
   <!-- Asked for separately, on Android 10 and up, after the rider has
-       already said yes to location once. It lets the page keep a fix
-       while the app is not in front; it does NOT survive the app being
-       killed, which would need a foreground service. -->
+       already said yes to location once. -->
   <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
   <uses-permission android:name="android.permission.WAKE_LOCK"/>
+
+  <!-- The foreground service is what actually keeps a position
+       flowing once the screen sleeps, which on a bike is most of
+       the ride. It costs nothing and uses nobody else's service;
+       the price Android asks is a notification the rider can see
+       and stop at any moment, which is a fair trade. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
   <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
 
@@ -32,5 +39,10 @@
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
     </activity>
+
+    <service
+        android:name=".TrackService"
+        android:exported="false"
+        android:foregroundServiceType="location"/>
   </application>
 </manifest>

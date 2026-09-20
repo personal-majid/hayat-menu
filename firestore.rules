@@ -130,12 +130,41 @@ service cloud.firestore {
       allow delete: if isOffice();
     }
 
-    /* ---- the staff list ------------------------------------
-       Read by the office so the app knows who you are.
-       Never writable from the website. */
-    match /staff/{uid} {
-      allow read:  if signedIn() && uid == mine();
+    /* ---- the crew ------------------------------------------
+       Signing in to the office is: pick your name, type your
+       code. No email, no password to forget.
+
+         crew/_list          just the names, for the dropdown
+         crew/<id>           { name, code, role }  never readable
+
+       The code is never sent to the browser. A sign-in is an
+       attempt to create your own staff record, and the rules
+       accept it only if the code you typed matches the one
+       stored beside your name. The comparison happens here,
+       where nobody can look at the answer.
+
+       Set each person's code in the console. Four digits is
+       ten thousand guesses and a script can try them all;
+       six is a million. The office can change prices and read
+       every customer's address, so six is the sensible length. */
+    match /crew/{id} {
+      allow read:  if id == "_list";
       allow write: if false;
+    }
+
+    /* ---- who you are, once you have proved it --------------
+       You may create your own record, and only by presenting a
+       code that matches a crew entry. You may never change it
+       afterwards, and never touch anybody else's. */
+    match /staff/{uid} {
+      allow read:   if signedIn() && uid == mine();
+      allow create: if signedIn() && uid == mine()
+        && exists(/databases/$(database)/documents/crew/$(request.resource.data.crew))
+        && request.resource.data.code ==
+             get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.code
+        && request.resource.data.role ==
+             get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.role;
+      allow update, delete: if false;
     }
 
     /* ---- everything else is closed -------------------------- */

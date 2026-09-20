@@ -59,6 +59,45 @@ public class MainActivity extends AppCompatActivity {
     s.setMediaPlaybackRequiresUserGesture(false);
     s.setCacheMode(WebSettings.LOAD_DEFAULT);
 
+    /* The bridge the page uses to keep a position flowing once the
+       screen sleeps. Browsers cannot do this and never will; a
+       foreground service can, and costs nothing.
+
+       Deliberately small: start, stop, and read the last fix. The
+       page decides when a delivery is live and sends the position
+       on to Firestore itself, so all the logic stays in one place
+       and the app stays a shell. */
+    web.addJavascriptInterface(new Object() {
+
+      @android.webkit.JavascriptInterface
+      public void start(String orderId) {
+        Intent i = new Intent(MainActivity.this, TrackService.class)
+            .setAction(TrackService.ACTION_START)
+            .putExtra(TrackService.EXTRA_ORDER, orderId == null ? "" : orderId);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+          startForegroundService(i);
+        } else {
+          startService(i);
+        }
+      }
+
+      @android.webkit.JavascriptInterface
+      public void stop() {
+        startService(new Intent(MainActivity.this, TrackService.class)
+            .setAction(TrackService.ACTION_STOP));
+      }
+
+      @android.webkit.JavascriptInterface
+      public boolean running() { return TrackService.running; }
+
+      /* "lat,lng,whenMillis" - empty until there is a real fix */
+      @android.webkit.JavascriptInterface
+      public String fix() {
+        if (TrackService.lastAt == 0) return "";
+        return TrackService.lastLat + "," + TrackService.lastLng + "," + TrackService.lastAt;
+      }
+    }, "HayatTrack");
+
     /* The site's own pages stay inside the app. Anything else — a
        phone call, WhatsApp, Google Maps — belongs to its own app. */
     web.setWebViewClient(new WebViewClient() {

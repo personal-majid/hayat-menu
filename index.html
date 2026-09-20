@@ -880,6 +880,44 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
   background:var(--hot);border:3px solid #fff;border-radius:50% 50% 50% 0;
   rotate:-45deg;box-shadow:0 4px 10px rgba(0,0,0,.4)}
 .comap .leaflet-control-attribution{font-size:9px}
+
+/* ---- a map that lets the page scroll past it ---------------
+   pan-y hands vertical scrolling back to the browser, so a
+   thumb dragged up the screen moves the page and not the map.
+   Two fingers still reach Leaflet, which is what people expect
+   from every embedded map they have ever used. */
+.comap{touch-action:pan-y}
+.comap.held{touch-action:none}
+.comap.held{box-shadow:0 0 0 2px var(--gold) inset}
+
+.maphint{position:absolute;inset:0;z-index:600;display:flex;
+  align-items:center;justify-content:center;text-align:center;
+  padding:0 24px;pointer-events:none;
+  background:rgba(10,6,3,.52);color:#fff;
+  font-size:var(--t-body);font-weight:600;letter-spacing:.01em;
+  opacity:0;transition:opacity .18s ease}
+.maphint.on{opacity:1}
+
+.maphome{position:absolute;right:8px;top:8px;z-index:601;
+  width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--line2);background:var(--card);color:var(--cream);
+  font-size:19px;line-height:1;cursor:pointer;box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:center}
+.maphome:hover{border-color:var(--gold);color:var(--gold)}
+.maphome:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.maphold{position:absolute;right:8px;bottom:8px;z-index:601;
+  border:1px solid var(--line2);border-radius:999px;
+  background:var(--card);color:var(--cream);
+  font:600 var(--t-small)/1 inherit;letter-spacing:.02em;
+  padding:8px 13px;cursor:pointer;box-shadow:var(--shadow)}
+.maphold.on{background:var(--gold);color:var(--onaccent);border-color:transparent}
+.maphold:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+@media (hover:hover) and (pointer:fine){
+  /* a mouse does not need the button; ctrl+wheel is enough */
+  .maphold{display:none}
+}
 .mapfail{display:grid;place-items:center;height:100%;padding:16px;text-align:center;
   font-size:12.5px;color:var(--muted);line-height:1.6}
 .pinnote{font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.55}
@@ -899,6 +937,222 @@ body.deskwork .backbar .crumbtxt{font-size:14px}
   body.deskwork .col{flex:1 1 0;min-width:0}
   body.deskwork .admap{height:min(64vh,620px)}
 }
+/* ---- the rider: a working tool, not a restaurant menu ----
+   Nothing on this screen belongs to the customer's browsing.
+   Bigger type, bigger targets, more room between things: it is
+   read at arm's length, often in sunlight, usually one-handed. */
+body.ridework nav#nav,
+body.ridework header .tools,
+body.ridework header #search,
+body.ridework footer,
+body.ridework #cartfab{display:none !important}
+body.ridework main{padding:0 16px 28px}
+body.ridework .shopwrap{max-width:620px}
+
+body.ridework .who.big{font-size:23px;line-height:1.2;letter-spacing:-.01em}
+body.ridework .addr{font-size:16px;line-height:1.45}
+body.ridework .shopbtn{min-height:54px;font-size:16px;border-radius:14px}
+body.ridework .shopbtn.small{min-height:48px;font-size:15px}
+body.ridework .rowbtns{gap:10px}
+body.ridework .total b{font-size:22px}
+body.ridework .status.big{font-size:15px;padding:13px 16px;letter-spacing:.06em}
+body.ridework .items{font-size:15px;line-height:1.6}
+body.ridework .notes{padding:14px 15px}
+body.ridework .notebox .fld{min-height:52px;font-size:16px}
+body.ridework .note p{font-size:15px}
+
+/* the one thing that must never be missed */
+body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
+  box-shadow:0 10px 26px rgba(0,0,0,.35)}
+
+/* ---- the money ---- */
+.paid{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:var(--r2);
+  padding:13px 14px;margin:14px 0 0}
+.paid.on{border-left:3px solid var(--green)}
+.paid.off{border-left:3px solid var(--gold)}
+.pdot{width:26px;height:26px;border-radius:50%;background:var(--green);
+  color:var(--onaccent);display:flex;align-items:center;justify-content:center;
+  font-weight:700;flex:0 0 auto}
+.pt{flex:1;min-width:0}
+.pt b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.pt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.prow{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+.prow .shopbtn{margin:0;width:auto;flex:1 1 auto}
+.paid .linky{flex:0 0 auto}
+
+.upi{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  border:1px solid var(--line);border-top:0;
+  border-radius:0 0 var(--r2) var(--r2);padding:16px 14px;margin:0 0 4px}
+.upiqr{width:150px;height:150px;flex:0 0 auto;border-radius:10px;
+  background:#fff;padding:8px}
+.upit{flex:1;min-width:150px}
+.upit b{display:block;font-size:26px;line-height:1.1;color:var(--cream)}
+.upit small{display:block;font-size:var(--t-small);color:var(--muted);margin:5px 0 10px}
+.upit .shopbtn{margin:0;width:auto}
+
+.ptag{font-size:var(--t-tiny);font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.ptag.on{background:var(--green);color:var(--onaccent)}
+.ptag.off{background:var(--hot);color:#fff}
+
+/* ---- keep your orders ---- */
+.youare{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:var(--r2);
+  padding:12px 14px;margin:0 0 14px;background:var(--soft3)}
+.youare span{font-size:var(--t-body);color:var(--muted)}
+.youare span b{color:var(--cream)}
+.youare .linky{margin-left:auto}
+.youare.guest{border-left:3px solid var(--gold)}
+.yt{flex:1;min-width:0}
+.yt b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.yt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.youare .shopbtn{margin:0;width:auto;flex:0 0 auto;white-space:nowrap}
+@media (max-width:420px){
+  .youare .shopbtn{width:100%}
+}
+
+/* ---- before an order is accepted ---- */
+.preact{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 0;
+  padding-top:9px;border-top:1px dashed var(--line2)}
+.bcard.empty{border-color:var(--hot)}
+.emptyord{text-align:left;margin:8px 0 0;color:var(--hot);font-weight:600}
+.numtxt{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.shownum{cursor:pointer}
+.shownum.showing{font-variant-numeric:tabular-nums;letter-spacing:.02em}
+
+/* ============================================================
+   THE DISH FINDER
+   One search box, one tap to add. Used by the customer in the
+   cart and by the office when editing an order.
+   ============================================================ */
+.finder{position:relative;margin:0 0 14px}
+.finder .fld{margin:0}
+.findpanel{display:none;margin-top:8px;border:1px solid var(--line);
+  border-radius:var(--r2);overflow:hidden;background:var(--card);
+  max-height:min(52vh,380px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.findpanel.on{display:block}
+
+.findrow{display:flex;align-items:center;gap:11px;width:100%;
+  padding:11px 13px;border:0;border-bottom:1px solid var(--line);
+  background:transparent;color:var(--cream);text-align:left;cursor:pointer;
+  font:inherit;min-height:56px}
+.findrow:last-child{border-bottom:0}
+.findrow:hover,.findrow:focus-visible{background:var(--soft2);outline:none}
+.fnd{flex:1;min-width:0}
+.fnd b{display:block;font-size:var(--t-h3);line-height:1.25}
+.fsize{display:inline-block;font-size:var(--t-tiny);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--gold);margin-top:3px}
+.fnd small{display:block;font-size:var(--t-tiny);color:var(--muted);margin-top:2px}
+.fpr{flex:0 0 auto;font-weight:700;font-size:var(--t-body);white-space:nowrap}
+.fadd{flex:0 0 auto;border:1px solid var(--line2);border-radius:999px;
+  padding:7px 13px;font-size:var(--t-small);font-weight:700;white-space:nowrap}
+.findrow:hover .fadd{background:var(--gold);color:var(--onaccent);border-color:transparent}
+.findrow.done .fadd{background:var(--green);color:var(--onaccent);border-color:transparent}
+.fnone{text-align:left;padding:14px 13px;margin:0}
+
+/* ---- is this phone ready to work ---- */
+.ready{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin:0 0 14px}
+.rdrow{display:flex;align-items:center;gap:12px;padding:13px 14px;
+  border-bottom:1px solid var(--line);border-left:3px solid var(--line2)}
+.rdrow:last-child{border-bottom:0}
+.rdrow.ok{border-left-color:var(--green)}
+.rdrow.warn{border-left-color:var(--gold)}
+.rdrow.bad{border-left-color:var(--hot)}
+.rdi{font-size:19px;line-height:1;flex:0 0 auto}
+.rdt{flex:1;min-width:0}
+.rdt b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.rdt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.rdrow .linky{flex:0 0 auto;min-height:40px;padding:0 14px;
+  border:1px solid var(--line2);border-radius:999px;font-weight:700}
+.rdrow.warn .linky{background:var(--gold);color:var(--onaccent);border-color:transparent}
+
+/* ============================================================
+   THE OFFICE CONSOLE
+   A fixed frame, not a page. The window never scrolls; the
+   work scrolls inside it. On a phone the board becomes one
+   full-width column at a time that you swipe between, because
+   four columns squeezed side by side is four unreadable ones.
+   ============================================================ */
+/* The whole window is the work. No site header, no page title,
+   no band of chrome: the board, the list or the map owns every
+   pixel and the controls float on top of it. */
+html:has(body.deskwork){overflow:hidden;height:100%}
+body.deskwork{overflow:hidden;height:100%;margin:0}
+body.deskwork header,
+body.deskwork .backbar{display:none !important}
+body.deskwork main{padding:0 !important;height:100dvh;overflow:hidden}
+body.deskwork .shopwrap{max-width:none;height:100%;padding:0}
+
+.console{position:relative;height:100dvh;min-height:0;overflow:hidden;
+  display:flex;flex-direction:column}
+
+/* floating, so it costs the work nothing */
+.conbar{position:absolute;left:12px;right:12px;top:12px;z-index:660;
+  display:flex;align-items:center;gap:12px;pointer-events:none}
+.conbar > *{pointer-events:auto}
+.conbar .tabs{margin:0;background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:4px;box-shadow:var(--shadow)}
+.conbar .adminbar{margin:0 0 0 auto;padding:6px 12px;border:1px solid var(--line);
+  border-radius:999px;background:var(--card);box-shadow:var(--shadow)}
+
+.conbody{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+  padding:66px 16px 0;overflow:hidden}
+.conbody.nomargin{padding:0}
+.conscroll{flex:1 1 auto;min-height:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding-bottom:88px}
+
+/* ---- the map takes whatever is left, and no less ---- */
+.conbody.nomargin .admap{flex:1 1 auto;height:auto !important;min-height:0;
+  border-radius:0;width:100%}
+.admaplegend{flex:0 0 auto;position:absolute;left:12px;bottom:12px;z-index:620;
+  background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:7px 12px;box-shadow:var(--shadow)}
+.conbody.nomargin{position:relative}
+.floatnote{position:absolute;left:50%;top:18px;transform:translateX(-50%);z-index:620;
+  background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:8px 16px;margin:0;box-shadow:var(--shadow)}
+
+/* ---- the board fills the frame; each column scrolls itself ---- */
+.conbody .board{flex:1 1 auto;min-height:0;display:flex;gap:12px;
+  overflow-x:auto;overflow-y:hidden;padding-bottom:12px;margin:0}
+.conbody .col{display:flex;flex-direction:column;min-height:0;
+  flex:1 1 0;min-width:270px}
+.conbody .colhead{flex:0 0 auto}
+.conbody .col > :not(.colhead){flex:0 0 auto}
+.conbody .col{overflow:hidden}
+.conbody .colbody{flex:1 1 auto;min-height:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding-bottom:80px}
+
+/* ---- the floating dock, always the same corner ---- */
+body.deskwork .conn{position:absolute;left:12px;right:12px;top:62px;z-index:655;
+  margin:0;box-shadow:var(--shadow)}
+.condock{position:fixed;right:16px;bottom:16px;z-index:700;display:flex;gap:10px}
+.dockbtn{position:relative;width:52px;height:52px;border-radius:50%;
+  border:1px solid var(--line2);background:var(--card);color:var(--cream);
+  font-size:20px;line-height:1;cursor:pointer;box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:center}
+.dockbtn:hover{border-color:var(--gold)}
+.dockbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.dockn{position:absolute;top:-2px;right:-2px;min-width:19px;height:19px;
+  padding:0 5px;border-radius:10px;background:var(--gold);color:var(--onaccent);
+  font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* ---- a phone: one column at a time, swiped ---- */
+@media (max-width:860px){
+  .conbar{left:8px;right:8px;top:8px;gap:8px}
+  .conbar .tabs{padding:3px}
+  .conbar .adminbar{padding:5px 10px}
+  .conbody{padding:56px 0 0}
+  .conbody .board{gap:0;scroll-snap-type:x mandatory;padding:0 0 12px}
+  .conbody .col{flex:0 0 100%;min-width:100%;scroll-snap-align:start;
+    padding:0 12px}
+  .conbody .colhead{position:sticky;top:0;z-index:5;background:var(--bg);
+    padding:8px 2px 10px;font-size:var(--t-h3)}
+  .conscroll{padding-left:12px;padding-right:12px}
+  .condock{right:12px;bottom:12px}
+}
+
 /* a marker that says who and how much, not just where */
 .omark{background:none;border:0}
 .omark .dot{display:block;width:14px;height:14px;border-radius:50%;border:2px solid #fff;
@@ -2022,7 +2276,7 @@ window.CONFIG = {
   },
 
   /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
-  instagram: "zaman_yemenmandi",          // <-- CHANGE THIS
+  instagram: "hayat_fish_n_mandi",
 
   /* ---- 2. HOME DELIVERY NUMBERS ---------------------------- *
      Three lines shown on the Home Delivery panel.
@@ -2049,6 +2303,31 @@ window.CONFIG = {
   address:    "NH966, near Punarppa UP School, Makkaraparamba, Kerala 676507",
   hours:      "Open daily · 12 pm – 11 pm",
   mapsLink:   "https://www.google.com/maps/dir/?api=1&destination=11.0065785,76.1270507",
+
+  /* ---- WHERE THE RESTAURANT IS -----------------------------
+     Every map opens here, every delivery distance is measured
+     from here, and the ⌂ button on a map comes back here.
+
+     To set it exactly: open Google Maps, right-click the shop's
+     front door, and click the numbers at the top of the menu
+     that appears - that copies them. Paste below. */
+  shop: { lat: 11.0065785, lng: 76.1270507, zoom: 14 },
+
+  /* ---- TAKING PAYMENT --------------------------------------
+     A UPI id turns every order into a QR the customer scans
+     with Google Pay, PhonePe or Paytm. It costs nothing, needs
+     no gateway and no account beyond the one the shop has.
+
+     Put the shop's UPI id below - it looks like an email
+     address, e.g. "hayatmandi@okicici" or "9844326842@ybl".
+     Leave it empty and the app simply stays cash-only.
+
+     One honest limit: UPI cannot tell this website that money
+     arrived. There is no callback without a paid gateway. So
+     the rider or the office always confirms it by hand after
+     seeing the payment on their own phone. */
+  upi: { id: "", name: "Hayat Fish and Mandi" },
+
   reviewLink: "https://maps.google.com/?cid=6866265905315816486",
 
   /* ---- 4a. REVIEWS ----------------------------------------- *
