@@ -1639,14 +1639,28 @@ function wantsLanding(){
   try{ return window.matchMedia("(max-width: 820px)").matches; }catch(e){ return false; }
 }
 
+/* "11:00" is a machine talking. People say eleven, and one in the
+   morning, so that is what the landing page says. */
+function clockWords(t){
+  var p = String(t).split(":");
+  var h = +p[0], m = +(p[1] || 0);
+  var ampm = h >= 12 ? "pm" : "am";
+  var hh = h % 12; if(hh === 0) hh = 12;
+  return hh + (m ? ":" + String(m).padStart(2, "0") : "") + " " + ampm;
+}
+
 function openNow(){
   var h = C().hours;
   if(!h || !h.open || !h.close) return { open:true, txt:"" };
   var now = new Date(), mins = now.getHours() * 60 + now.getMinutes();
   var toM = function(t){ var p = String(t).split(":"); return (+p[0]) * 60 + (+p[1] || 0); };
   var a = toM(h.open), b = toM(h.close);
+  /* A kitchen that closes after midnight has a closing time
+     smaller than its opening one, so the window wraps round. */
   var on = (b > a) ? (mins >= a && mins < b) : (mins >= a || mins < b);
-  return { open: on, txt: on ? ("Open until " + h.close) : ("Opens at " + h.open) };
+  return { open: on,
+           txt: on ? ("Open until " + clockWords(h.close))
+                   : ("Opens at " + clockWords(h.open)) };
 }
 
 function viewLanding(main){
