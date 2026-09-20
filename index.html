@@ -1634,17 +1634,29 @@ function dishHero(it){
            '<div class="bs">'+esc(C.tagline||"")+'</div>'+
          '</div>';
 }
-function pic(it,wide){
+/* A row in a list is a 64px square. Sending it the 1200px hero
+   was most of the weight of a category page - eight dishes cost
+   about 2.4MB, which on a phone outside the shop is a blank
+   screen for several seconds. photos/th/ holds the same pictures
+   at 200px and about 6KB, so the same eight cost 51KB. The hero
+   on the dish page still gets the full one. */
+function small(src){
+  return (typeof src === "string" && src.indexOf("photos/") === 0)
+    ? src.replace("photos/", "photos/th/")
+    : src;
+}
+function pic(it,wide,tiny){
   const fb=art(it||{},wide);
-  return `<img loading="lazy" src="${(it&&it.img)||fb}" alt="${esc((it&&it.name)||"")}"
-    onerror="this.onerror=null;this.src='${fb}'">`;
+  const src=(it&&it.img) ? (tiny ? small(it.img) : it.img) : fb;
+  return `<img loading="lazy" src="${src}" alt="${esc((it&&it.name)||"")}"
+    onerror="this.onerror=null;this.src='${(it&&it.img)||fb}'">`;
 }
 /* Dishes without a photograph get the mark, not a drawn plate. */
-function media(it,wide){
+function media(it,wide,tiny){
   if(isArtOnly(it)) return '<span class="artmark"><img src="assets/mark.png" alt=""></span>';
-  return pic(it,wide);
+  return pic(it,wide,tiny);
 }
-const thumb=it=>`<span class="thumb${isArtOnly(it)?" art":""}">${media(it)}</span>`;
+const thumb=it=>`<span class="thumb${isArtOnly(it)?" art":""}">${media(it,false,true)}</span>`;
 const tagHtml=it=>(it.tags||[]).map(t=>
   `<span class="tag ${t}">${t==="star"?T("tagStar"):t==="hot"?T("tagHot"):T("tagVeg")}</span>`).join("");
 function priceChips(it){
@@ -1666,7 +1678,7 @@ function upsellStrip(excludeCat){
   return `<h3 class="mini">${T("goesWith")}</h3><div class="ups">${ids.map(id=>{
     const [it,c]=findItem(id);
     return `<button class="upc" data-go="#/d/${c.id}/${it.id}">
-      <div class="ph">${pic(it)}</div>
+      <div class="ph">${pic(it,false,true)}</div>
       <div class="b"><div class="n">${esc(NM(it))}</div>
       <div class="p">${it.price!=null?rup(it.price):rup(lowest(it))}</div></div></button>`;
   }).join("")}</div>`;
@@ -2464,7 +2476,18 @@ function sectionSlides(c){
   }
   return out.slice(0,6);
 }
+/* Somebody ordering on a phone is not browsing a brochure. The
+   banner carousel is four 500KB photographs - on a category page
+   that was most of 2.9MB, before a single dish had been read.
+   The tablet in the restaurant keeps it, because there the
+   pictures ARE the point and the wifi is ours. */
+function orderingOnPhone(){
+  if(window.HAYAT_KIOSK) return false;
+  try{ return window.matchMedia("(max-width: 820px)").matches; }
+  catch(e){ return false; }
+}
 function slideShow(c, small){
+  if(orderingOnPhone()) return "";
   var sl = (c && c.slidesOverride) || sectionSlides(c);
   if(!sl.length) return "";
   return '<div class="slides'+(small?" small":"")+'" id="slides">'+sl.map(function(x,i){
@@ -2595,7 +2618,8 @@ function viewDish(cid,did){
   const pBlock = shots.length ? `<h3 class="mini">${T("photosHead")}</h3>
     <div class="pgrid">${shots.map(p=>`
       <button class="pcard" data-lb="${esc(p.src)}" data-cap="${esc(p.caption||NM(it))}">
-        <div class="ph"><img loading="lazy" src="${esc(p.src)}" alt=""></div>
+        <div class="ph"><img loading="lazy" src="${esc(small(p.src))}" alt=""
+          onerror="this.onerror=null;this.src='${esc(p.src)}'"></div>
         <div class="cap"><div class="cn">${esc(p.caption||NM(it))}</div>
           <div class="cprices">${priceChips(it)}</div></div></button>`).join("")}</div>` : "";
 
@@ -2678,7 +2702,8 @@ function viewGallery(){
     panel = PH.length
       ? `<div class="mos">${PH.map(p=>`
           <button class="mtile" data-lb="${esc(p.src)}" data-cap="${esc(p.caption||"")}">
-            <img loading="lazy" src="${esc(p.src)}" alt="">
+            <img loading="lazy" src="${esc(small(p.src))}" alt=""
+              onerror="this.onerror=null;this.src='${esc(p.src)}'">
             ${p.caption?`<div class="cap">${esc(p.caption)}</div>`:""}</button>`).join("")}</div>`
       : `<div class="nomedia"><b>No photos yet.</b><br>
          Drop jpg files into <code>gallery/</code> and list them in <code>config.js</code>
@@ -3115,6 +3140,11 @@ var INTRO = (function(){
    followed a link to a particular page — a review card, an order they are
    tracking, the office — came for that page, not for a film. */
 function introWelcome(){
+  /* The welcome film belongs to the tablet on the table. On a
+     phone it was opening underneath the ordering screen, where
+     nobody ever saw it, and pulling its poster down anyway -
+     a quarter of a megabyte before the first button. */
+  if(orderingOnPhone()) return false;
   var h = location.hash || "";
   return h === "" || h === "#" || h === "#/";
 }

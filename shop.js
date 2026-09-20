@@ -54,7 +54,7 @@ function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} });
 try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
-var DB = { orders:{}, riders:{}, customers:{}, verify:{}, seq:100 };
+var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
 var FAULT = null;              /* why it is not live, in one word */
 
@@ -62,8 +62,8 @@ var FAULT = null;              /* why it is not live, in one word */
 function lsRead(){
   try{ var d = JSON.parse(localStorage.getItem(KEY)) || {};
     return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{},
-             verify:d.verify||{}, seq:d.seq||100 }; }
-  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, seq:100 }; }
+             verify:d.verify||{}, pings:d.pings||{}, seq:d.seq||100 }; }
+  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, seq:100 }; }
 }
 function lsWrite(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
@@ -240,6 +240,7 @@ async function connectFirebase(cfg){
   watch("riders", "riders");
   watch("customers", "customers");
   watch("verify", "verify");
+  watch("pings",  "pings");
 
   /* ask the REST endpoint once, so a missing database is named plainly
      instead of showing up later as writes that quietly disappear */
@@ -654,6 +655,58 @@ var STORE = {
   customers: function(){
     return Object.keys(DB.customers).map(function(k){ return DB.customers[k]; })
       .sort(function(a,b){ return (b.lastAt || 0) - (a.lastAt || 0); });
+  },
+
+  /* ---- where they were when they last opened the app -----
+     Not the delivery address and never allowed to become it. A
+     doorstep is a rider standing at a door; this is a phone
+     saying roughly where its owner was, and it is only ever
+     read as a hint. It rides in its own collection because a
+     customer may not write to the customer book - the office
+     promotes it, exactly like the doorstep. */
+  pingSeen: function(phone, lat, lng){
+    var id = digitsOnly(phone);
+    if(!id || lat == null || lng == null) return null;
+    var row = { id:id, phone:phone, lat:+(+lat).toFixed(5),
+                lng:+(+lng).toFixed(5), at:Date.now() };
+    DB.pings[id] = row;
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "pings", id), row, { merge:true })
+        .catch(function(e){ console.warn("pingSeen", e); });
+    } else lsWrite();
+    return row;
+  },
+
+  pings: function(){ return DB.pings; },
+
+  /* ---- is this really them? ------------------------------
+     Two ways a number becomes trusted. Either they typed the
+     code we WhatsApped them, which the verify row records, or
+     somebody in the office rang them and said so. The office
+     one is a judgement, so it is signed and dated. */
+  isVerified: function(c){
+    if(!c) return false;
+    if(c.verified) return true;
+    var v = DB.verify[c.id];
+    return !!(v && v.ok);
+  },
+
+  setVerified: function(phone, yes, how){
+    var id = digitsOnly(phone);
+    var c = DB.customers[id];
+    if(!c) return null;
+    var patch = {
+      verified: !!yes,
+      verifiedAt: yes ? Date.now() : null,
+      verifiedBy: yes ? (myVoice() + (how ? " \u00b7 " + how : "")) : null
+    };
+    for(var k in patch) c[k] = patch[k];
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "customers", id), patch)
+        .catch(function(e){ console.warn("setVerified", e); });
+      fire();
+    } else lsWrite();
+    return c;
   },
 
   /* what we know, merged with what we just learned */
@@ -1667,10 +1720,24 @@ function openNow(){
                    : ("Opens at " + clockWords(h.open)) };
 }
 
+/* ------------------------------------------------------------
+   THE FRONT DOOR ON A PHONE
+
+   Two buttons of equal weight is a question, and a hungry person
+   at ten at night did not come here to answer a question. So
+   there is one obvious thing to press - tell us your number, we
+   ring you back - and underneath it the categories, in words,
+   for anybody who would rather pick for themselves.
+
+   No photographs on this screen. Pictures sell a dish once
+   somebody is looking at dishes; on the way in they are weight
+   on a phone outside the shop, and they make ten categories
+   look like a wall. The thumbnails start where they earn their
+   keep, on the dish list.
+   ------------------------------------------------------------ */
 function viewLanding(main){
-  var me  = knownMe();
   var shop = ((C().delivery || [])[0] || {}).number || C().whatsapp || "";
-  var st  = openNow();
+  var st   = openNow();
   var mine = STORE.myOrders();
   var live = mine.filter(function(o){
     return o.status !== "delivered" && o.status !== "cancelled";
@@ -1678,6 +1745,10 @@ function viewLanding(main){
   var last = mine.filter(function(o){
     return o.status === "delivered" && (o.lines || []).length;
   })[0];
+
+  var cats = (window.MENU || []).filter(function(c){
+    return c && c.id && (c.items || []).length;
+  });
 
   main.innerHTML =
     '<div class="land">' +
@@ -1700,27 +1771,32 @@ function viewLanding(main){
           '</a>'
         : '') +
 
-      '<div class="landdo">' +
-        '<button class="landbtn big" id="ldCall">' +
-          '<span class="lbi">\u260E</span>' +
-          '<span class="lbt"><b>Order food</b>' +
-          '<small>Tell us where you are \u2014 we call you straight back</small></span>' +
-        '</button>' +
+      /* The one button. Everything else on this screen is smaller
+         than it on purpose. */
+      '<button class="hero" id="ldCall">' +
+        '<b>Order food</b>' +
+        '<small>Give us your number \u2014 we call you straight back</small>' +
+      '</button>' +
 
-        '<button class="landbtn" id="ldMenu">' +
-          '<span class="lbi">\uD83C\uDF7D</span>' +
-          '<span class="lbt"><b>Browse the menu</b>' +
-          '<small>Pick it yourself and send the order</small></span>' +
-        '</button>' +
+      (last
+        ? '<button class="landagain" id="ldAgain">' +
+            '\u21BA Same as last time \u00b7 ' +
+            esc((last.lines || []).map(function(l){ return l.q + "\u00d7 " + l.name; })
+                  .join(", ")) +
+          '</button>'
+        : '') +
 
-        (last
-          ? '<button class="landbtn again" id="ldAgain">' +
-              '<span class="lbi">\u21BA</span>' +
-              '<span class="lbt"><b>The usual, again</b>' +
-              '<small>' + esc((last.lines || []).map(function(l){
-                return l.q + "\u00d7 " + l.name; }).join(", ")) + '</small></span>' +
-            '</button>'
-          : '') +
+      '<div class="catwrap">' +
+        '<div class="catcap">Or choose it yourself</div>' +
+        '<div class="catlist">' +
+          cats.map(function(c){
+            return '<button class="catrow" data-cat="' + esc(c.id) + '">' +
+              '<span class="catn">' + esc(c.name) + '</span>' +
+              '<span class="catc">' + (c.items || []).length + '</span>' +
+              '<span class="catgo">\u203A</span>' +
+            '</button>';
+          }).join("") +
+        '</div>' +
       '</div>' +
 
       '<div class="landfoot">' +
@@ -1731,19 +1807,23 @@ function viewLanding(main){
       installBar() +
     '</div>';
 
-  var browse = function(){
+  /* index.html owns the menu, and it only draws once this screen
+     has stood aside. The flag is what stops it drawing over us
+     again on the next repaint. */
+  var browse = function(hash){
     try{ sessionStorage.setItem("hayat_browsing", "1"); }catch(e){}
     REPAINT = null;
-    location.hash = "#/";
-    /* index.html owns the menu; nudge it to draw now that we have
-       stood aside */
+    location.hash = hash || "#/";
     try{ window.dispatchEvent(new HashChangeEvent("hashchange")); }catch(e){
       try{ window.dispatchEvent(new Event("hashchange")); }catch(err){}
     }
   };
 
   el("ldCall").onclick = function(){ location.hash = "#/quick"; };
-  el("ldMenu").onclick = browse;
+
+  main.querySelectorAll("[data-cat]").forEach(function(b){
+    b.onclick = function(){ browse("#/c/" + b.dataset.cat); };
+  });
 
   var ag = el("ldAgain");
   if(ag) ag.onclick = function(){
@@ -3665,6 +3745,23 @@ function learnDoorsteps(){
         STORE.rememberCustomer(o);
       }
     });
+
+    /* Where their phone last was, moved into the book. It goes
+       into its own three fields and never near lat/lng, which is
+       where a rider is supposed to ride to. */
+    var pings = STORE.pings();
+    Object.keys(pings).forEach(function(id){
+      var p = pings[id], c = STORE.customer(id);
+      if(!c || !p.at) return;
+      if((c.seenAt || 0) >= p.at) return;
+      /* at: c.lastAt on purpose. rememberCustomer moves lastAt
+         to now when it is not told otherwise, and opening the app
+         is not ordering - without this every ping would make a
+         customer look recently active and "gone quiet" would
+         never find anybody. */
+      STORE.rememberCustomer({ phone: c.phone, at: c.lastAt || 0 },
+        { seenLat: p.lat, seenLng: p.lng, seenAt: p.at });
+    });
   } finally { LEARNING = false; }
 }
 
@@ -3678,6 +3775,37 @@ function learnDoorsteps(){
    ------------------------------------------------------------ */
 var CQ = "";        /* what the office is searching for */
 var CVIEW = "list";
+/* recent | quiet | orders | spend - how the book is stacked */
+var CSORT = "recent";
+/* when true the list is a job to work through, not a directory */
+var CONLY = false;
+
+try{ CSORT = localStorage.getItem("hayat_csort") || "recent"; }catch(e){}
+
+/* Somebody who has not ordered in this long has gone quiet. Six
+   weeks is roughly "missed a month of Fridays" for a restaurant
+   people use a couple of times a month. */
+var QUIET_DAYS = 42;
+
+function daysSince(t){
+  if(!t) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+
+function lastSeenWords(c){
+  var d = daysSince(c.lastAt);
+  if(d === null) return "never ordered";
+  if(d === 0) return "today";
+  if(d === 1) return "yesterday";
+  if(d < 30)  return d + " days ago";
+  if(d < 60)  return "a month ago";
+  return Math.floor(d / 30) + " months ago";
+}
+
+function isQuiet(c){
+  var d = daysSince(c.lastAt);
+  return d !== null && d >= QUIET_DAYS;
+}
 
 function custStats(c){
   var mine = STORE.orders().filter(function(o){
@@ -3707,7 +3835,24 @@ function paintCustomers(main){
       })
     : all;
 
-  var placed = list.filter(function(c){ return c.lat && c.lng; });
+  /* The queue. Turning this on stops the page being a directory
+     and makes it a job: everyone we have not confirmed is a real
+     person, oldest first, so the office can work down it. */
+  var unver = all.filter(function(c){ return !STORE.isVerified(c); });
+  if(CONLY) list = list.filter(function(c){ return !STORE.isVerified(c); });
+
+  list = list.slice().sort(function(a,b){
+    if(CSORT === "quiet")  return (a.lastAt || 0) - (b.lastAt || 0);
+    if(CSORT === "orders") return custStats(b).n - custStats(a).n;
+    if(CSORT === "spend")  return custStats(b).spend - custStats(a).spend;
+    return (b.lastAt || 0) - (a.lastAt || 0);      /* recent */
+  });
+
+  /* the map draws what is on screen; the tally counts the book,
+     or turning the queue on would look like customers had lost
+     their locations */
+  var placed  = list.filter(function(c){ return c.lat && c.lng; });
+  var located = all.filter(function(c){ return c.lat && c.lng; }).length;
 
   main.innerHTML =
     '<div class="console">' +
@@ -3718,7 +3863,10 @@ function paintCustomers(main){
         '</div>' +
         '<div class="adminbar">' +
           '<span class="pill">' + all.length + ' customers</span>' +
-          '<span class="pill quiet">' + placed.length + ' located</span>' +
+          '<button class="pill' + (CONLY ? " on" : " warn") + '" id="cOnly" ' +
+            'title="Show only the ones nobody has confirmed yet">' +
+            unver.length + ' unverified</button>' +
+          '<span class="pill quiet">' + located + ' located</span>' +
         '</div>' +
       '</div>' +
 
@@ -3731,6 +3879,19 @@ function paintCustomers(main){
           : '<div class="conscroll">' +
               '<input class="fld cfind" id="cFind" autocomplete="off" ' +
                 'placeholder="Search a number, a name, a place\u2026" value="' + esc(CQ) + '">' +
+              '<div class="csort">' +
+                [["recent","Recently active"],["quiet","Gone quiet"],
+                 ["orders","Most orders"],["spend","Most spent"]]
+                  .map(function(p){
+                    return '<button class="chip' + (CSORT===p[0]?" on":"") +
+                      '" data-cs="' + p[0] + '">' + p[1] + '</button>';
+                  }).join("") +
+              '</div>' +
+              (CONLY
+                ? '<p class="cqhint">' + unver.length + ' to confirm. Ring them, ' +
+                  'or WhatsApp the code \u2014 then mark them verified.</p>'
+                : '') +
+              offerBar(list) +
               (list.length
                 ? '<div class="lines">' + list.map(custRow).join("") + '</div>'
                 : '<p class="shopsub">' + (q ? "Nobody matches that." : "Nobody yet.") + '</p>') +
@@ -3745,6 +3906,47 @@ function paintCustomers(main){
 
   main.querySelectorAll("[data-cv]").forEach(function(b){
     b.onclick = function(){ CVIEW = b.dataset.cv; paintCustomers(main); };
+  });
+
+  main.querySelectorAll("[data-cs]").forEach(function(b){
+    b.onclick = function(){
+      CSORT = b.dataset.cs;
+      try{ localStorage.setItem("hayat_csort", CSORT); }catch(e){}
+      paintCustomers(main);
+    };
+  });
+
+  var on = el("cOnly");
+  if(on) on.onclick = function(){ CONLY = !CONLY; paintCustomers(main); };
+
+  var os = el("oStart");
+  if(os) os.onclick = function(){
+    OFFER = offerDefault(); OSENT = {}; offerSave();
+    paintCustomers(main);
+    var t = el("oText"); if(t){ t.focus(); t.select(); }
+  };
+  var ox = el("oStop");
+  if(ox) ox.onclick = function(){ OFFER = null; OSENT = {}; offerSave(); paintCustomers(main); };
+  var ot = el("oText");
+  if(ot) ot.oninput = function(){ OFFER = ot.value; offerSave(); };
+
+  main.querySelectorAll("[data-off]").forEach(function(b){
+    b.onclick = function(){
+      /* marked before the window opens - if it is blocked or they
+         close it, the office still knows where they had got to */
+      OSENT[b.dataset.off] = true; offerSave();
+      b.classList.add("done"); b.textContent = "Sent";
+      var n = el("oText"); if(n) OFFER = n.value;
+      window.open(wa(b.dataset.offp, OFFER || ""), "_blank", "noopener");
+    };
+  });
+
+  main.querySelectorAll("[data-ver]").forEach(function(b){
+    b.onclick = function(){
+      STORE.setVerified(b.dataset.ver, true, "office");
+      shopToast("Marked verified.");
+      paintCustomers(main);
+    };
   });
 
   var f = el("cFind");
@@ -3771,16 +3973,80 @@ function paintCustomers(main){
   if(CVIEW === "map") drawCustomerMap(placed);
 }
 
+/* ------------------------------------------------------------
+   AN OFFER, SENT BY HAND, FOR NOTHING
+
+   The WhatsApp Business API charges per marketing message and
+   has no free tier. A wa.me link costs nothing, because it is
+   not a broadcast at all - it opens WhatsApp with the message
+   already typed and the office presses send. That is one tap per
+   customer, which is slow, and it is the honest price of free.
+
+   So the list itself is the tool: sort the book by Gone quiet,
+   write the offer once, and work down the list. Who has already
+   been sent to is remembered, because the office will be
+   interrupted halfway and there is nothing worse than losing
+   your place and sending the same thing twice.
+   ------------------------------------------------------------ */
+var OFFER = null;      /* the text being sent, or null when closed */
+var OSENT = {};        /* phone -> true, for the run in progress */
+
+try{ OFFER = sessionStorage.getItem("hayat_offer") || null; }catch(e){}
+try{ OSENT = JSON.parse(sessionStorage.getItem("hayat_osent") || "{}"); }catch(e){}
+
+function offerSave(){
+  try{
+    if(OFFER === null) sessionStorage.removeItem("hayat_offer");
+    else sessionStorage.setItem("hayat_offer", OFFER);
+    sessionStorage.setItem("hayat_osent", JSON.stringify(OSENT));
+  }catch(e){}
+}
+
+function offerDefault(){
+  var sh = (C().name || "Hayat");
+  return sh + "\n\nSpecial this week: [write the offer here]\n\n" +
+         "Order: " + base();
+}
+
+function offerBar(list){
+  if(OFFER === null){
+    return '<div class="offbar">' +
+      '<button class="chip offgo" id="oStart">\u2709 Send an offer to these ' +
+        list.length + '</button>' +
+    '</div>';
+  }
+  var left = list.filter(function(c){ return !OSENT[c.id]; }).length;
+  return '<div class="offbox">' +
+    '<div class="offhead"><b>Offer to ' + list.length + ' customers</b>' +
+      '<button class="linky" id="oStop">Done</button></div>' +
+    '<textarea class="fld" id="oText" rows="4">' + esc(OFFER) + '</textarea>' +
+    '<p class="offnote">' + left + ' still to send. WhatsApp opens with this ' +
+      'already typed \u2014 you press send. Free, one at a time.</p>' +
+  '</div>';
+}
+
 function custRow(c){
-  var st = custStats(c);
+  var st  = custStats(c);
+  var ok  = STORE.isVerified(c);
   var where = c.locFrom === "delivered" ? "doorstep known"
             : c.lat ? "pin saved"
                     : "no location yet";
-  return '<div class="line cline' + (c.lat ? "" : " noloc") + '">' +
+  /* A hint, kept visibly separate from the address a rider rides
+     to - it is where the phone was, not where the food goes. */
+  var seen = c.seenAt
+    ? '<a class="linky seen" target="_blank" rel="noopener" href="' +
+      'https://www.google.com/maps/search/?api=1&query=' + c.seenLat + ',' + c.seenLng +
+      '" title="Where their phone was when they last opened the app">' +
+      'Last seen ' + esc(lastSeenWords({ lastAt: c.seenAt })) + '</a>'
+    : '';
+  return '<div class="line cline' + (c.lat ? "" : " noloc") +
+      (ok ? "" : " unver") + (isQuiet(c) ? " quiethere" : "") + '">' +
     '<a class="ln" href="#/admin/c/' + esc(c.id) + '"><b>' +
-      esc(c.name || prettyPhone(c.phone)) + '</b>' +
+      esc(c.name || prettyPhone(c.phone)) +
+      (ok ? '<span class="vtick" title="Confirmed">\u2713</span>' : '') + '</b>' +
       '<small>' + esc(prettyPhone(c.phone)) +
-        (c.name ? '' : '') + ' \u00b7 ' + esc(where) + '</small>' +
+        ' \u00b7 ' + esc(lastSeenWords(c)) +
+        ' \u00b7 ' + esc(where) + '</small>' +
       (c.addr ? '<small class="caddr">' + esc(c.addr) + '</small>' : '') +
     '</a>' +
     '<div class="cstat"><b>' + st.n + '</b><small>' +
@@ -3791,7 +4057,16 @@ function custRow(c){
         'href="https://www.google.com/maps/search/?api=1&query=' + c.lat + ',' + c.lng +
         '">Map</a>'
       : '') +
+    seen +
+    (OFFER !== null
+      ? '<button class="linky off' + (OSENT[c.id] ? " done" : "") + '" ' +
+        'data-off="' + esc(c.id) + '" data-offp="' + esc(c.phone) + '">' +
+        (OSENT[c.id] ? "Sent" : "Send") + '</button>'
+      : '') +
     callBtn(c.phone, "Call", "linky") +
+    (ok ? '' : '<button class="linky ver" data-ver="' + esc(c.id) +
+                '" title="You have spoken to them - this is a real number">' +
+                'Verify</button>') +
     '<button class="linky go" data-again="' + esc(c.id) + '">Order</button>' +
   '</div>';
 }
@@ -4586,6 +4861,48 @@ function askGps(){
 }
 
 /* ------------------------------------------------------------
+   WHERE THEY WERE WHEN THEY LAST LOOKED
+
+   Useful to the office: somebody rings, and the book can say
+   "their phone was near the bypass an hour ago" instead of
+   nothing. But it is their location, so there are three rules,
+   and all three are load-bearing.
+
+   1. It NEVER asks. If the browser has not already been given
+      permission - for a delivery pin, usually - this does
+      nothing at all and shows no prompt. Asking a hungry person
+      for their location on the way in is how apps get deleted.
+   2. It only runs for somebody we can already name, because a
+      location with no phone number attached is surveillance
+      with no purpose.
+   3. Once an hour at most, and it never touches the delivery
+      address.
+   ------------------------------------------------------------ */
+var SEEN_EVERY = 3600000;        /* an hour */
+
+function markSeen(){
+  if(riderApp() || kiosk()) return;              /* customers only */
+  if(!navigator.geolocation || !navigator.permissions) return;
+
+  var me = knownMe();
+  var phone = digitsOnly(me && me.phone);
+  if(!phone) return;                             /* rule 2 */
+
+  var last = 0;
+  try{ last = +localStorage.getItem("hayat_seen_at") || 0; }catch(e){}
+  if(Date.now() - last < SEEN_EVERY) return;     /* rule 3 */
+
+  navigator.permissions.query({ name: "geolocation" }).then(function(st){
+    /* rule 1: granted, not prompt, not denied */
+    if(st.state !== "granted") return;
+    navigator.geolocation.getCurrentPosition(function(pos){
+      try{ localStorage.setItem("hayat_seen_at", String(Date.now())); }catch(e){}
+      STORE.pingSeen(phone, pos.coords.latitude, pos.coords.longitude);
+    }, function(){}, { enableHighAccuracy:false, timeout:8000, maximumAge:300000 });
+  }).catch(function(){});
+}
+
+/* ------------------------------------------------------------
    TROUBLE, AND ONLY TROUBLE
 
    This screen used to carry a panel explaining that the app was
@@ -5328,5 +5645,9 @@ window.SHOP = {
   flow: FLOW
 };
 paintFab();
+
+/* After the page is up and doing its job, not before. Nothing on
+   screen waits for this and nothing breaks if it never runs. */
+try{ setTimeout(markSeen, 4000); }catch(e){}
 
 })();

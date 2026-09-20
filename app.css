@@ -1879,3 +1879,75 @@ body:has(.land) #callfab{display:none !important}
 
 /* the one button on the page should look like the one button */
 .shopbtn.big{min-height:58px;font-size:17px;font-weight:650;border-radius:15px}
+
+/* ---- the customer book -------------------------------------
+   Sorting is four words, not a dropdown: the office is standing
+   up, and a dropdown on a touchscreen is two taps and a guess. */
+.csort{display:flex;gap:7px;flex-wrap:wrap;padding:2px 2px 10px}
+.csort .chip{border:1px solid var(--line,#2b241c);background:transparent;
+  color:inherit;font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;
+  cursor:pointer;opacity:.7;white-space:nowrap}
+.csort .chip:hover{opacity:1}
+.csort .chip.on{opacity:1;border-color:var(--gold,#e8c37a);
+  background:color-mix(in srgb, var(--gold,#e8c37a) 14%, transparent)}
+
+/* the unverified count is a button, and it looks like work to do */
+.pill.warn{border-color:color-mix(in srgb,#e0a33a 55%,transparent);
+  color:#e8c37a;cursor:pointer}
+.pill.on{background:color-mix(in srgb,#e0a33a 22%,transparent);
+  border-color:#e0a33a;color:#f3d79a;cursor:pointer}
+.cqhint{font-size:13px;opacity:.7;padding:0 2px 10px;margin:0}
+
+.vtick{display:inline-block;margin-left:6px;font-size:12px;
+  color:#6fcf8e;vertical-align:1px}
+.cline.unver .ln b{opacity:.92}
+.cline.unver{border-left:2px solid color-mix(in srgb,#e0a33a 60%,transparent)}
+.cline.quiethere .ln small{opacity:.55}
+.linky.ver{color:#e8c37a}
+/* where the phone was, not where the food goes - so it reads
+   quieter than the address and the pin */
+.linky.seen{opacity:.6;font-size:12px}
+.linky.seen:hover{opacity:.95}
+
+/* ---- sending an offer by hand ------------------------------ */
+.offbar{padding:0 2px 10px}
+.chip.offgo{border:1px solid var(--line,#2b241c);background:transparent;color:inherit;
+  font:inherit;font-size:13px;padding:7px 14px;border-radius:999px;cursor:pointer;opacity:.8}
+.chip.offgo:hover{opacity:1;border-color:var(--gold,#e8c37a)}
+.offbox{border:1px solid var(--line,#2b241c);border-radius:14px;padding:12px 13px;
+  margin:0 2px 12px;background:var(--card,#1a1510)}
+.offhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.offbox .fld{margin:0}
+.offnote{font-size:12px;opacity:.65;margin:8px 0 0}
+.linky.off{color:#8fd6a4}
+.linky.off.done{opacity:.4;text-decoration:line-through}
+
+/* ---- the front door on a phone -----------------------------
+   One button that is obviously the button, then the categories
+   as words. Nothing here competes with the hero. */
+.hero{display:block;width:100%;text-align:left;cursor:pointer;
+  border:0;border-radius:18px;padding:19px 20px;margin:4px 0 12px;
+  background:linear-gradient(135deg,#e0a33a,#c8862a);color:#241a0c;
+  box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.hero b{display:block;font-size:22px;font-weight:750;letter-spacing:-.01em}
+.hero small{display:block;font-size:13.5px;opacity:.82;margin-top:4px;line-height:1.35}
+.hero:active{transform:translateY(1px)}
+
+.landagain{display:block;width:100%;text-align:left;cursor:pointer;font:inherit;
+  font-size:13.5px;border:1px solid var(--line,#2b241c);background:transparent;
+  color:inherit;border-radius:13px;padding:12px 14px;margin:0 0 16px;opacity:.85;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.landagain:hover{opacity:1;border-color:var(--gold,#e8c37a)}
+
+.catcap{font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  opacity:.45;padding:0 2px 8px}
+.catlist{display:flex;flex-direction:column;
+  border:1px solid var(--line,#2b241c);border-radius:14px;overflow:hidden}
+.catrow{display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;
+  font:inherit;font-size:16px;text-align:left;color:inherit;background:transparent;
+  border:0;border-bottom:1px solid var(--line,#2b241c);padding:15px 15px}
+.catrow:last-child{border-bottom:0}
+.catrow:active,.catrow:hover{background:rgba(255,255,255,.04)}
+.catn{flex:1 1 auto}
+.catc{font-size:12px;opacity:.45;font-variant-numeric:tabular-nums}
+.catgo{opacity:.35;font-size:19px;line-height:1}
