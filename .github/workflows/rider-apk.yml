@@ -1,0 +1,51 @@
+# Builds the rider app on GitHub's machines, which already have the
+# Android SDK. Nothing has to be installed locally.
+#
+#   Actions tab -> Build rider APK -> Run workflow
+#   when it finishes, download "hayat-rider-apk" from that run.
+#
+# The APK is debug-signed: install it by sending the file to the rider
+# and letting them allow "install from this source". That is fine for
+# your own riders. The Play Store needs a release key, which is a
+# separate step whenever you want it.
+
+name: Build rider APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "rider-app/**"
+      - ".github/workflows/rider-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        working-directory: rider-app
+        run: gradle --no-daemon assembleDebug
+
+      - name: Name it something a rider will recognise
+        run: |
+          mkdir -p out
+          cp rider-app/app/build/outputs/apk/debug/app-debug.apk \
+             "out/hayat-rider.apk"
+          ls -lh out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hayat-rider-apk
+          path: out/hayat-rider.apk
+          retention-days: 90

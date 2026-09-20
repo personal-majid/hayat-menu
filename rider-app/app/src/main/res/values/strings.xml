@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Hayat Rider</string>
+  <!-- The one line to change if the site ever moves. -->
+  <string name="start_url">https://personal-majid.github.io/hayat-menu/#/drive</string>
+  <string name="offline">No connection. The app will load when you are back online.</string>
+</resources>
