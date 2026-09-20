@@ -1160,9 +1160,6 @@ body.deskwork:not(.deskboard) .shopwrap{
 /* ---- the map takes whatever is left, and no less ---- */
 .conbody.nomargin .admap{flex:1 1 auto;height:auto !important;min-height:0;
   border-radius:0;width:100%}
-.admaplegend{flex:0 0 auto;position:absolute;left:12px;bottom:12px;z-index:620;
-  background:var(--card);border:1px solid var(--line);border-radius:999px;
-  padding:7px 12px;box-shadow:var(--shadow)}
 .conbody.nomargin{position:relative}
 .floatnote{position:absolute;left:50%;top:18px;transform:translateX(-50%);z-index:620;
   background:var(--card);border:1px solid var(--line);border-radius:999px;
@@ -1521,3 +1518,46 @@ body.palopen{overflow:hidden}
 .tt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
 .trouble .shopbtn{margin:0;width:auto;flex:0 0 auto;white-space:nowrap}
 @media (max-width:420px){ .trouble .shopbtn{width:100%} }
+
+
+/* ============================================================
+   THE MAP FILTERS
+   Floating over the map, never taking a pixel from it. The
+   statuses answer "where is dinner"; the dates answer "where
+   does the business come from", which is the more useful
+   question and the one nothing else here could answer.
+   ============================================================ */
+.mapfilt{position:absolute;left:12px;right:12px;bottom:12px;z-index:640;
+  display:flex;flex-direction:column;gap:8px;align-items:flex-start;
+  pointer-events:none}
+.mapfilt > *{pointer-events:auto}
+
+.mfrow{display:flex;flex-wrap:wrap;gap:6px;
+  background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:5px;box-shadow:var(--shadow)}
+
+.mfchip,.mftime{display:inline-flex;align-items:center;gap:7px;
+  border:0;border-radius:999px;background:transparent;color:var(--muted);
+  font:600 var(--t-small)/1 inherit;letter-spacing:.02em;
+  padding:9px 13px;cursor:pointer;white-space:nowrap;min-height:34px}
+.mfchip:hover,.mftime:hover{background:var(--soft2);color:var(--cream)}
+.mfchip.on{background:var(--soft2);color:var(--cream)}
+.mftime.on{background:var(--gold);color:var(--onaccent)}
+.mfchip:focus-visible,.mftime:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+
+.mfdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;opacity:.35}
+.mfchip.on .mfdot{opacity:1}
+
+.mftally{background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:7px 14px;box-shadow:var(--shadow);
+  font-size:var(--t-small);color:var(--cream);font-weight:600}
+
+@media (max-width:860px){
+  .mapfilt{left:8px;right:8px;bottom:8px;gap:6px}
+  .mfrow{padding:4px;gap:4px;max-width:100%;overflow-x:auto;
+    flex-wrap:nowrap;scrollbar-width:none}
+  .mfrow::-webkit-scrollbar{display:none}
+  .mfchip,.mftime{padding:8px 11px}
+  /* clear of the floating dock */
+  .mapfilt{right:76px}
+}

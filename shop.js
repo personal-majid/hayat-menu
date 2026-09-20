@@ -1880,6 +1880,7 @@ function paintAdmin(main){
   var live   = orders.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; });
   var done   = orders.filter(function(o){ return o.status === "delivered"; });
   var pinned = orders.filter(function(o){ return o.lat && o.lng && o.status !== "cancelled"; });
+  var shown  = mapMatches(orders);
 
   /* The office is a console, not a page. It fills the window and
      never scrolls as a whole: the board scrolls inside its columns,
@@ -1907,13 +1908,10 @@ function paintAdmin(main){
       '<div class="conbody' + (ADVIEW === "map" ? " nomargin" : "") + '">' +
         (ADVIEW === "map"
           ? '<div id="admap" class="admap"></div>' +
-            '<div class="admaplegend">' +
-              '<span class="lg s-placed">new</span>' +
-              '<span class="lg s-accepted">kitchen</span>' +
-              '<span class="lg s-on_way">on the way</span>' +
-              '<span class="lg s-delivered">delivered</span>' +
-            '</div>' +
-            (pinned.length ? '' : '<p class="shopsub floatnote">No order has a pin yet.</p>')
+            mapFilterBar(shown) +
+            (orders.length
+              ? ''
+              : '<p class="shopsub floatnote">No orders yet.</p>')
 
           : ADVIEW === "board"
           ? (orders.length ? boardHtml(orders.filter(function(o){ return o.status !== "cancelled"; }))
@@ -1950,12 +1948,32 @@ function paintAdmin(main){
     };
   });
 
-  if(ADVIEW === "map") drawAdminMap(pinned);
+  if(ADVIEW === "map") drawAdminMap(shown);
   pinned.forEach(measureRoad);
-  /* a rider's dot only has to be chased while a ride is under way */
-  liveWatch(ADVIEW === "map" && pinned.some(function(o){
+  /* a rider's dot only has to be chased while a ride is under way,
+     and only while the office is actually looking at one */
+  liveWatch(ADVIEW === "map" && shown.some(function(o){
     return o.status === "assigned" || o.status === "on_way";
   }), main);
+
+  /* the filters */
+  main.querySelectorAll("[data-mf]").forEach(function(b){
+    b.onclick = function(){
+      var k = b.dataset.mf;
+      MFILT.on[k] = !MFILT.on[k];
+      saveFilter();
+      AVIEW = null;              /* a new question deserves a fresh view */
+      paintAdmin(main);
+    };
+  });
+  main.querySelectorAll("[data-mr]").forEach(function(b){
+    b.onclick = function(){
+      MFILT.range = b.dataset.mr;
+      saveFilter();
+      AVIEW = null;
+      paintAdmin(main);
+    };
+  });
   wireCards(main);
 }
 
@@ -2266,6 +2284,97 @@ function statusColour(s){
 
 function needsRider(o){
   return (o.status === "placed" || o.status === "accepted") && !o.riderId;
+}
+
+/* ------------------------------------------------------------
+   READING THE MAP
+
+   Live orders answer "where is dinner". Delivered ones answer a
+   different and more useful question: where does our business
+   actually come from. Same pins, different window on them.
+
+   Both the statuses and the stretch of time are the office's to
+   choose, and the choice is remembered, because whoever opens
+   this in the morning wants the same view they left.
+   ------------------------------------------------------------ */
+var RANGES = [
+  { k:"today",     t:"Today" },
+  { k:"yesterday", t:"Yesterday" },
+  { k:"week",      t:"7 days" },
+  { k:"month",     t:"30 days" },
+  { k:"all",       t:"All" }
+];
+
+var MFILT = (function(){
+  var d = { on: { placed:true, accepted:true, assigned:true, on_way:true, delivered:false },
+            range: "today" };
+  try{
+    var raw = JSON.parse(localStorage.getItem("hayat_mapfilter"));
+    if(raw && raw.on) return raw;
+  }catch(e){}
+  return d;
+})();
+
+function saveFilter(){
+  try{ localStorage.setItem("hayat_mapfilter", JSON.stringify(MFILT)); }catch(e){}
+}
+
+function dayStart(d){
+  var x = new Date(d);
+  x.setHours(0,0,0,0);
+  return x.getTime();
+}
+
+function inRange(at, range){
+  if(!at) return false;
+  if(range === "all") return true;
+  var today = dayStart(Date.now());
+  if(range === "today")     return at >= today;
+  if(range === "yesterday") return at >= today - 86400000 && at < today;
+  if(range === "week")      return at >= today - 6 * 86400000;
+  if(range === "month")     return at >= today - 29 * 86400000;
+  return true;
+}
+
+function mapMatches(orders){
+  return orders.filter(function(o){
+    if(!o.lat || !o.lng) return false;
+    if(o.status === "cancelled") return false;
+    if(!MFILT.on[o.status]) return false;
+    return inRange(o.at, MFILT.range);
+  });
+}
+
+/* what the office is actually looking at, in one line */
+function mapTally(list){
+  var money = list.reduce(function(n,o){ return n + (o.total || 0); }, 0);
+  var label = (RANGES.filter(function(r){ return r.k === MFILT.range; })[0] || {}).t || "";
+  return list.length
+    ? list.length + (list.length === 1 ? " order" : " orders") +
+      " \u00b7 " + rupee(money) + " \u00b7 " + label.toLowerCase()
+    : "Nothing matches \u00b7 " + label.toLowerCase();
+}
+
+function mapFilterBar(list){
+  var steps = [["placed","New"],["accepted","Kitchen"],["assigned","Rider"],
+               ["on_way","On the way"],["delivered","Delivered"]];
+  return '<div class="mapfilt">' +
+    '<div class="mfrow chips">' +
+      steps.map(function(p){
+        return '<button class="mfchip s-' + p[0] + (MFILT.on[p[0]] ? " on" : "") +
+          '" data-mf="' + p[0] + '" aria-pressed="' + (MFILT.on[p[0]] ? "true" : "false") + '">' +
+          '<span class="mfdot" style="background:' + statusColour(p[0]) + '"></span>' +
+          esc(p[1]) + '</button>';
+      }).join("") +
+    '</div>' +
+    '<div class="mfrow times">' +
+      RANGES.map(function(r){
+        return '<button class="mftime' + (MFILT.range === r.k ? " on" : "") +
+          '" data-mr="' + r.k + '">' + esc(r.t) + '</button>';
+      }).join("") +
+    '</div>' +
+    '<div class="mftally">' + esc(mapTally(list)) + '</div>' +
+  '</div>';
 }
 
 function drawAdminMap(list){
