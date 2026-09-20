@@ -1,0 +1,62 @@
+=============================================================
+ HAYAT — THE OFFICE LOGIN
+=============================================================
+
+Right now
+---------
+
+  User:  admin
+  Code:  112233
+
+That works immediately, everywhere, with no setup.
+
+It is in config.js, which means anyone who opens the page
+source can read it. It is a latch, not a lock. Fine while you
+are testing; not fine once real customer addresses are in the
+database.
+
+
+The real login, when you want it
+--------------------------------
+
+Each person gets their own code, and the code never reaches
+the browser - the security rules compare it inside Firestore,
+where nobody can look at the answer.
+
+Console: https://console.firebase.google.com/u/3/project/h-menu/firestore
+
+  1. Start collection:  crew
+
+  2. Document id:  admin
+       name  (string)  Admin
+       code  (string)  112233
+       role  (string)  office
+
+     Add one of these per person. Give each a different code.
+
+  3. Document id:  _list        (in the same crew collection)
+       people  (array)
+         -> map:  id = "admin",  name = "Admin"
+         -> add one map per person
+
+     This is the dropdown on the sign-in screen. It holds only
+     names, never codes.
+
+  4. Publish firestore.rules (the file in this folder).
+
+After that the sign-in screen shows a dropdown of names and
+asks for a code. The shared code in config.js stops being
+used - change it to something random and forget it.
+
+
+Why six digits
+--------------
+
+Four digits is ten thousand guesses and a script can try them
+all in a minute. Six is a million. The office can change
+prices and read every customer's home address, so six is the
+sensible length. 112233 is six digits, but it is also a
+pattern anyone would try early - consider something less
+guessable before you are taking real orders.
+
+=============================================================

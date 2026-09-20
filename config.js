@@ -179,6 +179,17 @@ window.CONFIG = {
      seeing the payment on their own phone. */
   upi: { id: "", name: "Hayat Fish and Mandi" },
 
+  /* ---- THE SHARED ADMIN CODE -------------------------------
+     The way in when no crew list exists yet, or when the
+     internet does not. Anyone who views the page source can
+     read it, so treat it as a latch rather than a lock.
+
+     The real login is Firestore -> crew, where each person has
+     their own code and the code never reaches the browser.
+     Once that exists, change this to something nobody knows
+     and forget it. */
+  adminCode: "112233",
+
   reviewLink: "https://maps.google.com/?cid=6866265905315816486",
 
   /* ---- 4a. REVIEWS ----------------------------------------- *

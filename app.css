@@ -1188,13 +1188,19 @@ body.deskwork:not(.deskboard) .shopwrap{
    it belongs in the flow, above the work, taking its own room. */
 /* A corner chip, not a band. It reports; it does not compete
    with the work for room, and it cannot land on a column head. */
-body.deskwork .conn{position:fixed;left:16px;bottom:16px;z-index:690;
-  margin:0;max-width:min(46vw,420px);
-  padding:9px 14px;border-radius:999px;
-  box-shadow:var(--shadow);font-size:var(--t-small)}
-body.deskwork .conn.bad{max-width:min(70vw,560px);border-radius:var(--r2)}
+/* Top-left is the tabs, bottom-left is the map filters. The
+   connection chip goes top-centre, where nothing else lives. */
+body.deskwork .conn{position:fixed;left:50%;transform:translateX(-50%);
+  top:16px;bottom:auto;z-index:670;
+  margin:0;max-width:min(40vw,360px);
+  padding:8px 14px;border-radius:999px;
+  box-shadow:var(--shadow);font-size:var(--t-small);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.deskwork .conn.bad{max-width:min(70vw,560px);border-radius:var(--r2);
+  white-space:normal}
 @media (max-width:860px){
-  body.deskwork .conn{left:12px;right:auto;bottom:74px;max-width:70vw}
+  body.deskwork .conn{top:auto;bottom:calc(100% - 100vh + 150px);
+    left:12px;right:12px;transform:none;max-width:none;text-align:center}
 }
 .condock{position:fixed;right:16px;bottom:16px;z-index:700;display:flex;gap:10px}
 .dockbtn{position:relative;width:52px;height:52px;border-radius:50%;
@@ -1657,3 +1663,49 @@ body.pkopen{overflow:hidden}
 
 /* a softer offer, for something optional */
 .youare.guest.soft{border-left-color:var(--line2);background:transparent}
+
+
+/* the tally shouts when orders exist but cannot be drawn */
+.mftally.warn{border-color:var(--gold);color:var(--gold)}
+
+/* Leaflet's own controls, kept clear of the floating chrome */
+.admap .leaflet-top.leaflet-right{top:58px}
+@media (max-width:860px){ .admap .leaflet-top.leaflet-right{top:52px} }
+
+
+/* ---- one customer, everything we know ---- */
+.profile{max-width:820px}
+.pstats{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px}
+.ps{flex:1 1 110px;border:1px solid var(--line);border-radius:var(--r2);
+  padding:13px 14px;background:var(--soft3)}
+.ps b{display:block;font-size:21px;line-height:1.15;color:var(--cream)}
+.ps small{display:block;font-size:var(--t-tiny);color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.ps.cold{border-left:3px solid var(--hot)}
+.ps.cold b{color:var(--hot)}
+.prow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.prow .shopbtn{margin:0;width:auto;flex:0 1 auto}
+.paddr{text-align:left;margin:0 0 16px}
+.favs{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px}
+.fav{border:1px solid var(--line);border-radius:999px;padding:7px 13px;
+  font-size:var(--t-small);color:var(--cream);background:var(--soft3)}
+.fav b{color:var(--gold)}
+.oline{text-decoration:none;color:inherit}
+.oline:hover{background:var(--soft2)}
+.oitems{color:var(--muted);opacity:.85}
+a.ln{text-decoration:none;color:inherit;display:block}
+a.ln:hover b{color:var(--gold)}
+
+/* ---- wanted for later ---- */
+.whenrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.whenrow .fld{margin:0;flex:1 1 200px}
+.wbtn{border:1px solid var(--line2);border-radius:999px;background:transparent;
+  color:var(--muted);font:600 var(--t-small)/1 inherit;padding:11px 15px;cursor:pointer}
+.wbtn.on{background:var(--gold);color:var(--onaccent);border-color:transparent}
+.latertag{background:var(--accentwash);color:var(--gold);border-radius:999px;
+  padding:3px 9px;font-size:var(--t-tiny);font-weight:700;white-space:nowrap}
+.bcard.later{opacity:.82;border-style:dashed}
+.sched{border:1px solid var(--line);border-left:3px solid var(--gold);
+  border-radius:var(--r2);padding:13px 15px;margin:14px 0 0;background:var(--soft3)}
+.sched b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.sched small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}

@@ -31,7 +31,20 @@
    Everything below the store only ever calls STORE.*, so nothing else
    in this file knows or cares which one is running.
    ----------------------------------------------------------- */
-var PASS = "1234";     /* TEMPORARY — replaced by a real login before go-live */
+/* The fallback way in.
+
+   This is readable by anyone who views the page source, so it is
+   a stopgap, not a lock. It exists so the office is never shut
+   out - offline, or before the crew list has been set up in the
+   console. The real login is crew/<id> in Firestore, where the
+   code never reaches the browser at all and the rules do the
+   checking. Set that up and this stops mattering. */
+function PASSCODE(){
+  /* read when needed, not at parse time: C is a function
+     expression defined further down, so it does not exist yet
+     up here - which is exactly how this broke once already */
+  return ((window.CONFIG || {}).adminCode) || "112233";
+}
 var KEY = "hayat_shop_v1";
 var CH  = null;
 try{ CH = new BroadcastChannel("hayat_shop"); }catch(e){}
@@ -584,6 +597,26 @@ var STORE = {
       fire();
     } else lsWrite();
     return r.avail;
+  },
+
+  /* Sign a rider's phone out from the office.
+
+     Clearing the claimed device is what actually ends a session:
+     their app finds itself unknown and asks for the code again.
+     The code survives, so an honest rider gets straight back in
+     and a phone left in a drawer does not. */
+  signOutRider: function(id, keepCode){
+    var r = DB.riders[id];
+    if(!r) return null;
+    var patch = { uid:null, claimedAt:null, avail:false, kicked: Date.now() };
+    if(!keepCode) patch.code = sixDigits();
+    for(var k in patch) r[k] = patch[k];
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "riders", id), patch)
+        .catch(function(e){ console.warn("signOutRider", e); });
+      fire();
+    } else lsWrite();
+    return patch.code || r.code;
   },
 
   /* a fresh code, for a rider who lost the message or left */
@@ -1641,6 +1674,10 @@ function viewOrder(main, id){
       (o.lat ? '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(mapsPin(o)) + '">Pin in Maps</a>' : '') +
     '</div>' +
+    (isLater(o)
+      ? '<div class="sched"><b>\u23F1 Coming ' + esc(whenWanted(o)) + '</b>' +
+        '<small>We will start it in good time.</small></div>'
+      : '') +
     installBar() +
     payBlock(o, "customer") +
     noteThread(o, "Anything we should know? Gate code, landmark\u2026") +
@@ -1947,7 +1984,7 @@ function gate(main, then){
       '<p class="shopnote">Offline. This unlocks the copy held on this ' +
       'device only \u2014 nothing here reaches the restaurant.</p>');
     var unlock = function(){
-      if(el("pw").value === PASS){
+      if(el("pw").value.trim() === PASSCODE()){
         try{ sessionStorage.setItem("hayat_admin","1"); }catch(e){}
         then();
       } else shopToast("Wrong passcode.");
@@ -1962,11 +1999,26 @@ function gate(main, then){
     '<div id="crewWrap"><p class="shopsub">Loading\u2026</p></div>');
 
   STORE.crew().then(function(people){
+    /* No crew set up yet? Fall back to the code rather than
+       locking the office out of its own board. A staff door that
+       can refuse everybody is worse than a weak one. */
     if(!people.length){
       el("crewWrap").innerHTML =
-        '<p class="shopsub">No staff have been set up yet.</p>' +
-        '<p class="shopnote">Firebase console \u2192 Firestore \u2192 crew ' +
-        '\u2192 add a person, and crew/_list to show them here.</p>';
+        '<input class="fld" id="pw" type="password" inputmode="numeric" ' +
+          'autocomplete="off" placeholder="Admin code">' +
+        '<button class="shopbtn" id="pwGo">Unlock</button>' +
+        '<p class="shopnote">No staff list yet, so this is the shared code. ' +
+        'Firebase console \u2192 Firestore \u2192 <b>crew</b> to give ' +
+        'each person their own.</p>';
+      var un = function(){
+        if(el("pw").value.trim() === PASSCODE()){
+          try{ sessionStorage.setItem("hayat_admin","1"); }catch(e){}
+          then();
+        } else shopToast("Wrong code.");
+      };
+      el("pwGo").onclick = un;
+      onEnter(el("pw"), un);
+      el("pw").focus();
       return;
     }
     el("crewWrap").innerHTML =
@@ -2016,6 +2068,7 @@ function paintAdmin(main){
   var done   = orders.filter(function(o){ return o.status === "delivered"; });
   var pinned = orders.filter(function(o){ return o.lat && o.lng && o.status !== "cancelled"; });
   var shown  = mapMatches(orders);
+  var blind  = mapBlind(orders);
 
   /* The office is a console, not a page. It fills the window and
      never scrolls as a whole: the board scrolls inside its columns,
@@ -2043,7 +2096,7 @@ function paintAdmin(main){
       '<div class="conbody' + (ADVIEW === "map" ? " nomargin" : "") + '">' +
         (ADVIEW === "map"
           ? '<div id="admap" class="admap"></div>' +
-            mapFilterBar(shown) +
+            mapFilterBar(shown, blind) +
             (orders.length
               ? ''
               : '<p class="shopsub floatnote">No orders yet.</p>')
@@ -2086,11 +2139,11 @@ function paintAdmin(main){
     };
   });
 
-  if(ADVIEW === "map") drawAdminMap(shown);
+  if(ADVIEW === "map") drawAdminMap(shown, blind);
   pinned.forEach(measureRoad);
   /* a rider's dot only has to be chased while a ride is under way,
      and only while the office is actually looking at one */
-  liveWatch(ADVIEW === "map" && shown.some(function(o){
+  liveWatch(ADVIEW === "map" && shown.concat(blind).some(function(o){
     return o.status === "assigned" || o.status === "on_way";
   }), main);
 
@@ -2138,7 +2191,8 @@ function liveWatch(on, main){
 /* ---- the board: one column per step, newest at the top ---- */
 function boardHtml(orders){
   return '<div class="board">' + FLOW.map(function(st){
-    var col = orders.filter(function(o){ return o.status === st; });
+    var col = orders.filter(function(o){ return o.status === st; })
+                    .sort(function(a,b){ return wantedAt(a) - wantedAt(b); });
     /* the head stays put, the cards under it scroll on their own,
        so a busy column never pushes the others off the screen */
     return '<div class="col">' +
@@ -2186,8 +2240,12 @@ function boardCard(o){
       '</div>'
     : '';
 
-  return '<div class="bcard' + (empty ? " empty" : "") + '">' +
-    '<div class="brow"><b>' + esc(o.id) + '</b><span class="btime">' + when(o.at) + '</span></div>' +
+  return '<div class="bcard' + (empty ? " empty" : "") +
+      (isLater(o) ? " later" : "") + '">' +
+    '<div class="brow"><b>' + esc(o.id) + '</b>' +
+      (isLater(o)
+        ? '<span class="latertag">\u23F1 ' + esc(whenWanted(o)) + '</span>'
+        : '<span class="btime">' + when(o.at) + '</span>') + '</div>' +
     '<div class="bname">' + esc(o.name) + '</div>' +
     '<div class="baddr">' + esc(o.addr) + '</div>' +
     (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' from us</div>' : '') +
@@ -2332,6 +2390,7 @@ function orderCard(o){
   return '<div class="ocard">' +
     '<div class="orow"><b>' + esc(o.id) + '</b>' +
       '<span class="status s-' + o.status + '">' + esc(STEP[o.status].t) + '</span>' +
+      (isLater(o) ? '<span class="latertag">\u23F1 ' + esc(whenWanted(o)) + '</span>' : '') +
       '<span class="otime">' + when(o.at) + '</span></div>' +
     '<div class="who">' + esc(o.name) + ' \u00b7 ' +
       (canDial() ? '<a href="tel:' + esc(o.phone) + '">' + esc(prettyPhone(o.phone)) + '</a>'
@@ -2482,26 +2541,76 @@ function inRange(at, range){
   return true;
 }
 
+/* ------------------------------------------------------------
+   WANTED FOR LATER
+
+   A lunch order taken at nine in the morning is not late; it is
+   early. The board sorts by when it is wanted, not when it was
+   typed, and an order the kitchen should not start yet says so
+   instead of sitting at the top looking neglected.
+   ------------------------------------------------------------ */
+function wantedAt(o){ return o.wantAt || o.at; }
+
+/* datetime-local speaks local time with no zone on the end */
+function localStamp(ms){
+  var d = new Date(ms);
+  var p = function(n){ return String(n).padStart(2, "0"); };
+  return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) +
+         "T" + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+function isLater(o){
+  return !!(o.wantAt && o.wantAt > Date.now() + 60000);
+}
+
+function whenWanted(o){
+  if(!o.wantAt) return "";
+  var mins = Math.round((o.wantAt - Date.now()) / 60000);
+  if(mins <= 0) return "due now";
+  if(mins < 60) return "in " + mins + " min";
+  var d = new Date(o.wantAt), today = new Date();
+  var sameDay = d.toDateString() === today.toDateString();
+  var t = when(o.wantAt);
+  return sameDay ? "at " + t : d.getDate() + "/" + (d.getMonth()+1) + " " + t;
+}
+
+function mapPasses(o){
+  if(o.status === "cancelled") return false;
+  if(!MFILT.on[o.status]) return false;
+  return inRange(o.at, MFILT.range);
+}
+
 function mapMatches(orders){
-  return orders.filter(function(o){
-    if(!o.lat || !o.lng) return false;
-    if(o.status === "cancelled") return false;
-    if(!MFILT.on[o.status]) return false;
-    return inRange(o.at, MFILT.range);
-  });
+  return orders.filter(function(o){ return mapPasses(o) && o.lat && o.lng; });
+}
+
+/* orders the filters accept but that carry no pin - they exist,
+   they simply cannot be drawn, and saying so is the whole point */
+function mapBlind(orders){
+  return orders.filter(function(o){ return mapPasses(o) && !(o.lat && o.lng); });
 }
 
 /* what the office is actually looking at, in one line */
-function mapTally(list){
+function mapTally(list, blind){
   var money = list.reduce(function(n,o){ return n + (o.total || 0); }, 0);
   var label = (RANGES.filter(function(r){ return r.k === MFILT.range; })[0] || {}).t || "";
-  return list.length
-    ? list.length + (list.length === 1 ? " order" : " orders") +
-      " \u00b7 " + rupee(money) + " \u00b7 " + label.toLowerCase()
-    : "Nothing matches \u00b7 " + label.toLowerCase();
+  var tail = blind
+    ? " \u00b7 " + blind + " with no pin"
+    : "";
+  /* "Nothing matches" was a lie when the orders existed and simply
+     had no pin on them. The office needs to know the difference:
+     one means change the filter, the other means chase the pin. */
+  if(!list.length)
+    return blind
+      ? blind + (blind === 1 ? " order" : " orders") +
+        " \u00b7 none has a pin, so none can be drawn"
+      : "Nothing matches \u00b7 " + label.toLowerCase();
+
+  return list.length + (list.length === 1 ? " order" : " orders") +
+    " \u00b7 " + rupee(money) + " \u00b7 " + label.toLowerCase() + tail;
 }
 
-function mapFilterBar(list){
+function mapFilterBar(list, blind){
   var steps = [["placed","New"],["accepted","Kitchen"],["assigned","Rider"],
                ["on_way","On the way"],["delivered","Delivered"]];
   return '<div class="mapfilt">' +
@@ -2523,7 +2632,8 @@ function mapFilterBar(list){
         'title="Group orders into neighbourhoods">' +
         (HEAT ? "Pins" : "Concentration") + '</button>' +
     '</div>' +
-    '<div class="mftally">' + esc(mapTally(list)) + '</div>' +
+    '<div class="mftally' + ((blind && blind.length) ? " warn" : "") + '">' +
+      esc(mapTally(list, (blind || []).length)) + '</div>' +
     (HEAT ? heatTop(list) : '') +
   '</div>';
 }
@@ -2611,10 +2721,14 @@ function heatTop(list){
   '</div>';
 }
 
-function drawAdminMap(list){
+function drawAdminMap(list, blind){
   var box = el("admap");
   if(!box) return;
   list = list || [];
+  /* A rider carrying an order with no customer pin still has a
+     position of their own, and the office still wants to see it.
+     The order cannot be drawn; the rider can. */
+  var riding = list.concat(blind || []);
 
   loadLeaflet().then(function(){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
@@ -2622,8 +2736,12 @@ function drawAdminMap(list){
     /* Always open on the restaurant. Whatever happened last time,
        wherever yesterday's orders were, the office looks at its
        own kitchen first and moves out from there. */
-    AMAP = LF.map(box, { zoomControl:true })
+    /* Leaflet puts zoom top-left by default, which is exactly
+       where the Board / List / Map tabs float. Moved out of
+       their way rather than asking the office to aim. */
+    AMAP = LF.map(box, { zoomControl:false })
              .setView([HOME.lat, HOME.lng], HOMEZOOM);
+    LF.control.zoom({ position:"topright" }).addTo(AMAP);
     tameMap(AMAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(AMAP);
@@ -2638,7 +2756,7 @@ function drawAdminMap(list){
     var pts = [[HOME.lat, HOME.lng]];
 
     /* a rider on the road, only while the ride is actually live */
-    list.filter(function(o){
+    riding.filter(function(o){
       return o.rLat && (o.status === "assigned" || o.status === "on_way");
     }).forEach(function(o){
       var r = o.riderId ? STORE.rider(o.riderId) : null;
@@ -2865,11 +2983,12 @@ function custRow(c){
             : c.lat ? "pin saved"
                     : "no location yet";
   return '<div class="line cline' + (c.lat ? "" : " noloc") + '">' +
-    '<div class="ln"><b>' + esc(c.name || prettyPhone(c.phone)) + '</b>' +
+    '<a class="ln" href="#/admin/c/' + esc(c.id) + '"><b>' +
+      esc(c.name || prettyPhone(c.phone)) + '</b>' +
       '<small>' + esc(prettyPhone(c.phone)) +
         (c.name ? '' : '') + ' \u00b7 ' + esc(where) + '</small>' +
       (c.addr ? '<small class="caddr">' + esc(c.addr) + '</small>' : '') +
-    '</div>' +
+    '</a>' +
     '<div class="cstat"><b>' + st.n + '</b><small>' +
       (st.n === 1 ? "order" : "orders") + '</small></div>' +
     '<div class="cstat"><b>' + rupee(st.spend) + '</b><small>spent</small></div>' +
@@ -2883,6 +3002,126 @@ function custRow(c){
   '</div>';
 }
 
+/* ------------------------------------------------------------
+   ONE CUSTOMER, EVERYTHING WE KNOW
+
+   Opened from the book or straight from a phone number. Every
+   order they ever placed, what they spend, what they order
+   most, and how long since they last did - which is the number
+   that tells you who is drifting away.
+   ------------------------------------------------------------ */
+function viewCustomer(main, phone){
+  gate(main, function(){ paintCustomer(main, phone); });
+}
+
+function custOrders(id){
+  return STORE.orders().filter(function(o){ return digitsOnly(o.phone) === id; })
+    .sort(function(a,b){ return b.at - a.at; });
+}
+
+function favourites(list){
+  var tally = {};
+  list.forEach(function(o){
+    (o.lines || []).forEach(function(l){
+      var k = l.name + (l.label ? " \u00b7 " + l.label : "");
+      tally[k] = (tally[k] || 0) + l.q;
+    });
+  });
+  return Object.keys(tally).map(function(k){ return { k:k, n:tally[k] }; })
+    .sort(function(a,b){ return b.n - a.n; }).slice(0, 5);
+}
+
+function paintCustomer(main, phone){
+  var id = digitsOnly(phone);
+  var c = STORE.customer(id);
+  var mine = custOrders(id);
+  var live = mine.filter(function(o){ return o.status !== "cancelled"; });
+  var spend = live.reduce(function(n,o){ return n + (o.total || 0); }, 0);
+  var gone = mine.filter(function(o){ return o.status === "cancelled"; }).length;
+  var since = mine.length ? Math.floor((Date.now() - mine[0].at) / 86400000) : null;
+  var fav = favourites(live);
+
+  if(!c && !mine.length){
+    main.innerHTML = shell("Not in the book",
+      '<p class="shopsub">Nothing recorded for that number yet.</p>' +
+      '<button class="shopbtn ghost" data-go="#/admin/who">The customer book</button>', true);
+    return;
+  }
+
+  main.innerHTML = shell(c && c.name ? c.name : prettyPhone(phone),
+    '<div class="profile">' +
+
+      '<div class="pstats">' +
+        '<div class="ps"><b>' + live.length + '</b><small>orders</small></div>' +
+        '<div class="ps"><b>' + rupee(spend) + '</b><small>lifetime</small></div>' +
+        '<div class="ps"><b>' + rupee(live.length ? Math.round(spend / live.length) : 0) +
+          '</b><small>average</small></div>' +
+        '<div class="ps' + (since !== null && since > 30 ? " cold" : "") + '"><b>' +
+          (since === null ? "\u2014" : since === 0 ? "today" : since + "d") +
+          '</b><small>since last</small></div>' +
+        (gone ? '<div class="ps"><b>' + gone + '</b><small>cancelled</small></div>' : '') +
+      '</div>' +
+
+      '<div class="prow">' +
+        callBtn(phone, "Call", "shopbtn small") +
+        '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
+          esc(wa(phone, "Hayat \u2014 hello" + (c && c.name ? " " + c.name : "") + "\n\n")) +
+          '">WhatsApp</a>' +
+        (c && c.lat
+          ? '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
+            'https://www.google.com/maps/search/?api=1&query=' + c.lat + ',' + c.lng +
+            '">Where they are</a>'
+          : '') +
+        '<button class="shopbtn small" data-again="' + esc(id) + '">Order for them</button>' +
+      '</div>' +
+
+      (c && c.addr ? '<p class="shopnote paddr">' + esc(c.addr) +
+        (c.locFrom === "delivered" ? ' \u00b7 doorstep known from a delivery'
+         : c.lat ? ' \u00b7 pin saved' : ' \u00b7 no location yet') + '</p>' : '') +
+
+      (fav.length
+        ? '<h3 class="mini">What they order</h3>' +
+          '<div class="favs">' + fav.map(function(f){
+            return '<span class="fav"><b>' + f.n + '\u00d7</b> ' + esc(f.k) + '</span>';
+          }).join("") + '</div>'
+        : '') +
+
+      '<h3 class="mini">Every order</h3>' +
+      (mine.length
+        ? '<div class="lines">' + mine.map(function(o){
+            return '<a class="line oline" href="#/admin/o/' + esc(o.id) + '">' +
+              '<div class="ln"><b>' + esc(o.id) + '</b>' +
+                '<small>' + esc(stamp(o.at)) + ' \u00b7 ' +
+                  esc(STEP[o.status] ? STEP[o.status].t : o.status) +
+                  (o.source === "phone" ? " \u00b7 by phone" : "") + '</small>' +
+                '<small class="oitems">' + esc((o.lines||[]).map(function(l){
+                  return l.q + "\u00d7 " + l.name; }).join(", ")) + '</small>' +
+              '</div>' +
+              '<div class="lp">' + rupee(o.total || 0) + '</div>' +
+              payTag(o) +
+            '</a>';
+          }).join("") + '</div>'
+        : '<p class="shopsub">No orders recorded.</p>') +
+
+      '<button class="shopbtn ghost" data-go="#/admin/who">Back to the book</button>' +
+    '</div>', true);
+
+  main.querySelectorAll("[data-again]").forEach(function(b){
+    b.onclick = function(){
+      CALL = { lines: [], phone: (c && c.phone) || phone, name: (c && c.name) || "",
+               addr: (c && c.addr) || "", lat: c && c.lat, lng: c && c.lng };
+      location.hash = "#/admin/call";
+    };
+  });
+}
+
+/* a date a person can read */
+function stamp(ms){
+  var d = new Date(ms);
+  var M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return d.getDate() + " " + M[d.getMonth()] + " \u00b7 " + when(ms);
+}
+
 var CMAP = null;
 function drawCustomerMap(list){
   var box = el("custmap");
@@ -2890,7 +3129,8 @@ function drawCustomerMap(list){
   loadLeaflet().then(function(){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
     var LF = window.L;
-    CMAP = LF.map(box, { zoomControl:true }).setView([HOME.lat, HOME.lng], HOMEZOOM);
+    CMAP = LF.map(box, { zoomControl:false }).setView([HOME.lat, HOME.lng], HOMEZOOM);
+    LF.control.zoom({ position:"topright" }).addTo(CMAP);
     tameMap(CMAP, box);
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(CMAP);
@@ -2959,7 +3199,8 @@ function paintCall(main){
               ? ' \u00b7 doorstep known from a delivery'
               : known.lat ? ' \u00b7 pin saved' : '') +
             '</small></div>' +
-            '<button class="linky" id="clUse">Use it</button>' +
+            '<a class="linky" href="#/admin/c/' + esc(known.id) + '">History</a>' +
+            '<button class="linky go" id="clUse">Use it</button>' +
           '</div>'
         : '') +
 
@@ -3110,6 +3351,14 @@ function paintEdit(main, id){
         '<span class="fi">\uD83D\uDD0D</span> Add something from the menu' +
       '</button>' +
 
+      /* when the customer wants it, not when they asked */
+      '<h3 class="mini">Wanted for</h3>' +
+      '<div class="whenrow">' +
+        '<button class="wbtn' + (!o.wantAt ? " on" : "") + '" data-when="now">As soon as possible</button>' +
+        '<input class="fld" id="edWhen" type="datetime-local" value="' +
+          esc(o.wantAt ? localStamp(o.wantAt) : "") + '">' +
+      '</div>' +
+
       '<h3 class="mini">Where it goes</h3>' +
       '<input class="fld" id="edName"  placeholder="Name" value="' + esc(o.name) + '">' +
       '<input class="fld" id="edPhone" placeholder="Phone" inputmode="tel" value="' + esc(o.phone) + '">' +
@@ -3162,6 +3411,19 @@ function paintEdit(main, id){
          while the palette is still open */
       paintEdit(main, id);
     }, "Add");
+  };
+
+  main.querySelectorAll("[data-when]").forEach(function(b){
+    b.onclick = function(){
+      STORE.edit(id, { wantAt: null });
+      paintEdit(main, id);
+    };
+  });
+  var ew = el("edWhen");
+  if(ew) ew.onchange = function(){
+    var v = ew.value ? new Date(ew.value).getTime() : null;
+    STORE.edit(id, { wantAt: v || null });
+    paintEdit(main, id);
   };
 
   el("edSave").onclick = function(){
@@ -3217,8 +3479,14 @@ function paintRiders(main){
               'href="https://www.google.com/maps/search/?api=1&query=' +
               st.lat + ',' + st.lng + '" title="Where they were last seen">Locate</a>'
             : '') +
+          /* the office's two levers over a rider's phone */
+          '<button class="linky" data-toggle="' + esc(r.id) + '" title="' +
+            (r.avail === false ? "Put them back on duty" : "Take them off duty") + '">' +
+            (r.avail === false ? "On duty" : "Off duty") + '</button>' +
           (r.uid || r.claimedAt
-            ? '<a class="linky" href="' + esc(riderInvite(r)) + '" target="_blank" ' +
+            ? '<button class="linky warn" data-kick="' + esc(r.id) + '" ' +
+              'title="Sign their phone out and issue a new code">Sign out</button>' +
+              '<a class="linky" href="' + esc(riderInvite(r)) + '" target="_blank" ' +
               'rel="noopener" title="Send the link again">Resend</a>'
             : '<a class="linky go" href="' + esc(riderInvite(r)) + '" target="_blank" ' +
               'rel="noopener">Send code</a>') +
@@ -3261,6 +3529,27 @@ function paintRiders(main){
                       : "Rider updated.");
     };
   });
+  main.querySelectorAll("[data-toggle]").forEach(function(b){
+    b.onclick = function(){
+      var r = STORE.rider(b.dataset.toggle);
+      if(!r) return;
+      var now = STORE.setAvailable(r.id, r.avail === false);
+      shopToast(r.name + (now ? " is on duty." : " is off duty."));
+    };
+  });
+
+  main.querySelectorAll("[data-kick]").forEach(function(b){
+    b.onclick = function(){
+      var r = STORE.rider(b.dataset.kick);
+      if(!r) return;
+      if(!window.confirm("Sign " + r.name + "'s phone out?\n\n" +
+         "Their app will ask for a code again, and they get a new one. " +
+         "Anything they are carrying stays assigned to them.")) return;
+      var code = STORE.signOutRider(r.id);
+      shopToast(r.name + " signed out. New code " + code + " \u2014 send it when they are back.");
+    };
+  });
+
   main.querySelectorAll("[data-drop]").forEach(function(b){
     b.onclick = function(){ REDIT = null; STORE.dropRider(b.dataset.drop); };
   });
@@ -3432,7 +3721,21 @@ function digits(p){ return String(p || "").replace(/\D/g, "").slice(-10); }
 function whoAmI(){
   var mine = digits(riderPhone());
   if(!mine) return null;
-  return STORE.riders().filter(function(r){ return digits(r.phone) === mine; })[0] || null;
+  var r = STORE.riders().filter(function(r){ return digits(r.phone) === mine; })[0] || null;
+
+  /* The office signed this phone out. Let go quietly rather than
+     carrying on as somebody the shop no longer recognises. */
+  if(r && r.kicked && !r.uid && !r.claimedAt){
+    var seen = 0;
+    try{ seen = +localStorage.getItem("hayat_kicked") || 0; }catch(e){}
+    if(r.kicked > seen){
+      try{ localStorage.setItem("hayat_kicked", String(r.kicked)); }catch(e){}
+      setRiderPhone("");
+      stopPing();
+      return null;
+    }
+  }
+  return r;
 }
 
 /* ------------------------------------------------------------
@@ -4047,7 +4350,8 @@ function route(p, main){
   REPAINT = null;
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
-           p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" && p[1] !== "call");
+           p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
+           p[1] !== "call" && p[1] !== "c");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -4060,6 +4364,7 @@ function route(p, main){
     if(p[1] === "riders") { REPAINT = function(){ if(REDIT) return; viewRiders(main); }; REPAINT(); return true; }
     if(p[1] === "call")   { REPAINT = function(){ if(isTyping()) return; viewCall(main); }; REPAINT(); return true; }
     if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
+    if(p[1] === "c" && p[2]) { REPAINT = function(){ viewCustomer(main, p[2]); }; REPAINT(); return true; }
     if(p[1] === "o" && p[2]) { REPAINT = function(){ viewEdit(main, p[2]); }; REPAINT(); return true; }
     REPAINT = function(){ viewAdmin(main); }; REPAINT(); return true;
   }
