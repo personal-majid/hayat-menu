@@ -97,6 +97,44 @@ function meFire(){ mewatch.slice().forEach(function(f){ try{ f(); }catch(e){} })
 
 function digitsOnly(v){ return String(v || "").replace(/[^0-9]/g, ""); }
 
+/* ------------------------------------------------------------
+   ONE PERSON, ONE KEY
+
+   The same number gets typed four ways:
+
+     9844326842        as they say it
+     09844326842       with the trunk zero
+     +91 98443 26842   as the phone book has it
+     91 9844326842     as WhatsApp shows it
+
+   digitsOnly gave four different strings, so it gave four
+   different customers - four sets of orders, four addresses, and
+   a checkout that prefilled nothing because the number "had
+   never ordered before".
+
+   The key is the ten digits that actually identify an Indian
+   mobile. Country code and trunk zero are spelling, not
+   identity, so they come off. Anything that is not a ten-digit
+   number is left exactly as typed rather than mangled into one -
+   a landline or a foreign number should stay wrong-looking
+   rather than silently become somebody else.
+   ------------------------------------------------------------ */
+function phoneKey(v){
+  var d = digitsOnly(v);
+  if(d.length === 12 && d.indexOf("91") === 0) d = d.slice(2);   /* +91... */
+  else if(d.length === 11 && d.charAt(0) === "0") d = d.slice(1); /* 0...  */
+  else if(d.length === 13 && d.indexOf("091") === 0) d = d.slice(3);
+  return d;
+}
+
+/* For dialling and for wa.me, which want the country code back. */
+function phoneWa(v){
+  var d = digitsOnly(v);
+  if(d.length === 10) return "91" + d;
+  if(d.length === 11 && d.charAt(0) === "0") return "91" + d.slice(1);
+  return d;
+}
+
 /* A name for this browser, so a customer who never signs in
    still has an identity the office can link orders to. Made once
    and kept; it is not a login and proves nothing on its own,
@@ -150,7 +188,7 @@ function riderInvite(r){
           "Your code: *" + r.code + "*\n\n" +
           "Type your number and that code the first time. " +
           "After that it just opens.";
-  return "https://wa.me/" + digitsOnly(r.phone) + "?text=" + encodeURIComponent(t);
+  return "https://wa.me/" + phoneWa(r.phone) + "?text=" + encodeURIComponent(t);
 }
 
 /* Which of the three is speaking.
@@ -361,7 +399,7 @@ var STORE = {
      The write carries the code they typed; the rules compare it
      with the stored one and only then accept the claim. */
   claimRider: function(phone, code){
-    var id = digitsOnly(phone);
+    var id = phoneKey(phone);
     if(!FB) return Promise.reject(new Error("offline"));
     if(!ME.uid) return Promise.reject(new Error("no-identity"));
     return FB.api.updateDoc(FB.api.doc(FB.db, "riders", id), {
@@ -548,7 +586,7 @@ var STORE = {
      the orders to the new device afterwards - which is why no
      new read permission is needed anywhere. */
   askToSee: function(phone, uid){
-    var id = digitsOnly(phone);
+    var id = phoneKey(phone);
     if(!id) return null;
     var row = { id:id, phone:phone, uid: uid || meId(),
                 at: Date.now(), ok:false, code:null, codeTry:null };
@@ -568,7 +606,7 @@ var STORE = {
   },
 
   verifyRow: function(phone){
-    var id = digitsOnly(phone);
+    var id = phoneKey(phone);
     return id ? (DB.verify[id] || null) : null;
   },
 
@@ -613,7 +651,7 @@ var STORE = {
     var n = 0;
     Object.keys(DB.orders).forEach(function(k){
       var o = DB.orders[k];
-      if(digitsOnly(o.phone) !== id) return;
+      if(phoneKey(o.phone) !== id) return;
       if(o.custUid === v.uid) return;
       o.custUid = v.uid; n++;
       if(FB) FB.api.updateDoc(FB.api.doc(FB.db, "orders", k), { custUid: v.uid })
@@ -649,7 +687,7 @@ var STORE = {
      Keyed by phone, digits only, because that is the one thing
      a caller always gives you. */
   customer: function(phone){
-    var id = digitsOnly(phone);
+    var id = phoneKey(phone);
     return id ? (DB.customers[id] || null) : null;
   },
   customers: function(){
@@ -665,7 +703,7 @@ var STORE = {
      customer may not write to the customer book - the office
      promotes it, exactly like the doorstep. */
   pingSeen: function(phone, lat, lng){
-    var id = digitsOnly(phone);
+    var id = phoneKey(phone);
     if(!id || lat == null || lng == null) return null;
     var row = { id:id, phone:phone, lat:+(+lat).toFixed(5),
                 lng:+(+lng).toFixed(5), at:Date.now() };
@@ -692,7 +730,7 @@ var STORE = {
   },
 
   setVerified: function(phone, yes, how){
-    var id = digitsOnly(phone);
+    var id = phoneKey(phone);
     var c = DB.customers[id];
     if(!c) return null;
     var patch = {
@@ -711,7 +749,7 @@ var STORE = {
 
   /* what we know, merged with what we just learned */
   rememberCustomer: function(o, extra){
-    var id = digitsOnly(o && o.phone);
+    var id = phoneKey(o && o.phone);
     if(!id) return null;
 
     var was = DB.customers[id] || { id:id, phone:o.phone, firstAt: o.at || Date.now() };
@@ -776,7 +814,7 @@ var STORE = {
      rider reach their own record without being able to list anyone
      else's — they address it directly, they never search for it. */
   addRider: function(name, phone){
-    var id = digitsOnly(phone);
+    var id = phoneKey(phone);
     if(!id) return null;
     var r = { id:id, name:name, phone:phone,
               code: sixDigits(), uid:null, claimedAt:null };
@@ -854,7 +892,7 @@ var STORE = {
     var r = DB.riders[id];
     if(!r) return id;
 
-    var moved = patch.phone && digitsOnly(patch.phone) !== id;
+    var moved = patch.phone && phoneKey(patch.phone) !== id;
     if(!moved){
       Object.keys(patch).forEach(function(k){ r[k] = patch[k]; });
       if(FB){
@@ -865,7 +903,7 @@ var STORE = {
       return id;
     }
 
-    var nid = digitsOnly(patch.phone);
+    var nid = phoneKey(patch.phone);
     var moving = Object.assign({}, r, patch, { id:nid, uid:null, claimedAt:null });
     DB.riders[nid] = moving;
     delete DB.riders[id];
@@ -935,7 +973,11 @@ function when(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:"2-digi
                    catch(e){ return ""; } }
 function base(){ return location.href.split("#")[0].split("?")[0]; }
 function wa(number, text){
-  return "https://wa.me/" + String(number||"").replace(/\D/g,"") +
+  /* wa.me will not accept a bare ten-digit Indian number - it
+     needs the country code, which is exactly the part phoneKey
+     strips off to decide identity. Same number, two spellings,
+     each for its own job. */
+  return "https://wa.me/" + phoneWa(number) +
          "?text=" + encodeURIComponent(text);
 }
 
@@ -1017,9 +1059,7 @@ function canDial(){
 }
 
 function prettyPhone(v){
-  var d = digitsOnly(v);
-  if(d.length === 12 && d.indexOf("91") === 0)
-    return "+91 " + d.slice(2,7) + " " + d.slice(7);
+  var d = phoneKey(v);
   if(d.length === 10) return d.slice(0,5) + " " + d.slice(5);
   return v;
 }
@@ -1508,7 +1548,7 @@ function viewSeeOld(main){
     var ph = el("soPhone").value.trim();
     if(!digitsOnly(ph)){ shopToast("A phone number, please."); return; }
     STORE.askToSee(ph);
-    SEEKING = digitsOnly(ph);
+    SEEKING = phoneKey(ph);
     shopToast("Asked. We will confirm in a moment.");
     viewSeeOld(main);
   };
@@ -1992,8 +2032,8 @@ function viewCheckout(main){
         '<div class="cotol">Deliver to</div>' +
         '<div class="cotow">' + esc(where) + '</div>' +
         (saved.name ? '<div class="coton">' + esc(saved.name) + ' \u00b7 ' +
-                      esc(saved.phone) + '</div>'
-                    : '<div class="coton">' + esc(saved.phone) + '</div>') +
+                      esc(prettyPhone(saved.phone)) + '</div>'
+                    : '<div class="coton">' + esc(prettyPhone(saved.phone)) + '</div>') +
         '<button class="linky cotoc" id="coChange">Change this</button>' +
       '</div>' +
 
@@ -3740,7 +3780,7 @@ function learnDoorsteps(){
       }
 
       /* not delivered yet: still worth recording who they are */
-      if(!o.custLearned && digitsOnly(o.phone)){
+      if(!o.custLearned && phoneKey(o.phone)){
         STORE.edit(o.id, { custLearned: true });
         STORE.rememberCustomer(o);
       }
@@ -3809,7 +3849,7 @@ function isQuiet(c){
 
 function custStats(c){
   var mine = STORE.orders().filter(function(o){
-    return digitsOnly(o.phone) === c.id && o.status !== "cancelled";
+    return phoneKey(o.phone) === c.id && o.status !== "cancelled";
   });
   var spend = mine.reduce(function(n,o){ return n + (o.total || 0); }, 0);
   return { n: mine.length, spend: spend, last: mine[0] };
@@ -3831,7 +3871,7 @@ function paintCustomers(main){
     ? all.filter(function(c){
         if((c.name || "").toLowerCase().indexOf(q) >= 0) return true;
         if((c.addr || "").toLowerCase().indexOf(q) >= 0) return true;
-        return qd ? digitsOnly(c.phone).indexOf(qd) >= 0 : false;
+        return qd ? phoneKey(c.phone).indexOf(qd) >= 0 : false;
       })
     : all;
 
@@ -4084,7 +4124,7 @@ function viewCustomer(main, phone){
 }
 
 function custOrders(id){
-  return STORE.orders().filter(function(o){ return digitsOnly(o.phone) === id; })
+  return STORE.orders().filter(function(o){ return phoneKey(o.phone) === id; })
     .sort(function(a,b){ return b.at - a.at; });
 }
 
@@ -4101,7 +4141,7 @@ function favourites(list){
 }
 
 function paintCustomer(main, phone){
-  var id = digitsOnly(phone);
+  var id = phoneKey(phone);
   var c = STORE.customer(id);
   var mine = custOrders(id);
   var live = mine.filter(function(o){ return o.status !== "cancelled"; });
@@ -4885,7 +4925,7 @@ function markSeen(){
   if(!navigator.geolocation || !navigator.permissions) return;
 
   var me = knownMe();
-  var phone = digitsOnly(me && me.phone);
+  var phone = phoneKey(me && me.phone);
   if(!phone) return;                             /* rule 2 */
 
   var last = 0;
