@@ -1507,6 +1507,7 @@ function viewOrder(main, id){
       (o.lat ? '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(mapsPin(o)) + '">Pin in Maps</a>' : '') +
     '</div>' +
+    installBar() +
     payBlock(o, "customer") +
     noteThread(o, "Anything we should know? Gate code, landmark\u2026") +
     (canCancel
@@ -1515,6 +1516,7 @@ function viewOrder(main, id){
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
 
   wireNotes(main, id, function(){ viewOrder(main, id); });
+  wireInstall(function(){ viewOrder(main, id); });
 
   var cb = el("obCancel");
   if(cb) cb.onclick = function(){
@@ -2793,81 +2795,56 @@ function askGps(){
   });
 }
 
-function readyPanel(){
-  var inApp = !!native();
-  return '<div class="ready" id="readyBox">' +
-    (inApp
-      ? '<div class="rdrow ok"><span class="rdi">\uD83D\uDEF5</span>' +
-        '<div class="rdt"><b>Hayat rider app</b>' +
-        '<small>Your position keeps going with the screen off.</small></div></div>'
-      : '<div class="rdrow warn"><span class="rdi">\uD83C\uDF10</span>' +
-        '<div class="rdt"><b>Running in the browser</b>' +
-        '<small>Position stops when the screen sleeps. The app fixes that.</small></div></div>') +
-    '<div class="rdrow" id="rdGps"><span class="rdi">\uD83D\uDCCD</span>' +
-      '<div class="rdt"><b>Location</b><small>Checking\u2026</small></div>' +
-      '<button class="linky" id="rdGpsGo" hidden>Allow</button></div>' +
-    '<div class="rdrow" id="rdBell"><span class="rdi">\uD83D\uDD14</span>' +
-      '<div class="rdt"><b>Alerts</b><small>Checking\u2026</small></div>' +
-      '<button class="linky" id="rdBellGo" hidden>Allow</button></div>' +
-  '</div>';
+/* ------------------------------------------------------------
+   TROUBLE, AND ONLY TROUBLE
+
+   This screen used to carry a panel explaining that the app was
+   running in a browser, that location was needed, that alerts
+   were needed - a wall of machinery on the front page of a
+   working app. A rider cannot act on most of it and should not
+   have to read any of it.
+
+   So: nothing at all when things work. One line, and a button
+   that fixes it, when something is genuinely broken. Permission
+   is asked once at sign-in, where a tap is already happening.
+   ------------------------------------------------------------ */
+function troubleStrip(){
+  if(GPSOK === false)
+    return '<div class="trouble" id="troubleBox">' +
+      '<div class="tt"><b>Location is off</b>' +
+      '<small>The shop cannot see you, and the customer cannot follow you.</small></div>' +
+      '<button class="shopbtn small" id="tbFix">Turn on</button>' +
+    '</div>';
+  return '<div id="troubleBox"></div>';
 }
 
-function paintReady(){
-  var row = el("rdGps"), note = row && row.querySelector("small"),
-      btn = el("rdGpsGo");
-  if(!row) return;
+function paintTrouble(main, again){
+  var box = el("troubleBox");
+  if(!box) return;
 
   gpsState().then(function(st){
-    if(st === "none"){
-      row.className = "rdrow bad";
-      note.textContent = "This phone cannot share a position.";
-      btn.hidden = true;
-    } else if(st === "granted" || GPSOK === true){
-      row.className = "rdrow ok";
-      note.textContent = "Shared while a delivery is open.";
-      btn.hidden = true;
-    } else if(st === "denied" || GPSOK === false){
-      row.className = "rdrow bad";
-      note.textContent = "Blocked. Open the site settings and allow location.";
-      btn.hidden = false;
-      btn.textContent = "Try again";
-    } else {
-      row.className = "rdrow warn";
-      note.textContent = "Needed so the shop and the customer can see you.";
-      btn.hidden = false;
-      btn.textContent = "Allow";
-    }
+    var bad = (st === "denied") || (st === "none") || GPSOK === false;
+    if(!bad){ box.innerHTML = ""; return; }
+
+    box.className = "trouble";
+    box.innerHTML =
+      '<div class="tt"><b>Location is off</b>' +
+      '<small>' + (st === "none"
+        ? "This phone cannot share a position."
+        : "The shop cannot see you, and the customer cannot follow you.") +
+      '</small></div>' +
+      (st === "none" ? "" : '<button class="shopbtn small" id="tbFix">Turn on</button>');
+
+    var fix = el("tbFix");
+    if(fix) fix.onclick = function(){
+      fix.disabled = true;
+      fix.textContent = "Waiting\u2026";
+      askGps().then(function(ok){
+        if(!ok) shopToast("Still blocked. Allow location for this site in your browser settings.");
+        if(again) again();
+      });
+    };
   });
-
-  if(btn) btn.onclick = function(){
-    btn.textContent = "Waiting\u2026";
-    askGps().then(function(){ paintReady(); });
-  };
-
-  var brow = el("rdBell"), bnote = brow && brow.querySelector("small"),
-      bbtn = el("rdBellGo");
-  if(brow){
-    var has = ("Notification" in window);
-    var pm = has ? Notification.permission : "denied";
-    if(!has || pm === "denied"){
-      brow.className = "rdrow bad";
-      bnote.textContent = has ? "Blocked. New jobs will not ring."
-                              : "This phone cannot show alerts.";
-      bbtn.hidden = true;
-    } else if(pm === "granted"){
-      brow.className = "rdrow ok";
-      bnote.textContent = "You will hear a new delivery.";
-      bbtn.hidden = true;
-    } else {
-      brow.className = "rdrow warn";
-      bnote.textContent = "So a new delivery reaches you.";
-      bbtn.hidden = false;
-      bbtn.textContent = "Allow";
-      bbtn.onclick = function(){
-        try{ Notification.requestPermission().then(function(){ paintReady(); }); }catch(e){}
-      };
-    }
-  }
 }
 
 /* ---- the sign-in and the job list ---- */
@@ -2882,7 +2859,7 @@ function viewDriveHome(main){
       '<button class="shopbtn" id="rvGo">Sign in</button>' +
       (riderPhone() ? '<p class="shopnote">That number is not on the rider list. ' +
         'Ask the office to add it.</p>' : '') +
-      '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+      backToMenu());
     var signIn = function(){
       /* This tap is the only gesture the browser will let us spend.
          Sound, alerts and location all have to be asked for here,
@@ -2911,6 +2888,7 @@ function viewDriveHome(main){
   var on = me.avail !== false;
 
   main.innerHTML = shell("Your deliveries",
+    installBar() +
     '<div class="adminbar"><span class="pill">' + mine.length + ' to go</span>' +
       '<span class="pill quiet">' + done + ' done</span>' +
       '<button class="linky" id="rvOut">Not ' + esc(me.name) + '?</button></div>' +
@@ -2926,7 +2904,7 @@ function viewDriveHome(main){
       '<span class="asw"></span>' +
     '</button>' +
 
-    readyPanel() +
+    troubleStrip() +
     (mine.length ? mine.map(function(o){
         return '<a class="jobcard" href="#/drive/' + esc(o.id) + '">' +
           '<div class="brow"><b>' + esc(o.id) + '</b>' +
@@ -2939,9 +2917,11 @@ function viewDriveHome(main){
             '<span class="rname">collect on delivery</span></div></a>';
       }).join("")
       : '<p class="shopsub">Nothing assigned to you right now.</p>') +
-    '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+    backToMenu());
 
   el("rvOut").onclick = function(){ setRiderPhone(""); viewDriveHome(main); };
+
+  wireInstall(function(){ viewDriveHome(main); });
 
   el("rvAvail").onclick = function(){
     var now = STORE.setAvailable(me.id, me.avail === false);
@@ -2949,7 +2929,7 @@ function viewDriveHome(main){
     viewDriveHome(main);
   };
 
-  paintReady();
+  paintTrouble(main, function(){ viewDriveHome(main); });
 
   armSound();
   checkForWork();
@@ -3000,14 +2980,36 @@ function viewDrive(main, id){
           ? "Position shared just now \u00b7 keep this screen on"
           : "Last sent " + f.txt + " \u2014 the screen slept, tap to resume";
       })()) + '</span></div>' +
+    troubleStrip() +
     noteThread(o, "Held up? Cannot find the door? Say so here\u2026") +
     '<button class="shopbtn ghost" data-go="#/drive">Your other deliveries</button>');
 
   wireNotes(main, id, function(){ viewDrive(main, id); });
   wirePaid(main, function(){ viewDrive(main, id); });
+  paintTrouble(main, function(){ viewDrive(main, id); });
 
   if(next) el("dvGo").onclick = function(){
+    /* This tap is a gesture, and a gesture is the only moment a
+       browser will show a location prompt. Starting to track on
+       a repaint asks silently, gets refused silently, and the
+       shop then watches a rider who never appears to move -
+       which is exactly what happened. So ask here, out loud. */
+    var moving = (next === "assigned" || next === "on_way");
+
+    /* Move the order first. Waiting on a GPS fix before changing
+       the status makes the button look dead for up to fifteen
+       seconds, which is how a rider decides the app is broken.
+       The permission ask still rides on this same tap. */
     STORE.setStatus(id, next);
+
+    if(moving && !native()){
+      askGps().then(function(ok){
+        if(!ok){
+          shopToast("Location is off - turn it on so the shop can see you.");
+          paintTrouble(main, function(){ viewDrive(main, id); });
+        }
+      });
+    }
     /* the money is the last thing on their mind and the first
        thing the shop will ask about, so say it once, here */
     if(next === "delivered" && !STORE.order(id).paid)
@@ -3110,6 +3112,13 @@ function startPing(id){
    chrome
    ============================================================ */
 function shell(title, body, wide){
+  /* The crumb bar belongs to the customer's app, where there is
+     a menu behind you. In the rider's app there is nothing
+     behind you, so it is a button that lies. */
+  if(riderApp())
+    return '<div class="shopwrap' + (wide ? " wide" : "") + '">' +
+      '<h2 class="shoph">' + esc(title) + '</h2>' + body + '</div>';
+
   return '<div class="backbar">' +
       '<button class="back" data-go="#/"><span class="a">‹</span>Menu</button>' +
       '<span class="crumbtxt">' + esc(title) + '</span></div>' +
@@ -3119,8 +3128,19 @@ function shell(title, body, wide){
 
 /* The office runs on a desktop all day. It gets the whole window:
    no category rail, no menu chrome, just the work. */
-function deskMode(on){
-  try{ document.body.classList.toggle("deskwork", !!on); }catch(e){}
+/* Two different office screens, two different layouts.
+
+   deskwork  any office screen: no menu chrome, wide
+   deskboard the board, list and map only: a fixed frame that
+             owns the window and scrolls inside itself
+
+   Editing an order is an ordinary page and must scroll like one,
+   or the message thread at the foot of it cannot be reached. */
+function deskMode(on, board){
+  try{
+    document.body.classList.toggle("deskwork", !!on);
+    document.body.classList.toggle("deskboard", !!on && !!board);
+  }catch(e){}
 }
 
 /* The rider is not browsing a restaurant. They are working, on a
@@ -3201,22 +3221,121 @@ function repaintRows(){
 }
 
 /* ------------------------------------------------------------
-   THE CUSTOMER SIDE IS A WEBSITE, NOT AN APP TO INSTALL
+   INSTALLING, IN ONE TAP
 
-   A customer ordering dinner should not be asked to install
-   anything. Chrome offers it anyway once a site has a manifest
-   and a service worker, so we decline on the customer's behalf.
+   No browser lets a page install itself. Chrome will not even
+   let us open its own prompt without a tap to answer for, and
+   iOS has no prompt at all - Apple only offers Share -> Add to
+   Home Screen, by hand, forever.
 
-   The rider is the opposite case and keeps its own front door
-   at rider.html, which stays installable - that one IS a tool
-   somebody uses every day, and an icon is the point of it.
+   So one tap is the floor, and this is how we get there: catch
+   Chrome's offer the moment it arrives, keep it, and put our
+   own button in front of the person. Their tap opens the real
+   prompt. No digging through a three-dot menu.
+
+   On iPhone there is nothing to catch, so we show the two
+   steps instead - and only on the rider's app, where an icon
+   is the point. Nagging a customer who wants dinner is how you
+   stop them ordering dinner.
    ------------------------------------------------------------ */
+var OFFER = null;                 /* Chrome's deferred prompt */
+var INSTALLWATCH = [];
+
+function onOffer(f){ INSTALLWATCH.push(f); }
+function offerFire(){ INSTALLWATCH.slice().forEach(function(f){ try{ f(); }catch(e){} }); }
+
+function installed(){
+  try{
+    return window.matchMedia("(display-mode: standalone)").matches ||
+           window.navigator.standalone === true;
+  }catch(e){ return false; }
+}
+function isApple(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function installDismissed(){
+  try{ return localStorage.getItem("hayat_noinstall") === "1"; }catch(e){ return false; }
+}
+function dismissInstall(){
+  try{ localStorage.setItem("hayat_noinstall", "1"); }catch(e){}
+  offerFire();
+}
+
+/* The page caught this in its head, before we existed - Chrome
+   fires it early and it is gone if nobody is listening. Take
+   whatever is waiting, and keep listening for a later one. */
+function takeOffer(){
+  if(window.__hayatOffer && OFFER !== window.__hayatOffer){
+    OFFER = window.__hayatOffer;
+    offerFire();
+  }
+}
+takeOffer();
+window.addEventListener("hayat-offer", takeOffer);
 window.addEventListener("beforeinstallprompt", function(e){
-  var onRider = /rider\.html/.test(location.pathname) ||
-                /^#\/drive\b/.test(location.hash || "");
-  if(onRider) return;              /* let the rider be installed */
-  e.preventDefault();
+  e.preventDefault();             /* keep it; we will open it ourselves */
+  OFFER = e;
+  offerFire();
 });
+
+window.addEventListener("appinstalled", function(){
+  OFFER = null;
+  try{ localStorage.removeItem("hayat_noinstall"); }catch(e){}
+  offerFire();
+  shopToast("Installed. Open it from your home screen.");
+});
+
+/* Read the head's catch every time rather than trusting an
+   event to arrive after we started listening. shop.js and that
+   snippet race on a big page, and a race decided the offer
+   never appeared. */
+function theOffer(){
+  if(!OFFER && window.__hayatOffer) OFFER = window.__hayatOffer;
+  return OFFER;
+}
+
+/* true when there is something worth showing a person */
+function canOfferInstall(){
+  if(installed() || installDismissed()) return false;
+  return !!theOffer() || (isApple() && riderApp());
+}
+
+function installBar(){
+  if(!canOfferInstall()) return "";
+  var rider = riderApp();
+  if(theOffer()){
+    return '<div class="getapp" id="getApp">' +
+      '<div class="gt"><b>' + (rider ? "Install the rider app" : "Add Hayat to your phone") + '</b>' +
+        '<small>' + (rider
+          ? "One tap. Opens from your home screen, and location keeps working."
+          : "One tap. Order again without hunting for the link.") + '</small></div>' +
+      '<button class="shopbtn small" id="getAppGo">Install</button>' +
+      '<button class="gx" id="getAppNo" aria-label="Not now">\u00d7</button>' +
+    '</div>';
+  }
+  /* an iPhone: no prompt exists, so say the two steps plainly */
+  return '<div class="getapp ios" id="getApp">' +
+    '<div class="gt"><b>Add this to your home screen</b>' +
+      '<small>Tap <b>Share</b>, then <b>Add to Home Screen</b>.</small></div>' +
+    '<button class="gx" id="getAppNo" aria-label="Not now">\u00d7</button>' +
+  '</div>';
+}
+
+function wireInstall(repaint){
+  var go = el("getAppGo"), no = el("getAppNo");
+  if(go) go.onclick = function(){
+    if(!theOffer()) return;
+    go.disabled = true;
+    OFFER.prompt();
+    OFFER.userChoice.then(function(r){
+      if(r && r.outcome === "accepted"){ OFFER = null; }
+      else { go.disabled = false; }
+      if(repaint) repaint();
+    }).catch(function(){ go.disabled = false; });
+  };
+  if(no) no.onclick = function(){ dismissInstall(); if(repaint) repaint(); };
+}
 
 /* ---------- routing ---------------------------------------- */
 
@@ -3255,7 +3374,8 @@ document.addEventListener("focusout", function(){
 
 function route(p, main){
   REPAINT = null;
-  deskMode(p[0] === "admin");
+  /* the board owns the window; every other office page does not */
+  deskMode(p[0] === "admin", p[0] === "admin" && p[1] !== "o" && p[1] !== "riders");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -3299,6 +3419,11 @@ document.addEventListener("click", function(e){
 });
 
 window.addEventListener("hashchange", paintFab);
+
+/* Chrome decides when a site is installable, and tells us late.
+   Repaint when it does, so the offer appears rather than waiting
+   for the next thing the person happens to tap. */
+onOffer(function(){ repaintNow(); });
 document.addEventListener("visibilitychange", function(){
   if(document.visibilityState === "visible" && PINGJOB) holdScreen();
 });
@@ -3314,6 +3439,15 @@ document.addEventListener("visibilitychange", function(){
    a delivery app.
    ------------------------------------------------------------ */
 function riderApp(){ return !!window.HAYAT_RIDER_APP; }
+
+/* In the rider's own app there is no menu to go back to, so the
+   button should not be there at all. Redirecting it was papering
+   over an offer that never made sense on that screen. */
+function backToMenu(txt){
+  if(riderApp()) return "";
+  return '<button class="shopbtn ghost" data-go="#/">' +
+         esc(txt || "Back to the menu") + '</button>';
+}
 
 if(riderApp()){
   (function(){

@@ -1107,21 +1107,7 @@ body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
 .findrow.done .fadd{background:var(--green);color:var(--onaccent);border-color:transparent}
 .fnone{text-align:left;padding:14px 13px;margin:0}
 
-/* ---- is this phone ready to work ---- */
-.ready{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin:0 0 14px}
-.rdrow{display:flex;align-items:center;gap:12px;padding:13px 14px;
   border-bottom:1px solid var(--line);border-left:3px solid var(--line2)}
-.rdrow:last-child{border-bottom:0}
-.rdrow.ok{border-left-color:var(--green)}
-.rdrow.warn{border-left-color:var(--gold)}
-.rdrow.bad{border-left-color:var(--hot)}
-.rdi{font-size:19px;line-height:1;flex:0 0 auto}
-.rdt{flex:1;min-width:0}
-.rdt b{display:block;font-size:var(--t-h3);color:var(--cream)}
-.rdt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
-.rdrow .linky{flex:0 0 auto;min-height:40px;padding:0 14px;
-  border:1px solid var(--line2);border-radius:999px;font-weight:700}
-.rdrow.warn .linky{background:var(--gold);color:var(--onaccent);border-color:transparent}
 
 /* ============================================================
    THE OFFICE CONSOLE
@@ -1133,12 +1119,23 @@ body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
 /* The whole window is the work. No site header, no page title,
    no band of chrome: the board, the list or the map owns every
    pixel and the controls float on top of it. */
-html:has(body.deskwork){overflow:hidden;height:100%}
-body.deskwork{overflow:hidden;height:100%;margin:0}
+/* Only the board freezes the window. */
+html:has(body.deskboard){overflow:hidden;height:100%}
+body.deskboard{overflow:hidden;height:100%;margin:0}
+body.deskwork:not(.deskboard){overflow-y:auto}
 body.deskwork header,
 body.deskwork .backbar{display:none !important}
-body.deskwork main{padding:0 !important;height:100dvh;overflow:hidden}
-body.deskwork .shopwrap{max-width:none;height:100%;padding:0}
+/* The board is its own fixed frame and handles its own scrolling.
+   Every other office screen - editing an order, the rider list -
+   is an ordinary page and must be able to scroll, or the message
+   thread at the foot of an order is simply unreachable. */
+body.deskboard main{padding:0 !important;height:100dvh;overflow:hidden}
+body.deskwork:not(.deskboard) main{padding:0 !important;height:auto;overflow:visible}
+body.deskwork .shopwrap{max-width:none;padding:0}
+body.deskwork .shopwrap.wide{max-width:1500px}
+/* an ordinary office page: room to breathe, and room to scroll past */
+body.deskwork:not(.deskboard) .shopwrap{
+  max-width:820px;margin:0 auto;padding:20px 20px 120px}
 
 .console{position:relative;height:100dvh;min-height:0;overflow:hidden;
   display:flex;flex-direction:column}
@@ -1487,3 +1484,40 @@ body.palopen{overflow:hidden}
 @media (prefers-reduced-motion:reduce){
   .palette{animation:none}
 }
+
+
+/* ---- the install offer -------------------------------------
+   One tap, in front of the person, instead of three dots and a
+   menu they will never open. Dismissible, and it stays
+   dismissed - asking twice is how a prompt becomes a nag. */
+.getapp{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-left:3px solid var(--gold);
+  border-radius:var(--r2);padding:13px 14px;margin:0 0 14px;
+  background:var(--soft3)}
+.gt{flex:1;min-width:0}
+.gt b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.gt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.getapp .shopbtn{margin:0;width:auto;flex:0 0 auto;white-space:nowrap}
+.gx{flex:0 0 auto;width:34px;height:34px;border:0;border-radius:50%;
+  background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+.gx:hover{background:var(--soft2);color:var(--cream)}
+.getapp.ios{border-left-color:var(--green)}
+@media (max-width:420px){
+  .getapp .shopbtn{width:100%;order:3}
+}
+
+
+/* ---- something is actually wrong ---------------------------
+   Invisible when the app is working. One line and a button
+   when it is not. A rider should never be reading a status
+   panel about their own software. */
+.trouble{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-left:3px solid var(--hot);
+  border-radius:var(--r2);padding:13px 14px;margin:0 0 14px;
+  background:var(--soft3)}
+.trouble:empty{display:none;margin:0;padding:0;border:0}
+.tt{flex:1;min-width:0}
+.tt b{display:block;font-size:var(--t-h3);color:var(--cream)}
+.tt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
+.trouble .shopbtn{margin:0;width:auto;flex:0 0 auto;white-space:nowrap}
+@media (max-width:420px){ .trouble .shopbtn{width:100%} }

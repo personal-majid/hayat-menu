@@ -12,6 +12,18 @@
 <link rel="manifest" href="rider.webmanifest">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="stylesheet" href="app.css">
+<script>
+/* Chrome can offer the install before shop.js has finished parsing,
+   and the offer is gone if nobody is listening. Catch it here, in
+   the head, and hold it for whoever wants it. */
+window.__hayatOffer = null;
+window.addEventListener("beforeinstallprompt", function(e){
+  e.preventDefault();
+  window.__hayatOffer = e;
+  try{ window.dispatchEvent(new Event("hayat-offer")); }catch(err){}
+});
+</script>
+
 
 <!-- ============================================================
      THE RIDER APP
@@ -54,8 +66,6 @@
 
   .boot{padding:40px 0;text-align:center;color:var(--muted)}
 
-  /* the install prompt, for a rider opening the link in a browser */
-  .install{border:1px solid var(--line);border-left:3px solid var(--gold);
     border-radius:var(--r2);padding:15px 16px;margin:0 0 16px;background:var(--soft3)}
   .install b{display:block;font-size:var(--t-h3);color:var(--cream);margin:0 0 6px}
   .install p{margin:0 0 4px;font-size:var(--t-body);color:var(--muted);line-height:1.5}
@@ -88,34 +98,9 @@
     window.__toastJob = setTimeout(function(){ t.classList.remove("on"); }, 2600);
   };
 
-  /* Anyone who opened the link in a browser rather than installing
-     it still works - they just get told, once, that there is a
-     better way. Installed apps never see this. */
-  (function(){
-    var installed = false;
-    try{
-      installed = window.matchMedia("(display-mode: standalone)").matches ||
-                  window.navigator.standalone === true;
-    }catch(e){}
-    if(installed) return;
-    window.addEventListener("load", function(){
-      var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-      var box = document.createElement("div");
-      box.className = "install";
-      box.innerHTML =
-        "<b>Add this to your home screen</b>" +
-        "<p>" + (isIOS
-          ? "Tap Share, then <b>Add to Home Screen</b>."
-          : "Tap the three dots, then <b>Install app</b> or <b>Add to Home screen</b>.") +
-        "</p>" +
-        "<p>Then open it from the icon. Location keeps working while " +
-        "the app is in front, which it cannot do in a browser tab.</p>" +
-        "<button class='shopbtn ghost small hide' id='hideInstall'>Not now</button>";
-      var main = document.getElementById("main");
-      main.insertBefore(box, main.firstChild);
-      document.getElementById("hideInstall").onclick = function(){ box.remove(); };
-    });
-  })();
+  /* The install offer lives in shop.js now, so the customer's
+     app and this one behave the same way: one tap when Chrome
+     allows it, the two Apple steps when it does not. */
 </script>
 
 <script src="config.js"></script>

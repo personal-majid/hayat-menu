@@ -18,6 +18,18 @@
 <link rel="apple-touch-icon" href="assets/mark.png">
 <title>Hayat Fish and Mandi Restaurant — Menu</title>
 <link rel="stylesheet" href="app.css">
+<script>
+/* Chrome can offer the install before shop.js has finished parsing,
+   and the offer is gone if nobody is listening. Catch it here, in
+   the head, and hold it for whoever wants it. */
+window.__hayatOffer = null;
+window.addEventListener("beforeinstallprompt", function(e){
+  e.preventDefault();
+  window.__hayatOffer = e;
+  try{ window.dispatchEvent(new Event("hayat-offer")); }catch(err){}
+});
+</script>
+
 </head>
 <body>
 <div id="intro" hidden>
