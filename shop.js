@@ -2016,12 +2016,12 @@ function viewQuick(main){
       '<button class="spotcard' + (here ? " set" : "") + '" id="qHere">' +
         '<span class="spi">\uD83D\uDCCD</span>' +
         '<span class="spt"><b>' +
-          (here ? "Location shared" : "Share my location instead") + '</b>' +
+          (here ? "Pin set" : "Drop a pin instead") + '</b>' +
           '<small>' + (here
-            ? here.lat.toFixed(5) + ", " + here.lng.toFixed(5) + " \u00b7 the rider will find you"
-            : "Quicker than typing, and the rider follows it exactly") +
+            ? "The rider will follow the pin"
+            : "Quicker than typing an address") +
           '</small></span>' +
-        '<span class="spgo">' + (here ? "Change" : "Share") + '</span>' +
+        '<span class="spgo">' + (here ? "Change" : "Map") + '</span>' +
       '</button>' +
 
       '<input class="fld" id="qNote" placeholder="Anything to tell the kitchen? (optional)" ' +
@@ -2031,18 +2031,15 @@ function viewQuick(main){
       '<p class="opt tiny">We only ever use it for this order.</p>' +
       '<button class="shopbtn ghost" data-go="#/">Browse the menu instead</button>');
 
+    /* The map, not a blind GPS grab. The picker opens on where the
+       phone thinks it is and lets them nudge the pin to the actual
+       door - GPS in a lane in Makkaraparamba can be forty metres out. */
     el("qHere").onclick = function(){
       grab();
-      var b = el("qHere");
-      b.querySelector(".spgo").textContent = "\u2026";
-      askGps().then(function(pos){
-        if(!pos || !pos.coords){
-          shopToast("Could not get your location \u2014 type the address instead.");
-          draw(); return;
-        }
-        here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      openPinPicker(here, function(spot){
+        here = { lat: spot.lat, lng: spot.lng };
         draw();
-        shopToast("Got it \u2014 that is enough for the rider.");
+        shopToast("Got it \u2014 the rider will follow the pin.");
       });
     };
 
@@ -2077,8 +2074,14 @@ function viewQuick(main){
       var id = STORE.place(o);
       if(!id){ shopToast("Something went wrong. Please call us."); return; }
 
-      try{ localStorage.setItem("hayat_me", JSON.stringify(
-        { name:name, phone:phone, addr:addr, lat:here && here.lat, lng:here && here.lng })); }catch(e){}
+      /* into the same book the checkout uses, so the next order
+         starts on the last screen, not the first */
+      var rec = meRecord();
+      rec.name = name || rec.name; rec.phone = phone;
+      if(addr || here) bookAddrs(rec, { label: nextLabel(rec), text: addr,
+                                        lat: here && here.lat, lng: here && here.lng });
+      rec.addr = addr; rec.lat = here && here.lat; rec.lng = here && here.lng;
+      saveMe(rec);
 
       location.hash = "#/o/" + id;
     };
@@ -2109,7 +2112,9 @@ function viewCheckout(main){
 
   /* Where are we? A first order walks 1 -> 2 -> 3. A repeat order
      starts at 3 and only visits 2 if they press Change. */
-  if(CO_STEP == null) CO_STEP = known ? 3 : 1;
+  /* Ask only for what is missing. A number we already hold - from
+     the call-back form, from a past order - is never asked again. */
+  if(CO_STEP == null) CO_STEP = known ? 3 : (phoneKey(me.phone) ? 2 : 1);
   /* step 3 needs a number and a place - from the book, or the
      ones just typed on the way through */
   if(CO_STEP === 3 && !(phoneKey(me.phone) && (me.addrs.length || CO_ADDR))) CO_STEP = 1;
@@ -4703,9 +4708,17 @@ function paintCall(main){
     var id = STORE.place(o);
     if(!id){ shopToast("Something went wrong."); return; }
     STORE.setStatus(id, "accepted");      /* the office took it, so it is accepted */
-    STORE.rememberCustomer(STORE.order(id));
+    var placed = STORE.order(id);
+    STORE.rememberCustomer(placed);
     CALL = { lines: [] };
-    shopToast("Order " + id + " is on the board.");
+    /* The customer was on the phone and has nothing in writing.
+       WhatsApp opens - the desktop app on the office PC - with
+       what they ordered, the total and the link that shows it
+       moving. The office presses send. */
+    if(phoneKey(placed.phone)){
+      try{ window.open(waCustomer(placed, msgAccepted(placed)), "_blank", "noopener"); }catch(e){}
+    }
+    shopToast("Order " + id + " is on the board \u2014 WhatsApp is open to send them the link.");
     location.hash = "#/admin";
   };
 }
