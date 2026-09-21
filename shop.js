@@ -1725,6 +1725,64 @@ function viewCart(main){
    everyone, and a browser that could read it by typing a number
    would hand a stranger's home address to anybody who guessed
    their phone. The rules forbid it; so does this. */
+/* ------------------------------------------------------------
+   THE ADDRESS BOOK, ON THEIR OWN PHONE
+
+   Home, work, mother's place. Kept in hayat_me on the device -
+   never read from the office's customer book, because a browser
+   that could look up addresses by typing a number would hand a
+   stranger's home to anybody who guessed one. The office learns
+   addresses from the orders themselves.
+
+   Each entry: { label, text, lat, lng, last }. "last" is when it
+   was last delivered to, so the default is the one they used
+   most recently, which is nearly always right.
+   ------------------------------------------------------------ */
+function meRecord(){
+  var dev = {};
+  try{ dev = JSON.parse(localStorage.getItem("hayat_me")) || {}; }catch(e){}
+  if(!Array.isArray(dev.addrs)) dev.addrs = [];
+  /* an old single-address record becomes the first entry */
+  if(!dev.addrs.length && (dev.addr || dev.lat != null)){
+    dev.addrs.push({ label:"Home", text:dev.addr || "", lat:dev.lat, lng:dev.lng, last:0 });
+  }
+  return dev;
+}
+function saveMe(rec){
+  try{ localStorage.setItem("hayat_me", JSON.stringify(rec)); }catch(e){}
+}
+function addrKey(a){
+  return ((a.text || "").trim().toLowerCase()) + "|" +
+         (a.lat != null ? (+a.lat).toFixed(4) : "") + "|" +
+         (a.lng != null ? (+a.lng).toFixed(4) : "");
+}
+/* remember an address they just used; same place twice is one entry */
+function bookAddrs(rec, a){
+  var k = addrKey(a), hit = null;
+  rec.addrs.forEach(function(x){ if(addrKey(x) === k) hit = x; });
+  if(hit){
+    hit.last = Date.now();
+    if(a.label) hit.label = a.label;
+  } else {
+    rec.addrs.unshift({ label: a.label || nextLabel(rec), text: a.text || "",
+                        lat: a.lat, lng: a.lng, last: Date.now() });
+  }
+  rec.addrs.sort(function(x,y){ return (y.last||0) - (x.last||0); });
+  rec.addrs = rec.addrs.slice(0, 6);
+  return rec;
+}
+function nextLabel(rec){
+  var used = rec.addrs.map(function(a){ return (a.label||"").toLowerCase(); });
+  var pool = ["Home","Work","Other"];
+  for(var i = 0; i < pool.length; i++) if(used.indexOf(pool[i].toLowerCase()) < 0) return pool[i];
+  return "Place " + (rec.addrs.length + 1);
+}
+function stepDots(n, of){
+  var out = '<div class="stepdots">';
+  for(var i = 1; i <= of; i++) out += '<i class="' + (i < n ? "done" : i === n ? "now" : "") + '"></i>';
+  return out + '</div>';
+}
+
 function knownMe(){
   var mine = STORE.myOrders();
   var last = mine[0];
@@ -1889,7 +1947,6 @@ function viewLanding(main){
         installLink() +
       '</div>' +
 
-      installBar() +
     '</div>';
 
   /* index.html owns the menu, and it only draws once this screen
@@ -1920,7 +1977,6 @@ function viewLanding(main){
     location.hash = "#/cart";
   };
 
-  wireInstall(function(){ viewLanding(main); });
   wireInstallLink(function(){ viewLanding(main); });
 }
 
@@ -2048,154 +2104,171 @@ function viewQuick(main){
    ------------------------------------------------------------ */
 function viewCheckout(main){
   if(!CART.length){ location.hash = "#/"; return; }
-  var saved = knownMe();
+  var me = meRecord();
+  var known = !!(phoneKey(me.phone) && me.addrs.length);
 
-  /* Known means we could send a rider right now without asking
-     anything. A pin counts instead of an address - it is better
-     than an address. */
-  var known = !!(digitsOnly(saved.phone) && ((saved.addr || "").trim() ||
-                 (saved.lat != null && saved.lng != null)));
+  /* Where are we? A first order walks 1 -> 2 -> 3. A repeat order
+     starts at 3 and only visits 2 if they press Change. */
+  if(CO_STEP == null) CO_STEP = known ? 3 : 1;
+  /* step 3 needs a number and a place - from the book, or the
+     ones just typed on the way through */
+  if(CO_STEP === 3 && !(phoneKey(me.phone) && (me.addrs.length || CO_ADDR))) CO_STEP = 1;
+  if(CO_STEP === 1) return stepPhone();
+  if(CO_STEP === 2) return stepWhere();
+  return stepConfirm();
 
-  if(known && !CO_EDIT) return drawKnown();
-  return drawForm();
-
-  /* ---- the repeat order: everything we know, and Place ------ */
-  function drawKnown(){
-    if(saved.lat != null && saved.lng != null && !PIN){
-      PIN = { lat: saved.lat, lng: saved.lng };
-    }
-    var where = (saved.addr || "").trim() ||
-                (PIN ? "The spot you pinned last time" : "");
-
-    main.innerHTML = shell("Send it",
-      '<div class="cosum">' +
-        '<span>' + cartCount() + ' item(s)</span>' +
-        '<b>' + rupee(cartTotal()) + '</b>' +
-      '</div>' +
-
-      '<div class="coto">' +
-        '<div class="cotol">Deliver to</div>' +
-        '<div class="cotow">' + esc(where) + '</div>' +
-        (saved.name ? '<div class="coton">' + esc(saved.name) + ' \u00b7 ' +
-                      esc(prettyPhone(saved.phone)) + '</div>'
-                    : '<div class="coton">' + esc(prettyPhone(saved.phone)) + '</div>') +
-        '<button class="linky cotoc" id="coChange">Change this</button>' +
-      '</div>' +
-
-      '<input class="fld" id="coNote" placeholder="Anything we should know? (optional)">' +
-      '<button class="shopbtn big" id="coGo">' + (AMEND ? "Update the order" : "Place the order") + '</button>' +
-      '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>');
-
-    el("coChange").onclick = function(){
-      CO_EDIT = true;
+  /* ---- 1. the number --------------------------------------- */
+  function stepPhone(){
+    main.innerHTML = shell("What number should the rider call?",
+      stepDots(1, 3) +
+      '<input class="fld big" id="coPhone" name="tel" type="tel" autocomplete="tel" ' +
+        'inputmode="tel" placeholder="Phone number" value="' + esc(me.phone || "") + '">' +
+      '<input class="fld" id="coName" name="name" autocomplete="name" ' +
+        'placeholder="Your name (optional)" value="' + esc(me.name || "") + '">' +
+      '<button class="shopbtn big" id="coNext">Continue</button>');
+    var go = function(){
+      var ph = el("coPhone").value.trim();
+      if(!phoneKey(ph) || phoneKey(ph).length < 10){ shopToast("A ten-digit mobile number, please."); el("coPhone").focus(); return; }
+      me.phone = ph; me.name = el("coName").value.trim(); saveMe(me);
+      CO_STEP = me.addrs.length ? 3 : 2;
       viewCheckout(main);
     };
-    el("coGo").onclick = function(){
-      send(saved.name || "", saved.phone, saved.addr || "");
-    };
+    el("coNext").onclick = go;
+    onEnter(el("coPhone"), go); onEnter(el("coName"), go);
+    el("coPhone").focus();
   }
 
-  /* ---- the first order, or a correction -------------------- */
-  function drawForm(){
-    main.innerHTML = shell("Where is it going?",
-      /* A browser will offer the number it already has, in one tap,
-         but only if the field says what it is. name and autocomplete
-         are what turn three fields into a single autofill. */
-      '<input class="fld big" id="coPhone" name="tel" type="tel" autocomplete="tel" ' +
-        'inputmode="tel" placeholder="Phone number" value="' + esc(saved.phone||"") + '">' +
-      '<input class="fld" id="coName" name="name" autocomplete="name" ' +
-        'placeholder="Your name (optional)" value="' + esc(saved.name||"") + '">' +
-      '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" ' +
-        'placeholder="Address \u2014 house, landmark, area">' + esc(saved.addr||"") + '</textarea>' +
+  /* ---- 2. where ------------------------------------------- */
+  function stepWhere(){
+    var picking = me.addrs.length > 0 && !CO_NEWADDR;
+    main.innerHTML = shell(picking ? "Deliver to\u2026" : "Where should it come?",
+      stepDots(2, 3) +
+      (picking
+        ?
+          '<div class="addrbook">' + me.addrs.map(function(a, i){
+            return '<button class="addrcard" data-pick="' + i + '">' +
+              '<b>' + esc(a.label || "Saved") + '</b>' +
+              '<span>' + esc(a.text || (a.lat != null ? "Pinned on the map" : "")) + '</span>' +
+            '</button>';
+          }).join("") +
+          '<button class="addrcard new" id="coNewAddr"><b>+ Somewhere else</b></button>' +
+          '</div>'
+        :
+          '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" rows="2" ' +
+            'placeholder="House, landmark, area">' + esc(CO_DRAFT.text || "") + '</textarea>' +
+          '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
+            '<span class="spi">📍</span>' +
+            '<span class="spt"><b id="coSpotT">' + (PIN ? "Pin set" : "Drop a pin") + '</b>' +
+            '<small id="coSpotS">' + (PIN ? PIN.lat.toFixed(4) + ", " + PIN.lng.toFixed(4)
+                                          : "The rider follows the pin") + '</small></span>' +
+            '<span class="spgo">' + (PIN ? "Change" : "Map") + '</span>' +
+          '</button>' +
+          '<div class="labelrow">' + ["Home","Work","Other"].map(function(l){
+            return '<button class="chip' + ((CO_DRAFT.label || "Home") === l ? " on" : "") +
+              '" data-lbl="' + l + '">' + l + '</button>';
+          }).join("") + '</div>' +
+          '<button class="shopbtn big" id="coNext">Continue</button>' +
+          (me.addrs.length ? '<button class="linky center" id="coBackPick">Use a saved address</button>' : '')));
 
-      /* A card, not a map. Tapping opens a picker that fills the
-         screen, where dragging actually works. */
-      '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
-        '<span class="spi">\uD83D\uDCCD</span>' +
-        '<span class="spt"><b id="coSpotT">' +
-          (PIN ? "Your spot is set" : "Show us where to bring it") + '</b>' +
-          '<small id="coSpotS">' +
-          (PIN ? PIN.lat.toFixed(5) + ", " + PIN.lng.toFixed(5)
-               : "The rider follows this, not the address.") +
-          '</small></span>' +
-        '<span class="spgo">' + (PIN ? "Change" : "Set on map") + '</span>' +
-      '</button>' +
-
-      '<input class="fld" id="coNote"  placeholder="Anything we should know? (optional)">' +
-      '<div class="total"><span>' + cartCount() + ' item(s)</span><b>' +
-        rupee(cartTotal()) + '</b></div>' +
-      '<button class="shopbtn big" id="coGo">Place the order</button>' +
-      '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>');
-
-    mountMap(saved);
-
-    el("coGo").onclick = function(){
-      var name  = el("coName").value.trim(),
-          phone = el("coPhone").value.trim(),
-          addr  = el("coAddr").value.trim();
-      /* The number is the whole account. Everything else can be
-         sorted out on the phone, but without a number nobody can
-         be called back. */
-      if(!digitsOnly(phone)){ shopToast("We need a phone number."); return; }
-      if(!addr && !PIN){ shopToast("An address or a pin on the map, please."); return; }
-      send(name, phone, addr);
-    };
-  }
-
-  /* ---- one way out, used by both --------------------------- */
-  function send(name, phone, addr){
-    if(!CART.length){
-      shopToast("Your cart is empty.");
-      location.hash = "#/cart";
+    if(picking){
+      main.querySelectorAll("[data-pick]").forEach(function(b){
+        b.onclick = function(){
+          var a = me.addrs[+b.dataset.pick];
+          CO_ADDR = a; PIN = (a.lat != null) ? { lat:a.lat, lng:a.lng } : null;
+          CO_STEP = 3; viewCheckout(main);
+        };
+      });
+      el("coNewAddr").onclick = function(){ CO_NEWADDR = true; PIN = null; CO_DRAFT = {}; viewCheckout(main); };
       return;
     }
-    /* Changing an order that is in: the same order is rewritten,
-       so the board shows one card, not two. If the kitchen said
-       yes while they were choosing, the door has shut, and the
-       change becomes a phone call rather than a silent surprise. */
-    if(AMEND){
-      var was = STORE.order(AMEND);
-      if(!was){ setAmend(null); }
-      else if(was.status !== "placed"){
-        setAmend(null);
-        CART = []; saveCart(); paintFab();
-        shopToast("That order has already been accepted \u2014 please call us to change it.");
-        location.hash = "#/o/" + was.id;
-        return;
-      } else {
-        var note2 = el("coNote");
-        STORE.edit(was.id, {
-          lines: CART.slice(), total: cartTotal(),
-          note: (note2 && note2.value.trim()) || was.note || "",
-          changedAt: Date.now(), changedBy: "customer"
-        });
-        var id2 = was.id;
-        setAmend(null);
-        CART = []; saveCart(); paintFab(); CO_EDIT = false;
-        shopToast("Order updated.");
-        location.hash = "#/o/" + id2;
-        return;
-      }
-    }
-    try{ localStorage.setItem("hayat_me", JSON.stringify(
-      { name:name, phone:phone, addr:addr,
-        lat:PIN&&PIN.lat, lng:PIN&&PIN.lng })); }catch(e){}
+    mountMap(PIN);           /* keep whatever pin this draft has; a new place starts blank */
+    main.querySelectorAll("[data-lbl]").forEach(function(b){
+      b.onclick = function(){
+        CO_DRAFT.text = el("coAddr").value; CO_DRAFT.label = b.dataset.lbl; viewCheckout(main);
+      };
+    });
+    var bp = el("coBackPick");
+    if(bp) bp.onclick = function(){ CO_NEWADDR = false; viewCheckout(main); };
+    el("coNext").onclick = function(){
+      var text = el("coAddr").value.trim();
+      if(!text && !PIN){ shopToast("An address, or a pin on the map."); return; }
+      CO_ADDR = { label: CO_DRAFT.label || nextLabel(me), text: text,
+                  lat: PIN && PIN.lat, lng: PIN && PIN.lng };
+      CO_NEWADDR = false; CO_DRAFT = {};
+      CO_STEP = 3; viewCheckout(main);
+    };
+  }
+
+  /* ---- 3. check and send ---------------------------------- */
+  function stepConfirm(){
+    var a = CO_ADDR || me.addrs[0];
+    if(a && a.lat != null && !PIN) PIN = { lat:a.lat, lng:a.lng };
+    main.innerHTML = shell(AMEND ? "Update the order" : "Send it",
+      stepDots(3, 3) +
+      '<div class="coto">' +
+        '<div class="cotol">Deliver to</div>' +
+        '<div class="cotow"><b>' + esc(a.label || "") + '</b> ' +
+          esc(a.text || (a.lat != null ? "the pin on the map" : "")) + '</div>' +
+        '<div class="coton">' + esc(me.name ? me.name + " · " : "") + esc(prettyPhone(me.phone)) + '</div>' +
+        '<div class="cotoacts">' +
+          '<button class="linky" id="coChange">Change address</button>' +
+          '<button class="linky" id="coWho">Not you?</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="lines slim">' + CART.map(function(l){
+        return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
+          (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
+          '<div class="lq">×' + l.q + '</div>' +
+          '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
+      }).join("") + '</div>' +
+      '<div class="total"><span>Total · pay on delivery</span><b>' + rupee(cartTotal()) + '</b></div>' +
+      '<input class="fld" id="coNote" placeholder="A note for the rider (optional)">' +
+      '<button class="shopbtn big" id="coGo">' + (AMEND ? "Update the order" : "Place the order") + '</button>' +
+      '<button class="linky center" data-go="#/cart">Back to the cart</button>');
+
+    el("coChange").onclick = function(){ CO_STEP = 2; CO_NEWADDR = false; viewCheckout(main); };
+    el("coWho").onclick = function(){ CO_STEP = 1; viewCheckout(main); };
+    el("coGo").onclick = function(){ send(me.name || "", me.phone, a); };
+  }
+
+  /* ---- one way out ---------------------------------------- */
+  function send(name, phone, a){
+    if(!CART.length){ shopToast("Your cart is empty."); location.hash = "#/cart"; return; }
+    var addr = a.text || "";
+    /* the book remembers this one as most recent */
+    bookAddrs(me, a); me.name = name; me.phone = phone; me.addr = addr;
+    me.lat = a.lat; me.lng = a.lng; saveMe(me);
 
     var note = el("coNote");
-    var o = {
-      name:name, phone:phone, addr:addr,
-      note: note ? note.value.trim() : "",
-      lines: CART.slice(),
-      total: cartTotal()
-    };
-    if(PIN){ o.lat = +PIN.lat.toFixed(6); o.lng = +PIN.lng.toFixed(6); }
+    if(AMEND){
+      var was = STORE.order(AMEND);
+      if(was && was.status === "placed"){
+        STORE.edit(was.id, { lines: CART.slice(), total: cartTotal(), addr: addr,
+          lat: a.lat != null ? +(+a.lat).toFixed(6) : was.lat, lng: a.lng != null ? +(+a.lng).toFixed(6) : was.lng,
+          note: (note && note.value.trim()) || was.note || "", changedAt: Date.now(), changedBy: "customer" });
+        var id2 = was.id; setAmend(null); CART = []; saveCart(); paintFab(); CO_STEP = null; CO_ADDR = null;
+        shopToast("Order updated."); location.hash = "#/o/" + id2; return;
+      }
+      setAmend(null);
+      if(was){ CART = []; saveCart(); paintFab(); CO_STEP = null;
+        shopToast("That order has already been accepted — please call us to change it.");
+        location.hash = "#/o/" + was.id; return; }
+    }
+    var o = { name:name, phone:phone, addr:addr, note: note ? note.value.trim() : "",
+              lines: CART.slice(), total: cartTotal() };
+    if(a.lat != null){ o.lat = +(+a.lat).toFixed(6); o.lng = +(+a.lng).toFixed(6); }
     var id = STORE.place(o);
     if(!id){ shopToast("Something went wrong. Nothing was ordered."); return; }
-    CART = []; saveCart();
-    CO_EDIT = false;
+    CART = []; saveCart(); paintFab(); CO_STEP = null; CO_ADDR = null; CO_EDIT = false;
     location.hash = "#/o/" + id;
   }
 }
+
+/* where the checkout is: null means "work it out" */
+var CO_STEP = null, CO_ADDR = null, CO_NEWADDR = false, CO_DRAFT = {};
+window.addEventListener("hashchange", function(){
+  if(!/^#\/checkout/.test(location.hash)){ CO_STEP = null; CO_ADDR = null; CO_NEWADDR = false; CO_DRAFT = {}; }
+});
 
 /* set while they are correcting a remembered address, so the
    short screen does not immediately draw over the long one */
@@ -2490,7 +2563,6 @@ function viewOrder(main, id){
       ? '<div class="sched"><b>\u23F1 Coming ' + esc(whenWanted(o)) + '</b>' +
         '<small>We will start it in good time.</small></div>'
       : '') +
-    installBar() +
     payBlock(o, "customer") +
     noteThread(o, "Anything we should know? Gate code, landmark\u2026") +
     (o.status === "placed" && (o.lines || []).length
@@ -2512,7 +2584,8 @@ function viewOrder(main, id){
   };
 
   wireNotes(main, id, function(){ viewOrder(main, id); });
-  wireInstall(function(){ viewOrder(main, id); });
+  /* they have just placed something worth coming back to */
+  if(o.status !== "cancelled") setTimeout(installSheet, 1800);
 
   var cb = el("obCancel");
   if(cb) cb.onclick = function(){
@@ -5713,6 +5786,47 @@ function canOfferInstall(){
   return !!theOffer() || isApple();
 }
 
+/* ------------------------------------------------------------
+   INSTALL, AS A SHEET
+
+   Not a bar wedged into the page. One sheet, from the bottom,
+   after the moment they have something worth keeping - an order
+   on its way - and only once a day. Two buttons: Install, Not
+   now. On an iPhone the same sheet shows the two Safari steps.
+   ------------------------------------------------------------ */
+function installSheet(){
+  if(!canOfferInstall()) return;
+  if(riderApp()) return;
+  try{ if(sessionStorage.getItem("hayat_sheet_shown") === "1") return; }catch(e){}
+  if(el("instSheet")) return;
+  var apple = !theOffer() && isApple();
+  var safari = /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios/i.test(navigator.userAgent);
+  var box = document.createElement("div");
+  box.className = "sheetwrap"; box.id = "instSheet";
+  box.innerHTML =
+    '<div class="sheet install">' +
+      '<img class="sheeticon" src="assets/icon-192.png" alt="">' +
+      '<b class="sheett">Keep Hayat on your phone</b>' +
+      '<p class="sheetsub">' + (apple
+        ? (safari ? 'Tap <b>Share</b> below, then <b>Add to Home Screen</b>.'
+                  : 'Open this page in <b>Safari</b>, then Share \u2192 Add to Home Screen.')
+        : 'Opens like an app. Order again in two taps, and follow your rider.') + '</p>' +
+      (apple ? '' : '<button class="shopbtn big" id="instGo">Install</button>') +
+      '<button class="linky center" id="instNo">Not now</button>' +
+    '</div>';
+  document.body.appendChild(box);
+  try{ sessionStorage.setItem("hayat_sheet_shown", "1"); }catch(e){}
+  var close = function(){ box.remove(); };
+  el("instNo").onclick = function(){ dismissInstall(); close(); };
+  box.onclick = function(e){ if(e.target === box) close(); };
+  var go = el("instGo");
+  if(go) go.onclick = function(){
+    if(!theOffer()){ close(); return; }
+    OFFER.prompt();
+    OFFER.userChoice.then(function(r){ if(r && r.outcome === "accepted") OFFER = null; close(); });
+  };
+}
+
 function installBar(){
   if(!canOfferInstall()) return "";
   var rider = riderApp();
@@ -5793,6 +5907,10 @@ document.addEventListener("focusout", function(){
 
 function route(p, main){
   REPAINT = null;
+  /* cart, checkout, an order: the customer is mid-task. The menu
+     search in the header is for browsing and only distracts here. */
+  try{ document.body.classList.toggle("inflow",
+    /^(cart|checkout|o|quick|orders|seen)$/.test(p[0] || "")); }catch(e){}
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&

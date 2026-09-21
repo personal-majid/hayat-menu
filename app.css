@@ -2022,3 +2022,42 @@ body.phoneorder header .brand h1{font-size:15px}
 .rowadd .step{min-height:34px}
 .rowpick{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--gold2,#e8c37a);
   opacity:.85;padding:0 6px;white-space:nowrap}
+
+/* ---- checkout in three steps ------------------------------- */
+.stepdots{display:flex;gap:6px;justify-content:center;margin:2px 0 16px}
+.stepdots i{width:22px;height:4px;border-radius:2px;background:var(--line,#2b241c);display:block}
+.stepdots i.done{background:color-mix(in srgb,var(--gold,#e8c37a) 55%,transparent)}
+.stepdots i.now{background:var(--gold,#e8c37a)}
+.stepq{font-size:17px;font-weight:600;margin:0 0 14px;letter-spacing:-.01em}
+
+.addrbook{display:flex;flex-direction:column;gap:9px;margin-bottom:10px}
+.addrcard{display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:inherit;
+  cursor:pointer;background:var(--card,#1a1510);border:1px solid var(--line,#2b241c);
+  border-radius:14px;padding:14px 16px}
+.addrcard b{font-size:15px}
+.addrcard span{font-size:13.5px;opacity:.72;line-height:1.4}
+.addrcard:hover{border-color:var(--gold,#e8c37a)}
+.addrcard.new{background:transparent;border-style:dashed;align-items:center}
+.addrcard.new b{font-size:14px;opacity:.8}
+
+.labelrow{display:flex;gap:8px;margin:2px 0 14px}
+.labelrow .chip{border:1px solid var(--line,#2b241c);background:transparent;color:inherit;
+  font:inherit;font-size:13px;padding:7px 14px;border-radius:999px;cursor:pointer;opacity:.7}
+.labelrow .chip.on{opacity:1;border-color:var(--gold,#e8c37a);
+  background:color-mix(in srgb,var(--gold,#e8c37a) 14%,transparent)}
+
+.cotoacts{display:flex;gap:16px;margin-top:9px}
+.cotoacts .linky{margin:0;font-size:13px}
+.linky.center{display:block;margin:10px auto 0;text-align:center}
+.lines.slim .line{padding:10px 2px}
+
+/* mid-task: no menu search in the header */
+body.phoneorder.inflow #search{display:none !important}
+
+/* the install sheet */
+.sheet.install{text-align:center;padding:22px 20px 20px}
+.sheeticon{width:64px;height:64px;border-radius:16px;margin:0 auto 12px;display:block;
+  box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.sheett{display:block;font-size:18px;font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.sheet.install .sheetsub{margin:0 0 16px;font-size:14px;line-height:1.5}
+.sheet.install .shopbtn{margin:0}
