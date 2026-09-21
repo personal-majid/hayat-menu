@@ -3156,11 +3156,11 @@ var INTRO = (function(){
    followed a link to a particular page — a review card, an order they are
    tracking, the office — came for that page, not for a film. */
 function introWelcome(){
-  /* The welcome film belongs to the tablet on the table. On a
-     phone it was opening underneath the ordering screen, where
-     nobody ever saw it, and pulling its poster down anyway -
-     a quarter of a megabyte before the first button. */
-  if(orderingOnPhone()) return false;
+  /* The welcome film plays on the tablet on the table - the one
+     opened with ?us - and nowhere else. Every other screen is
+     somebody trying to order or work, and a film in front of
+     them is a pain. */
+  if(!KIOSK) return false;
   var h = location.hash || "";
   return h === "" || h === "#" || h === "#/";
 }
