@@ -1805,6 +1805,11 @@ const KIOSK = (MODE === "tablet");
 /* shop.js needs to know which front door this is: the tablet on a
    table wants the menu, a phone off a WhatsApp link wants to order. */
 window.HAYAT_KIOSK = KIOSK;
+/* A phone ordering dinner does not want the tablet's furniture:
+   the theme picker, the photo/list toggle, full screen, the
+   gallery, the footer with three more buttons in it. The class
+   lets the stylesheet take them away in one place. */
+try{ if(orderingOnPhone()) document.body.classList.add("phoneorder"); }catch(e){}
 /* #/us was only a marker — drop straight into the menu */
 if(/#\/us\b/.test(location.hash)) location.hash = "#/";
 var IG_OK = null;                      /* null = unknown, true/false after probe */
@@ -2400,6 +2405,14 @@ function wireFeedback(s){
   if(skip) skip.onclick=thanks;
 }
 
+/* On a phone, a dish with one price is added from the row. The
+   tablet is a menu to read, not a till, so it gets nothing. */
+function rowCtl(it){
+  if(!orderingOnPhone()) return "";
+  try{ return window.SHOP && window.SHOP.rowControl ? window.SHOP.rowControl(it) : ""; }
+  catch(e){ return ""; }
+}
+
 /* ---------------- category ---------------- */
 function viewCat(id){
   const c=MENU.find(x=>x.id===id); if(!c) return viewHome();
@@ -2409,10 +2422,10 @@ function viewCat(id){
   let table, toggle="";
   if(c.layout==="paper"){
     table=`<div class="paper"><div class="rows">${items.map(it=>`
-      <button class="row" data-go="#/d/${c.id}/${it.id}">${thumb(it)}
+      <div class="prowwrap"><button class="row" data-go="#/d/${c.id}/${it.id}">${thumb(it)}
         <span><span class="n">${esc(NM(it))}${tagHtml(it)}</span>
         ${it.desc?`<span class="d">${esc(it.desc)}</span>`:""}</span>
-        <span class="p">${rup(it.price)}</span></button>`).join("")}</div></div>`;
+        <span class="p">${rup(it.price)}</span></button>${rowCtl(it)}</div>`).join("")}</div></div>`;
   } else {
     const variants=[...new Set(items.flatMap(it=>it.matrix?it.matrix.rows.map(r=>r[0]):[]))]
                      .filter(v=>v!=="Price");
@@ -2431,10 +2444,10 @@ function viewCat(id){
     table=`${toggle}<div class="plist">
       ${items.some(it=>it.matrix)?`<div class="phead"><span></span><span></span>
         ${QHF.map(h=>`<span>${T(h)}</span>`).join("")}</div>`:""}
-      ${items.map(it=>`<button class="prow${it.anchor?" anchor":""}" data-go="#/d/${c.id}/${it.id}">
+      ${items.map(it=>`<div class="prowwrap"><button class="prow${it.anchor?" anchor":""}" data-go="#/d/${c.id}/${it.id}">
         ${thumb(it)}<span class="pl"><span class="n">${esc(NM(it))}${tagHtml(it)}</span>
         ${it.desc?`<span class="d">${esc(it.desc)}</span>`:""}</span>
-        ${cells(it)}</button>`).join("")}</div>`;
+        ${cells(it)}</button>${rowCtl(it)}</div>`).join("")}</div>`;
   }
 
   const cards=`<div class="pgrid">${items.map(it=>`
@@ -2452,8 +2465,11 @@ function viewCat(id){
     slideShow(c)+
     head(SN(c),c.tagline)+
     (c.note?`<p class="secsub" style="margin-top:-14px">${esc(c.note)}</p>`:"")+
-    (VIEW==="photo" ? toggle+cards : table)+
-    upsellStrip(c.id)+
+    (VIEW==="photo" && !orderingOnPhone() ? toggle+cards : table)+
+    /* "Goes well with" under Mandi showed fish fry, mojito and
+       parota, and on a phone that read as three more mandis. It
+       stays on the dish page, where it belongs. */
+    (orderingOnPhone() ? "" : upsellStrip(c.id))+
     backBottom("#/",T("backMenu"));
   wireSlides();
   restoreScroll();

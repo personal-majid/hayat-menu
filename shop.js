@@ -983,6 +983,31 @@ function wa(number, text){
 
 /* ---------- the cart (this browser only) ------------------- */
 var CART = [];
+
+/* ------------------------------------------------------------
+   CHANGING AN ORDER THAT IS ALREADY IN
+
+   Somebody forgot the bread. Until the kitchen has said yes, that
+   is their order to change, and making them cancel and start
+   again - or ring - is a small cruelty we do not need. So the
+   order's lines come back into the cart, and when they send it
+   the same order is updated. Once it is accepted the door shuts
+   and the button becomes a phone number.
+   ------------------------------------------------------------ */
+var AMEND = null;
+try{ AMEND = sessionStorage.getItem("hayat_amend") || null; }catch(e){}
+function setAmend(id){
+  AMEND = id || null;
+  try{ if(AMEND) sessionStorage.setItem("hayat_amend", AMEND);
+       else sessionStorage.removeItem("hayat_amend"); }catch(e){}
+}
+/* still allowed? the order must exist, be theirs, and be untouched */
+function amendable(){
+  if(!AMEND) return null;
+  var o = STORE.order(AMEND);
+  if(!o || o.status !== "placed"){ setAmend(null); return null; }
+  return o;
+}
 try{ CART = JSON.parse(localStorage.getItem("hayat_cart")) || []; }catch(e){ CART = []; }
 function saveCart(){
   try{ localStorage.setItem("hayat_cart", JSON.stringify(CART)); }catch(e){}
@@ -1414,8 +1439,12 @@ function paintCallFab(){
     document.body.appendChild(f);
   }
   var h = location.hash || "";
-  f.hidden = cartCount() > 0 ||
-             /^#\/(admin|drive|o|quick|checkout|cart)\b/.test(h);
+  /* The landing already has this as its one big button; a second
+     copy floating over it is exactly the clutter it replaced. It
+     shows only once they have gone into the menu. */
+  var onLanding = (h === "" || h === "#" || h === "#/") && wantsLanding();
+  f.hidden = cartCount() > 0 || onLanding ||
+             /^#\/(admin|drive|o|quick|checkout|cart|orders|seen)\b/.test(h);
 }
 
 /* ---------- the floating cart button ----------------------- */
@@ -1650,8 +1679,12 @@ function viewCart(main){
     wireCartFinder(main);
     return;
   }
-  main.innerHTML = shell("Your cart",
-    signInStrip() +
+  var am = amendable();
+  main.innerHTML = shell(am ? "Changing order " + esc(am.id) : "Your cart",
+    (am ? '<div class="amendbar"><b>You are changing order ' + esc(am.id) + '</b>' +
+          '<small>Add or remove, then send it again. It replaces what we have.</small>' +
+          '<button class="linky" id="amendNo">Leave it as it was</button></div>' : '') +
+    (am ? '' : signInStrip()) +
     cartFinder() +
     '<div class="lines">' + CART.map(function(l){
       return '<div class="line">' +
@@ -1665,11 +1698,17 @@ function viewCart(main){
         '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
     }).join("") + '</div>' +
     '<div class="total"><span>Total</span><b>' + rupee(cartTotal()) + '</b></div>' +
-    '<button class="shopbtn" data-go="#/checkout">Checkout</button>' +
+    '<button class="shopbtn" data-go="#/checkout">' + (am ? "Update the order" : "Checkout") + '</button>' +
     '<button class="shopbtn ghost" data-go="#/">Browse the menu</button>');
 
   wireCartFinder(main);
   wireSignIn(main, function(){ viewCart(main); });
+  var an = el("amendNo");
+  if(an) an.onclick = function(){
+    var id = AMEND; setAmend(null);
+    CART = []; saveCart(); paintFab();
+    location.hash = "#/o/" + id;
+  };
 }
 
 /* What we already know about the person ordering.
@@ -1731,7 +1770,10 @@ function kiosk(){ return !!window.HAYAT_KIOSK; }
 
 function wantsLanding(){
   if(riderApp() || kiosk()) return false;
-  try{ if(sessionStorage.getItem("hayat_browsing") === "1") return false; }catch(e){}
+  /* There used to be a "browsing" flag here that, once set, handed
+     #/ back to the tablet's home page - so a phone had two home
+     screens, and an empty cart could land you on "Watch the
+     intro". On a phone, #/ is this screen. Always. */
   /* a desk is for looking; a phone in a hand is for ordering */
   try{ return window.matchMedia("(max-width: 820px)").matches; }catch(e){ return false; }
 }
@@ -1842,6 +1884,7 @@ function viewLanding(main){
       '<div class="landfoot">' +
         (shop ? callBtn(shop, "Call the restaurant", "landlink") : '') +
         (mine.length ? '<a class="landlink" href="#/orders">Your orders</a>' : '') +
+        installLink() +
       '</div>' +
 
       installBar() +
@@ -1851,7 +1894,6 @@ function viewLanding(main){
      has stood aside. The flag is what stops it drawing over us
      again on the next repaint. */
   var browse = function(hash){
-    try{ sessionStorage.setItem("hayat_browsing", "1"); }catch(e){}
     REPAINT = null;
     location.hash = hash || "#/";
     try{ window.dispatchEvent(new HashChangeEvent("hashchange")); }catch(e){
@@ -1877,6 +1919,7 @@ function viewLanding(main){
   };
 
   wireInstall(function(){ viewLanding(main); });
+  wireInstallLink(function(){ viewLanding(main); });
 }
 
 function viewQuick(main){
@@ -2038,7 +2081,7 @@ function viewCheckout(main){
       '</div>' +
 
       '<input class="fld" id="coNote" placeholder="Anything we should know? (optional)">' +
-      '<button class="shopbtn big" id="coGo">Place the order</button>' +
+      '<button class="shopbtn big" id="coGo">' + (AMEND ? "Update the order" : "Place the order") + '</button>' +
       '<p class="shopnote">Pay on delivery. We will call if anything is unclear.</p>');
 
     el("coChange").onclick = function(){
@@ -2103,6 +2146,34 @@ function viewCheckout(main){
       shopToast("Your cart is empty.");
       location.hash = "#/cart";
       return;
+    }
+    /* Changing an order that is in: the same order is rewritten,
+       so the board shows one card, not two. If the kitchen said
+       yes while they were choosing, the door has shut, and the
+       change becomes a phone call rather than a silent surprise. */
+    if(AMEND){
+      var was = STORE.order(AMEND);
+      if(!was){ setAmend(null); }
+      else if(was.status !== "placed"){
+        setAmend(null);
+        CART = []; saveCart(); paintFab();
+        shopToast("That order has already been accepted \u2014 please call us to change it.");
+        location.hash = "#/o/" + was.id;
+        return;
+      } else {
+        var note2 = el("coNote");
+        STORE.edit(was.id, {
+          lines: CART.slice(), total: cartTotal(),
+          note: (note2 && note2.value.trim()) || was.note || "",
+          changedAt: Date.now(), changedBy: "customer"
+        });
+        var id2 = was.id;
+        setAmend(null);
+        CART = []; saveCart(); paintFab(); CO_EDIT = false;
+        shopToast("Order updated.");
+        location.hash = "#/o/" + id2;
+        return;
+      }
     }
     try{ localStorage.setItem("hayat_me", JSON.stringify(
       { name:name, phone:phone, addr:addr,
@@ -2420,10 +2491,23 @@ function viewOrder(main, id){
     installBar() +
     payBlock(o, "customer") +
     noteThread(o, "Anything we should know? Gate code, landmark\u2026") +
+    (o.status === "placed" && (o.lines || []).length
+      ? '<button class="shopbtn ghost" id="obChange">Change this order</button>'
+      : '') +
     (canCancel
       ? '<button class="shopbtn ghost danger" id="obCancel">Cancel this order</button>'
       : '<p class="shopnote">To change anything now, please call us.</p>') +
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+
+  var ch = el("obChange");
+  if(ch) ch.onclick = function(){
+    CART = (o.lines || []).map(function(l){
+      return { k: l.id + "|" + (l.label || ""), id: l.id, name: l.name,
+               label: l.label || "", price: l.price, q: l.q };
+    });
+    saveCart(); setAmend(o.id); paintFab();
+    location.hash = "#/cart";
+  };
 
   wireNotes(main, id, function(){ viewOrder(main, id); });
   wireInstall(function(){ viewOrder(main, id); });
@@ -2852,6 +2936,53 @@ function wireSeen(main){
   });
 }
 
+/* ------------------------------------------------------------
+   THE BUSINESS DAY
+
+   The shop opens at eleven and closes at one in the morning, so
+   "today" on the board is not midnight to midnight - an order
+   delivered at half past midnight belongs to the evening that
+   is still going. The day starts at opening time; before that,
+   we are still in yesterday's.
+   ------------------------------------------------------------ */
+function shiftStart(){
+  var h = ((C().hours || {}).open || "11:00").split(":");
+  var d = new Date();
+  d.setHours(+h[0] || 11, +h[1] || 0, 0, 0);
+  if(Date.now() < d.getTime()) d.setDate(d.getDate() - 1);
+  return d.getTime();
+}
+
+/* Delivered and settled, and from a day that is over: off the
+   board. It is still in the book and the list; the board is for
+   what is happening, not what happened. Unpaid stays until it is
+   paid, because unpaid is still happening. */
+function onBoard(o){
+  if(o.status === "cancelled") return false;
+  if(o.status !== "delivered") return true;
+  if(!o.paid) return true;
+  var when = (o.log || []).filter(function(l){ return l.s === "delivered"; }).pop();
+  var t = when ? when.at : o.at;
+  return t >= shiftStart();
+}
+
+/* what the day has done so far */
+function takings(orders){
+  var since = shiftStart();
+  var t = { n:0, sum:0, paid:0, open:0, openSum:0 };
+  orders.forEach(function(o){
+    if(o.status === "cancelled") return;
+    if(o.status !== "delivered" && o.status !== "cancelled"){ t.open++; t.openSum += (o.total || 0); }
+    if(o.at < since && o.status !== "delivered") return;
+    var when = (o.log || []).filter(function(l){ return l.s === "delivered"; }).pop();
+    var at = when ? when.at : o.at;
+    if(at < since) return;
+    t.n++; t.sum += (o.total || 0);
+    if(o.paid) t.paid += (o.total || 0);
+  });
+  return t;
+}
+
 function paintAdmin(main){
   learnDoorsteps();
   checkCodes();
@@ -2860,6 +2991,7 @@ function paintAdmin(main){
   var live   = orders.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; });
   var done   = orders.filter(function(o){ return o.status === "delivered"; });
   var pinned = orders.filter(function(o){ return o.lat && o.lng && o.status !== "cancelled"; });
+  var tk     = takings(orders);
   var shown  = mapMatches(orders);
   var blind  = mapBlind(orders);
 
@@ -2880,9 +3012,12 @@ function paintAdmin(main){
           }).join("") +
         '</div>' +
         '<div class="adminbar">' +
-          '<span class="pill">' + live.length + ' live</span>' +
-          '<span class="pill quiet">' + done.length + '</span>' +
-          (gone.length ? '<span class="pill gone">' + gone.length + '</span>' : '') +
+          '<span class="pill money" title="Delivered since opening today">' +
+            'Today <b>' + rupee(tk.sum) + '</b><small>' + tk.n + (tk.n === 1 ? ' order' : ' orders') +
+            (tk.sum > tk.paid ? ' \u00b7 ' + rupee(tk.sum - tk.paid) + ' to collect' : '') + '</small></span>' +
+          '<span class="pill">' + live.length + ' live' +
+            (live.length ? '<small>' + rupee(tk.openSum) + '</small>' : '') + '</span>' +
+          (gone.length ? '<span class="pill gone" title="Cancelled">' + gone.length + '</span>' : '') +
         '</div>' +
       '</div>' +
 
@@ -2895,7 +3030,7 @@ function paintAdmin(main){
               : '<p class="shopsub floatnote">No orders yet.</p>')
 
           : ADVIEW === "board"
-          ? (orders.length ? boardHtml(orders.filter(function(o){ return o.status !== "cancelled"; }))
+          ? (orders.length ? boardHtml(orders.filter(onBoard))
                            : '<p class="shopsub">No orders yet.</p>')
 
           : '<div class="conscroll">' +
@@ -2991,8 +3126,10 @@ function boardHtml(orders){
                     .sort(function(a,b){ return wantedAt(a) - wantedAt(b); });
     /* the head stays put, the cards under it scroll on their own,
        so a busy column never pushes the others off the screen */
+    var money = col.reduce(function(n,o){ return n + (o.total || 0); }, 0);
     return '<div class="col">' +
       '<div class="colhead"><b>' + esc(STEP[st].t) + '</b>' +
+        (col.length ? '<span class="colsum">' + rupee(money) + '</span>' : '') +
         '<span class="cnt">' + col.length + '</span></div>' +
       '<div class="colbody">' +
         (col.length ? col.map(boardCard).join("")
@@ -3048,24 +3185,92 @@ function boardCard(o){
       (isLater(o)
         ? '<span class="latertag">\u23F1 ' + esc(whenWanted(o)) + '</span>'
         : '<span class="btime">' + when(o.at) + '</span>') + '</div>' +
-    '<div class="bname">' + esc(o.name) + '</div>' +
-    '<div class="baddr">' + esc(o.addr) + '</div>' +
-    (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' from us</div>' : '') +
+    '<div class="bname">' + esc(o.name || prettyPhone(o.phone)) + '</div>' +
+    /* What is IN the order is what the kitchen and the rider talk
+       about; the whole address is noise on a board. One line of
+       items on the card, and the full address plus every line in
+       the tooltip for anybody who hovers or presses and holds. */
+    (empty ? '' : '<div class="bitems" title="' + esc(orderLine(o)) + '">' + esc(orderLine(o)) + '</div>') +
+    '<div class="baddr" title="' + esc(o.addr || "") + '">' + esc(shortAddr(o.addr)) + '</div>' +
+    (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' away</div>' : '') +
     '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
       payTag(o) +
       (discountLabel(o) ? '<span class="offtag">' + esc(discountLabel(o)) + '</span>' : '') +
       (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
+    /* The contact row is four small words, not four buttons. The
+       one button on a card is the thing that moves the order on;
+       everything else is there when you need it and quiet when
+       you do not. */
     '<div class="quick">' +
       '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
         esc(waCustomer(o, waText)) +
         '" title="Message the customer">WhatsApp</a>' +
+      callBtn(o.phone, "Call", "qbtn") +
       (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
         '" title="Route from the shop">Maps</a>' : '') +
-      callBtn(o.phone, "Call", "qbtn") +
       '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit' +
         noteTag(o) + '</a>' +
     '</div>' +
-    act + '</div>';
+    act +
+    /* Decline lives under Accept, small, and asks why - the reason
+       is what the customer is told, so it has to be a real one. It
+       is never the first thing on the card. */
+    (o.status === "placed" && !ticket
+      ? '<button class="declink" data-decline="' + esc(o.id) + '">Decline\u2026</button>'
+      : '') +
+    '</div>';
+}
+
+/* ------------------------------------------------------------
+   SAYING NO PROPERLY
+
+   Zomato's merchant app found that asking for a reason cut
+   rejections and support calls: the customer hears something
+   true instead of nothing. Each reason here writes the message
+   the customer gets, and one of them - out of stock - is worth
+   the office knowing about tomorrow too.
+   ------------------------------------------------------------ */
+var DECLINE_WHY = [
+  { k:"stock",  t:"Something is out of stock",
+    msg:"Sorry \u2014 one of the items you ordered has run out tonight. Call us and we will sort out something else." },
+  { k:"far",    t:"Too far to deliver",
+    msg:"Sorry \u2014 that address is outside where we can deliver tonight." },
+  { k:"busy",   t:"Kitchen is full right now",
+    msg:"Sorry \u2014 the kitchen is full right now and we cannot take this in time. Please try again in a while." },
+  { k:"closed", t:"We are closed",
+    msg:"Sorry \u2014 we are closed at the moment. We open at 11 am." },
+  { k:"reach",  t:"Cannot reach the customer",
+    msg:"We tried to call about your order and could not reach you. Call us when you are free and we will make it." }
+];
+
+function declineSheet(id){
+  var o = STORE.order(id);
+  if(!o) return;
+  var old = el("declSheet"); if(old) old.remove();
+  var box = document.createElement("div");
+  box.className = "sheetwrap"; box.id = "declSheet";
+  box.innerHTML =
+    '<div class="sheet">' +
+      '<div class="sheeth"><b>Decline ' + esc(o.id) + '</b>' +
+        '<button class="linky" id="declX">Keep it</button></div>' +
+      '<p class="sheetsub">Why? The customer is told this.</p>' +
+      DECLINE_WHY.map(function(w){
+        return '<button class="sheetopt" data-why="' + w.k + '">' + esc(w.t) + '</button>';
+      }).join("") +
+    '</div>';
+  document.body.appendChild(box);
+  el("declX").onclick = function(){ box.remove(); };
+  box.onclick = function(e){ if(e.target === box) box.remove(); };
+  box.querySelectorAll("[data-why]").forEach(function(b){
+    b.onclick = function(){
+      var w = DECLINE_WHY.filter(function(x){ return x.k === b.dataset.why; })[0];
+      STORE.setStatus(id, "cancelled", { declined: w.k, declinedAt: Date.now() });
+      box.remove();
+      /* the customer hears why, in their WhatsApp, in one tap */
+      try{ window.open(waCustomer(o, "Hayat \u2014 order " + o.id + "\n\n" + w.msg), "_blank", "noopener"); }catch(e){}
+      shopToast("Declined \u2014 " + w.t.toLowerCase() + ".");
+    };
+  });
 }
 
 /* both views use the same buttons, so they are wired in one place */
@@ -3075,6 +3280,9 @@ function wireCards(main){
       var p = b.dataset.adv.split("|");
       STORE.setStatus(p[0], p[1]);
     };
+  });
+  main.querySelectorAll("[data-decline]").forEach(function(b){
+    b.onclick = function(){ declineSheet(b.dataset.decline); };
   });
   main.querySelectorAll("[data-assign]").forEach(function(sel){
     sel.onchange = function(){
@@ -3101,6 +3309,17 @@ function mapsFromShop(o){
          "&destination=" + encodeURIComponent(d) + "&travelmode=driving";
 }
 function waCustomer(o, text){ return wa(o.phone, text); }
+
+/* The first landmark, not the whole essay. Makkaraparamba
+   addresses are directions, and directions belong to the rider's
+   screen, not a card that has to sit beside six others. */
+function shortAddr(a){
+  a = String(a || "").trim();
+  if(!a) return "";
+  var first = a.split(/[,\n]/)[0].trim();
+  if(first.length > 44) first = first.slice(0, 42) + "\u2026";
+  return first;
+}
 
 function orderLine(o){
   return (o.lines || []).map(function(l){
@@ -3308,7 +3527,8 @@ function distLabel(o){
   if(o.roadKm) return o.roadKm.toFixed(1) + " km" + (o.roadMin ? " \u00b7 " + o.roadMin + " min" : "");
   if(!o.lat || !o.lng) return "";
   var km = kmFrom(o.lat, o.lng);
-  return (km < 1 ? Math.round(km * 1000) + " m" : km.toFixed(1) + " km") + " \u2248";
+  /* the ~ goes in front: "~1.3 km away" reads; "1.3 km ~ away" does not */
+  return "\u2248 " + (km < 1 ? Math.round(km * 1000) + " m" : km.toFixed(1) + " km");
 }
 
 /* ---- real road distance, once, when the order arrives --------
@@ -3961,23 +4181,23 @@ function paintCustomers(main){
 
   var os = el("oStart");
   if(os) os.onclick = function(){
-    OFFER = offerDefault(); OSENT = {}; offerSave();
+    BLAST = offerDefault(); BSENT = {}; offerSave();
     paintCustomers(main);
     var t = el("oText"); if(t){ t.focus(); t.select(); }
   };
   var ox = el("oStop");
-  if(ox) ox.onclick = function(){ OFFER = null; OSENT = {}; offerSave(); paintCustomers(main); };
+  if(ox) ox.onclick = function(){ BLAST = null; BSENT = {}; offerSave(); paintCustomers(main); };
   var ot = el("oText");
-  if(ot) ot.oninput = function(){ OFFER = ot.value; offerSave(); };
+  if(ot) ot.oninput = function(){ BLAST = ot.value; offerSave(); };
 
   main.querySelectorAll("[data-off]").forEach(function(b){
     b.onclick = function(){
       /* marked before the window opens - if it is blocked or they
          close it, the office still knows where they had got to */
-      OSENT[b.dataset.off] = true; offerSave();
+      BSENT[b.dataset.off] = true; offerSave();
       b.classList.add("done"); b.textContent = "Sent";
-      var n = el("oText"); if(n) OFFER = n.value;
-      window.open(wa(b.dataset.offp, OFFER || ""), "_blank", "noopener");
+      var n = el("oText"); if(n) BLAST = n.value;
+      window.open(wa(b.dataset.offp, BLAST || ""), "_blank", "noopener");
     };
   });
 
@@ -4014,7 +4234,7 @@ function paintCustomers(main){
 }
 
 /* ------------------------------------------------------------
-   AN OFFER, SENT BY HAND, FOR NOTHING
+   AN BLAST, SENT BY HAND, FOR NOTHING
 
    The WhatsApp Business API charges per marketing message and
    has no free tier. A wa.me link costs nothing, because it is
@@ -4028,17 +4248,17 @@ function paintCustomers(main){
    interrupted halfway and there is nothing worse than losing
    your place and sending the same thing twice.
    ------------------------------------------------------------ */
-var OFFER = null;      /* the text being sent, or null when closed */
-var OSENT = {};        /* phone -> true, for the run in progress */
+var BLAST = null;      /* the text being sent, or null when closed */
+var BSENT = {};        /* phone -> true, for the run in progress */
 
-try{ OFFER = sessionStorage.getItem("hayat_offer") || null; }catch(e){}
-try{ OSENT = JSON.parse(sessionStorage.getItem("hayat_osent") || "{}"); }catch(e){}
+try{ BLAST = sessionStorage.getItem("hayat_offer") || null; }catch(e){}
+try{ BSENT = JSON.parse(sessionStorage.getItem("hayat_osent") || "{}"); }catch(e){}
 
 function offerSave(){
   try{
-    if(OFFER === null) sessionStorage.removeItem("hayat_offer");
-    else sessionStorage.setItem("hayat_offer", OFFER);
-    sessionStorage.setItem("hayat_osent", JSON.stringify(OSENT));
+    if(BLAST === null) sessionStorage.removeItem("hayat_offer");
+    else sessionStorage.setItem("hayat_offer", BLAST);
+    sessionStorage.setItem("hayat_osent", JSON.stringify(BSENT));
   }catch(e){}
 }
 
@@ -4049,17 +4269,17 @@ function offerDefault(){
 }
 
 function offerBar(list){
-  if(OFFER === null){
+  if(BLAST === null){
     return '<div class="offbar">' +
       '<button class="chip offgo" id="oStart">\u2709 Send an offer to these ' +
         list.length + '</button>' +
     '</div>';
   }
-  var left = list.filter(function(c){ return !OSENT[c.id]; }).length;
+  var left = list.filter(function(c){ return !BSENT[c.id]; }).length;
   return '<div class="offbox">' +
     '<div class="offhead"><b>Offer to ' + list.length + ' customers</b>' +
       '<button class="linky" id="oStop">Done</button></div>' +
-    '<textarea class="fld" id="oText" rows="4">' + esc(OFFER) + '</textarea>' +
+    '<textarea class="fld" id="oText" rows="4">' + esc(BLAST) + '</textarea>' +
     '<p class="offnote">' + left + ' still to send. WhatsApp opens with this ' +
       'already typed \u2014 you press send. Free, one at a time.</p>' +
   '</div>';
@@ -4098,10 +4318,10 @@ function custRow(c){
         '">Map</a>'
       : '') +
     seen +
-    (OFFER !== null
-      ? '<button class="linky off' + (OSENT[c.id] ? " done" : "") + '" ' +
+    (BLAST !== null
+      ? '<button class="linky off' + (BSENT[c.id] ? " done" : "") + '" ' +
         'data-off="' + esc(c.id) + '" data-offp="' + esc(c.phone) + '">' +
-        (OSENT[c.id] ? "Sent" : "Send") + '</button>'
+        (BSENT[c.id] ? "Sent" : "Send") + '</button>'
       : '') +
     callBtn(c.phone, "Call", "linky") +
     (ok ? '' : '<button class="linky ver" data-ver="' + esc(c.id) +
@@ -4920,7 +5140,13 @@ function askGps(){
    ------------------------------------------------------------ */
 var SEEN_EVERY = 3600000;        /* an hour */
 
-function markSeen(){
+/* Named pingWhereabouts and not markSeen: the rider code above
+   already has a markSeen(ids) that remembers which jobs have been
+   rung for. v100 shipped a second markSeen() here, the later one
+   won, and every rider check found nothing remembered and rang
+   again - on every phone that had ever signed in as a rider,
+   including the owner's, in the customer app. */
+function pingWhereabouts(){
   if(riderApp() || kiosk()) return;              /* customers only */
   if(!navigator.geolocation || !navigator.permissions) return;
 
@@ -5404,12 +5630,42 @@ function isApple(){
   return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
+/* "Not now" used to mean "never again", which is how the owner
+   himself ended up unable to find the install offer. Now it means
+   a week. And the footer keeps a small permanent link, so nobody
+   has to wait for a bar to come back. */
+var INSTALL_SNOOZE = 7 * 86400000;
 function installDismissed(){
-  try{ return localStorage.getItem("hayat_noinstall") === "1"; }catch(e){ return false; }
+  try{
+    var v = localStorage.getItem("hayat_noinstall");
+    if(!v) return false;
+    if(v === "1") return false;                /* the old forever flag: forgiven */
+    return (Date.now() - (+v || 0)) < INSTALL_SNOOZE;
+  }catch(e){ return false; }
 }
 function dismissInstall(){
-  try{ localStorage.setItem("hayat_noinstall", "1"); }catch(e){}
+  try{ localStorage.setItem("hayat_noinstall", String(Date.now())); }catch(e){}
   offerFire();
+}
+/* the always-there way in, for the footer */
+function installLink(){
+  if(installed()) return "";
+  if(!theOffer() && !isApple()) return "";
+  return '<button class="landlink" id="getAppLink">Install the app</button>';
+}
+function wireInstallLink(repaint){
+  var l = el("getAppLink");
+  if(!l) return;
+  l.onclick = function(){
+    try{ localStorage.removeItem("hayat_noinstall"); }catch(e){}
+    if(theOffer()){
+      OFFER.prompt();
+      OFFER.userChoice.then(function(r){
+        if(r && r.outcome === "accepted") OFFER = null;
+        if(repaint) repaint();
+      });
+    } else if(repaint) repaint();              /* Apple: the bar with the two steps */
+  };
 }
 
 /* The page caught this in its head, before we existed - Chrome
@@ -5567,8 +5823,10 @@ function route(p, main){
 STORE.onChange(function(){
   repaintNow();
   /* a rider signed in on this phone gets told about work wherever
-     they are in the app, not only on the deliveries page */
-  try{ if(riderPhone()) checkForWork(); }catch(e){}
+     they are in the RIDER app. The customer app is a different
+     front door; a phone that once signed in as a rider must not
+     ring like one when its owner is ordering dinner. */
+  try{ if(riderApp() && riderPhone()) checkForWork(); }catch(e){}
 });
 
 document.addEventListener("click", function(e){
@@ -5676,9 +5934,21 @@ if(riderApp()){
   });
 })();
 
+/* For a category row on a phone: a dish with one price gets Add
+   right there; a dish with sizes says Choose and opens. The row
+   is a [data-row] so repaintRows() turns Add into a stepper in
+   place after the first tap. */
+function rowControl(it){
+  var ch = choices(it);
+  if(ch.length === 1) return '<span class="rowadd" data-row="' + esc(it.id) + '|' +
+    esc(ch[0].label) + '">' + addControl(it.id, ch[0].label, ch[0].price) + '</span>';
+  return '<span class="rowpick">Choose \u203A</span>';
+}
+
 window.SHOP = {
   route: route,
   dishButtons: dishButtons,
+  rowControl: rowControl,
   repaintRows: repaintRows,
   paintFab: paintFab,
   store: STORE,
@@ -5688,6 +5958,6 @@ paintFab();
 
 /* After the page is up and doing its job, not before. Nothing on
    screen waits for this and nothing breaks if it never runs. */
-try{ setTimeout(markSeen, 4000); }catch(e){}
+try{ setTimeout(pingWhereabouts, 4000); }catch(e){}
 
 })();
