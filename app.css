@@ -2177,3 +2177,48 @@ body.phoneorder #search{display:none !important}
 .rdot{width:10px;height:10px;border-radius:50%;background:#6fcf8e;grid-row:span 2}
 .rdot.away{background:#e0a33a}
 .rdot.off{background:#777}
+
+/* ---- the board card, read top to bottom ----------------------
+   who / what / where / money / do. One type size for the name, one
+   for the rest, the code demoted to grey. */
+.bcard{padding:12px 12px 8px}
+.bhead{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.bwho{flex:1 1 auto;min-width:0;font-size:15px;font-weight:750;color:var(--cream);
+  letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bhead .btime,.bhead .latertag{margin-left:0;flex:0 0 auto}
+.bwhat{font-size:12.5px;line-height:1.45;color:var(--cream);margin-bottom:6px;cursor:help}
+.bwhat > div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bmore{font-size:11.5px;color:var(--muted)}
+.bwhere{font-size:11.5px;color:var(--muted);margin-bottom:8px;cursor:help;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bmoney{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.bmoney .btot{font-size:15px}
+.bmoney .rname{margin-left:0;font-size:11.5px}
+.bid{margin-left:auto;font-size:10.5px;color:var(--muted);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.bcard .quick{margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+.bcard .quick .declink{width:auto;margin-left:auto;padding:4px 0;font-size:11.5px;opacity:.7;text-align:right}
+.bcard .quick .declink:hover{color:#e07a7a;opacity:1}
+.bcard button.mini{margin-top:0}
+
+/* ---- v113: riders strip on the office map ----
+   Sits under the Board / List / Map tabs; the filter bars own the
+   bottom-left. Light, like the tabs, so it reads on any theme. */
+.riderstrip{position:absolute;left:14px;top:82px;z-index:1100;display:flex;flex-direction:column;gap:5px;
+  max-width:min(88%,330px);pointer-events:auto}
+.rsrow{display:grid;grid-template-columns:10px auto 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:center;
+  text-align:left;padding:7px 12px;border-radius:12px;border:0;
+  background:rgba(255,255,255,.94);color:#1B2410;font:inherit;cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,.12);backdrop-filter:blur(6px)}
+.rsrow:hover{box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.rsrow .rdot{grid-row:span 2;width:10px;height:10px;border-radius:50%;background:#9A8A6C}
+.rsrow.f-live .rdot{background:#8FBE43;box-shadow:0 0 0 3px rgba(143,190,67,.28)}
+.rsrow.f-stale .rdot{background:#F2A33C}
+.rsrow.f-cold .rdot{background:#9A8A6C}
+.rsrow.f-none .rdot{background:transparent;border:2px dashed #E4705A}
+.rsname{font-weight:800;font-size:13px;white-space:nowrap}
+.rsline{font-size:12px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsjobs{grid-column:2 / span 2;font-size:11px;opacity:.5;letter-spacing:.2px}
+.rsrow.f-none .rsline{color:#C2412B;opacity:1;font-weight:600}
+.omark.bike.f-old .bikedot{opacity:.5;filter:grayscale(1)}
+.omark.bike.f-old .tag{opacity:.7}
+@media (max-width:860px){ .riderstrip{left:8px;top:78px;max-width:92%} .rsline{white-space:normal} }

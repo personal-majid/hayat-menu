@@ -545,10 +545,19 @@ var STORE = {
     var o = DB.orders[id];
     if(!o) return;
     o.rLat = +lat.toFixed(6); o.rLng = +lng.toFixed(6); o.rAt = Date.now();
+    /* The rider keeps their own last position too. An order's
+       position is wiped when it is delivered; the rider is still
+       somewhere, and the office wants to see where before the
+       next job's first ping. */
+    var r = o.riderId ? DB.riders[o.riderId] : null;
+    if(r){ r.lat = o.rLat; r.lng = o.rLng; r.at = o.rAt; }
     if(FB){
       FB.api.updateDoc(FB.api.doc(FB.db, "orders", id),
         { rLat:o.rLat, rLng:o.rLng, rAt:o.rAt })
         .catch(function(e){ console.warn("ping", e); });
+      if(r) FB.api.updateDoc(FB.api.doc(FB.db, "riders", r.id),
+        { lat:r.lat, lng:r.lng, at:r.at })
+        .catch(function(e){ console.warn("ping rider", e); });
       fire();
     } else lsWrite();
   },
@@ -964,6 +973,10 @@ var STORE = {
 
 /* ---------- the steps an order goes through ---------------- */
 var FLOW = ["placed","accepted","assigned","on_way","delivered"];
+/* A button is a verb. "Accepted" describes a card; "Accept" is what
+   the finger is about to do. */
+var DOING = { accepted:"Accept", assigned:"Assign a rider", on_way:"On the way", delivered:"Mark delivered" };
+function doWord(st){ return DOING[st] || (STEP[st] && STEP[st].t) || st; }
 var STEP = {
   placed:    { t:"Order placed",  s:"We have it. Confirming now." },
   accepted:  { t:"Accepted",      s:"The kitchen has started." },
@@ -2273,12 +2286,12 @@ function viewCheckout(main){
 
   /* ---- 1. the number --------------------------------------- */
   function stepPhone(){
-    main.innerHTML = shell("What number should the rider call?",
+    main.innerHTML = shell("Who is this for?",
       stepDots(1, 3) +
       '<input class="fld big" id="coPhone" name="tel" type="tel" autocomplete="tel" ' +
         'inputmode="tel" placeholder="Phone number" value="' + esc(me.phone || "") + '">' +
       '<input class="fld" id="coName" name="name" autocomplete="name" ' +
-        'placeholder="Your name (optional)" value="' + esc(me.name || "") + '">' +
+        'placeholder="Your name" value="' + esc(me.name || "") + '">' +
       '<button class="shopbtn big" id="coNext">Continue</button>' +
       (STORE.myOrders().length ? '' :
         '<button class="linky center" id="coOld">Ordered before on another phone?</button>'));
@@ -2290,7 +2303,11 @@ function viewCheckout(main){
     var go = function(){
       var ph = el("coPhone").value.trim();
       if(!phoneKey(ph) || phoneKey(ph).length < 10){ shopToast("A ten-digit mobile number, please."); el("coPhone").focus(); return; }
-      me.phone = ph; me.name = el("coName").value.trim(); saveMe(me);
+      /* The name is what the rider calls out at the gate and what
+         the board shows the kitchen. Asked once; never again. */
+      var nm = el("coName").value.trim();
+      if(!nm){ shopToast("And your name, so the rider knows who to ask for."); el("coName").focus(); return; }
+      me.phone = ph; me.name = nm; saveMe(me);
       CO_STEP = me.addrs.length ? 3 : 2;
       viewCheckout(main);
     };
@@ -3428,7 +3445,7 @@ function boardCard(o){
     act = '<button class="mini" data-assignpick="' + o.id + '">Assign a rider</button>';
   } else if(next){
     act = '<button class="mini" data-adv="' + o.id + '|' + next + '">' +
-          esc(STEP[next].t) + '</button>';
+          esc(doWord(next)) + '</button>';
   }
 
   /* Before it is accepted the office may still want to talk to the
@@ -3440,47 +3457,56 @@ function boardCard(o){
              : (o.status === "accepted") ? msgAccepted(o)
              : msgOnWay(o);
 
+  /* Five lines, in the order a kitchen reads them: who, what,
+     where, how much, and the one thing to do next. The order code
+     is small and grey - people say names, not codes. Every other
+     action is a quiet word underneath. */
+  var lines = (o.lines || []);
+  var shown = lines.slice(0, 3).map(function(l){
+    return l.q + "× " + l.name + (l.label ? " (" + l.label + ")" : "");
+  });
+  var more = lines.length > 3 ? ' <span class="bmore">+' + (lines.length - 3) + ' more</span>' : '';
+  var where = [shortAddr(o.addr), distLabel(o) ? distLabel(o) + " away" : ""].filter(Boolean).join(" · ");
+
   return '<div class="bcard' + (ticket ? " ticket" : empty ? " empty" : "") +
       (isLater(o) ? " later" : "") + '">' +
-    (ticket ? '<div class="tkflag">\u260E Wants a call \u00b7 nothing written down yet</div>' : '') +
-    '<div class="brow"><b>' + esc(o.id) + '</b>' +
+    (ticket ? '<div class="tkflag">☎ Wants a call · nothing written down yet</div>' : '') +
+
+    '<div class="bhead">' +
+      '<b class="bwho">' + esc(o.name || prettyPhone(o.phone)) + '</b>' +
       (isLater(o)
-        ? '<span class="latertag">\u23F1 ' + esc(whenWanted(o)) + '</span>'
-        : '<span class="btime">' + when(o.at) + '</span>') + '</div>' +
-    '<div class="bname">' + esc(o.name || prettyPhone(o.phone)) + '</div>' +
-    /* What is IN the order is what the kitchen and the rider talk
-       about; the whole address is noise on a board. One line of
-       items on the card, and the full address plus every line in
-       the tooltip for anybody who hovers or presses and holds. */
-    (empty ? '' : '<div class="bitems" title="' + esc(orderLine(o)) + '">' + esc(orderLine(o)) + '</div>') +
-    '<div class="baddr" title="' + esc(o.addr || "") + '">' + esc(shortAddr(o.addr)) + '</div>' +
-    (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' away</div>' : '') +
-    '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
+        ? '<span class="latertag">⏱ ' + esc(whenWanted(o)) + '</span>'
+        : '<span class="btime">' + when(o.at) + '</span>') +
+    '</div>' +
+
+    (empty ? '' :
+      '<div class="bwhat" title="' + esc(orderLine(o)) + '">' +
+        shown.map(function(t){ return '<div>' + esc(t) + '</div>'; }).join("") + more +
+      '</div>') +
+
+    (where ? '<div class="bwhere" title="' + esc(o.addr || "") + '">' + esc(where) + '</div>' : '') +
+
+    '<div class="bmoney">' +
+      '<span class="btot">' + rupee(o.total) + '</span>' +
       payTag(o) +
       (discountLabel(o) ? '<span class="offtag">' + esc(discountLabel(o)) + '</span>' : '') +
-      (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
-    /* The contact row is four small words, not four buttons. The
-       one button on a card is the thing that moves the order on;
-       everything else is there when you need it and quiet when
-       you do not. */
-    '<div class="quick">' +
-      '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
-        esc(waCustomer(o, waText)) +
-        '" title="Message the customer">WhatsApp</a>' +
-      callBtn(o.phone, "Call", "qbtn") +
-      (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
-        '" title="Route from the shop">Maps</a>' : '') +
-      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit' +
-        noteTag(o) + '</a>' +
+      (rider ? '<span class="rname">🏍 ' + esc(rider.name) + '</span>' : '') +
+      '<span class="bid">' + esc(o.id) + '</span>' +
     '</div>' +
+
     act +
-    /* Decline lives under Accept, small, and asks why - the reason
-       is what the customer is told, so it has to be a real one. It
-       is never the first thing on the card. */
-    (o.status === "placed" && !ticket
-      ? '<button class="declink" data-decline="' + esc(o.id) + '">Decline\u2026</button>'
-      : '') +
-    '</div>';
+
+    '<div class="quick">' +
+      callBtn(o.phone, "Call", "qbtn") +
+      '<a class="qbtn wa" target="_blank" rel="noopener" href="' + esc(waCustomer(o, waText)) +
+        '" title="Message the customer">WhatsApp</a>' +
+      (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
+        '" title="Route from the shop">Map</a>' : '') +
+      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit' + noteTag(o) + '</a>' +
+      (o.status === "placed" && !ticket
+        ? '<button class="qbtn declink" data-decline="' + esc(o.id) + '">Decline</button>' : '') +
+    '</div>' +
+  '</div>';
 }
 
 /* ------------------------------------------------------------
@@ -3727,7 +3753,7 @@ function orderCard(o){
     action = '<button class="shopbtn small" data-assignpick="' + o.id + '">Assign a rider</button>';
   else if(next)
     action = '<button class="shopbtn small" data-adv="' + o.id + '|' + next + '">' +
-             esc(STEP[next].t) + '</button>';
+             esc(doWord(next)) + '</button>';
 
   return '<div class="ocard">' +
     '<div class="orow"><b>' + esc(o.id) + '</b>' +
@@ -4108,6 +4134,70 @@ function heatTop(list){
   '</div>';
 }
 
+/* Who is out carrying something, and where each of them is.
+   One entry per rider. Position comes from the freshest live
+   order ping, failing that the rider's own last position, failing
+   that nothing - and the entry says so in words. */
+function ridersOnMap(orders){
+  var by = {};
+  orders.forEach(function(o){
+    if(o.status !== "assigned" && o.status !== "on_way") return;
+    if(!o.riderId) return;
+    var s = by[o.riderId];
+    if(!s){
+      var r = STORE.rider(o.riderId);
+      s = by[o.riderId] = { id:o.riderId, name:(r && r.name) || "Rider",
+                            r:r, jobs:[], lat:null, lng:null, at:0, own:false };
+    }
+    s.jobs.push(o);
+    if(o.rLat && (o.rAt || 0) > s.at){ s.lat = o.rLat; s.lng = o.rLng; s.at = o.rAt; }
+  });
+  return Object.keys(by).map(function(k){
+    var s = by[k];
+    if(!s.lat && s.r && s.r.lat){ s.lat = s.r.lat; s.lng = s.r.lng; s.at = s.r.at || 0; s.own = true; }
+    s.fresh = staleness(s.at);
+    var opened = s.jobs.some(function(o){ return o.status === "on_way" || o.rAt; });
+    s.line = !s.at
+      ? (opened ? "phone is not sharing its location" : "has not opened the job yet")
+      : s.own
+        ? "last seen " + s.fresh.txt + " · before this job"
+        : s.fresh.state === "live" ? "moving now"
+        : "last seen " + s.fresh.txt + " — the phone may have slept";
+    return s;
+  }).sort(function(a,b){ return (b.at || 0) - (a.at || 0); });
+}
+
+/* The strip on the map: every rider with a job, in one line each,
+   whether or not they could be drawn. Tapping a row goes to them. */
+function riderStrip(box, spots){
+  var old = box.querySelector(".riderstrip");
+  if(old) old.remove();
+  if(!spots.length) return;
+  var d = document.createElement("div");
+  d.className = "riderstrip";
+  d.innerHTML = spots.map(function(s){
+    var k = !s.at ? "none" : s.own ? "cold" : s.fresh.state;
+    return '<button class="rsrow f-' + k + '" data-rs="' + esc(s.id) + '">' +
+      '<span class="rdot"></span>' +
+      '<span class="rsname">' + esc(shortName(s.name)) + '</span>' +
+      '<span class="rsline">' + esc(s.line) + '</span>' +
+      '<span class="rsjobs">' + s.jobs.map(function(o){ return esc(o.id); }).join(", ") + '</span>' +
+    '</button>';
+  }).join("");
+  d.addEventListener("click", function(e){
+    var b = e.target.closest("[data-rs]"); if(!b) return;
+    var s = spots.filter(function(x){ return x.id === b.getAttribute("data-rs"); })[0];
+    if(!s) return;
+    if(s.lat && AMAP){ AMAP.setView([s.lat, s.lng], Math.max(AMAP.getZoom(), 15)); return; }
+    location.hash = "#/admin/o/" + s.jobs[0].id;
+  });
+  /* Leaflet must not take these taps as a drag on the map */
+  ["mousedown","touchstart","dblclick","wheel"].forEach(function(t){
+    d.addEventListener(t, function(e){ e.stopPropagation(); }, { passive:true });
+  });
+  box.appendChild(d);
+}
+
 function drawAdminMap(list, blind){
   var box = el("admap");
   if(!box) return;
@@ -4142,26 +4232,31 @@ function drawAdminMap(list, blind){
 
     var pts = [[HOME.lat, HOME.lng]];
 
-    /* a rider on the road, only while the ride is actually live */
-    riding.filter(function(o){
-      return o.rLat && (o.status === "assigned" || o.status === "on_way");
-    }).forEach(function(o){
-      var r = o.riderId ? STORE.rider(o.riderId) : null;
-      var fresh = staleness(o.rAt);
-      pts.push([o.rLat, o.rLng]);
-      LF.marker([o.rLat, o.rLng], { zIndexOffset: 500, icon: LF.divIcon({
-        className: "omark bike f-" + fresh.state,
+    /* Every rider with a job, once - not once per order. A rider
+       who has not opened the job yet has no position on the order,
+       but usually has a last one of their own; that is drawn,
+       marked as old, so the office at least knows where they were.
+       A rider with no position at all is still listed in the strip
+       below, because "not on the map" must never read as "fine". */
+    var spots = ridersOnMap(riding);
+    spots.forEach(function(s){
+      if(!s.lat) return;
+      pts.push([s.lat, s.lng]);
+      LF.marker([s.lat, s.lng], { zIndexOffset: 500, icon: LF.divIcon({
+        className: "omark bike f-" + (s.own ? "old" : s.fresh.state),
         html: '<span class="bikedot">\uD83C\uDFCD</span>' +
-              '<span class="tag">' + esc(r ? shortName(r.name) : "Rider") +
-              ' \u00b7 ' + esc(o.id) + '</span>',
+              '<span class="tag">' + esc(shortName(s.name)) +
+              ' \u00b7 ' + s.jobs.length + (s.jobs.length > 1 ? " jobs" : " job") + '</span>',
         iconSize: null, iconAnchor: [14, 14] }) })
         .addTo(AMAP).bindPopup(
-          "<b>" + esc(r ? r.name : "Rider") + "</b><br>" +
-          "carrying " + esc(o.id) + "<br>" +
-          "last seen " + esc(fresh.txt) +
-          (fresh.state === "live" ? "" : " \u2014 the phone may have slept") + "<br>" +
-          '<a href="#/admin/o/' + esc(o.id) + '">Open the order</a>');
+          "<b>" + esc(s.name) + "</b><br>" +
+          esc(s.line) + "<br>" +
+          s.jobs.map(function(o){
+            return '<a href="#/admin/o/' + esc(o.id) + '">' + esc(o.id) + '</a> \u00b7 ' +
+                   esc(shortName(o.name)) + ' \u00b7 ' + esc(STEP[o.status].t);
+          }).join("<br>"));
     });
+    riderStrip(box, spots);
 
     list.forEach(function(o){
       pts.push([o.lat, o.lng]);
@@ -4194,13 +4289,17 @@ function drawAdminMap(list, blind){
           className: "omark" + (wants ? " wants" : ""),
           html: '<span class="dot" style="background:' + statusColour(o.status) + '"></span>' +
                 '<span class="tag">' + (wants ? '\u25CF ' : '') +
-                esc(shortName(o.name)) + ' \u00b7 ' + rupee(o.total) + '</span>',
+                esc(shortName(o.name)) + ' \u00b7 ' + rupee(o.total) +
+                (o.riderId && o.status !== "delivered"
+                  ? ' \u00b7 \uD83C\uDFCD ' + esc(shortName((STORE.rider(o.riderId) || {}).name || "rider"))
+                  : '') + '</span>',
           iconSize: null, iconAnchor: [7, 7]
         })
       }).addTo(AMAP).bindPopup(
         "<b>" + esc(o.id) + "</b> \u00b7 " + esc(STEP[o.status].t) +
         (wants ? ' \u00b7 <b class="wantsr">no rider yet</b>' : "") + "<br>" +
         esc(o.name) + "<br>" + rupee(o.total) +
+        (o.riderId ? " \u00b7 \ud83c\udfcd " + esc((STORE.rider(o.riderId) || {}).name || "rider") : "") +
         (distLabel(o) ? " \u00b7 " + distLabel(o) + " away" : "") + "<br>" +
         picker +
         '<a href="#/admin/o/' + esc(o.id) + '"><b>Open the order</b></a><br>' +
@@ -5292,7 +5391,14 @@ function paintRiders(main){
     var n = el("rName").value.trim(), p = el("rPhone").value.trim();
     if(!n || !p){ shopToast("Name and phone, please."); return; }
     var id = STORE.addRider(n, p);
-    if(id){ el("rName").value = ""; el("rPhone").value = ""; }
+    if(id){
+      el("rName").value = ""; el("rPhone").value = "";
+      /* the invite goes the same moment: link plus code, on WhatsApp,
+         so nobody has to find the rider later to hand it over */
+      var r = STORE.rider(id);
+      if(r){ try{ window.open(riderInvite(r), "_blank", "noopener"); }catch(e){} }
+      shopToast(n + " added \u2014 WhatsApp is open with their link and code.");
+    }
   };
   el("rAdd").onclick = addRider;
   onEnter(el("rName"),  addRider);
@@ -5667,15 +5773,27 @@ function viewDriveHome(main){
   var me = whoAmI();
 
   if(!me){
+    /* The link the office sent carries the number; the code came
+       with it in the same WhatsApp message. Number plus code, once.
+       After that the phone is remembered and this screen is never
+       seen again. */
+    var joinId = "";
+    try{ joinId = sessionStorage.getItem("hayat_join") || ""; }catch(e){}
+    var known = joinId || riderPhone();
     main.innerHTML = shell("Rider",
-      '<p class="revsub">Sign in with the number the restaurant registered for you.</p>' +
-      '<input class="fld" id="rvPhone" placeholder="Your phone number" inputmode="tel" value="' +
-        esc(riderPhone()) + '">' +
+      '<p class="revsub">Type your number and the code the restaurant sent you on WhatsApp.</p>' +
+      '<input class="fld" id="rvPhone" placeholder="Your phone number" inputmode="tel" ' +
+        'autocomplete="tel" value="' + esc(known) + '">' +
+      '<input class="fld big" id="rvCode" placeholder="6-digit code" inputmode="numeric" ' +
+        'autocomplete="one-time-code" maxlength="6">' +
       '<button class="shopbtn" id="rvGo">Sign in</button>' +
-      (riderPhone() ? '<p class="shopnote">That number is not on the rider list. ' +
-        'Ask the office to add it.</p>' : '') +
+      '<p class="shopnote" id="rvWhy"></p>' +
       backToMenu());
     var signIn = function(){
+      var ph = el("rvPhone").value.trim(), code = el("rvCode").value.trim();
+      var why = el("rvWhy");
+      if(!phoneKey(ph)){ why.textContent = "Your phone number, please."; el("rvPhone").focus(); return; }
+      if(code.length < 4){ why.textContent = "The code from the WhatsApp message."; el("rvCode").focus(); return; }
       /* This tap is the only gesture the browser will let us spend.
          Sound, alerts and location all have to be asked for here,
          while a finger is still on the screen - not later, in the
@@ -5683,13 +5801,36 @@ function viewDriveHome(main){
       armSound();
       try{ if("Notification" in window && Notification.permission === "default")
              Notification.requestPermission(); }catch(e){}
-      setRiderPhone(el("rvPhone").value.trim());
-      askGps().then(function(){ viewDriveHome(main); });
-      viewDriveHome(main);
+      var b = el("rvGo"); b.disabled = true; b.textContent = "Checking\u2026";
+      var ok = function(){
+        setRiderPhone(phoneKey(ph));
+        askGps().then(function(){ viewDriveHome(main); });
+        viewDriveHome(main);
+      };
+      var no = function(msg){
+        b.disabled = false; b.textContent = "Sign in";
+        why.textContent = msg || "That code does not match this number. Check the WhatsApp message, or ask the office.";
+        el("rvCode").focus();
+      };
+      var r = STORE.rider(phoneKey(ph));
+      if(!r || r.off){ no("That number is not on the rider list. Ask the office to add you."); return; }
+      if(STORE.live() && ME.uid){
+        /* the rules do the comparing; a wrong code is refused */
+        STORE.claimRider(ph, code).then(ok).catch(function(e){
+          var c = (e && e.code) || "";
+          no(c === "permission-denied" ? "" : "Could not sign in - check your connection and try again.");
+        });
+      } else {
+        /* no identity to claim with (anonymous sign-in off, or
+           offline): compare here. Until the rules are published
+           this is what runs. */
+        if(String(r.code) === code) ok(); else no();
+      }
     };
     el("rvGo").onclick = signIn;
-    onEnter(el("rvPhone"), signIn);
-    el("rvPhone").focus();
+    onEnter(el("rvPhone"), function(){ el("rvCode").focus(); });
+    onEnter(el("rvCode"), signIn);
+    (known ? el("rvCode") : el("rvPhone")).focus();
     return;
   }
 
@@ -5781,7 +5922,7 @@ function viewDrive(main, id){
     '<div class="total"><span>Collect</span><b>' + rupee(o.total) + '</b></div>' +
     '<div class="status big s-' + o.status + '">' + esc(STEP[o.status].t) + '</div>' +
     payBlock(o, "rider") +
-    (next ? '<button class="shopbtn" id="dvGo">' + esc(STEP[next].t) + '</button>'
+    (next ? '<button class="shopbtn" id="dvGo">' + esc(doWord(next)) + '</button>'
           : '<p class="shopnote">Done. Thank you.</p>') +
     /* Read from the order, not set by hand, so a repaint cannot
        quietly undo it - that is how the last one went wrong. */
@@ -6394,6 +6535,11 @@ if(riderApp()){
     function paint(){
       var h = (location.hash || "").replace(/^#\/?/, "");
       var p = h.split("/").filter(Boolean);
+
+      /* the invite link arrives as #join=<phone>: keep the number
+         for the sign-in form, then settle on the normal hash */
+      var jm = h.match(/^join=(\d+)/);
+      if(jm){ try{ sessionStorage.setItem("hayat_join", jm[1]); }catch(e){} }
 
       /* a rider app has exactly two screens */
       if(p[0] === "drive" && p[1]){
