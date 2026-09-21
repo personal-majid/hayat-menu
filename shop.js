@@ -54,7 +54,7 @@ function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} });
 try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
-var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, seq:100 };
+var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
 var FAULT = null;              /* why it is not live, in one word */
 
@@ -62,8 +62,8 @@ var FAULT = null;              /* why it is not live, in one word */
 function lsRead(){
   try{ var d = JSON.parse(localStorage.getItem(KEY)) || {};
     return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{},
-             verify:d.verify||{}, pings:d.pings||{}, seq:d.seq||100 }; }
-  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, seq:100 }; }
+             verify:d.verify||{}, pings:d.pings||{}, menus:d.menus||{}, seq:d.seq||100 }; }
+  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, seq:100 }; }
 }
 function lsWrite(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
@@ -279,6 +279,7 @@ async function connectFirebase(cfg){
   watch("customers", "customers");
   watch("verify", "verify");
   watch("pings",  "pings");
+  watch("menus",  "menus");
 
   /* ask the REST endpoint once, so a missing database is named plainly
      instead of showing up later as writes that quietly disappear */
@@ -635,8 +636,9 @@ var STORE = {
         .then(function(){ return true; })
         .catch(function(){ return false; });
     }
-    /* offline: compare here, because there are no rules to do it */
-    if(String(code).trim() === v.code){ v.ok = true; lsWrite(); return true; }
+    /* offline: compare here, because there are no rules to do it -
+       and link the orders, which is the whole point of the code */
+    if(String(code).trim() === v.code){ v.codeTry = String(code).trim(); STORE.approveSight(id); return true; }
     return false;
   },
 
@@ -716,6 +718,31 @@ var STORE = {
   },
 
   pings: function(){ return DB.pings; },
+
+  /* ---- how the menu is arranged --------------------------
+     The dishes come from menu-data.js (and one day from a CSV).
+     WHERE they sit and whether they show is the office's call,
+     made from a phone, and kept here as one small document:
+
+       menus/layout = { cats:[id...], hide:{catId:true},
+                        items:{catId:[itemId...]}, off:{itemId:true} }
+
+     Nothing about a dish is copied; only its order and its
+     switch. A new CSV import keeps whatever arrangement is here
+     and appends anything it has not seen. */
+  layout: function(){ return (DB.menus && DB.menus.layout) || {}; },
+
+  saveLayout: function(l){
+    l = Object.assign({}, l, { at: Date.now(), by: myVoice() });
+    DB.menus = DB.menus || {};
+    DB.menus.layout = l;
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "menus", "layout"), l)
+        .catch(function(e){ console.warn("saveLayout", e); });
+      fire();
+    } else lsWrite();
+    return l;
+  },
 
   /* ---- is this really them? ------------------------------
      Two ways a number becomes trusted. Either they typed the
@@ -1517,6 +1544,9 @@ function wireSignIn(main, after){
 }
 
 /* The customer's side of proving a number on a new phone. */
+function seekPrefill(){
+  try{ return sessionStorage.getItem("hayat_seek") || meRecord().phone || ""; }catch(e){ return ""; }
+}
 function viewSeeOld(main){
   var v = SEEKING ? STORE.verifyRow(SEEKING) : null;
   var asked = !!v;
@@ -1527,16 +1557,11 @@ function viewSeeOld(main){
       ? '<p class="revsub">On a new phone? Two ways to get your ' +
         'orders back.</p>' +
 
-        /* Instant, if they ever signed in: nobody has to approve
-           anything, because Google already proved who they are. */
-        (STORE.live() && STORE.isGuest()
-          ? '<button class="shopbtn" id="soGoogle">Sign in with Google</button>' +
-            '<p class="opt">Instant, if you used it before.</p>' +
-            '<div class="orline"><span>or</span></div>'
-          : '') +
-
+        /* One way, not two. Google's popup drew as a black box on
+           phones, and a code on WhatsApp is something everybody here
+           understands. */
         '<input class="fld big" id="soPhone" type="tel" inputmode="tel" ' +
-          'autocomplete="tel" placeholder="Phone number">' +
+          'autocomplete="tel" placeholder="Phone number" value="' + esc(seekPrefill()) + '">' +
         '<button class="shopbtn' + (STORE.live() ? " ghost" : "") + '" id="soGo">' +
           'Ask the restaurant</button>' +
         '<p class="opt">We will check it is you and confirm.</p>'
@@ -1577,7 +1602,7 @@ function viewSeeOld(main){
     var ph = el("soPhone").value.trim();
     if(!digitsOnly(ph)){ shopToast("A phone number, please."); return; }
     STORE.askToSee(ph);
-    SEEKING = phoneKey(ph);
+    setSeeking(phoneKey(ph));
     shopToast("Asked. We will confirm in a moment.");
     viewSeeOld(main);
   };
@@ -1597,19 +1622,28 @@ function viewSeeOld(main){
   var st = el("soStop");
   if(st) st.onclick = function(){
     if(SEEKING) STORE.dropSight(SEEKING);
-    SEEKING = null;
+    setSeeking(null);
     viewSeeOld(main);
   };
 
   /* the moment the office says yes, their orders are theirs */
   if(v && v.ok){
-    SEEKING = null;
+    setSeeking(null);
     shopToast("That is you \u2014 here are your orders.");
     location.hash = "#/orders";
   }
 }
 
+/* the number they are trying to get back, kept across a reload -
+   the code arrives while they are looking at WhatsApp, and coming
+   back to a blank form would look like it had forgotten them */
 var SEEKING = null;
+try{ SEEKING = sessionStorage.getItem("hayat_seeking") || null; }catch(e){}
+function setSeeking(v){
+  SEEKING = v || null;
+  try{ if(SEEKING) sessionStorage.setItem("hayat_seeking", SEEKING);
+       else sessionStorage.removeItem("hayat_seeking"); }catch(e){}
+}
 
 function viewMyOrders(main){
   var mine = STORE.myOrders();
@@ -1637,13 +1671,18 @@ function viewMyOrders(main){
        Google widget rendered as a black box. Google lives on one
        screen now - "ordered before on another phone" - where it
        is the answer to a question rather than an interruption. */
-    (STORE.isGuest()
+    /* Whether they signed in is beside the point; whether this
+       phone has orders is the point. It used to check the first
+       and hide the second - every phone-only customer saw an
+       empty page over a full history. */
+    (!mine.length
       ? '<p class="shopsub">Orders you place on this phone appear here.</p>' +
         '<button class="shopbtn ghost" data-go="#/seen">Ordered before on another phone?</button>'
       : (open.length
           ? '<h3 class="mini">Still going</h3>' + open.map(card).join("")
           : '<p class="shopsub">Nothing on the way right now.</p>') +
-        (past.length ? '<h3 class="mini">Before this</h3>' + past.slice(0,20).map(card).join("") : '')
+        (past.length ? '<h3 class="mini">Before this</h3>' + past.slice(0,20).map(card).join("") : '') +
+        '<button class="linky center" data-go="#/seen">Missing an order from another phone?</button>'
     ) +
     '<button class="shopbtn ghost" data-go="#/">Browse the menu</button>');
 
@@ -1898,11 +1937,32 @@ var MOPEN = {};         /* category id -> open */
 var MDISH = null;       /* the one dish whose sizes are showing */
 
 function liveMenu(){
-  return (window.MENU || []).filter(function(c){
-    return c && c.id && c.active !== false && (c.items || []).some(onSale);
+  var L = STORE.layout(), hide = L.hide || {}, order = L.cats || [];
+  var cats = (window.MENU || []).filter(function(c){
+    return c && c.id && c.active !== false && !hide[c.id] && (c.items || []).some(onSale);
+  });
+  /* the office's order first; anything it has not placed keeps
+     the file's order after them */
+  cats.sort(function(a,b){
+    var ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+    if(ia < 0) ia = 1e6; if(ib < 0) ib = 1e6;
+    return ia - ib;
+  });
+  return cats.map(function(c){
+    var want = (L.items || {})[c.id] || [];
+    var items = (c.items || []).slice().sort(function(a,b){
+      var ia = want.indexOf(a.id), ib = want.indexOf(b.id);
+      if(ia < 0) ia = 1e6; if(ib < 0) ib = 1e6;
+      return ia - ib;
+    });
+    return Object.assign({}, c, { items: items });
   });
 }
-function onSale(it){ return it && it.off !== true && choices(it).length > 0; }
+function onSale(it){
+  if(!it || it.off === true) return false;
+  if((STORE.layout().off || {})[it.id]) return false;
+  return choices(it).length > 0;
+}
 function fromPrice(it){
   var ch = choices(it);
   if(!ch.length) return "";
@@ -2219,7 +2279,14 @@ function viewCheckout(main){
         'inputmode="tel" placeholder="Phone number" value="' + esc(me.phone || "") + '">' +
       '<input class="fld" id="coName" name="name" autocomplete="name" ' +
         'placeholder="Your name (optional)" value="' + esc(me.name || "") + '">' +
-      '<button class="shopbtn big" id="coNext">Continue</button>');
+      '<button class="shopbtn big" id="coNext">Continue</button>' +
+      (STORE.myOrders().length ? '' :
+        '<button class="linky center" id="coOld">Ordered before on another phone?</button>'));
+    var old = el("coOld");
+    if(old) old.onclick = function(){
+      try{ sessionStorage.setItem("hayat_seek", el("coPhone").value.trim()); }catch(e){}
+      location.hash = "#/seen";
+    };
     var go = function(){
       var ph = el("coPhone").value.trim();
       if(!phoneKey(ph) || phoneKey(ph).length < 10){ shopToast("A ten-digit mobile number, please."); el("coPhone").focus(); return; }
@@ -2249,7 +2316,7 @@ function viewCheckout(main){
           '</div>'
         :
           '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" rows="2" ' +
-            'placeholder="House, landmark, area">' + esc(CO_DRAFT.text || "") + '</textarea>' +
+            'placeholder="House, landmark, area (optional)">' + esc(CO_DRAFT.text || "") + '</textarea>' +
           '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
             '<span class="spi">📍</span>' +
             '<span class="spt"><b id="coSpotT">' + (PIN ? "Pin set" : "Drop a pin") + '</b>' +
@@ -2283,13 +2350,28 @@ function viewCheckout(main){
     });
     var bp = el("coBackPick");
     if(bp) bp.onclick = function(){ CO_NEWADDR = false; viewCheckout(main); };
-    el("coNext").onclick = function(){
-      var text = el("coAddr").value.trim();
-      if(!text && !PIN){ shopToast("An address, or a pin on the map."); return; }
+    var finish = function(text){
       CO_ADDR = { label: CO_DRAFT.label || nextLabel(me), text: text,
                   lat: PIN && PIN.lat, lng: PIN && PIN.lng };
       CO_NEWADDR = false; CO_DRAFT = {};
       CO_STEP = 3; viewCheckout(main);
+    };
+    el("coNext").onclick = function(){
+      var text = el("coAddr").value.trim();
+      if(text || PIN) return finish(text);
+      /* Neither typed nor pinned. Their phone knows where they are;
+         take that rather than send them back to a form. Only if
+         the phone will not say do we ask for something. */
+      var b = el("coNext"); b.disabled = true; b.textContent = "Finding you\u2026";
+      askGps().then(function(pos){
+        if(pos && pos.coords){
+          PIN = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          finish("");
+        } else {
+          b.disabled = false; b.textContent = "Continue";
+          shopToast("Type a landmark, or drop a pin on the map.");
+        }
+      });
     };
   }
 
@@ -2523,6 +2605,18 @@ function openPinPicker(start, onPick){
     };
 
     setTimeout(function(){ try{ map.invalidateSize(); }catch(e){} }, 60);
+
+    /* No pin yet: start where the phone is, not at the shop. The
+       customer then only nudges; most will just press Confirm. */
+    if(!(start && start.lat) && navigator.geolocation){
+      var t0 = el("pkTxt"); if(t0) t0.textContent = "Finding you\u2026";
+      navigator.geolocation.getCurrentPosition(function(pos){
+        map.setView([pos.coords.latitude, pos.coords.longitude], 18);
+        var t = el("pkTxt"); if(t) t.textContent = "Is the pin on your door? Drag to adjust.";
+      }, function(){
+        var t = el("pkTxt"); if(t) t.textContent = "Move the map so the pin sits on your door";
+      }, { enableHighAccuracy:true, timeout:10000, maximumAge:60000 });
+    }
   }).catch(function(){
     var t = el("pkTxt");
     if(t) t.textContent = "The map is not loading. Close this and use the address.";
@@ -3214,6 +3308,7 @@ function paintAdmin(main){
         '<button class="dockbtn wide" data-go="#/admin/call" title="Take an order by phone">' +
           '\u260E<span class="dlab">Phone order</span></button>' +
         '<button class="dockbtn" data-go="#/admin/who" title="Customers">\uD83D\uDC64</button>' +
+        '<button class="dockbtn" data-go="#/admin/menu" title="Arrange the menu">\uD83C\uDF7D</button>' +
         '<button class="dockbtn" data-go="#/admin/riders" title="Riders">' +
           '\uD83C\uDFCD<span class="dockn">' + riders.length + '</span></button>' +
       '</div>' +
@@ -3327,12 +3422,10 @@ function boardCard(o){
   } else if(empty){
     act = '<p class="shopnote emptyord">No items. Sort it out with the customer.</p>';
   } else if(o.status === "accepted"){
-    act = riders.length
-      ? '<select class="fld sel mini" data-assign="' + o.id + '">' +
-          '<option value="">Assign\u2026</option>' +
-          riders.map(function(r){ return '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>'; }).join("") +
-        '</select>'
-      : '<button class="mini ghostmini" data-go="#/admin/riders">Add a rider</button>';
+    /* A sheet, not a <select>: the same on a phone and a desk, and
+       it never dead-ends - riders who are off duty are still
+       listed, greyed, and adding one is on the same sheet. */
+    act = '<button class="mini" data-assignpick="' + o.id + '">Assign a rider</button>';
   } else if(next){
     act = '<button class="mini" data-adv="' + o.id + '|' + next + '">' +
           esc(STEP[next].t) + '</button>';
@@ -3453,13 +3546,55 @@ function wireCards(main){
   main.querySelectorAll("[data-decline]").forEach(function(b){
     b.onclick = function(){ declineSheet(b.dataset.decline); };
   });
-  main.querySelectorAll("[data-assign]").forEach(function(sel){
-    sel.onchange = function(){
-      if(!sel.value) return;
-      var o = STORE.setStatus(sel.dataset.assign, "assigned", { riderId: sel.value });
-      var r = STORE.rider(sel.value);
-      if(o && r) window.open(wa(r.phone, riderMsg(o, r)), "_blank");
+  main.querySelectorAll("[data-assignpick]").forEach(function(b){
+    b.onclick = function(){ assignSheet(b.dataset.assignpick); };
+  });
+}
+
+/* Who takes it. Everyone the shop has, available first, off duty
+   greyed but still there - the office knows who is standing in
+   the doorway better than a flag does. */
+function assignSheet(id){
+  var o = STORE.order(id); if(!o) return;
+  var all = Object.keys(DB.riders).map(function(k){ return DB.riders[k]; })
+    .sort(function(a,b){
+      var ra = (a.off ? 2 : a.avail === false ? 1 : 0), rb = (b.off ? 2 : b.avail === false ? 1 : 0);
+      return ra - rb || String(a.name).localeCompare(String(b.name));
+    });
+  var old = el("asgSheet"); if(old) old.remove();
+  var box = document.createElement("div");
+  box.className = "sheetwrap"; box.id = "asgSheet";
+  box.innerHTML =
+    '<div class="sheet">' +
+      '<div class="sheeth"><b>Who takes ' + esc(o.id) + '?</b>' +
+        '<button class="linky" id="asgX">Cancel</button></div>' +
+      (all.length
+        ? all.map(function(r){
+            var state = r.off ? "signed out" : r.avail === false ? "off duty" : (r.uid || r.claimedAt) ? "available" : "not signed in yet";
+            var busy = STORE.orders().filter(function(x){ return x.riderId === r.id && (x.status === "assigned" || x.status === "on_way"); }).length;
+            return '<button class="sheetopt rider' + (r.off || r.avail === false ? " dim" : "") + '" data-asg="' + esc(r.id) + '">' +
+              '<span class="rdot ' + (r.off ? "off" : r.avail === false ? "away" : "on") + '"></span>' +
+              '<b>' + esc(r.name) + '</b>' +
+              '<small>' + esc(state) + (busy ? ' \u00b7 ' + busy + ' on the go' : '') + '</small>' +
+            '</button>';
+          }).join("")
+        : '<p class="sheetsub">No riders yet.</p>') +
+      '<button class="sheetopt add" data-go="#/admin/riders">+ Add a rider</button>' +
+    '</div>';
+  document.body.appendChild(box);
+  el("asgX").onclick = function(){ box.remove(); };
+  box.onclick = function(e){ if(e.target === box) box.remove(); };
+  box.querySelectorAll("[data-asg]").forEach(function(b){
+    b.onclick = function(){
+      var r = STORE.rider(b.dataset.asg);
+      var done = STORE.setStatus(id, "assigned", { riderId: b.dataset.asg });
+      box.remove();
+      if(done && r){ try{ window.open(wa(r.phone, riderMsg(done, r)), "_blank"); }catch(e){} }
+      shopToast(r ? r.name + " has it." : "Assigned.");
     };
+  });
+  box.querySelectorAll("[data-go]").forEach(function(b){
+    b.onclick = function(){ box.remove(); location.hash = b.dataset.go; };
   });
 }
 
@@ -3589,11 +3724,7 @@ function orderCard(o){
   else if(o.status === "placed")
     action = '<button class="shopbtn small" data-adv="' + o.id + '|accepted">Accept</button>';
   else if(o.status === "accepted")
-    action = riders.length
-      ? '<select class="fld sel" data-assign="' + o.id + '"><option value="">Assign a rider…</option>' +
-        riders.map(function(r){ return '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>'; }).join("") +
-        '</select>'
-      : '<button class="shopbtn small ghost" data-go="#/admin/riders">Add a rider first</button>';
+    action = '<button class="shopbtn small" data-assignpick="' + o.id + '">Assign a rider</button>';
   else if(next)
     action = '<button class="shopbtn small" data-adv="' + o.id + '|' + next + '">' +
              esc(STEP[next].t) + '</button>';
@@ -4242,6 +4373,140 @@ function custStats(c){
   });
   var spend = mine.reduce(function(n,o){ return n + (o.total || 0); }, 0);
   return { n: mine.length, spend: spend, last: mine[0] };
+}
+
+/* ------------------------------------------------------------
+   ARRANGING THE MENU
+
+   What sells goes to the top; what has run out goes dark. Drag
+   with a mouse, or use the arrows with a thumb - a phone in a
+   kitchen has no mouse. Every change saves at once and the
+   customer's menu follows it on the next repaint.
+   ------------------------------------------------------------ */
+var MA_OPEN = null;      /* the category whose dishes are showing */
+
+function viewMenuAdmin(main){
+  gate(main, function(){ paintMenuAdmin(main); });
+}
+
+function layoutOf(){
+  /* a working copy with every id present, so moving is simple */
+  var L = STORE.layout();
+  var cats = (window.MENU || []).map(function(c){ return c.id; });
+  var order = (L.cats || []).filter(function(id){ return cats.indexOf(id) >= 0; });
+  cats.forEach(function(id){ if(order.indexOf(id) < 0) order.push(id); });
+  var items = {};
+  (window.MENU || []).forEach(function(c){
+    var have = (c.items || []).map(function(it){ return it.id; });
+    var want = ((L.items || {})[c.id] || []).filter(function(id){ return have.indexOf(id) >= 0; });
+    have.forEach(function(id){ if(want.indexOf(id) < 0) want.push(id); });
+    items[c.id] = want;
+  });
+  return { cats: order, hide: Object.assign({}, L.hide || {}), items: items, off: Object.assign({}, L.off || {}) };
+}
+
+function moveIn(arr, id, dir){
+  var i = arr.indexOf(id); if(i < 0) return arr;
+  var j = i + dir; if(j < 0 || j >= arr.length) return arr;
+  arr.splice(i, 1); arr.splice(j, 0, id);
+  return arr;
+}
+
+function paintMenuAdmin(main){
+  var L = layoutOf();
+  var byId = {}; (window.MENU || []).forEach(function(c){ byId[c.id] = c; });
+
+  main.innerHTML =
+    '<div class="shopwrap wide mapage">' +
+      '<div class="mahead"><h2 class="shoph">Arrange the menu</h2>' +
+        '<span class="pill quiet">' + L.cats.filter(function(id){ return !L.hide[id]; }).length +
+          ' of ' + L.cats.length + ' showing</span></div>' +
+      '<p class="cqhint">Drag to reorder, or use the arrows. The eye hides a category or a dish from customers. Saves as you go.</p>' +
+        '<div class="malist" id="maCats">' + L.cats.map(function(id, i){
+          var c = byId[id]; if(!c) return "";
+          var hidden = !!L.hide[id], open = MA_OPEN === id;
+          var items = L.items[id] || [];
+          var offN = items.filter(function(x){ return L.off[x]; }).length;
+          return '<div class="marow' + (hidden ? " off" : "") + (open ? " open" : "") + '" draggable="true" data-ma="' + esc(id) + '">' +
+            '<span class="magrip" title="Drag">☰</span>' +
+            '<button class="maname" data-maopen="' + esc(id) + '">' + esc(c.name) +
+              '<small>' + items.length + (offN ? ' · ' + offN + ' hidden' : '') + '</small></button>' +
+            '<button class="maarrow" data-mamove="' + esc(id) + '|-1" ' + (i === 0 ? 'disabled' : '') + '>▲</button>' +
+            '<button class="maarrow" data-mamove="' + esc(id) + '|1" ' + (i === L.cats.length - 1 ? 'disabled' : '') + '>▼</button>' +
+            '<button class="maeye" data-mahide="' + esc(id) + '" title="' + (hidden ? "Show" : "Hide") + '">' +
+              (hidden ? "🙈" : "👁") + '</button>' +
+            (open ? '<div class="masub" data-masub="' + esc(id) + '">' + items.map(function(iid, j){
+                var it = (c.items || []).filter(function(x){ return x.id === iid; })[0]; if(!it) return "";
+                var isOff = !!L.off[iid];
+                return '<div class="marow sub' + (isOff ? " off" : "") + '" draggable="true" data-mai="' + esc(id) + '|' + esc(iid) + '">' +
+                  '<span class="magrip">☰</span>' +
+                  '<span class="maname plain">' + esc(it.name) + '<small>' + esc(fromPrice(it)) + '</small></span>' +
+                  '<button class="maarrow" data-maimove="' + esc(id) + '|' + esc(iid) + '|-1" ' + (j === 0 ? 'disabled' : '') + '>▲</button>' +
+                  '<button class="maarrow" data-maimove="' + esc(id) + '|' + esc(iid) + '|1" ' + (j === items.length - 1 ? 'disabled' : '') + '>▼</button>' +
+                  '<button class="maeye" data-maoff="' + esc(iid) + '" title="' + (isOff ? "Show" : "Hide today") + '">' +
+                    (isOff ? "🙈" : "👁") + '</button>' +
+                '</div>';
+              }).join("") + '</div>' : '') +
+          '</div>';
+        }).join("") + '</div>' +
+      '<div class="condock">' +
+        '<button class="dockbtn" data-go="#/admin" title="Orders">▦</button>' +
+        '<button class="dockbtn" data-go="#/admin/who" title="Customers">👤</button>' +
+      '</div>' +
+    '</div>';
+
+  var save = function(){ STORE.saveLayout(L); paintMenuAdmin(main); };
+
+  main.querySelectorAll("[data-maopen]").forEach(function(b){
+    b.onclick = function(){ MA_OPEN = (MA_OPEN === b.dataset.maopen) ? null : b.dataset.maopen; paintMenuAdmin(main); };
+  });
+  main.querySelectorAll("[data-mamove]").forEach(function(b){
+    b.onclick = function(){ var p = b.dataset.mamove.split("|"); moveIn(L.cats, p[0], +p[1]); save(); };
+  });
+  main.querySelectorAll("[data-maimove]").forEach(function(b){
+    b.onclick = function(){ var p = b.dataset.maimove.split("|"); moveIn(L.items[p[0]], p[1], +p[2]); save(); };
+  });
+  main.querySelectorAll("[data-mahide]").forEach(function(b){
+    b.onclick = function(){ var id = b.dataset.mahide; if(L.hide[id]) delete L.hide[id]; else L.hide[id] = true; save(); };
+  });
+  main.querySelectorAll("[data-maoff]").forEach(function(b){
+    b.onclick = function(){ var id = b.dataset.maoff; if(L.off[id]) delete L.off[id]; else L.off[id] = true; save(); };
+  });
+
+  /* ---- mouse drag: categories among categories, dishes within
+     their category. HTML5 drag, which phones do not have; the
+     arrows cover them. */
+  var dragging = null;
+  main.querySelectorAll(".marow[draggable]").forEach(function(row){
+    row.addEventListener("dragstart", function(e){
+      dragging = row; row.classList.add("dragging");
+      try{ e.dataTransfer.setData("text/plain", "x"); e.dataTransfer.effectAllowed = "move"; }catch(err){}
+      e.stopPropagation();
+    });
+    row.addEventListener("dragend", function(){ row.classList.remove("dragging"); dragging = null;
+      main.querySelectorAll(".marow.over").forEach(function(r){ r.classList.remove("over"); }); });
+    row.addEventListener("dragover", function(e){
+      if(!dragging || dragging === row) return;
+      var same = (!!dragging.dataset.mai) === (!!row.dataset.mai);
+      if(!same) return;
+      if(dragging.dataset.mai && dragging.dataset.mai.split("|")[0] !== (row.dataset.mai||"").split("|")[0]) return;
+      e.preventDefault(); e.stopPropagation(); row.classList.add("over");
+    });
+    row.addEventListener("dragleave", function(){ row.classList.remove("over"); });
+    row.addEventListener("drop", function(e){
+      if(!dragging || dragging === row) return;
+      e.preventDefault(); e.stopPropagation();
+      if(dragging.dataset.mai){
+        var a = dragging.dataset.mai.split("|"), b = (row.dataset.mai||"").split("|");
+        if(a[0] !== b[0]) return;
+        var arr = L.items[a[0]]; arr.splice(arr.indexOf(a[1]), 1); arr.splice(arr.indexOf(b[1]) + (e.offsetY > row.offsetHeight/2 ? 1 : 0), 0, a[1]);
+      } else if(dragging.dataset.ma && row.dataset.ma){
+        var id = dragging.dataset.ma, to = row.dataset.ma;
+        L.cats.splice(L.cats.indexOf(id), 1); L.cats.splice(L.cats.indexOf(to) + (e.offsetY > 28 ? 1 : 0), 0, id);
+      }
+      save();
+    });
+  });
 }
 
 function viewCustomers(main){
@@ -5918,12 +6183,20 @@ function installSheet(){
     '<div class="sheet install">' +
       '<img class="sheeticon" src="assets/icon-192.png" alt="">' +
       '<b class="sheett">Keep Hayat on your phone</b>' +
-      '<p class="sheetsub">' + (apple
-        ? (safari ? 'Tap <b>Share</b> below, then <b>Add to Home Screen</b>.'
-                  : 'Open this page in <b>Safari</b>, then Share \u2192 Add to Home Screen.')
-        : 'Opens like an app. Order again in two taps, and follow your rider.') + '</p>' +
-      (apple ? '' : '<button class="shopbtn big" id="instGo">Install</button>') +
-      '<button class="linky center" id="instNo">Not now</button>' +
+      (apple
+        ? /* iPhones have no install button a page can press. Only
+             Safari's own Share button does it, so say where that is
+             and what it looks like, and make this a note, not a
+             button that seems to do nothing. */
+          '<div class="iossteps">' +
+            '<div><span class="ioss">1</span>Tap the <span class="iosshare">\u2B06</span> <b>Share</b> button ' +
+              (safari ? 'at the bottom of Safari' : 'in <b>Safari</b> (open this page there first)') + '</div>' +
+            '<div><span class="ioss">2</span>Scroll and tap <b>Add to Home Screen</b></div>' +
+          '</div>' +
+          '<button class="shopbtn big" id="instNo">Got it</button>'
+        : '<p class="sheetsub">Opens like an app. Order again in two taps, and follow your rider.</p>' +
+          '<button class="shopbtn big" id="instGo">Install</button>' +
+          '<button class="linky center" id="instNo">Not now</button>') +
     '</div>';
   document.body.appendChild(box);
   try{ sessionStorage.setItem("hayat_sheet_shown", "1"); }catch(e){}
@@ -6025,7 +6298,7 @@ function route(p, main){
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
-           p[1] !== "call" && p[1] !== "c");
+           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -6045,6 +6318,7 @@ function route(p, main){
     if(p[1] === "riders") { REPAINT = function(){ if(REDIT) return; viewRiders(main); }; REPAINT(); return true; }
     if(p[1] === "call")   { REPAINT = function(){ if(isTyping()) return; viewCall(main); }; REPAINT(); return true; }
     if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
+    if(p[1] === "menu")   { REPAINT = function(){ viewMenuAdmin(main); }; REPAINT(); return true; }
     if(p[1] === "c" && p[2]) { REPAINT = function(){ viewCustomer(main, p[2]); }; REPAINT(); return true; }
     if(p[1] === "o" && p[2]) { REPAINT = function(){ viewEdit(main, p[2]); }; REPAINT(); return true; }
     REPAINT = function(){ viewAdmin(main); }; REPAINT(); return true;

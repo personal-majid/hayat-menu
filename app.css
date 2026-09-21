@@ -1621,10 +1621,15 @@ body.palopen{overflow:hidden}
    THE FULL-SCREEN PIN PICKER
    Nothing behind it wants a gesture, so one finger moves the map.
    ============================================================ */
-.picker{position:fixed;inset:0;z-index:950;background:var(--bg)}
+/* height from dvh, not inset:0 - a phone's URL bar eats the bottom
+   of 100vh and the Confirm button with it */
+.picker{position:fixed;left:0;right:0;top:0;height:100dvh;z-index:950;background:var(--bg)}
 body.pkopen{overflow:hidden}
 .pkmap{position:absolute;inset:0}
-.pkcross{position:absolute;inset:0;z-index:5;pointer-events:none;
+/* Leaflet's panes run to z-index 1000. Everything of ours that
+   sits on the map has to clear that or the map paints over it -
+   which is how the Confirm button vanished on a phone. */
+.pkcross{position:absolute;inset:0;z-index:1100;pointer-events:none;
   display:flex;align-items:center;justify-content:center}
 .pkcross span{position:relative;width:26px;height:26px;border-radius:50%;
   background:var(--hot);border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.4);
@@ -1633,7 +1638,7 @@ body.pkopen{overflow:hidden}
   width:2px;height:13px;background:#fff;transform:translateX(-50%);
   box-shadow:0 1px 3px rgba(0,0,0,.4)}
 
-.pkbar{position:absolute;left:12px;right:12px;top:12px;z-index:10;
+.pkbar{position:absolute;left:12px;right:12px;top:12px;z-index:1200;
   display:flex;align-items:center;gap:8px}
 .pkx,.pkme{flex:0 0 auto;width:42px;height:42px;border-radius:50%;
   border:1px solid var(--line2);background:var(--card);color:var(--cream);
@@ -1643,8 +1648,8 @@ body.pkopen{overflow:hidden}
   border-radius:999px;padding:11px 15px;box-shadow:var(--shadow);
   font-size:var(--t-small);font-weight:600;color:var(--cream);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pkfoot{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
-  z-index:10}
+.pkfoot{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));
+  z-index:1200}
 .pkfoot .shopbtn{margin:0;min-height:56px;font-size:16px;box-shadow:var(--shadow)}
 
 /* the card that opens it */
@@ -2136,3 +2141,39 @@ body.phoneorder #search{display:none !important}
 @media (max-width:380px){.msizes{padding-left:14px}}
 
 .mnone{text-align:center;opacity:.6;padding:30px 10px;font-size:14.5px}
+
+/* ---- arranging the menu ------------------------------------ */
+.malist{display:flex;flex-direction:column;gap:6px;padding:0 2px 24px;max-width:720px}
+.marow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--card,#1a1510);
+  border:1px solid var(--line,#2b241c);border-radius:12px;padding:8px 10px 8px 8px}
+.marow.off{opacity:.5}
+.marow.dragging{opacity:.35}
+.marow.over{border-color:var(--gold,#e8c37a);box-shadow:0 0 0 2px color-mix(in srgb,var(--gold,#e8c37a) 35%,transparent)}
+.magrip{cursor:grab;opacity:.45;padding:0 6px;font-size:16px;user-select:none}
+.maname{flex:1 1 auto;min-width:0;text-align:left;font:inherit;font-size:15px;font-weight:650;color:inherit;
+  background:transparent;border:0;cursor:pointer;padding:4px 2px;display:flex;flex-direction:column;gap:1px}
+.maname.plain{cursor:default;font-weight:600;font-size:14px}
+.maname small{font-size:12px;font-weight:500;opacity:.55}
+.maarrow{width:34px;height:34px;border-radius:9px;border:1px solid var(--line,#2b241c);background:transparent;
+  color:inherit;font-size:12px;cursor:pointer}
+.maarrow:disabled{opacity:.25;cursor:default}
+.maeye{width:36px;height:34px;border-radius:9px;border:1px solid var(--line,#2b241c);background:transparent;
+  font-size:16px;cursor:pointer}
+.masub{flex-basis:100%;display:flex;flex-direction:column;gap:5px;margin-top:8px;padding-left:22px}
+.marow.sub{background:var(--soft2,#1f1913)}
+.mapage{padding-bottom:90px}
+.mahead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.mahead .shoph{margin:0;text-align:left}
+.iossteps{text-align:left;display:flex;flex-direction:column;gap:12px;margin:4px 0 18px;font-size:14.5px;line-height:1.45}
+.iossteps > div{display:flex;gap:10px;align-items:flex-start}
+.ioss{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--gold,#e8c37a);color:#241a0c;
+  font-size:12px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.iosshare{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;
+  border:1.5px solid currentColor;font-size:13px;vertical-align:-5px;margin:0 2px}
+.sheetopt.rider{display:grid;grid-template-columns:14px 1fr;column-gap:10px;align-items:center}
+.sheetopt.rider small{grid-column:2;font-size:12.5px;opacity:.6;margin-top:1px}
+.sheetopt.dim{opacity:.55}
+.sheetopt.add{text-align:center;border-style:dashed;background:transparent}
+.rdot{width:10px;height:10px;border-radius:50%;background:#6fcf8e;grid-row:span 2}
+.rdot.away{background:#e0a33a}
+.rdot.off{background:#777}
