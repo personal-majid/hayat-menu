@@ -1809,7 +1809,13 @@ window.HAYAT_KIOSK = KIOSK;
    the theme picker, the photo/list toggle, full screen, the
    gallery, the footer with three more buttons in it. The class
    lets the stylesheet take them away in one place. */
-try{ if(orderingOnPhone()) document.body.classList.add("phoneorder"); }catch(e){}
+function markPhone(){
+  try{ document.body.classList.toggle("phoneorder", orderingOnPhone()); }catch(e){}
+}
+markPhone();
+/* a laptop window dragged narrow is a phone for our purposes, and
+   dragged wide again it is not - so follow the width, not the load */
+try{ window.matchMedia("(max-width: 820px)").addEventListener("change", markPhone); }catch(e){}
 /* #/us was only a marker — drop straight into the menu */
 if(/#\/us\b/.test(location.hash)) location.hash = "#/";
 var IG_OK = null;                      /* null = unknown, true/false after probe */

@@ -1633,7 +1633,10 @@ function viewMyOrders(main){
   };
 
   main.innerHTML = shell("Your orders",
-    signInStrip() +
+    /* The sign-in strip used to sit here and on the cart, and its
+       Google widget rendered as a black box. Google lives on one
+       screen now - "ordered before on another phone" - where it
+       is the answer to a question rather than an interruption. */
     (STORE.isGuest()
       ? '<p class="shopsub">Orders you place on this phone appear here.</p>' +
         '<button class="shopbtn ghost" data-go="#/seen">Ordered before on another phone?</button>'
@@ -1684,7 +1687,6 @@ function viewCart(main){
     (am ? '<div class="amendbar"><b>You are changing order ' + esc(am.id) + '</b>' +
           '<small>Add or remove, then send it again. It replaces what we have.</small>' +
           '<button class="linky" id="amendNo">Leave it as it was</button></div>' : '') +
-    (am ? '' : signInStrip()) +
     cartFinder() +
     '<div class="lines">' + CART.map(function(l){
       return '<div class="line">' +
