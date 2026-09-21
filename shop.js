@@ -1877,93 +1877,184 @@ function openNow(){
    look like a wall. The thumbnails start where they earn their
    keep, on the dish list.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   THE MENU, ON ONE PAGE
+
+   Zomato's lesson, applied: nobody should change page to order
+   dinner. The whole menu is one list. Categories are closed by
+   default and open where you tap; a dish with one price adds
+   from its row; a dish with sizes opens a short list of sizes
+   underneath, each with its own Add. Search filters the same
+   list live, across every category, so the person who knows
+   they want alfaham types three letters and is done.
+
+   Data first, so the CSV import has somewhere to land:
+     menu.active === false   the whole menu is hidden
+     item.off    === true    the dish is hidden for the day
+   Nothing else about the shape changes.
+   ------------------------------------------------------------ */
+var MQ = "";            /* what they typed in search */
+var MOPEN = {};         /* category id -> open */
+var MDISH = null;       /* the one dish whose sizes are showing */
+
+function liveMenu(){
+  return (window.MENU || []).filter(function(c){
+    return c && c.id && c.active !== false && (c.items || []).some(onSale);
+  });
+}
+function onSale(it){ return it && it.off !== true && choices(it).length > 0; }
+function fromPrice(it){
+  var ch = choices(it);
+  if(!ch.length) return "";
+  if(ch.length === 1) return rupee(ch[0].price);
+  return "from " + rupee(Math.min.apply(null, ch.map(function(c){ return c.price; })));
+}
+function searchDishes(q){
+  q = q.trim().toLowerCase();
+  if(!q) return null;
+  /* The dish called alfaham comes before the dish whose story
+     mentions alfaham. Name first, then subtitle, then category,
+     then the description. */
+  var out = [];
+  liveMenu().forEach(function(c){
+    (c.items || []).forEach(function(it){
+      if(!onSale(it)) return;
+      var rank = (it.name || "").toLowerCase().indexOf(q) >= 0 ? 0
+               : (it.sub  || "").toLowerCase().indexOf(q) >= 0 ? 1
+               : (c.name  || "").toLowerCase().indexOf(q) >= 0 ? 2
+               : (it.desc || "").toLowerCase().indexOf(q) >= 0 ? 3 : -1;
+      if(rank >= 0) out.push({ it:it, c:c, rank:rank });
+    });
+  });
+  out.sort(function(a,b){ return a.rank - b.rank; });
+  return out;
+}
+
+function dishRow(it, c){
+  var ch = choices(it);
+  var open = MDISH === it.id;
+  var inCart = CART.filter(function(l){ return l.id === it.id; })
+                   .reduce(function(n,l){ return n + l.q; }, 0);
+  var one = ch.length === 1;
+  return '<div class="mrow' + (open ? " open" : "") + '" data-dish="' + esc(it.id) + '">' +
+    '<div class="mrowhead">' +
+      (it.img ? '<img class="mthumb" loading="lazy" src="' + esc(String(it.img).replace("photos/","photos/th/")) +
+                '" alt="" onerror="this.onerror=null;this.src=\'' + esc(it.img) + '\'">' : '') +
+      '<div class="mtext">' +
+        '<b>' + esc(it.name) + '</b>' +
+        (it.sub ? '<small>' + esc(it.sub) + '</small>' : '') +
+        '<span class="mprice">' + esc(fromPrice(it)) + '</span>' +
+      '</div>' +
+      (one
+        ? '<span class="rowadd" data-row="' + esc(it.id) + '|' + esc(ch[0].label) + '">' +
+            addControl(it.id, ch[0].label, ch[0].price) + '</span>'
+        : '<button class="mpick" data-sizes="' + esc(it.id) + '">' +
+            (inCart ? '<b class="mqty">' + inCart + '</b>' : '') +
+            (open ? "Close" : "Choose") + '</button>') +
+    '</div>' +
+    (open && !one
+      ? '<div class="msizes">' + ch.map(function(x){
+          return '<div class="msize" data-row="' + esc(it.id) + '|' + esc(x.label) + '">' +
+            '<span class="msl">' + esc(x.label || it.name) + '</span>' +
+            '<span class="msp">' + rupee(x.price) + '</span>' +
+            addControl(it.id, x.label, x.price) +
+          '</div>';
+        }).join("") + '</div>'
+      : '') +
+  '</div>';
+}
+
+function catBlock(c){
+  var open = !!MOPEN[c.id];
+  var items = (c.items || []).filter(onSale);
+  return '<section class="mcat' + (open ? " open" : "") + '">' +
+    '<button class="mcathead" data-cat="' + esc(c.id) + '">' +
+      '<span class="mcatname">' + esc(c.name) + '</span>' +
+      '<span class="mcatn">' + items.length + '</span>' +
+      '<span class="mcatchev">' + (open ? "⌄" : "›") + '</span>' +
+    '</button>' +
+    (open ? '<div class="mitems">' + items.map(function(it){ return dishRow(it, c); }).join("") + '</div>' : '') +
+  '</section>';
+}
+
 function viewLanding(main){
-  var shop = ((C().delivery || [])[0] || {}).number || C().whatsapp || "";
   var st   = openNow();
   var mine = STORE.myOrders();
-  var live = mine.filter(function(o){
-    return o.status !== "delivered" && o.status !== "cancelled";
-  })[0];
-  var last = mine.filter(function(o){
-    return o.status === "delivered" && (o.lines || []).length;
-  })[0];
-
-  var cats = (window.MENU || []).filter(function(c){
-    return c && c.id && (c.items || []).length;
-  });
+  var live = mine.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; })[0];
+  var last = mine.filter(function(o){ return o.status === "delivered" && (o.lines || []).length; })[0];
+  var hits = searchDishes(MQ);
+  var cats = liveMenu();
 
   main.innerHTML =
-    '<div class="land">' +
+    '<div class="menu1">' +
 
-      '<div class="landtop">' +
-        '<h1 class="landh">Hayat</h1>' +
-        '<p class="landsub">Fish and Mandi \u00b7 Makkaraparamba</p>' +
-        '<div class="landstate' + (st.open ? " on" : " off") + '">' +
-          '<span class="ldot"></span>' + esc(st.txt || (st.open ? "Open" : "Closed")) +
-        '</div>' +
+      '<div class="mtop">' +
+        '<div class="mbrand"><b>Hayat</b><span>Fish &amp; Mandi · Makkaraparamba</span></div>' +
+        '<span class="mstate' + (st.open ? " on" : "") + '">' + esc(st.txt || (st.open ? "Open" : "Closed")) + '</span>' +
       '</div>' +
 
-      /* If something is already on its way, that is the only thing
-         they came here to see. */
       (live
         ? '<a class="landlive" href="#/o/' + esc(live.id) + '">' +
             '<div><b>' + esc(STEP[live.status] ? STEP[live.status].t : "On its way") + '</b>' +
-            '<small>Order ' + esc(live.id) + ' \u00b7 tap to follow it</small></div>' +
-            '<span class="lgo">\u203A</span>' +
-          '</a>'
+            '<small>Order ' + esc(live.id) + ' · tap to follow it</small></div>' +
+            '<span class="lgo">›</span></a>'
         : '') +
 
-      /* The one button. Everything else on this screen is smaller
-         than it on purpose. */
-      '<button class="hero" id="ldCall">' +
-        '<b>Order food</b>' +
-        '<small>Give us your number \u2014 we call you straight back</small>' +
-      '</button>' +
-
-      (last
-        ? '<button class="landagain" id="ldAgain">' +
-            '\u21BA Same as last time \u00b7 ' +
-            esc((last.lines || []).map(function(l){ return l.q + "\u00d7 " + l.name; })
-                  .join(", ")) +
-          '</button>'
-        : '') +
-
-      '<div class="catwrap">' +
-        '<div class="catcap">Or choose it yourself</div>' +
-        '<div class="catlist">' +
-          cats.map(function(c){
-            return '<button class="catrow" data-cat="' + esc(c.id) + '">' +
-              '<span class="catn">' + esc(c.name) + '</span>' +
-              '<span class="catc">' + (c.items || []).length + '</span>' +
-              '<span class="catgo">\u203A</span>' +
-            '</button>';
-          }).join("") +
-        '</div>' +
+      '<div class="msearch"><span class="msi">⌕</span>' +
+        '<input id="mq" type="search" autocomplete="off" placeholder="Search dishes" value="' + esc(MQ) + '">' +
+        (MQ ? '<button class="mclear" id="mqx" aria-label="Clear">×</button>' : '') +
       '</div>' +
 
+      (hits === null
+        ? /* the normal page */
+          '<button class="mcall" id="ldCall">' +
+            '<span class="mcalli">☎</span>' +
+            '<span><b>Order food</b><small>Give us your number, we call you back</small></span>' +
+          '</button>' +
+          (last
+            ? '<button class="landagain" id="ldAgain">↺ Same as last time · ' +
+                esc((last.lines || []).map(function(l){ return l.q + "× " + l.name; }).join(", ")) +
+              '</button>'
+            : '') +
+          '<div class="mcats">' + cats.map(catBlock).join("") + '</div>'
+        : /* search results, flat */
+          (hits.length
+            ? '<div class="mitems flat">' + hits.map(function(h){ return dishRow(h.it, h.c); }).join("") + '</div>'
+            : '<p class="mnone">Nothing called “' + esc(MQ) + '”. Try another word.</p>')) +
+
       '<div class="landfoot">' +
-        (shop ? callBtn(shop, "Call the restaurant", "landlink") : '') +
+        callBtn(((C().delivery || [])[0] || {}).number || C().whatsapp || "", "Call the restaurant", "landlink") +
         (mine.length ? '<a class="landlink" href="#/orders">Your orders</a>' : '') +
         installLink() +
       '</div>' +
-
     '</div>';
 
-  /* index.html owns the menu, and it only draws once this screen
-     has stood aside. The flag is what stops it drawing over us
-     again on the next repaint. */
-  var browse = function(hash){
-    REPAINT = null;
-    location.hash = hash || "#/";
-    try{ window.dispatchEvent(new HashChangeEvent("hashchange")); }catch(e){
-      try{ window.dispatchEvent(new Event("hashchange")); }catch(err){}
-    }
+  /* ---- wiring ---- */
+  var q = el("mq");
+  q.oninput = function(){
+    MQ = q.value; var at = q.selectionStart;
+    viewLanding(main);
+    var n = el("mq"); if(n){ n.focus(); try{ n.setSelectionRange(at, at); }catch(e){} }
   };
+  var qx = el("mqx"); if(qx) qx.onclick = function(){ MQ = ""; viewLanding(main); el("mq").focus(); };
 
-  el("ldCall").onclick = function(){ location.hash = "#/quick"; };
+  var call = el("ldCall"); if(call) call.onclick = function(){ location.hash = "#/quick"; };
 
   main.querySelectorAll("[data-cat]").forEach(function(b){
-    b.onclick = function(){ browse("#/c/" + b.dataset.cat); };
+    b.onclick = function(){
+      var id = b.dataset.cat;
+      MOPEN[id] = !MOPEN[id];
+      viewLanding(main);
+      /* an opened category should start at its own top */
+      if(MOPEN[id]){ var sec = main.querySelector('[data-cat="' + id + '"]');
+        if(sec) try{ sec.scrollIntoView({ block:"start", behavior:"smooth" }); }catch(e){} }
+    };
+  });
+  main.querySelectorAll("[data-sizes]").forEach(function(b){
+    b.onclick = function(){
+      MDISH = (MDISH === b.dataset.sizes) ? null : b.dataset.sizes;
+      viewLanding(main);
+    };
   });
 
   var ag = el("ldAgain");
@@ -1973,10 +2064,8 @@ function viewLanding(main){
                label: l.label || "", price: l.price, q: l.q };
     });
     saveCart(); paintFab();
-    shopToast("Same as last time \u2014 check it and send.");
     location.hash = "#/cart";
   };
-
   wireInstallLink(function(){ viewLanding(main); });
 }
 
@@ -5681,6 +5770,15 @@ function repaintRows(){
     }catch(e){}
     var ctrl = row.querySelector(".add, .step");
     if(ctrl) ctrl.outerHTML = addControl(id, lbl, price);
+  });
+  /* the count on a Choose button, for dishes with sizes */
+  document.querySelectorAll(".mrow[data-dish]").forEach(function(r){
+    var id = r.dataset.dish, pick = r.querySelector(".mpick");
+    if(!pick) return;
+    var n = CART.filter(function(l){ return l.id === id; }).reduce(function(a,l){ return a + l.q; }, 0);
+    var badge = pick.querySelector(".mqty");
+    if(n && !badge){ badge = document.createElement("b"); badge.className = "mqty"; pick.insertBefore(badge, pick.firstChild); }
+    if(badge){ if(n) badge.textContent = n; else badge.remove(); }
   });
 }
 
