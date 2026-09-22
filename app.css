@@ -2222,3 +2222,25 @@ body.phoneorder #search{display:none !important}
 .omark.bike.f-old .bikedot{opacity:.5;filter:grayscale(1)}
 .omark.bike.f-old .tag{opacity:.7}
 @media (max-width:860px){ .riderstrip{left:8px;top:78px;max-width:92%} .rsline{white-space:normal} }
+
+/* ---- v114: one office dock, one caption per console ---- */
+.dockbtn.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent);border-color:transparent}
+.tabcap{display:flex;align-items:center;padding:0 10px 0 14px;font-size:11px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.dockroom{height:84px}
+@media (max-width:620px){ .tabcap{padding:0 8px 0 10px;font-size:10px} }
+/* phone: the filter bars sit above the dock, not beside it */
+@media (max-width:860px){
+  .mapfilt{right:8px;bottom:74px}
+}
+/* phone: a rider's row is name on one line, actions wrapped beneath */
+@media (max-width:620px){
+  .rline{flex-wrap:wrap;row-gap:6px}
+  .rline .ln{flex:1 1 calc(100% - 24px)}
+  .rline .linky{margin-left:0;padding:4px 0}
+  .rline .linky:first-of-type{margin-left:21px}
+}
+/* phone: the connection line clears the three filter rows */
+@media (max-width:860px){
+  body.deskboard .conn{bottom:calc(100% - 100vh + 236px)}
+}

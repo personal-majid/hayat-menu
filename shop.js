@@ -3285,7 +3285,7 @@ function paintAdmin(main){
          band above it. A kitchen screen has one job on it, and
          every row of chrome is a row of orders nobody can see. */
       '<div class="conbar">' +
-        '<div class="tabs">' +
+        '<div class="tabs">' + tabCap("Orders") +
           ['board','list','map'].map(function(v){
             return '<button class="tab' + (ADVIEW===v ? " on" : "") + '" data-view="' + v + '">' +
               (v==="board" ? "Board" : v==="list" ? "List" : "Map") + '</button>';
@@ -3321,14 +3321,7 @@ function paintAdmin(main){
       /* the two things you reach for, always in the same corner */
       /* No way out to the customer's menu. This is a till, and a
          till does not have a browse button on it. */
-      '<div class="condock">' +
-        '<button class="dockbtn wide" data-go="#/admin/call" title="Take an order by phone">' +
-          '\u260E<span class="dlab">Phone order</span></button>' +
-        '<button class="dockbtn" data-go="#/admin/who" title="Customers">\uD83D\uDC64</button>' +
-        '<button class="dockbtn" data-go="#/admin/menu" title="Arrange the menu">\uD83C\uDF7D</button>' +
-        '<button class="dockbtn" data-go="#/admin/riders" title="Riders">' +
-          '\uD83C\uDFCD<span class="dockn">' + riders.length + '</span></button>' +
-      '</div>' +
+      officeDock("orders") +
 
       /* Out of the flow entirely. It used to sit in the column
          above the board and landed on the first column head. It
@@ -3990,6 +3983,10 @@ function whenWanted(o){
 function mapPasses(o){
   if(o.status === "cancelled") return false;
   if(!MFILT.on[o.status]) return false;
+  /* An order still moving is on the map whatever day it was
+     typed. "Today" is a window on finished business; a delivery
+     that started before midnight is not finished at 00:10. */
+  if(o.status !== "delivered") return true;
   return inRange(o.at, MFILT.range);
 }
 
@@ -4196,7 +4193,40 @@ function riderStrip(box, spots){
     d.addEventListener(t, function(e){ e.stopPropagation(); }, { passive:true });
   });
   box.appendChild(d);
+  /* under the floating tab bar, however tall it wraps to today */
+  try{
+    var bar = box.closest(".console").querySelector(".conbar");
+    if(bar) d.style.top = Math.round(bar.getBoundingClientRect().bottom -
+                                     box.getBoundingClientRect().top + 10) + "px";
+  }catch(e){}
 }
+
+/* One dock on every office screen, in the same order, the
+   current one lit. Four screens used to carry four different
+   docks of bare icons, and the customer book looked so much
+   like the orders console that Majid read its List / Map as
+   the orders map and wondered where the Board had gone. */
+function officeDock(here){
+  var n = STORE.riders().length;
+  var B = [
+    ["call",   "#/admin/call",   "\u260E",       "Phone order"],
+    ["orders", "#/admin",        "\u25A6",       "Orders"],
+    ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
+    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
+    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"]
+  ];
+  return '<div class="condock">' + B.map(function(b){
+    var on = b[0] === here;
+    return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
+      '" title="' + b[3] + '"' + (on ? ' aria-current="page"' : '') + '>' +
+      b[2] + '<span class="dlab">' + b[3] + '</span>' +
+      (b[0] === "riders" && n ? '<span class="dockn">' + n + '</span>' : '') +
+      '</button>';
+  }).join("") + '</div>';
+}
+
+/* the word in front of a console's tabs: which book this is */
+function tabCap(t){ return '<span class="tabcap">' + esc(t) + '</span>'; }
 
 function drawAdminMap(list, blind){
   var box = el("admap");
@@ -4548,10 +4578,7 @@ function paintMenuAdmin(main){
               }).join("") + '</div>' : '') +
           '</div>';
         }).join("") + '</div>' +
-      '<div class="condock">' +
-        '<button class="dockbtn" data-go="#/admin" title="Orders">▦</button>' +
-        '<button class="dockbtn" data-go="#/admin/who" title="Customers">👤</button>' +
-      '</div>' +
+      officeDock("menu") +
     '</div>';
 
   var save = function(){ STORE.saveLayout(L); paintMenuAdmin(main); };
@@ -4650,7 +4677,7 @@ function paintCustomers(main){
   main.innerHTML =
     '<div class="console">' +
       '<div class="conbar">' +
-        '<div class="tabs">' +
+        '<div class="tabs">' + tabCap("Customers") +
           '<button class="tab' + (CVIEW==="list"?" on":"") + '" data-cv="list">List</button>' +
           '<button class="tab' + (CVIEW==="map" ?" on":"") + '" data-cv="map">Map</button>' +
         '</div>' +
@@ -4691,10 +4718,7 @@ function paintCustomers(main){
             '</div>') +
       '</div>' +
 
-      '<div class="condock">' +
-        '<button class="dockbtn" data-go="#/admin/call" title="Order by phone">\u260E</button>' +
-        '<button class="dockbtn" data-go="#/admin" title="Orders">\u25A6</button>' +
-      '</div>' +
+      officeDock("who") +
     '</div>';
 
   main.querySelectorAll("[data-cv]").forEach(function(b){
@@ -5385,7 +5409,8 @@ function paintRiders(main){
     '<input class="fld" id="rName"  placeholder="Rider name">' +
     '<input class="fld" id="rPhone" placeholder="Phone with country code, e.g. 919844326842" inputmode="tel">' +
     '<button class="shopbtn" id="rAdd">Add rider</button>' +
-    '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>');
+    '<div class="dockroom"></div>' +
+    officeDock("riders"));
 
   var addRider = function(){
     var n = el("rName").value.trim(), p = el("rPhone").value.trim();
