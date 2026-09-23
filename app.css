@@ -939,12 +939,8 @@ body.ridework #cartfab,
 body.ridework .backbar{display:none !important}
 body.ridework main{padding:14px 16px 28px}
 
-/* a slim bar of their own, so they know whose app this is */
-body.ridework .shopwrap::before{
-  content:"Hayat \00b7 deliveries";
-  display:block;font-size:var(--t-small);letter-spacing:.14em;
-  text-transform:uppercase;color:var(--muted);
-  padding:0 0 12px;border-bottom:1px solid var(--line);margin:0 0 16px}
+/* the "Hayat · deliveries" bar is drawn once, by shop.js (.ridebar);
+   the CSS ::before copy that used to sit here doubled it */
 body.ridework .shopwrap{max-width:620px}
 
 body.ridework .who.big{font-size:23px;line-height:1.2;letter-spacing:-.01em}

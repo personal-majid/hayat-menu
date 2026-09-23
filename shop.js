@@ -2725,7 +2725,10 @@ function viewOrder(main, id){
       ? '<div id="trackmap" class="comap trackmap"></div>' +
         '<p class="pinnote" id="trackNote">' +
           (function(){
-            if(!o.lat) return "Updated " + staleness(o.rAt).txt;
+            /* No pin on the order: we cannot say how far. Say what
+               we do know, and offer the one tap that fixes it. */
+            if(!o.lat) return "Rider left the kitchen \u00b7 " + staleness(o.rAt).txt +
+              '<br><button class="linky" id="trackPin">Share my location so you can see how far</button>';
             var R = 6371, rad = Math.PI/180;
             var dLat = (o.rLat - o.lat) * rad, dLng = (o.rLng - o.lng) * rad;
             var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
@@ -2800,6 +2803,16 @@ function viewOrder(main, id){
   };
 
   if(o.rLat && at >= 2 && o.status !== "delivered") drawTrackMap(o);
+  var tp = el("trackPin");
+  if(tp) tp.onclick = function(){
+    if(!navigator.geolocation){ shopToast("This phone cannot share its location."); return; }
+    tp.textContent = "Finding you\u2026";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      STORE.edit(id, { lat:+pos.coords.latitude.toFixed(6), lng:+pos.coords.longitude.toFixed(6) });
+      shopToast("Got it. The rider can see your door now.");
+    }, function(){ tp.textContent = "Location is off on this phone"; },
+    { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
+  };
 }
 
 /* the customer's own little map: their pin, and the rider closing in */
@@ -2815,9 +2828,14 @@ function drawTrackMap(o){
     LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(TMAP);
 
-    var dest = (o.lat && o.lng) ? [o.lat, o.lng] : [HOME.lat, HOME.lng];
+    /* The second pin is the customer's door when we have it. When
+       we do not, it is the kitchen, and it says so - a "You" pin
+       standing on the restaurant is a lie the customer catches. */
+    var known = !!(o.lat && o.lng);
+    var dest = known ? [o.lat, o.lng] : [HOME.lat, HOME.lng];
     LF.marker(dest, { icon: LF.divIcon({ className:"omark",
-      html:'<span class="dot" style="background:#E4705A"></span><span class="tag">You</span>',
+      html:'<span class="dot" style="background:' + (known ? "#E4705A" : "#1B2410") + '"></span>' +
+           '<span class="tag">' + (known ? "You" : "Hayat") + '</span>',
       iconSize:null, iconAnchor:[7,7] }) }).addTo(TMAP);
 
     var r = o.riderId ? STORE.rider(o.riderId) : null;
@@ -5755,7 +5773,7 @@ function pingWhereabouts(){
    is asked once at sign-in, where a tap is already happening.
    ------------------------------------------------------------ */
 function troubleStrip(){
-  if(GPSOK === false)
+  if(GPSOK === false && PINGJOB == null)
     return '<div class="trouble" id="troubleBox">' +
       '<div class="tt"><b>Location is off</b>' +
       '<small>The shop cannot see you, and the customer cannot follow you.</small></div>' +
@@ -5769,7 +5787,11 @@ function paintTrouble(main, again){
   if(!box) return;
 
   gpsState().then(function(st){
-    var bad = (st === "denied") || (st === "none") || GPSOK === false;
+    /* Granted is granted: one timed-out fix does not mean the
+       phone's location is off, and saying so while the position
+       is visibly streaming made the rider distrust the whole line. */
+    var bad = (st === "denied") || (st === "none") ||
+              (st !== "granted" && GPSOK === false);
     if(!bad){ box.innerHTML = ""; return; }
 
     box.className = "trouble";
@@ -6080,6 +6102,8 @@ function startPing(id){
   var last = 0;
   PINGID = navigator.geolocation.watchPosition(function(pos){
     var now = Date.now();
+    GPSOK = true;                          /* a fix is the proof */
+    var tb = el("troubleBox"); if(tb && tb.innerHTML){ tb.innerHTML = ""; tb.className = ""; }
     if(now - last < 5000) return;         /* five seconds, as agreed */
     last = now;
     STORE.ping(id, pos.coords.latitude, pos.coords.longitude);

@@ -1,207 +1,213 @@
 # =====================================================================
-#  HAYAT FISH & MANDI — PRINTED CARD, PRICE SOURCE
+#  HAYAT FISH & MANDI — PRINTED A4 CARD, PRICE SOURCE
 #  Edit this file, then run:   python3 build.py
-#  Nothing else needs touching. Layout, fonts and QR codes are automatic.
 #
-#  Section header:   [KEY | ENGLISH | MALAYALAM | col1,col2,col3 | note]
-#     leave the columns empty for a single-price list
-#  Item line:        Name | price            (single price)
-#                    Name | p1 | p2 | p3     (matches the columns above)
-#                    Name | 200 | 400 | - | -    ( -  prints an em dash)
-#  Blank write-in line:   ~
+#  [KEY | English | Malayalam | columns | note | flags]
+#     columns  Qtr,Half,Full   (leave empty for a single price)
+#     flags    2up   two items per line, for long drink lists
+#              nop   no price column at all
+#              ask   dotted write-in space instead of a price
+#              box   draw the section inside a highlight panel
+#              star  a gold marker on the first item
+#  Item:   Name | price            or   Name | p1 | p2 | p3
+#          -  prints an em dash        ~  prints a blank write-in line
+#          --Label   a small sub-heading inside the list
 # =====================================================================
 
-[SEAFOOD | Seafood | കടൽ വിഭവങ്ങൾ |  | Today's catch — please ask for the market price]
-Ailafish | market
-Ayakoora | market
-Chemmeen (Prawns) | market
-King Fish Mandi | market
-~
-~
-~
+[SEA | From the Sea | കടൽ വിഭവങ്ങൾ |  | Priced by the day's catch — please ask | nop,box,caption]
+King Fish  ·  Neymeen
+Pomfret  ·  Avoli
+Ayakoora  ·  Seer
+Aila  ·  Mackerel
+Chemmeen  ·  Prawns
+Koonthal  ·  Squid
 
-[MEALS | Meals | ഊണ് |  | Served as one generous plate]
+[MANGALORE | Mangalapuram Special | മംഗലാപുരം സ്പെഷ്യൽ |  |  |]
+Chicken Ghee Roast | 250
+Prawn Ghee Roast | 350
+Squid Ghee Roast | 270
+Gadbad Ice Cream | 220
+
+[MEALS | Meals | ഊണ് |  | Served for one |]
 Meals | 100
 
-[MANDI | Mandi | മന്ദി | Qtr,Half,Full | ]
+[MANDI | Mandi | മന്ദി | Qtr,Half,Full | Slow-smoked rice, carved to order |]
+*King Fish Mandi | Whole seer · market price
 Chicken Mandi | 160 | 320 | 600
-Alfaham Mandi | 180 | 360 | 660
-Afghani Alfaham Mandi | 200 | 400 | 780
+Beef Alfaham Mandi | 250 | 490 | 960
+--with Alfaham
 Creamy Alfaham Mandi | 210 | 420 | 840
+Afghani Alfaham Mandi | 200 | 400 | 780
+Masala Alfaham Mandi | 200 | 400 | 780
 Dynamic Alfaham Mandi | 200 | 400 | 780
-Honey Mandi | 180 | 380 | 720
 Honey Chilly Alfaham Mandi | 190 | 380 | 720
 Kondattam Alfaham Mandi | 190 | 380 | 720
 Kanthari Alfaham Mandi | 190 | 380 | 720
-Masala Alfaham Mandi | 200 | 400 | 780
 Pepper Alfaham Mandi | 190 | 380 | 720
-Beef Alfaham Mandi | 250 | 490 | 960
-Shawaya Mandi | 190 | 380 | 720
-Creamy Shawaya Mandi | 190 | 390 | 750
+Honey Mandi | 180 | 380 | 720
+Alfaham Mandi | 180 | 360 | 660
+--with Shawaya
 Dynamic Shawaya Mandi | 200 | 400 | 780
 Masala Shawaya Mandi | 200 | 400 | 780
+Creamy Shawaya Mandi | 190 | 390 | 750
+Shawaya Mandi | 190 | 380 | 720
 
-[SHAWARMA | Shawarma | ഷവർമ |  | ]
-Shawarma Roll | 100
-Shawarma Plate | 120
+[SHAWARMA | Shawarma | ഷവർമ |  |  |]
 Shawarma Full Meat | 140
+Shawarma Plate | 120
+Shawarma Roll | 100
 
-[ALFAHAM | Alfaham | അൽഫഹം | Qtr,Half,Full | Charcoal grill only — rice is served separately]
-Alfaham Only | 120 | 240 | 450
-Afghani Alfaham | 150 | 300 | 600
-Honey Alfaham | 130 | 260 | 500
-Honey Chilly Alfaham | 130 | 260 | 500
-Kanthari Alfaham | 130 | 260 | 500
-Kondattam Alfaham | 140 | 280 | 550
+[ALFAHAM | Alfaham | അൽഫഹം | Qtr,Half,Full | Charcoal grill, no rice |]
 Creamy Alfaham | 150 | 300 | 600
 Dynamic Alfaham | 150 | 300 | 600
 Masala Alfaham | 150 | 300 | 600
+Afghani Alfaham | 150 | 300 | 600
+Kondattam Alfaham | 140 | 280 | 550
+Honey Alfaham | 130 | 260 | 500
+Honey Chilly Alfaham | 130 | 260 | 500
+Kanthari Alfaham | 130 | 260 | 500
 Pepper Alfaham | 130 | 260 | 500
 Peri Peri Alfaham | 130 | 260 | 500
+Alfaham Only | 120 | 240 | 450
 
-[SHAWAYA | Shawaya | ഷവായ | Qtr,Half,Full | ]
-Shawaya Only | 130 | 260 | 500
-Creamy Shawaya | 140 | 280 | 550
+[SHAWAYA | Shawaya | ഷവായ | Qtr,Half,Full |  |]
 Dynamic Shawaya | 150 | 300 | 600
+Creamy Shawaya | 140 | 280 | 550
 Masala Shawaya | 140 | 270 | 520
+Shawaya Only | 130 | 260 | 500
 
-[NOODLES | Noodles | നൂഡിൽസ് |  | ]
-Chicken Noodles | 180
-Chicken Schezwan Noodles | 190
-Mix Noodles | 230
-Egg Noodles | 170
-Egg Schezwan Noodles | 180
-Veg Noodles | 160
-Veg Schezwan Noodles | 170
+[BROAST | Broast | ബ്രോസ്റ്റ് | 4 pcs,8 pcs,12 pcs | Fried to order, always crisp | box,star]
+Broast | 150 | 300 | 450
+Chicken Pop | . | 180 | .
+Chicken Strips | . | 250 | .
 
-[CHINESE | Chinese | ചൈനീസ് | Qtr,Half,Qtr,Half | ]
-Chicken Chilly | 180 | 360 | 200 | 400
-Honey Chilly Chicken | 190 | 380 | 210 | 420
-Schezwan Chicken | 190 | 380 | 210 | 420
-Chicken Manchurian | 180 | 360 | 200 | 400
-Gobi Manchurian | 160 | 320 | 180 | 360
-Paneer Manchurian | 190 | 380 | 210 | 420
-Mushroom Manchurian | 190 | 380 | 210 | 420
-Gobi Chilly | 160 | 320 | 180 | 360
-Paneer Chilly | 190 | 380 | 210 | 420
-Mushroom Chilly | 190 | 380 | 210 | 420
-Chicken Kondattam | 200 | 400 | - | -
-Dragon Chicken | 200 | 400 | - | -
-Chicken Lollypop | 200 | 400 | - | -
-Chicken 65 | 180 | 360 | - | -
-Chicken Wings | 180 | 360 | - | -
-Pepper Chicken Dry | 200 | 400 | - | -
-Garlic Chicken | 190 | 380 | - | -
-Ginger Chicken | 200 | 400 | - | -
-Beef Chilli | 230 | 460 | - | -
-Beef Fry | 230 | 460 | - | -
-Beef Pepper Masala | 240 | 480 | - | -
-Beef Dry Fry | 230 | 480 | - | -
-Beef Roast | 230 | 460 | - | -
+[STARTERS | Starters | സ്റ്റാർട്ടേഴ്സ് | Qtr,Half | Fried and grilled, straight from the kitchen | box]
+Ginger Chicken | 200 | 400
+Pepper Chicken Dry | 200 | 400
+Chicken Kondattam | 200 | 400
+Chicken Lollypop | 200 | 400
+Dragon Chicken | 200 | 400
+Garlic Chicken | 190 | 380
+Chicken 65 | 180 | 360
+Chicken Wings | 180 | 360
 
-[CRICE | Chinese Rice | ചൈനീസ് റൈസ് |  | ]
-Chicken Fried Rice | 180
-Chicken Schezwan Fried Rice | 190
-Mix Fried Rice | 230
-Egg Fried Rice | 170
-Egg Schezwan Fried Rice | 180
-Veg Fried Rice | 160
-Veg Schezwan Fried Rice | 170
+[BEEF | Beef | ബീഫ് | Qtr,Half |  |]
+Beef Pepper Masala | 240 | 480
+Beef Dry Fry | 230 | 480
+Beef Roast | 230 | 460
+Beef Fry | 230 | 460
+Beef Chilli | 230 | 460
 
-[GRAVY | Indian Gravy | കറികൾ | Qtr,Half | ]
+[CURRIES | Curries | കറികൾ | Qtr,Half | Goes with parotta, kuboos or rice |]
 Butter Chicken | 230 | 460
-Kadai Chicken | 220 | 440
-Pepper Chicken Masala | 220 | 440
 Chicken Tikka Masala | 230 | 460
 Chicken Hyderabadi | 230 | 460
 Chicken Angara Masala | 230 | 460
-Veg Mix Curry | 190 | 380
+Kadai Chicken | 220 | 440
+Pepper Chicken Masala | 220 | 440
 Paneer Butter Masala | 210 | 420
 Mushroom Butter Masala | 210 | 420
-Veg Korma | 180 | 360
 Paneer Kadai | 210 | 420
+Veg Mix Curry | 190 | 380
+Veg Korma | 180 | 360
 Veg Kadai | 180 | 360
 
-[SOUP | Soup | സൂപ്പ് | Veg,Chicken | ]
-Clear Soup | 100 | 120
-Manchow Soup | 160 | 180
-Hot & Sour Soup | 160 | 180
-Sweet Corn Soup | 170 | 190
-
-[BREADS | Breads | പൊറോട്ടയും റൊട്ടിയും |  | ]
+[BREADS | Breads | പൊറോട്ടയും റൊട്ടിയും |  |  |]
 Parotta | 15
 Wheat Parotta | 20
 Chapati | 15
-Kuboos | 10
 Rumali Rotti | 20
+Kuboos | 10
 
-[BROAST | Broast | ബ്രോസ്റ്റ് |  | ]
-Broast <i>4 pcs · 8 pcs · 12 pcs</i> | 150 · 300 · 450
-Chicken Pop | 180
-Chicken Strips | 250
+[SOUP | Soup | സൂപ്പ് | Veg,Chicken |  |]
+Sweet Corn Soup | 170 | 190
+Manchow Soup | 160 | 180
+Hot & Sour Soup | 160 | 180
+Clear Soup | 100 | 120
 
-[SALADS | Salads | സാലഡ് |  | ]
-Fruit &amp; Veg Salad | 200
-Garden Salad | 80
-Pineapple Honey Mint Salad | 150
+[INDOCH | Chilly &amp; Manchurian | ചില്ലി &amp; മഞ്ചൂരിയൻ | Qtr,Half,Qtr,Half |  |]
+Honey Chilly Chicken | 190 | 380 | 210 | 420
+Schezwan Chicken | 190 | 380 | 210 | 420
+Chicken Chilly | 180 | 360 | 200 | 400
+Chicken Manchurian | 180 | 360 | 200 | 400
+Paneer Chilly | 190 | 380 | 210 | 420
+Paneer Manchurian | 190 | 380 | 210 | 420
+Mushroom Chilly | 190 | 380 | 210 | 420
+Mushroom Manchurian | 190 | 380 | 210 | 420
+Gobi Chilly | 160 | 320 | 180 | 360
+Gobi Manchurian | 160 | 320 | 180 | 360
+
+[RICENOODLES | Fried Rice &amp; Noodles | ഫ്രൈഡ് റൈസ് &amp; നൂഡിൽസ് |  | Same price, rice or noodles |]
+Mix | 230
+Chicken Schezwan | 190
+Chicken | 180
+Egg Schezwan | 180
+Egg | 170
+Veg Schezwan | 170
+Veg | 160
+
+[SALADS | Salads | സാലഡ് |  |  |]
 Hayat Special Salad | 250
+Fruit &amp; Veg Salad | 200
+Pineapple Honey Mint Salad | 150
 Fruit Salad with Ice Cream | 120
+Garden Salad | 80
 
-[JUICE | Fresh Juice | ഫ്രഷ് ജ്യൂസ് |  | ]
-Fresh Lime Water | 30
-Mint Lime Water | 35
-Fresh Lime Soda | 40
+[MOJITO | Mojito | മൊഹീറ്റോ |  | Pineapple Chilli is the one to try | star,box]
+Pineapple Chilli | 100
+Green Apple | 120
+Blueberry | 120
+Passionfruit | 120
+Kiwi | 120
+Mint | 100
+Lemon Mint | 100
+Watermelon | 100
+Blue Lagoon | 100
+
+[JUICE | Fresh Juice | ഫ്രഷ് ജ്യൂസ് |  | Pressed to order | 2up]
+Dragon Fruit Juice | 110
+Apple Juice | 90
+Pomegranate Juice | 90
+Mango Juice | 80
+Grape Juice | 80
+Pineapple Juice | 75
+Orange Juice | 70
+Chikku Juice | 70
+Watermelon Juice | 60
+Carrot Juice | 60
+Musambi Juice | 60
 Mint Lime Soda | 45
 Pineapple Mint | 45
-Watermelon Mint | 40
 Pineapple Lime | 45
 Grape Lime | 45
 Pineapple Chilly | 45
 Dragon Fruit Lime | 45
-Watermelon Juice | 60
-Pineapple Juice | 75
-Orange Juice | 70
-Apple Juice | 90
-Grape Juice | 80
-Mango Juice | 80
-Pomegranate Juice | 90
-Dragon Fruit Juice | 110
-Carrot Juice | 60
-Musambi Juice | 60
-Chikku Juice | 70
+Fresh Lime Soda | 40
+Watermelon Mint | 40
+Mint Lime Water | 35
+Fresh Lime Water | 30
 
-[FALOODA | Falooda | ഫലൂദ |  | ]
+[SHAKE | Shake | ഷേക്ക് |  |  | 2up]
+Butterscotch | 120
+Chikku | 120
+Black Carrot | 110
+Strawberry | 110
+Chocolate | 100
+Mango | 100
+Vanilla | 100
+Avil Milk Special | 80
+
+[FALOODA | Falooda | ഫലൂദ |  |  |]
 Fruit Falooda | 210
 Royal Falooda | 170
 Rose Falooda | 170
 
-[MOJITO | Mojito | മൊഹീറ്റോ |  | ]
-Mint | 100
-Lemon Mint | 100
-Green Apple | 120
-Blueberry | 120
-Watermelon | 100
-Passionfruit | 120
-Kiwi | 120
-Pineapple | 100
-Blue Lagoon | 100
-
-[SHAKE | Shake | ഷേക്ക് |  | ]
-Chocolate | 100
-Black Carrot | 110
-Mango | 100
-Strawberry | 110
-Vanilla | 100
-Butterscotch | 120
-Chikku | 120
-Avil Milk Special | 80
-
-[BEV | Beverages | ചൂടു പാനീയങ്ങൾ |  | ]
-Tea | 15
-Mint Tea | 15
-Lemon Tea | 15
+[BEV | Hot &amp; Cold | ചൂടു പാനീയങ്ങൾ |  |  | 2up]
+Horlicks | 30
+Boost | 30
 Green Tea | 20
 Coffee | 20
 Black Coffee | 20
-Horlicks | 30
-Boost | 30
+Tea | 15
+Mint Tea | 15
+Lemon Tea | 15
