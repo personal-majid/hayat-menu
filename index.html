@@ -885,11 +885,12 @@ window.CONFIG = {
   },
 
   /* ---- 0aa. COLOUR THEME ----------------------------------- *
-     "garden" = the green and cream of the printed flyer (default)
+     "paper"  = the cream card, ink type and gold rule of the printed menu (default)
+     "garden" = the green and cream of the older flyer
      "night"  = the dark gold dining room
      Either way the guest can switch it with the leaf button in
      the header, and their choice sticks on that device.        */
-  theme: "garden",
+  theme: "paper",
 
   /* ---- 0a. FULL SCREEN ------------------------------------- *
      true  = the menu goes full screen (no address bar, no tabs)
@@ -1555,15 +1556,19 @@ let VIEW = "table";
 let L = localStorage0("hayatLang") || "en";
 try{ VIEW = localStorage0("hayatView") === "photo" ? "photo" : "table"; }catch(e){}
 try{
-  THEME = localStorage0("hayatTheme") || ((C && C.theme==="garden") ? "garden" : "night");
+  /* the light theme config.js chose; a device that remembered the
+     old green flips to it once, because the brand moved on */
+  var DAY = (C && C.theme) || "garden";
+  THEME = localStorage0("hayatTheme") || DAY;
+  if(THEME === "garden" && DAY === "paper") THEME = "paper";
   applyTheme();
 }catch(e){}
 function applyTheme(){
   document.documentElement.setAttribute("data-theme", THEME);
   var m=document.querySelector('meta[name="theme-color"]');
-  if(m) m.setAttribute("content", THEME==="garden" ? "#243510" : "#100A05");
+  if(m) m.setAttribute("content", THEME==="garden" ? "#243510" : THEME==="paper" ? "#F5F0E4" : "#100A05");
   var b=document.getElementById("themebtn");
-  if(b) b.classList.toggle("on", THEME==="garden");
+  if(b) b.classList.toggle("on", THEME!=="night");
 }
 function localStorage0(k){ try{return window.localStorage.getItem(k)}catch(e){return null} }
 function saveLang(v){ try{window.localStorage.setItem("hayatLang",v)}catch(e){} }
@@ -2889,7 +2894,7 @@ document.getElementById("fcat").onclick=sheetCatering;
     if(n>=5){n=0;if(confirm("Download party enquiries + feedback as a text file?"))exportAll();}});})();
 document.getElementById("galbtn").onclick=()=>{search.value="";location.hash="#/gallery"};
 document.getElementById("themebtn").onclick=()=>{
-  THEME = THEME==="garden" ? "night" : "garden";
+  THEME = THEME==="night" ? ((C && C.theme) || "garden") : "night";
   try{ window.localStorage.setItem("hayatTheme", THEME); }catch(e){}
   applyTheme(); route();
 };

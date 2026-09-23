@@ -60,11 +60,12 @@ window.CONFIG = {
   },
 
   /* ---- 0aa. COLOUR THEME ----------------------------------- *
-     "garden" = the green and cream of the printed flyer (default)
+     "paper"  = the cream card, ink type and gold rule of the printed menu (default)
+     "garden" = the green and cream of the older flyer
      "night"  = the dark gold dining room
      Either way the guest can switch it with the leaf button in
      the header, and their choice sticks on that device.        */
-  theme: "garden",
+  theme: "paper",
 
   /* ---- 0a. FULL SCREEN ------------------------------------- *
      true  = the menu goes full screen (no address bar, no tabs)

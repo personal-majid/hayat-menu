@@ -2037,12 +2037,23 @@ function dishRow(it, c){
   '</div>';
 }
 
+/* The printed card sets every section name with its Malayalam
+   beside it. Same here. A category without one simply has none. */
+var CAT_ML = { mandi:"\u0d2e\u0d28\u0d4d\u0d24\u0d3f", alfaham:"\u0d05\u0d7d\u0d2b\u0d39\u0d02",
+  shawaya:"\u0d37\u0d35\u0d3e\u0d2f", exotic:"\u0d2b\u0d4d\u0d30\u0d48\u0d21\u0d4d \u0d1a\u0d3f\u0d15\u0d4d\u0d15\u0d7b",
+  biryani:"\u0d2c\u0d3f\u0d30\u0d3f\u0d2f\u0d3e\u0d23\u0d3f", seafood:"\u0d15\u0d1f\u0d7d \u0d35\u0d3f\u0d2d\u0d35\u0d19\u0d4d\u0d19\u0d7e",
+  gravies:"\u0d15\u0d31\u0d3f\u0d15\u0d7e", breads:"\u0d2c\u0d4d\u0d30\u0d46\u0d21\u0d4d\u0d38\u0d4d", shawarma:"\u0d37\u0d35\u0d7c\u0d2e",
+  sides:"\u0d38\u0d48\u0d21\u0d4d\u0d38\u0d4d", drinks:"\u0d1c\u0d4d\u0d2f\u0d42\u0d38\u0d4d", desserts:"\u0d21\u0d38\u0d47\u0d7c\u0d1f\u0d4d\u0d38\u0d4d" };
+
 function catBlock(c){
   var open = !!MOPEN[c.id];
   var items = (c.items || []).filter(onSale);
+  var ml = CAT_ML[c.id];
   return '<section class="mcat' + (open ? " open" : "") + '">' +
     '<button class="mcathead" data-cat="' + esc(c.id) + '">' +
-      '<span class="mcatname">' + esc(c.name) + '</span>' +
+      '<span class="mcatname">' + esc(c.name) +
+        (ml ? ' <span class="mml">' + ml + '</span>' : '') + '</span>' +
+      '<span class="mrule"></span>' +
       '<span class="mcatn">' + items.length + '</span>' +
       '<span class="mcatchev">' + (open ? "⌄" : "›") + '</span>' +
     '</button>' +
@@ -2063,7 +2074,11 @@ function viewLanding(main){
 
       '<div class="mtop">' +
         '<div class="mbrand"><b>Hayat</b><span>Fish &amp; Mandi · Makkaraparamba</span></div>' +
-        '<span class="mstate' + (st.open ? " on" : "") + '">' + esc(st.txt || (st.open ? "Open" : "Closed")) + '</span>' +
+        '<span class="mtopr">' +
+          '<span class="mstate' + (st.open ? " on" : "") + '">' + esc(st.txt || (st.open ? "Open" : "Closed")) + '</span>' +
+          '<button class="mlang" id="ldLang" title="English / Malayalam">' +
+            ((typeof L === "string" && L === "ml") ? "English" : "\u0d2e\u0d32\u0d2f\u0d3e\u0d33\u0d02") + '</button>' +
+        '</span>' +
       '</div>' +
 
       (live
@@ -2093,7 +2108,7 @@ function viewLanding(main){
         : /* search results, flat */
           (hits.length
             ? '<div class="mitems flat">' + hits.map(function(h){ return dishRow(h.it, h.c); }).join("") + '</div>'
-            : '<p class="mnone">Nothing called “' + esc(MQ) + '”. Try another word.</p>')) +
+            : '<p class="mnone">Nothing called \u201c' + esc(MQ) + '\u201d. Try \u201cmandi\u201d or \u201calfaham\u201d.</p>')) +
 
       '<div class="landfoot">' +
         callBtn(((C().delivery || [])[0] || {}).number || C().whatsapp || "", "Call the restaurant", "landlink") +
@@ -2110,6 +2125,7 @@ function viewLanding(main){
     var n = el("mq"); if(n){ n.focus(); try{ n.setSelectionRange(at, at); }catch(e){} }
   };
   var qx = el("mqx"); if(qx) qx.onclick = function(){ MQ = ""; viewLanding(main); el("mq").focus(); };
+  var lg = el("ldLang"); if(lg) lg.onclick = function(){ var b = document.getElementById("langbtn"); if(b) b.click(); };
 
   var call = el("ldCall"); if(call) call.onclick = function(){ location.hash = "#/quick"; };
 
@@ -2596,8 +2612,7 @@ function openPinPicker(start, onPick){
     var map = LF.map(box, { zoomControl:false, attributionControl:true })
                 .setView([at.lat, at.lng], start && start.lat ? 18 : 16);
     LF.control.zoom({ position:"bottomleft" }).addTo(map);
-    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(map);
+    tileLayer(LF).addTo(map);
 
     /* Full screen: every gesture is the map's. No taming here -
        that is what broke it. */
@@ -2817,6 +2832,19 @@ function viewOrder(main, id){
 
 /* the customer's own little map: their pin, and the rider closing in */
 var TMAP = null, TDOTS = null;
+/* The map's paper: on the paper theme a pale Carto basemap that
+   sits with the cream; elsewhere OpenStreetMap's own tiles. Both
+   free, both attributed. */
+function tileLayer(LF){
+  var paper = document.documentElement.getAttribute("data-theme") === "paper";
+  return paper
+    ? LF.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom:19, subdomains:"abcd",
+        attribution:"&copy; OpenStreetMap &copy; CARTO" })
+    : LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom:19, attribution:"&copy; OpenStreetMap" });
+}
+
 function drawTrackMap(o){
   var box = el("trackmap");
   if(!box || !o.rLat) return;
@@ -2825,8 +2853,7 @@ function drawTrackMap(o){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
     TMAP = LF.map(box, { zoomControl:false, attributionControl:true, dragging:true });
     tameMap(TMAP, box);
-    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(TMAP);
+    tileLayer(LF).addTo(TMAP);
 
     /* The second pin is the customer's door when we have it. When
        we do not, it is the kitchen, and it says so - a "You" pin
@@ -4268,8 +4295,7 @@ function drawAdminMap(list, blind){
              .setView([HOME.lat, HOME.lng], HOMEZOOM);   /* replaced by frameMap below */
     LF.control.zoom({ position:"topright" }).addTo(AMAP);
     tameMap(AMAP, box);
-    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(AMAP);
+    tileLayer(LF).addTo(AMAP);
 
     if(HEAT) drawClusters(AMAP, list);
 
@@ -5036,8 +5062,7 @@ function drawCustomerMap(list){
     CMAP = LF.map(box, { zoomControl:false });
     LF.control.zoom({ position:"topright" }).addTo(CMAP);
     tameMap(CMAP, box);
-    LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(CMAP);
+    tileLayer(LF).addTo(CMAP);
 
     LF.circleMarker([HOME.lat, HOME.lng], {
       radius:7, color:"#FFFFFF", weight:2, fillColor:"#1B2410", fillOpacity:1
@@ -6485,6 +6510,8 @@ function route(p, main){
      search in the header is for browsing and only distracts here. */
   try{ document.body.classList.toggle("inflow",
     /^(cart|checkout|o|quick|orders|seen)$/.test(p[0] || "")); }catch(e){}
+  /* the landing carries its own brand row; the header above it is a second one */
+  try{ document.body.classList.toggle("onland", !p.length); }catch(e){}
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&

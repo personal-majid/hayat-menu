@@ -12,6 +12,8 @@ html[lang="ml"] .tag{letter-spacing:.2px}
   --bg:#100A05; --card:#1D1409; --card2:#241906;
   --line:rgba(201,162,75,.14); --line2:rgba(201,162,75,.28);
   --gold:#C9A24B; --gold2:#EFCE86; --cream:#F3EFE2; --green:#8FBE43;
+  /* the primary button colour: gold in the dining room, ink on paper */
+  --pri:var(--gold); --pri2:var(--gold2);
   --paper:#EFE6CF; --ink:#2A1A0D; --hot:#E4705A; --muted:#9C8A6C;
   --ig1:#F58529; --ig2:#DD2A7B; --ig3:#8134AF;
   --r:16px; --r2:11px; --r3:9px; --tap:48px;
@@ -170,7 +172,7 @@ h3.mini{animation:riseIn .3s cubic-bezier(.22,.9,.3,1) both}
   border:1px solid var(--line);border-radius:14px;margin:0 0 18px}
 .seg button{min-height:40px;padding:0 22px;border-radius:11px;font-size:13.5px;
   font-weight:700;color:var(--muted);letter-spacing:.3px}
-.seg button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.seg button.on{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 .plist{max-width:940px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
   background:var(--listbg);
   box-shadow:var(--shadow)}
@@ -222,7 +224,7 @@ h3.mini{animation:riseIn .3s cubic-bezier(.22,.9,.3,1) both}
   text-transform:uppercase;margin-right:5px}
 .ribbon{position:absolute;top:12px;left:12px;font-size:9.5px;font-weight:800;
   letter-spacing:1.2px;text-transform:uppercase;padding:5px 10px;border-radius:7px;
-  background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+  background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 .ribbon.hot{background:linear-gradient(135deg,#F08A72,var(--hot));color:#2A0D08}
 
 /* ================= dish page ================= */
@@ -270,14 +272,14 @@ table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
   letter-spacing:.7px;margin-left:7px;vertical-align:1.5px;display:inline-block}
 .tag.hot{background:rgba(228,112,90,.9);color:#2A0D08}
 .tag.veg{background:rgba(143,190,67,.9);color:#17250A}
-.tag.star{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.tag.star{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 
 /* ================= gallery ================= */
 .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--soft2);
   border:1px solid var(--line);border-radius:14px;margin:0 0 22px}
 .tabs button{min-height:42px;padding:0 22px;border-radius:11px;font-size:13.5px;
   font-weight:700;color:var(--muted);letter-spacing:.4px}
-.tabs button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.tabs button.on{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 .ggrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 .gcell{border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--card);
   position:relative;width:100%;display:block;box-shadow:var(--shadow)}
@@ -383,7 +385,7 @@ table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
   gap:9px;font-size:14.5px;font-weight:700;text-decoration:none;border:1px solid var(--line2);
   background:var(--soft2);color:var(--cream)}
 .cta .wa{background:linear-gradient(135deg,#4ADE80,#16A34A);color:#052E16;border:0}
-.cta .gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent);border:0}
+.cta .gold{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent);border:0}
 
 /* ============ reels (instagram-style vertical feed) ============ */
 .reelrow{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 12px;scroll-snap-type:x mandatory}
@@ -426,7 +428,7 @@ textarea.fld{min-height:110px;resize:vertical}
   text-decoration:none;font-weight:700;font-size:13.5px;margin-top:4px}
 .qcard a.wa{background:linear-gradient(135deg,#4ADE80,#16A34A);color:#052E16}
 .qcard a.ig{background:linear-gradient(135deg,var(--ig1),var(--ig2) 55%,var(--ig3));color:#fff}
-.qcard a.gg{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.qcard a.gg{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 
 @media (max-width:860px){
   .celebrate{padding:22px 17px;border-radius:18px}
@@ -464,7 +466,7 @@ textarea.fld{min-height:110px;resize:vertical}
 .gtabs button{flex:1;min-height:54px;border-radius:16px;font-size:14px;font-weight:700;
   letter-spacing:.4px;border:1px solid var(--line);background:var(--soft);color:var(--muted);
   display:flex;align-items:center;justify-content:center;gap:8px}
-.gtabs button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent);border-color:var(--gold)}
+.gtabs button.on{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent);border-color:var(--gold)}
 .mos{columns:3;column-gap:14px}
 .mos > *{break-inside:avoid;margin-bottom:14px}
 .mtile{border-radius:16px;overflow:hidden;border:1px solid var(--line);position:relative;
@@ -590,7 +592,7 @@ footer button,footer a{flex:1;min-height:46px;display:flex;align-items:center;ju
   gap:9px;border-radius:var(--r2);text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.2px;
   background:var(--soft);border:1px solid var(--line);color:var(--cream);transition:all .18s}
 footer button:active,footer a:active{transform:scale(.985)}
-footer .gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent);border-color:transparent;
+footer .gold{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent);border-color:transparent;
   font-weight:700}
 footer .ig{background:rgba(221,42,123,.12);border-color:rgba(221,42,123,.35);color:#F0B9D2}
 footer .star{color:var(--gold2);font-size:17px}
@@ -710,7 +712,7 @@ footer .star{color:var(--gold2);font-size:17px}
 .revbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;
   border-radius:var(--r2);font-size:15px;font-weight:650;text-decoration:none;letter-spacing:.2px;
   border:1px solid var(--line);background:var(--soft);color:var(--cream);margin-bottom:10px}
-.revbtn.primary{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent);
+.revbtn.primary{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent);
   border-color:transparent;font-weight:700}
 .revbtn.ghost{min-height:46px;font-size:13.5px;font-weight:600;color:var(--muted)}
 .revbtn:active{transform:scale(.99)}
@@ -756,7 +758,7 @@ footer .star{color:var(--gold2);font-size:17px}
 #cartfab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));
   z-index:60;display:flex;align-items:center;gap:9px;border:0;border-radius:999px;cursor:pointer;
   padding:13px 22px;font:inherit;font-size:14px;font-weight:700;color:var(--onaccent);
-  background:linear-gradient(135deg,var(--gold2),var(--gold));box-shadow:0 10px 26px rgba(0,0,0,.30)}
+  background:linear-gradient(135deg,var(--pri2),var(--pri));box-shadow:0 10px 26px rgba(0,0,0,.30)}
 #cartfab .b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;
   background:rgba(0,0,0,.22);font-size:12px}
 body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
@@ -768,7 +770,7 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
 .shopbtn{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;gap:8px;
   border-radius:var(--r2);border:1px solid transparent;font:inherit;font-size:15px;font-weight:700;
   cursor:pointer;text-decoration:none;margin:10px 0 0;
-  background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+  background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 .shopbtn.ghost{background:var(--soft);border-color:var(--line);color:var(--cream);font-weight:600}
 .shopbtn.small{min-height:44px;font-size:13.5px}
 .lines{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin:0 0 12px}
@@ -1277,7 +1279,7 @@ body.deskwork .conn.bad{max-width:min(70vw,560px);border-radius:var(--r2);
 .dtab{flex:none;width:46px;min-height:46px;border-radius:11px;cursor:pointer;font:inherit;
   font-size:15px;font-weight:800;color:var(--muted);background:var(--soft2);
   border:1px solid var(--line)}
-.dtab.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent);
+.dtab.on{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent);
   border-color:transparent}
 .disc .fld{margin:0}
 .shopbtn.danger{background:none;border-color:rgba(228,112,90,.55);color:var(--hot);font-weight:700}
@@ -1307,7 +1309,7 @@ body.deskwork .conn.bad{max-width:min(70vw,560px);border-radius:var(--r2);
   background:var(--soft2);border:1px solid var(--line)}
 .tab{flex:1;min-height:38px;border:0;border-radius:999px;cursor:pointer;font:inherit;
   font-size:13px;font-weight:700;color:var(--muted);background:transparent}
-.tab.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+.tab.on{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 .board{display:flex;gap:10px;overflow-x:auto;padding:0 0 10px;margin:0 0 6px;
   scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
 .col{flex:0 0 240px;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px}
@@ -1329,7 +1331,7 @@ body.deskwork .conn.bad{max-width:min(70vw,560px);border-radius:var(--r2);
    with the heading painted on it in a colour that vanished. */
 button.mini,select.mini{width:100%;min-height:36px;border-radius:9px;border:1px solid transparent;cursor:pointer;
   font:inherit;font-size:12.5px;font-weight:700;margin-top:4px;
-  background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent)}
+  background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 .ghostmini{background:var(--soft);border-color:var(--line);color:var(--cream)}
 .sel.mini{padding:0 10px;color:var(--cream);background:var(--soft2);border:1px solid var(--line)}
 .pinlink.mini2{font-size:11.5px;margin:0 0 6px}
@@ -2220,7 +2222,7 @@ body.phoneorder #search{display:none !important}
 @media (max-width:860px){ .riderstrip{left:8px;top:78px;max-width:92%} .rsline{white-space:normal} }
 
 /* ---- v114: one office dock, one caption per console ---- */
-.dockbtn.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--onaccent);border-color:transparent}
+.dockbtn.on{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent);border-color:transparent}
 .tabcap{display:flex;align-items:center;padding:0 10px 0 14px;font-size:11px;font-weight:800;
   letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 .dockroom{height:84px}
@@ -2240,3 +2242,218 @@ body.phoneorder #search{display:none !important}
 @media (max-width:860px){
   body.deskboard .conn{bottom:calc(100% - 100vh + 236px)}
 }
+
+
+/* ============================================================
+   PAPER — the printed menu, on a screen
+   Cream stock, ink type, one gold hairline with a diamond on it.
+   Serif for names, a quiet sans for everything you tap.
+   ============================================================ */
+@font-face{font-family:"Cormorant";font-weight:600;font-style:normal;font-display:swap;
+  src:url(fonts/cormorant-600.woff2) format("woff2")}
+@font-face{font-family:"Cormorant";font-weight:700;font-style:normal;font-display:swap;
+  src:url(fonts/cormorant-700.woff2) format("woff2")}
+@font-face{font-family:"Cormorant";font-weight:500;font-style:italic;font-display:swap;
+  src:url(fonts/cormorant-500i.woff2) format("woff2")}
+@font-face{font-family:"Manrope";font-weight:400;font-display:swap;src:url(fonts/manrope-400.woff2) format("woff2")}
+@font-face{font-family:"Manrope";font-weight:600;font-display:swap;src:url(fonts/manrope-600.woff2) format("woff2")}
+@font-face{font-family:"Manrope";font-weight:800;font-display:swap;src:url(fonts/manrope-800.woff2) format("woff2")}
+@font-face{font-family:"NotoML";font-weight:400;font-display:swap;unicode-range:U+0D00-0D7F;
+  src:url(fonts/noto-malayalam-400.woff2) format("woff2")}
+
+html[data-theme="paper"]{
+  --bg:#F5F0E4; --card:#FBF8F1; --card2:#F0E9DA;
+  --line:rgba(27,26,23,.13); --line2:rgba(27,26,23,.26);
+  --gold:#B8975A; --gold2:#7E6535; --cream:#1B1A17; --green:#4F7A2C;
+  --paper:#FBF8F1; --ink:#1B1A17; --hot:#B3462B; --muted:#6F6758;
+  --pri:#1B1A17; --pri2:#3A3630; --onaccent:#F5F0E4;
+  --soft:rgba(27,26,23,.045); --soft2:rgba(27,26,23,.08); --soft3:rgba(27,26,23,.03);
+  --chrome:rgba(245,240,228,.94); --chrome2:rgba(245,240,228,.94); --navbg:rgba(251,248,241,.7);
+  --deep:#E9E1CE; --accentwash:rgba(184,151,90,.16); --accentwash2:rgba(184,151,90,.09);
+  --veil:rgba(27,26,23,.45); --shadow:0 8px 24px rgba(27,26,23,.10);
+  --r:12px; --r2:8px; --r3:6px;
+  --tablehead:rgba(27,26,23,.06); --tablerow:rgba(27,26,23,.03); --listbg:var(--card);
+}
+html[data-theme="paper"] body{
+  font-family:"Manrope","NotoML","Segoe UI",-apple-system,Roboto,"Noto Sans Malayalam",sans-serif;
+  background:
+    radial-gradient(1000px 600px at 50% -30%, #FDFBF6 0%, transparent 65%),
+    var(--bg);
+  color:var(--ink);
+}
+/* the serif: every name that would be in serif on the printed card */
+html[data-theme="paper"] .mbrand b,
+html[data-theme="paper"] .shoph,
+html[data-theme="paper"] .landh,
+html[data-theme="paper"] .mcatname,
+html[data-theme="paper"] .mtext b,
+html[data-theme="paper"] .detail h1,
+html[data-theme="paper"] .brand h1,
+html[data-theme="paper"] .colhead b,
+html[data-theme="paper"] .bwho b,
+html[data-theme="paper"] .who.big,
+html[data-theme="paper"] .line .ln > b,
+html[data-theme="paper"] .catrow b,
+html[data-theme="paper"] .kt b{
+  font-family:"Cormorant","Cormorant Garamond",Georgia,serif;font-weight:700;letter-spacing:.005em}
+
+/* header: paper, hairline, the mark */
+html[data-theme="paper"] header{background:var(--chrome);border-bottom:1px solid var(--line2)}
+html[data-theme="paper"] header .logo{filter:none;opacity:1}
+html[data-theme="paper"] .brand h1{font-size:19px;color:var(--ink)}
+html[data-theme="paper"] .brand p{color:var(--gold2)}
+html[data-theme="paper"] footer{background:var(--chrome);border-top:1px solid var(--line2)}
+
+/* the one-page menu */
+html[data-theme="paper"] .mtop{align-items:center;gap:12px;padding:14px 2px 18px;
+  border-bottom:1px solid var(--line2);margin:0 0 14px;position:relative}
+html[data-theme="paper"] .mtop::after{content:"\25C6";position:absolute;right:0;bottom:-6px;
+  font-size:9px;color:var(--gold);background:var(--bg);padding-left:6px}
+html[data-theme="paper"] .mbrand{display:flex;align-items:center;gap:12px}
+html[data-theme="paper"] .mbrand::before{content:"";width:26px;height:42px;flex:0 0 auto;
+  background:url(assets/mark.png) center/contain no-repeat}
+html[data-theme="paper"] .mbrand b{font-size:34px;font-weight:600;letter-spacing:-.01em}
+html[data-theme="paper"] .mbrand span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold2);opacity:1;margin-top:3px}
+html[data-theme="paper"] .mstate{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  border:1px solid var(--gold);border-radius:999px;padding:6px 11px;color:var(--gold2);opacity:1}
+html[data-theme="paper"] .mstate.on{color:var(--green);border-color:var(--green)}
+html[data-theme="paper"] .mstate.on:before{background:var(--green)}
+
+html[data-theme="paper"] .msearch input{background:var(--card);border:1px solid var(--line2);border-radius:10px}
+html[data-theme="paper"] .msearch input:focus{border-color:var(--gold)}
+html[data-theme="paper"] .mcall{background:var(--card);border:1px solid var(--line2);border-radius:10px}
+html[data-theme="paper"] .mcalli{background:var(--pri);color:var(--onaccent);border-radius:8px}
+html[data-theme="paper"] .mcall b{font-family:"Cormorant",serif;font-size:19px;font-weight:700}
+html[data-theme="paper"] .landagain{background:var(--card);border:1px solid var(--line2)}
+
+/* a section, as the print sets it: NAME · malayalam ——————◆ */
+html[data-theme="paper"] .mcats{gap:0;margin-top:4px}
+html[data-theme="paper"] .mcat{border:0;border-radius:0;background:transparent}
+html[data-theme="paper"] .mcat.open{border:0}
+html[data-theme="paper"] .mcathead{padding:15px 2px 13px;gap:12px;border-bottom:0}
+html[data-theme="paper"] .mcat.open .mcathead{border-bottom:0}
+html[data-theme="paper"] .mcatname{flex:0 1 auto;font-size:19px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;line-height:1.1}
+html[data-theme="paper"] .mml{font-family:"NotoML","Noto Sans Malayalam",sans-serif;font-size:13px;
+  color:var(--muted);letter-spacing:0;text-transform:none;margin-left:4px}
+html[data-theme="paper"] .mrule{flex:1 1 auto;height:1px;background:var(--gold);opacity:.7;
+  position:relative;min-width:24px}
+html[data-theme="paper"] .mrule::after{content:"\25C6";position:absolute;right:-2px;top:-7px;
+  font-size:9px;line-height:1;color:var(--gold);opacity:1}
+html[data-theme="paper"] .mcatn{font-size:11px;letter-spacing:.08em;opacity:.55}
+html[data-theme="paper"] .mcatchev{opacity:.4}
+html[data-theme="paper"] .mitems{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  overflow:hidden;margin:0 0 8px}
+html[data-theme="paper"] .mitems.flat{margin-top:8px}
+html[data-theme="paper"] .mrow{border-bottom:1px solid var(--line)}
+html[data-theme="paper"] .mthumb{border-radius:6px}
+html[data-theme="paper"] .mtext b{font-size:18px;font-weight:700;line-height:1.15}
+html[data-theme="paper"] .mtext small{font-family:"Cormorant",serif;font-style:italic;font-weight:500;
+  font-size:14px;opacity:.75}
+html[data-theme="paper"] .mprice{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;font-size:13px}
+html[data-theme="paper"] .mpick{color:var(--ink);border:1px solid var(--ink);border-radius:999px;
+  font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;padding:9px 14px}
+html[data-theme="paper"] .mrow.open .mpick{background:var(--pri);color:var(--onaccent)}
+html[data-theme="paper"] .mqty{background:var(--gold);color:#fff}
+html[data-theme="paper"] .msizes{background:var(--card2);padding-left:80px}
+html[data-theme="paper"] .msl{font-family:"Cormorant",serif;font-weight:600;font-size:16px}
+html[data-theme="paper"] .msp{color:var(--ink);font-variant-numeric:tabular-nums}
+html[data-theme="paper"] .add{border-radius:999px;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+html[data-theme="paper"] .step{border-radius:999px;border:1px solid var(--line2);background:var(--card)}
+
+/* buttons and cards everywhere else */
+html[data-theme="paper"] .shopbtn{border-radius:999px;letter-spacing:.04em}
+html[data-theme="paper"] .shopbtn.ghost{background:transparent;border-color:var(--ink);color:var(--ink)}
+html[data-theme="paper"] .shoph{font-size:28px;font-weight:600;letter-spacing:.01em;margin:10px 0 18px}
+html[data-theme="paper"] .backbar{background:var(--chrome)}
+html[data-theme="paper"] .back{border-radius:999px;border:1px solid var(--line2);background:var(--card)}
+html[data-theme="paper"] .crumbtxt{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--gold2)}
+html[data-theme="paper"] .lines,html[data-theme="paper"] .ocard,html[data-theme="paper"] .ridercard,
+html[data-theme="paper"] .addrcard,html[data-theme="paper"] .coto,html[data-theme="paper"] .notes,
+html[data-theme="paper"] .paid,html[data-theme="paper"] .landlive,html[data-theme="paper"] .bcard{
+  background:var(--card);border-color:var(--line2);border-radius:10px}
+html[data-theme="paper"] .line{background:transparent}
+html[data-theme="paper"] .line .ln > b{font-size:17px}
+html[data-theme="paper"] .total b,html[data-theme="paper"] .btot{font-family:"Cormorant",serif;font-weight:700;font-size:24px}
+html[data-theme="paper"] .tabs,html[data-theme="paper"] .conbar .tabs{background:var(--card);border:1px solid var(--line2)}
+html[data-theme="paper"] .tab{letter-spacing:.06em;text-transform:uppercase;font-size:11.5px;font-weight:700}
+html[data-theme="paper"] .tabcap{color:var(--gold2)}
+html[data-theme="paper"] .colhead{border-bottom:1px solid var(--gold)}
+html[data-theme="paper"] .colhead b{font-size:15px;letter-spacing:.12em;text-transform:uppercase}
+html[data-theme="paper"] .dockbtn{background:var(--card);border-color:var(--line2);color:var(--ink)}
+html[data-theme="paper"] .pill{background:var(--card);border:1px solid var(--line2)}
+html[data-theme="paper"] .mfrow,html[data-theme="paper"] .mftally{background:var(--card);border-color:var(--line2)}
+html[data-theme="paper"] .rsrow{background:var(--card);color:var(--ink)}
+html[data-theme="paper"] .fld{background:var(--card);border:1px solid var(--line2);border-radius:10px;color:var(--ink)}
+html[data-theme="paper"] .stepdots i.on{background:var(--gold)}
+html[data-theme="paper"] .tstep.on .dot{background:var(--gold);border-color:var(--gold)}
+html[data-theme="paper"] .tstep .dot{border-color:var(--line2)}
+html[data-theme="paper"] .tstep b{font-family:"Cormorant",serif;font-size:17px;font-weight:700}
+html[data-theme="paper"] .sheet{background:var(--card);border-radius:18px 18px 0 0}
+html[data-theme="paper"] .sheetopt{border-color:var(--line2)}
+html[data-theme="paper"] .landlink{color:var(--gold2)}
+html[data-theme="paper"] #cartfab{background:var(--pri);color:var(--onaccent);border-radius:999px;box-shadow:var(--shadow)}
+html[data-theme="paper"] #callfab{background:var(--card);color:var(--ink);border:1px solid var(--line2)}
+html[data-theme="paper"] .comap,html[data-theme="paper"] .admap{border-color:var(--line2);border-radius:10px}
+/* paper: ink mark, lining numerals, ink call button */
+html[data-theme="paper"] header .logo,html[data-theme="paper"] .mbrand::before{filter:brightness(0) opacity(.88)}
+html[data-theme="paper"] .shoph,html[data-theme="paper"] .mtext b,html[data-theme="paper"] .mcatname,
+html[data-theme="paper"] .tstep b,html[data-theme="paper"] .colhead b,html[data-theme="paper"] .line .ln > b{
+  font-variant-numeric:lining-nums;font-feature-settings:"lnum" 1}
+html[data-theme="paper"] .total b,html[data-theme="paper"] .btot{font-family:"Manrope",sans-serif;font-weight:800;font-size:22px}
+html[data-theme="paper"] .callbtn,html[data-theme="paper"] .ridercard .callbtn{background:var(--pri);color:var(--onaccent)}
+html[data-theme="paper"] .mcatname{font-size:18px;letter-spacing:.07em}
+html[data-theme="paper"] .dockbtn.on{background:var(--pri);color:var(--onaccent);border-color:transparent}
+html[data-theme="paper"] .qbtn.wa,html[data-theme="paper"] .quick .wa{color:var(--green)}
+html[data-theme="paper"] .qbtn.gm{color:var(--gold2)}
+
+/* ---- paper polish: photos, motion, timeline, map pins, toast ---- */
+/* the landing is its own front page: no second header above it on a phone */
+html[data-theme="paper"] body.phoneorder.onland header{display:none}
+html[data-theme="paper"] body.phoneorder.onland .menu1{padding-top:8px}
+html[data-theme="paper"] .mtopr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+html[data-theme="paper"] .mlang{font:inherit;font-size:10.5px;letter-spacing:.08em;color:var(--gold2);
+  background:none;border:0;padding:2px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.mlang{display:none}                       /* only the paper landing shows it */
+html[data-theme="paper"] .mlang{display:inline-block}
+
+/* photos: a little larger, rounded, lifted; the open dish gets the big one */
+html[data-theme="paper"] .mthumb{width:64px;height:64px;border-radius:10px;
+  box-shadow:0 3px 10px rgba(27,26,23,.14);transition:width .18s ease,height .18s ease,border-radius .18s ease}
+html[data-theme="paper"] .mrow.open .mthumb{width:92px;height:92px;border-radius:12px}
+html[data-theme="paper"] .msizes{padding-left:16px}
+
+/* motion: a section unfolds, a size list slides in */
+html[data-theme="paper"] .mitems,html[data-theme="paper"] .msizes{animation:paperIn .18s ease both}
+@keyframes paperIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+html[data-theme="paper"] #cartfab{transition:transform .15s ease}
+html[data-theme="paper"] #cartfab:active{transform:scale(.96)}
+@media (prefers-reduced-motion:reduce){html[data-theme="paper"] .mitems,html[data-theme="paper"] .msizes{animation:none}}
+
+/* the timeline reads like a receipt */
+html[data-theme="paper"] .tstep{gap:14px;padding-bottom:16px}
+html[data-theme="paper"] .tstep::before{left:4px;top:14px;width:1px;background:var(--gold);opacity:.6}
+html[data-theme="paper"] .tstep .dot{width:9px;height:9px;margin-top:5px;border:1px solid var(--gold);background:var(--card)}
+html[data-theme="paper"] .tstep.on .dot{background:var(--gold);border-color:var(--gold)}
+html[data-theme="paper"] .tstep.now .dot{box-shadow:0 0 0 4px rgba(184,151,90,.22)}
+html[data-theme="paper"] .tstep .tt{font-family:"Cormorant",serif;font-style:italic;font-weight:500;font-size:14px;color:var(--muted)}
+html[data-theme="paper"] .tstep small{font-size:12.5px}
+
+/* map pins in the house colours */
+html[data-theme="paper"] .omark .tag{background:var(--card);color:var(--ink);border:1px solid var(--line2);
+  font-family:"Manrope",sans-serif;letter-spacing:.06em;border-radius:6px}
+html[data-theme="paper"] .omark.bike .tag{background:var(--pri);color:var(--onaccent);border-color:transparent}
+html[data-theme="paper"] .bikedot{background:var(--card);border:1px solid var(--line2);box-shadow:0 2px 8px rgba(27,26,23,.18)}
+html[data-theme="paper"] .omark.bike.f-live .bikedot{box-shadow:0 0 0 3px rgba(79,122,44,.35)}
+html[data-theme="paper"] .comap .leaflet-marker-icon .dot{border-color:var(--card)}
+
+/* the board card: the customer's name in serif, like a reservation */
+html[data-theme="paper"] .bwho{font-family:"Cormorant",serif;font-weight:700;font-size:19px;letter-spacing:0}
+html[data-theme="paper"] .bcard{box-shadow:0 2px 10px rgba(27,26,23,.06)}
+
+/* words: empty states and toasts in the house voice */
+html[data-theme="paper"] .mnone{font-family:"Cormorant",serif;font-style:italic;font-size:18px;opacity:.8}
+html[data-theme="paper"] #toast{background:var(--pri);color:var(--onaccent);border-radius:999px;
+  font-family:"Manrope",sans-serif;font-weight:600;letter-spacing:.02em;box-shadow:var(--shadow)}
+html[data-theme="paper"] .shopsub,html[data-theme="paper"] .pinnote{font-family:"Cormorant",serif;font-style:italic;font-size:15px}
