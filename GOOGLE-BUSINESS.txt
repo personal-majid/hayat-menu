@@ -1,0 +1,62 @@
+GOOGLE BUSINESS PROFILE - what the admin does today, and how to
+unlock the rest. All of it is free.
+=================================================================
+
+TODAY (no setup)
+----------------
+  Board -> a DELIVERED card -> WhatsApp
+      sends "Thank you... a word on Google helps" with the five-star
+      link. Never automatic: you tap it, per customer.
+  Customer's order page, after delivery
+      "How was it?" -> our review card -> Google stars.
+  Admin -> Google (the G in the dock)
+      Business Profile, our listing, the five-star link, reviews,
+      posts, and a QR for the counter.
+
+  The five-star link is in config.js -> review.writeLink and already
+  carries our place id (ChIJ6e-dHwDLpzsRJqS5O3bgSV8).
+
+
+NEXT: reply to reviews, post offers, change hours FROM the admin
+-----------------------------------------------------------------
+Google only opens this through its Business Profile APIs, and only
+to businesses it has approved. Free; takes Google 1-2 weeks.
+
+  1. Google Cloud console -> project "h-menu" (the Firebase one)
+     -> APIs & Services -> Library -> enable:
+        My Business Account Management API
+        My Business Business Information API
+        My Business Q&A API
+        Business Profile Performance API
+     (the "reviews" and "posts" calls live in the older
+      Google My Business API v4.9 - enable that too)
+
+  2. Request access:
+        https://developers.google.com/my-business/content/prereqs
+     -> "Request access to the API" form. Use the owner's Google
+     account of the listing. Say: single restaurant, own listing,
+     replying to reviews and posting offers from our own admin.
+
+  3. When the approval mail arrives:
+     Cloud console -> APIs & Services -> Credentials
+     -> Create credentials -> OAuth client ID -> Web application
+        Authorised JavaScript origins:
+            https://personal-majid.github.io
+        Authorised redirect URIs:
+            https://personal-majid.github.io/hayat-menu/
+     Copy the CLIENT ID (ends in .apps.googleusercontent.com).
+     There is no secret for this kind of client. Never paste
+     anything called "secret" anywhere in the site.
+
+  4. config.js -> add
+        google: { clientId: "PASTE-THE-CLIENT-ID" },
+     and run SHIP.bat.
+
+  5. Tell Claude "Google API is approved". Then the admin gets:
+        - reviews on the board, reply from the card
+        - Offer blast -> WhatsApp AND a Google Post in one tap
+        - "Closed today" / new hours -> Google updates with the app
+        - a tile: calls, direction taps, profile views this week
+
+Nothing in this stops working if Google says no. Today's part
+needs no approval at all.

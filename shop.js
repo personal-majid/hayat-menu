@@ -2738,25 +2738,7 @@ function viewOrder(main, id){
     /* once the rider is moving, show them moving */
     (o.rLat && at >= 2 && o.status !== "delivered"
       ? '<div id="trackmap" class="comap trackmap"></div>' +
-        '<p class="pinnote" id="trackNote">' +
-          (function(){
-            /* No pin on the order: we cannot say how far. Say what
-               we do know, and offer the one tap that fixes it. */
-            if(!o.lat) return "Rider left the kitchen \u00b7 " + staleness(o.rAt).txt +
-              '<br><button class="linky" id="trackPin">Share my location so you can see how far</button>';
-            var R = 6371, rad = Math.PI/180;
-            var dLat = (o.rLat - o.lat) * rad, dLng = (o.rLng - o.lng) * rad;
-            var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-                    Math.cos(o.lat*rad)*Math.cos(o.rLat*rad)*Math.sin(dLng/2)*Math.sin(dLng/2);
-            var km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            var f = staleness(o.rAt);
-            var where = (km < 0.2 ? "Almost at your door"
-                       : km < 1   ? Math.round(km*1000) + " m away"
-                                  : km.toFixed(1) + " km away");
-            /* do not claim a distance from a fix that has gone cold */
-            if(f.state !== "live") return "Last seen " + f.txt;
-            return where + " \u00b7 " + f.txt;
-          })() + '</p>'
+        '<p class="pinnote" id="trackNote">' + trackLine(o) + '</p>'
       : '') +
 
     '<div class="lines">' + (o.lines||[]).map(function(l){
@@ -2791,9 +2773,12 @@ function viewOrder(main, id){
     (o.status === "placed" && (o.lines || []).length
       ? '<button class="shopbtn ghost" id="obChange">Change this order</button>'
       : '') +
+    (o.status === "delivered" && !riderApp()
+      ? '<a class="shopbtn" href="' + esc(base() + "?guest#/review") + '">How was it? \u2605</a>'
+      : '') +
     (canCancel
       ? '<button class="shopbtn ghost danger" id="obCancel">Cancel this order</button>'
-      : '<p class="shopnote">To change anything now, please call us.</p>') +
+      : o.status === "delivered" ? '' : '<p class="shopnote">To change anything now, please call us.</p>') +
     '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
 
   var ch = el("obChange");
@@ -2818,16 +2803,7 @@ function viewOrder(main, id){
   };
 
   if(o.rLat && at >= 2 && o.status !== "delivered") drawTrackMap(o);
-  var tp = el("trackPin");
-  if(tp) tp.onclick = function(){
-    if(!navigator.geolocation){ shopToast("This phone cannot share its location."); return; }
-    tp.textContent = "Finding you\u2026";
-    navigator.geolocation.getCurrentPosition(function(pos){
-      STORE.edit(id, { lat:+pos.coords.latitude.toFixed(6), lng:+pos.coords.longitude.toFixed(6) });
-      shopToast("Got it. The rider can see your door now.");
-    }, function(){ tp.textContent = "Location is off on this phone"; },
-    { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
-  };
+  wireTrackPin(id);
 }
 
 /* the customer's own little map: their pin, and the rider closing in */
@@ -2843,6 +2819,33 @@ function tileLayer(LF){
         attribution:"&copy; OpenStreetMap &copy; CARTO" })
     : LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom:19, attribution:"&copy; OpenStreetMap" });
+}
+
+function wireTrackPin(id){
+  var tp = el("trackPin");
+  if(!tp) return;
+  tp.onclick = function(){
+    if(!navigator.geolocation){ shopToast("This phone cannot share its location."); return; }
+    tp.textContent = "Finding you\u2026";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      STORE.edit(id, { lat:+pos.coords.latitude.toFixed(6), lng:+pos.coords.longitude.toFixed(6) });
+      shopToast("Got it. The rider can see your door now.");
+    }, function(){ tp.textContent = "Location is off on this phone"; },
+    { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
+  };
+}
+
+/* one line under the customer's map: how far, how fresh */
+function trackLine(o){
+  if(!o.lat) return "Rider left the kitchen \u00b7 " + staleness(o.rAt).txt +
+    '<br><button class="linky" id="trackPin">Share my location so you can see how far</button>';
+  var km = kmBetween(o.lat, o.lng, o.rLat, o.rLng);
+  var f = staleness(o.rAt);
+  var where = (km < 0.2 ? "Almost at your door"
+             : km < 1   ? Math.round(km*1000) + " m away"
+                        : km.toFixed(1) + " km away");
+  if(f.state !== "live") return "Last seen " + f.txt;
+  return where + " \u00b7 " + f.txt;
 }
 
 function drawTrackMap(o){
@@ -3493,6 +3496,7 @@ function boardCard(o){
      buttons, which is what the card used to show. */
   var waText = (o.status === "placed") ? msgAsk(o)
              : (o.status === "accepted") ? msgAccepted(o)
+             : (o.status === "delivered") ? msgThanks(o)
              : msgOnWay(o);
 
   /* Five lines, in the order a kitchen reads them: who, what,
@@ -3746,6 +3750,21 @@ function msgChanged(o){
     "\n\nThe latest is always here: " + base() + "#/o/" + o.id;
 }
 
+/* The links Google gives a listing, from config. writeLink lands on
+   the five stars; the listing is the public page. */
+function reviewUrl(){ var r = C().review || {}; return r.writeLink || C().reviewLink || ""; }
+function listingUrl(){ return C().reviewLink || C().mapsLink || ""; }
+
+/* After delivery: thanks, and the one ask a restaurant is allowed
+   to make - not "five stars please", just the door. Sent from the
+   board's WhatsApp on a delivered card, never automatically. */
+function msgThanks(o){
+  return "Hayat \u2014 order " + o.id + "\n\n" +
+    "Thank you" + (o.name ? " " + o.name : "") + ". Hope you enjoyed it." +
+    (reviewUrl() ? "\n\nIf you have a moment, a word on Google helps a small kitchen more than you would think:\n" + reviewUrl() : "") +
+    "\n\nSee you again \u2014 " + base();
+}
+
 function msgRiderHere(o){
   return "Hayat \u2014 order " + o.id + "\n\nI am outside with your order." +
          "\nPlease collect " + rupee(o.total) + ".";
@@ -3829,7 +3848,7 @@ function orderCard(o){
    the view survives a repaint so a status change does not yank the
    map back to the start.
    ------------------------------------------------------------ */
-var AMAP = null, AVIEW = null;
+var AMAP = null, AVIEW = null, RMARKS = {};
 var ADVIEW = "board";
 try{ ADVIEW = localStorage.getItem("hayat_adview") || "board"; }catch(e){}
 
@@ -4258,7 +4277,8 @@ function officeDock(here){
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
     ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
-    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"]
+    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
+    ["google", "#/admin/google", "G",             "Google"]
   ];
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
@@ -4313,10 +4333,11 @@ function drawAdminMap(list, blind){
        A rider with no position at all is still listed in the strip
        below, because "not on the map" must never read as "fine". */
     var spots = ridersOnMap(riding);
+    RMARKS = {};
     spots.forEach(function(s){
       if(!s.lat) return;
       pts.push([s.lat, s.lng]);
-      LF.marker([s.lat, s.lng], { zIndexOffset: 500, icon: LF.divIcon({
+      RMARKS[s.id] = LF.marker([s.lat, s.lng], { zIndexOffset: 500, icon: LF.divIcon({
         className: "omark bike f-" + (s.own ? "old" : s.fresh.state),
         html: '<span class="bikedot">\uD83C\uDFCD</span>' +
               '<span class="tag">' + esc(shortName(s.name)) +
@@ -4557,6 +4578,45 @@ function custStats(c){
    customer's menu follows it on the next repaint.
    ------------------------------------------------------------ */
 var MA_OPEN = null;      /* the category whose dishes are showing */
+
+/* ---- Google, from the desk --------------------------------
+   Everything Google lets an owner do without their API: open the
+   profile, read the reviews, hand a guest the five-star link, print
+   the QR. The API half (reply from here, post offers, change hours)
+   waits on Google approving access; GOOGLE-BUSINESS.txt says how. */
+function viewGoogleAdmin(main){
+  gate(main, function(){ paintGoogleAdmin(main); });
+}
+function paintGoogleAdmin(main){
+  var w = reviewUrl(), l = listingUrl();
+  var since = Date.now() - 7 * 86400000;
+  var done = STORE.orders().filter(function(o){ return o.status === "delivered" && o.at >= since; }).length;
+  var qr = (typeof window.qrFor === "function" && w) ? window.qrFor(w, 220) : "";
+  var row = function(href, t, sub, ext){
+    return '<a class="line glink" href="' + esc(href) + '"' + (ext === false ? '' : ' target="_blank" rel="noopener"') + '>' +
+      '<div class="ln"><b>' + esc(t) + '</b><small>' + esc(sub) + '</small></div><span class="lgo">\u203A</span></a>';
+  };
+  main.innerHTML =
+    '<div class="shopwrap wide mapage">' +
+      '<div class="mahead"><h2 class="shoph">Google</h2>' +
+        '<span class="pill quiet">' + done + ' delivered this week</span></div>' +
+      '<p class="cqhint">The WhatsApp on a delivered card already carries the review link. ' +
+        'Everything below opens Google itself.</p>' +
+      '<div class="lines">' +
+        row("https://business.google.com/", "Business Profile", "Hours, photos, posts, replies \u2014 signed in as the owner") +
+        (l ? row(l, "Our listing", "What a customer sees on Google Maps") : "") +
+        (w ? row(w, "The five-star link", "Opens straight on the stars. Long-press to copy.") : "") +
+        row("https://business.google.com/reviews", "Reviews", "Read and reply") +
+        row("https://business.google.com/posts", "Posts", "Put today\u2019s offer on Google too") +
+      '</div>' +
+      (qr ? '<div class="gqr"><img src="' + qr + '" alt="QR to review" width="220" height="220">' +
+              '<small>Print for the counter \u00b7 scans to the five stars</small></div>' : '') +
+      '<p class="shopnote">Replying from here, posting offers and changing hours need Google\u2019s API access. ' +
+        'GOOGLE-BUSINESS.txt in the folder walks through the request \u2014 it is free.</p>' +
+      '<div class="dockroom"></div>' +
+      officeDock("google") +
+    '</div>';
+}
 
 function viewMenuAdmin(main){
   gate(main, function(){ paintMenuAdmin(main); });
@@ -5999,15 +6059,7 @@ function viewDrive(main, id){
     /* Read from the order, not set by hand, so a repaint cannot
        quietly undo it - that is how the last one went wrong. */
     '<div class="gpsrow"><span class="gpsdot' + (o.rAt ? " on" : "") + '" id="gpsDot"></span>' +
-      '<span id="gpsTxt">' + esc((function(){
-        if(!next) return "Not sharing";
-        if(!o.rAt) return native() ? "Starting\u2026" : "Sharing while this screen is on";
-        var f = staleness(o.rAt);
-        if(native()) return "Position shared " + f.txt + " \u00b7 keeps going with the screen off";
-        return f.state === "live"
-          ? "Position shared just now \u00b7 keep this screen on"
-          : "Last sent " + f.txt + " \u2014 the screen slept, tap to resume";
-      })()) + '</span></div>' +
+      '<span id="gpsTxt">' + esc(gpsLine(o)) + '</span></div>' +
     troubleStrip() +
     noteThread(o, "Held up? Cannot find the door? Say so here\u2026") +
     '<button class="shopbtn ghost" data-go="#/drive">Your other deliveries</button>');
@@ -6049,7 +6101,43 @@ function viewDrive(main, id){
   else stopPing();
 }
 
-/* ---- the position, while the job is open ---- */
+function gpsLine(o){
+  var next = FLOW[FLOW.indexOf(o.status) + 1];
+  if(!next) return "Not sharing";
+  if(!o.rAt) return native() ? "Starting\u2026" : "Sharing while this screen is on";
+  var f = staleness(o.rAt);
+  if(native()) return "Position shared " + f.txt + " \u00b7 keeps going with the screen off";
+  return f.state === "live"
+    ? "Position shared just now \u00b7 keep this screen on"
+    : "Last sent " + f.txt + " \u2014 the screen slept, tap to resume";
+}
+
+/* ---- the position, while the job is open ----
+   Sampled every five seconds; WRITTEN only when it matters. A phone
+   parked at a red light was sending the same point twelve times a
+   minute to Firestore, and every write repainted three screens.
+   That is the heat Majid felt in his pocket. */
+var LASTW = { lat:null, lng:null, at:0 };
+function worthWriting(lat, lng){
+  var now = Date.now();
+  if(!LASTW.at) return true;
+  if(now - LASTW.at >= 30000) return true;                 /* a heartbeat, half a minute */
+  var d = kmBetween(LASTW.lat, LASTW.lng, lat, lng) * 1000;
+  return d >= 20;                                          /* or twenty metres */
+}
+function kmBetween(a1, b1, a2, b2){
+  var R = 6371, rad = Math.PI/180;
+  var dLat = (a2 - a1) * rad, dLng = (b2 - b1) * rad;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+          Math.cos(a1*rad)*Math.cos(a2*rad)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function sendPing(id, lat, lng){
+  if(!worthWriting(lat, lng)) return;
+  LASTW = { lat:lat, lng:lng, at:Date.now() };
+  STORE.ping(id, lat, lng);
+}
+
 var PINGID = null, PINGJOB = null, WAKE = null;
 
 /* Android and iOS both stop a browser's GPS when the screen sleeps.
@@ -6096,6 +6184,7 @@ var NATIVEJOB = null;
 function startPing(id){
   if(PINGJOB === id) return;
   stopPing();
+  LASTW = { lat:null, lng:null, at:0 };
 
   /* ---- the app: hand the job to the foreground service ---- */
   var N = native();
@@ -6115,7 +6204,7 @@ function startPing(id){
       var at = +p[2];
       if(at === seen) return;          /* nothing new since last look */
       seen = at;
-      STORE.ping(id, +p[0], +p[1]);   /* the repaint draws the rest */
+      sendPing(id, +p[0], +p[1]);
     }, 5000);
     return;
   }
@@ -6131,7 +6220,7 @@ function startPing(id){
     var tb = el("troubleBox"); if(tb && tb.innerHTML){ tb.innerHTML = ""; tb.className = ""; }
     if(now - last < 5000) return;         /* five seconds, as agreed */
     last = now;
-    STORE.ping(id, pos.coords.latitude, pos.coords.longitude);
+    sendPing(id, pos.coords.latitude, pos.coords.longitude);
   }, function(){
     var t = el("gpsTxt");
     if(t) t.textContent = "Location is off \u2014 the customer cannot see you move";
@@ -6330,7 +6419,7 @@ function wireInstallLink(repaint){
         if(r && r.outcome === "accepted") OFFER = null;
         if(repaint) repaint();
       });
-    } else if(repaint) repaint();              /* Apple: the bar with the two steps */
+    } else installSheet(true);                 /* Apple: the sheet with the two steps */
   };
 }
 
@@ -6385,11 +6474,13 @@ function canOfferInstall(){
    on its way - and only once a day. Two buttons: Install, Not
    now. On an iPhone the same sheet shows the two Safari steps.
    ------------------------------------------------------------ */
-function installSheet(){
-  if(!canOfferInstall()) return;
+function installSheet(asked){
   if(riderApp()) return;
-  try{ if(sessionStorage.getItem("hayat_sheet_shown") === "1") return; }catch(e){}
-  if(el("instSheet")) return;
+  if(!asked){
+    if(!canOfferInstall()) return;
+    try{ if(sessionStorage.getItem("hayat_sheet_shown") === "1") return; }catch(e){}
+  }
+  var stale = el("instSheet"); if(stale){ if(!asked) return; stale.remove(); }
   var apple = !theOffer() && isApple();
   var safari = /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios/i.test(navigator.userAgent);
   var box = document.createElement("div");
@@ -6515,7 +6606,7 @@ function route(p, main){
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
-           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu");
+           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -6536,13 +6627,66 @@ function route(p, main){
     if(p[1] === "call")   { REPAINT = function(){ if(isTyping()) return; viewCall(main); }; REPAINT(); return true; }
     if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
     if(p[1] === "menu")   { REPAINT = function(){ viewMenuAdmin(main); }; REPAINT(); return true; }
+    if(p[1] === "google") { REPAINT = function(){ viewGoogleAdmin(main); }; REPAINT(); return true; }
     if(p[1] === "c" && p[2]) { REPAINT = function(){ viewCustomer(main, p[2]); }; REPAINT(); return true; }
     if(p[1] === "o" && p[2]) { REPAINT = function(){ viewEdit(main, p[2]); }; REPAINT(); return true; }
     REPAINT = function(){ viewAdmin(main); }; REPAINT(); return true;
   }
   return false;
 }
+/* Everything about the data EXCEPT where the riders are right now.
+   If this has not changed since the last paint, the change was a
+   ping, and a ping moves a dot; it does not rebuild a page. */
+function quietSig(){
+  var o = {}, ids = Object.keys(DB.orders);
+  for(var i = 0; i < ids.length; i++){
+    var x = DB.orders[ids[i]];
+    o[ids[i]] = [x.status, x.editedAt, x.paid, x.payMode, x.riderId, x.total, x.lat, x.lng,
+                 (x.notes || []).length, x.cancelWhy, x.wantAt, x.doorAt, x.roadKm];
+  }
+  var r = {}, rk = Object.keys(DB.riders);
+  for(var j = 0; j < rk.length; j++){
+    var y = DB.riders[rk[j]];
+    r[rk[j]] = [y.name, y.phone, y.avail, y.off, y.uid, y.claimedAt, y.code];
+  }
+  return JSON.stringify([o, r, Object.keys(DB.customers).length, Object.keys(DB.verify).length,
+                         Object.keys(DB.pings).length, DB.menus && DB.menus.layout && DB.menus.layout.at]);
+}
+var LASTSIG = "";
+
+function nudgePins(){
+  var h = (location.hash || "").replace(/^#\/?/, "").split("/");
+  try{
+    /* the customer's tracker */
+    if(h[0] === "o" && h[1] && TMAP && TDOTS){
+      var o = STORE.order(h[1]);
+      if(o && o.rLat){
+        TDOTS.setLatLng([o.rLat, o.rLng]);
+        var n = el("trackNote"); if(n) n.innerHTML = trackLine(o);
+        wireTrackPin(h[1]);
+      }
+    }
+    /* the office map */
+    if(h[0] === "admin" && !h[1] && AMAP){
+      var live = STORE.orders();
+      ridersOnMap(live).forEach(function(s){
+        var m = RMARKS[s.id];
+        if(m && s.lat) m.setLatLng([s.lat, s.lng]);
+      });
+      var box = el("admap"); if(box) riderStrip(box, ridersOnMap(live));
+    }
+    /* the rider's own line */
+    if(h[0] === "drive" && h[1]){
+      var job = STORE.order(h[1]); var t = el("gpsTxt"); var d = el("gpsDot");
+      if(job && t){ t.textContent = gpsLine(job); if(d) d.classList.toggle("on", !!job.rAt); }
+    }
+  }catch(e){}
+}
+
 STORE.onChange(function(){
+  var sig = quietSig();
+  if(sig === LASTSIG){ nudgePins(); return; }
+  LASTSIG = sig;
   repaintNow();
   /* a rider signed in on this phone gets told about work wherever
      they are in the RIDER app. The customer app is a different

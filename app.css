@@ -2457,3 +2457,12 @@ html[data-theme="paper"] .mnone{font-family:"Cormorant",serif;font-style:italic;
 html[data-theme="paper"] #toast{background:var(--pri);color:var(--onaccent);border-radius:999px;
   font-family:"Manrope",sans-serif;font-weight:600;letter-spacing:.02em;box-shadow:var(--shadow)}
 html[data-theme="paper"] .shopsub,html[data-theme="paper"] .pinnote{font-family:"Cormorant",serif;font-style:italic;font-size:15px}
+/* ---- Google page ---- */
+.glink{text-decoration:none;color:inherit}
+.glink .lgo{font-size:22px;opacity:.45}
+.gqr{display:flex;flex-direction:column;align-items:center;gap:8px;margin:18px 0;padding:18px;
+  border:1px solid var(--line);border-radius:var(--r2);background:var(--card)}
+.gqr img{border-radius:8px;background:#fff;padding:8px}
+.gqr small{color:var(--muted);font-size:12px}
+.dockbtn .gicon{font-weight:800;font-size:17px}
+@media (max-width:620px){ .condock{gap:6px} .dockbtn{width:48px;height:48px;font-size:18px} .dockbtn.wide{width:48px} }
