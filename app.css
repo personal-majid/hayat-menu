@@ -2466,3 +2466,13 @@ html[data-theme="paper"] .shopsub,html[data-theme="paper"] .pinnote{font-family:
 .gqr small{color:var(--muted);font-size:12px}
 .dockbtn .gicon{font-weight:800;font-size:17px}
 @media (max-width:620px){ .condock{gap:6px} .dockbtn{width:48px;height:48px;font-size:18px} .dockbtn.wide{width:48px} }
+/* ---- around us right now ---- */
+.crowd{margin:18px 0}
+.crowd .noteshead small{font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px;opacity:.7}
+.crowdsum{margin:6px 0 10px;font-size:13.5px;color:var(--muted)}
+.crow .cnum{display:flex;flex-direction:column;align-items:flex-end;min-width:48px;font-variant-numeric:tabular-nums;font-weight:700;font-size:14px}
+.crow .cnum small{font-size:10px;font-weight:400;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
+.crow .cm{font-size:15px}
+.crow.v-busier .cm{color:var(--hot)}
+.crow.v-quieter .cm{color:var(--green)}
+.crow.us{background:var(--accentwash)}

@@ -1,0 +1,10 @@
+<!doctype html><html><body><h1 id="n"></h1><div>Popular times</div><div id="bars"></div><div id="live"></div>
+<script>
+var T={ 'ChIJ6e-dHwDLpzsRJqS5O3bgSV8':['Hayat Fish and Mandi',72,55,'Busier than usual'], 'ChIJTydvRgDLpzsRR9GxWVCgz8I':['Nahl Kuzhimandhi',20,45,'Less busy than usual'], 'ChIJAS4AFX3LpzsRgYQJQrNeE90':['Dosa Land',null,38,''] };
+var id=decodeURIComponent((location.search.match(/place_id:([^&]+)/)||[])[1]||''); var t=T[id];
+if(t){ document.getElementById('n').textContent=t[0]; var h=new Date().getHours(); var b=document.getElementById('bars');
+  var d=document.createElement('div'); d.setAttribute('aria-label', t[1]!=null?('Currently '+t[1]+'% busy, usually '+t[2]+'% busy.'):(t[2]+'% busy at '+(h%12||12)+' '+(h>=12?'PM':'AM')+'.')); b.appendChild(d);
+  ['60% busy at 7 PM.','80% busy at 8 PM.'].forEach(function(a){ var e=document.createElement('div'); e.setAttribute('aria-label',a); b.appendChild(e); });
+  if(t[3]) document.getElementById('live').innerHTML='Live<div>'+t[3]+'</div>';
+} else { document.getElementById('n').textContent='Somewhere'; document.body.appendChild(document.createTextNode('nothing here')); }
+</script></body></html>

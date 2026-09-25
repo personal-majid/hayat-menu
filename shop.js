@@ -54,7 +54,7 @@ function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} });
 try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
-var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, seq:100 };
+var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
 var FAULT = null;              /* why it is not live, in one word */
 
@@ -62,8 +62,8 @@ var FAULT = null;              /* why it is not live, in one word */
 function lsRead(){
   try{ var d = JSON.parse(localStorage.getItem(KEY)) || {};
     return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{},
-             verify:d.verify||{}, pings:d.pings||{}, menus:d.menus||{}, seq:d.seq||100 }; }
-  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, seq:100 }; }
+             verify:d.verify||{}, pings:d.pings||{}, menus:d.menus||{}, crowd:d.crowd||{}, seq:d.seq||100 }; }
+  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, seq:100 }; }
 }
 function lsWrite(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
@@ -280,6 +280,7 @@ async function connectFirebase(cfg){
   watch("verify", "verify");
   watch("pings",  "pings");
   watch("menus",  "menus");
+  watch("crowd",  "crowd");        /* the busy bars, from the extension */
 
   /* ask the REST endpoint once, so a missing database is named plainly
      instead of showing up later as writes that quietly disappear */
@@ -4587,6 +4588,42 @@ var MA_OPEN = null;      /* the category whose dishes are showing */
 function viewGoogleAdmin(main){
   gate(main, function(){ paintGoogleAdmin(main); });
 }
+/* "Around us right now": what the Hayat Crowd extension read from
+   Google's busy bars. Two hours old is still a reading; older is
+   history and says so. */
+function crowdBlock(){
+  var rows = Object.keys(DB.crowd || {}).map(function(k){ return DB.crowd[k]; })
+    .filter(function(r){ return r && r.at; })
+    .sort(function(a,b){ return (b.us ? 1 : 0) - (a.us ? 1 : 0) || (b.margin || -99) - (a.margin || -99); });
+  if(!rows.length)
+    return '<div class="crowd"><div class="noteshead">Around us right now</div>' +
+      '<p class="cqhint">Nothing read yet. The Hayat Crowd extension (crowd-ext folder, README inside) ' +
+      'reads Google\u2019s busy bars for us and the restaurants around us.</p></div>';
+  var newest = rows.reduce(function(m,r){ return Math.max(m, r.at); }, 0);
+  var stale = Date.now() - newest > 2 * 3600000;
+  var live = rows.filter(function(r){ return r.margin != null && Date.now() - r.at < 2 * 3600000; });
+  var busier = live.filter(function(r){ return r.verdict === "busier"; }).length;
+  var quieter = live.filter(function(r){ return r.verdict === "quieter"; }).length;
+  var avg = live.length ? Math.round(live.reduce(function(n,r){ return n + r.margin; }, 0) / live.length) : null;
+  var sign = function(n){ return n == null ? "\u2014" : (n > 0 ? "+" : "") + n; };
+  return '<div class="crowd">' +
+    '<div class="noteshead">Around us right now <small>' + esc(stale ? "last read " + when(newest) : "read " + staleness(newest).txt) + '</small></div>' +
+    (live.length
+      ? '<p class="crowdsum">' + busier + ' busier \u00b7 ' + quieter + ' quieter \u00b7 ' + (live.length - busier - quieter) +
+        ' as usual \u00b7 average <b>' + sign(avg) + '</b> points vs a normal hour</p>'
+      : '') +
+    '<div class="lines">' + rows.map(function(r){
+      return '<div class="line crow' + (r.us ? " us" : "") + ' v-' + esc(r.verdict || "unknown") + '">' +
+        '<div class="ln"><b>' + esc(r.name || r.key) + '</b><small>' + esc(r.live || r.verdict || "") +
+          (Date.now() - r.at > 2 * 3600000 ? ' \u00b7 ' + esc(when(r.at)) : '') + '</small></div>' +
+        '<span class="cnum">' + (r.now == null ? "\u2014" : r.now + "%") + '<small>now</small></span>' +
+        '<span class="cnum">' + (r.usual == null ? "\u2014" : r.usual + "%") + '<small>usual</small></span>' +
+        '<span class="cnum cm">' + sign(r.margin) + '</span>' +
+      '</div>';
+    }).join("") + '</div>' +
+  '</div>';
+}
+
 function paintGoogleAdmin(main){
   var w = reviewUrl(), l = listingUrl();
   var since = Date.now() - 7 * 86400000;
@@ -4608,7 +4645,9 @@ function paintGoogleAdmin(main){
         (w ? row(w, "The five-star link", "Opens straight on the stars. Long-press to copy.") : "") +
         row("https://business.google.com/reviews", "Reviews", "Read and reply") +
         row("https://business.google.com/posts", "Posts", "Put today\u2019s offer on Google too") +
+        row("crowd-ext/phone.html", "Crowd reader on a phone", "One tap on a Maps page tells us how busy a place is") +
       '</div>' +
+      crowdBlock() +
       (qr ? '<div class="gqr"><img src="' + qr + '" alt="QR to review" width="220" height="220">' +
               '<small>Print for the counter \u00b7 scans to the five stars</small></div>' : '') +
       '<p class="shopnote">Replying from here, posting offers and changing hours need Google\u2019s API access. ' +

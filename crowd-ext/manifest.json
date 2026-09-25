@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Hayat Crowd",
+  "version": "1.0",
+  "description": "Reads Google's busy bars for our shop and the restaurants around us, and says who is busier or quieter than usual.",
+  "permissions": ["storage", "alarms", "tabs", "scripting"],
+  "host_permissions": ["https://www.google.com/maps/*", "https://firestore.googleapis.com/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Hayat Crowd" },
+  "content_scripts": [{ "matches": ["https://www.google.com/maps/*"], "js": ["reader.js", "content.js"], "run_at": "document_idle" }],
+  "icons": { "128": "icon.png" }
+}

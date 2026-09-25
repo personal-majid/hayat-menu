@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hayat Crowd on a phone</title>
+<style>
+  body{font:16px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px 18px;background:#F5F0E4;color:#1B1A17;max-width:560px}
+  h1{font:600 30px Georgia,serif;margin:0 0 6px}
+  .sub{color:#6F6758;margin:0 0 22px}
+  ol{padding-left:20px}li{margin:0 0 12px}
+  a.bm{display:inline-block;padding:12px 18px;border-radius:999px;background:#1B1A17;color:#F5F0E4;text-decoration:none;font-weight:700}
+  code{background:#FBF8F1;border:1px solid rgba(27,26,23,.2);border-radius:6px;padding:2px 6px;font-size:14px}
+  textarea{width:100%;box-sizing:border-box;height:90px;font:12px ui-monospace,monospace;border:1px solid rgba(27,26,23,.26);border-radius:8px;padding:8px;background:#FBF8F1}
+  small{color:#6F6758}
+</style></head><body>
+<h1>Hayat Crowd</h1>
+<p class="sub">One tap on a Google Maps page tells the office how busy that place is right now.</p>
+<ol>
+  <li><b>Copy</b> the code below (tap the box, Select all, Copy).</li>
+  <li>In Safari / Chrome: bookmark any page, then <b>edit the bookmark</b> — name it <code>Crowd</code> and replace its address with the copied code.</li>
+  <li>Open a restaurant in <b>Google Maps in the browser</b> (not the app) — for example ours:<br>
+      <small><a href="https://www.google.com/maps/place/?q=place_id:ChIJ6e-dHwDLpzsRJqS5O3bgSV8">google.com/maps · Hayat Fish and Mandi</a></small></li>
+  <li>Open the bookmark <code>Crowd</code>. It reads the busy bars, asks for a short key once, and saves.</li>
+</ol>
+<textarea readonly id="code"></textarea>
+<p><small>The first time it asks for the robot word from <code>firestore.rules</code>. Until the rules are published, any word works.</small></p>
+<script>
+  document.getElementById("code").value =
+    "javascript:(function(){var s=document.createElement('script');s.src='https://personal-majid.github.io/hayat-menu/crowd-ext/bm.js?'+Date.now();document.head.appendChild(s)})()";
+  document.getElementById("code").onclick = function(){ this.select(); };
+</script>
+</body></html>
