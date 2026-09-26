@@ -36,6 +36,7 @@
   .bill .tot{ display:flex; justify-content:space-between; font-size:18px; font-weight:900; margin-top:4px }
   .bill .sub{ display:flex; justify-content:space-between; font-size:12px }
   .qr{ text-align:center; margin-top:8px } .qr img{ width:34mm; height:34mm } .qr small{ display:block; font-size:10px }
+  .band{ background:#000; color:#fff; text-align:center; font-size:17px; font-weight:900; letter-spacing:.04em; padding:5px 0; margin:6px 0 4px }
   .foot{ text-align:center; font-size:10.5px; margin-top:6px }
   .screen{ text-align:center; margin:0 auto 14px; width:var(--w) }
   .screen button{ font:inherit; padding:10px 18px; border:0; border-radius:999px; background:#1B1A17; color:#fff; cursor:pointer }
@@ -87,7 +88,9 @@
       '<hr>' +
       (m.off ? '<div class="sub"><span>Subtotal</span><span>' + rupee(m.sub) + '</span></div><div class="sub"><span>' + esc(job.offLabel || "Discount") + '</span><span>− ' + rupee(m.off) + '</span></div>' : '') +
       '<div class="tot"><span>TOTAL</span><span>' + rupee(m.total != null ? m.total : o.total) + '</span></div>' +
-      '<div class="sub"><span>' + esc(o.paid ? "PAID · " + (o.payMode === "upi" ? "UPI" : "Cash") : "Cash on delivery") + '</span><span>' + esc(o.rider ? "Rider " + o.rider : "") + '</span></div>' +
+      (o.paid
+        ? '<div class="band">PAID · ' + esc(o.payMode === "upi" ? "UPI" : "Cash") + '</div>'
+        : '<div class="band">TO PAY ' + rupee(m.total != null ? m.total : o.total) + '</div><div class="sub"><span>Cash or UPI to the rider</span><span>' + esc(o.rider ? "Rider " + o.rider : "") + '</span></div>') +
       qr +
       '<div class="foot">Thank you · ' + esc(job.site || "") + '</div>' +
     '</div>');

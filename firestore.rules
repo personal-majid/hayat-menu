@@ -253,6 +253,13 @@ service cloud.firestore {
     match /kds/{id}      { allow read, write: if isOffice() || hasRole(['kitchen','captain']); }
     match /waitlist/{id} { allow read, write: if isOffice() || hasRole(['captain']); }
 
+    /* ---- printing ---------------------------------------------
+         settings/print   which printer is which; set from the desk
+         print_jobs/{id}  a ticket for the shop PC's print agent; the
+                          agent (admin SDK) marks it done and prunes */
+    match /settings/{id}   { allow read: if isCrew(); allow write: if isOffice(); }
+    match /print_jobs/{id} { allow read, create, update: if isOffice(); allow delete: if false; }
+
     /* ---- cleaning -------------------------------------------
          cleanplan/main      the master cleaning schedule (office edits)
          cleanlog/{id}       one tick per task done: who, when, optional small photo

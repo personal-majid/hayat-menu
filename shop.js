@@ -54,7 +54,7 @@ function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} });
 try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
-var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, seq:100 };
+var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, settings:{}, prints:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
 var FAULT = null;              /* why it is not live, in one word */
 
@@ -62,8 +62,9 @@ var FAULT = null;              /* why it is not live, in one word */
 function lsRead(){
   try{ var d = JSON.parse(localStorage.getItem(KEY)) || {};
     return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{},
-             verify:d.verify||{}, pings:d.pings||{}, menus:d.menus||{}, crowd:d.crowd||{}, seq:d.seq||100 }; }
-  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, seq:100 }; }
+             verify:d.verify||{}, pings:d.pings||{}, menus:d.menus||{}, crowd:d.crowd||{},
+             settings:d.settings||{}, prints:d.prints||{}, seq:d.seq||100 }; }
+  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, settings:{}, prints:{}, seq:100 }; }
 }
 function lsWrite(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
@@ -304,6 +305,9 @@ async function connectFirebase(cfg){
   watch("pings",  "pings");
   watch("menus",  "menus");
   watch("crowd",  "crowd");        /* the busy bars, from the extension */
+  watch("settings", "settings");   /* one small doc per thing the office set up: printers, ... */
+  /* print_jobs is watched only once the office opens; see printWatch() */
+  window.__printWatch = function(){ watch("print_jobs", "prints"); };
 
   /* ask the REST endpoint once, so a missing database is named plainly
      instead of showing up later as writes that quietly disappear */
@@ -1120,6 +1124,34 @@ var STORE = {
     });
     return fixed;
   },
+  /* ---- printing: what the office set up, and the jobs sent ---- */
+  printSettings: function(){ return DB.settings.print || {}; },
+  savePrintSettings: function(patch){
+    var now = Object.assign({}, DB.settings.print || {}, patch, { id:"print", at: Date.now() });
+    DB.settings.print = now;
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "settings", "print"), now, { merge:true })
+        .catch(function(e){ console.warn("savePrintSettings", e); });
+      fire();
+    } else lsWrite();
+    return now;
+  },
+  /* a ticket for the shop PC to print; resolves with the job id */
+  sendPrint: function(job){
+    var row = Object.assign({}, job, { done:false, tries:0, by: myVoice(), sentAt: Date.now() });
+    if(FB){
+      return FB.api.addDoc(FB.api.collection(FB.db, "print_jobs"), row).then(function(r){ return r.id; });
+    }
+    var id = "p" + Date.now().toString(36);
+    DB.prints[id] = Object.assign({ id:id }, row); lsWrite();
+    return Promise.resolve(id);
+  },
+  printJobs: function(){
+    return Object.keys(DB.prints).filter(function(k){ return k.charAt(0) !== "_"; })
+      .map(function(k){ return DB.prints[k]; })
+      .sort(function(a,b){ return (b.sentAt || 0) - (a.sentAt || 0); });
+  },
+  printAgent: function(){ return DB.prints._agent || null; },
   dropRider: function(id){
     if(DB.riders[id]) DB.riders[id].off = true;
     if(FB){
@@ -3796,6 +3828,10 @@ function bundleFor(o){
    everything else is Front. A ticket per kitchen, a bill per order,
    printed from print.html on an 80 mm roll.
    ============================================================ */
+function autoKot(){
+  var ps = STORE.printSettings();
+  return ps.autoKot != null ? !!ps.autoKot : !!(C().kot || {}).autoPrint;
+}
 function kotMainCats(){
   var k = C().kot || {};
   return (k.main && k.main.length) ? k.main : ["mandi","alfaham","breads","meals","biryani","beef","mandi-rice"];
@@ -3808,6 +3844,8 @@ function catOfDish(id){
 }
 function kotStation(line){
   var cid = catOfDish(line.id), main = kotMainCats();
+  var set = (STORE.printSettings().stations || {})[cid];
+  if(set === "main" || set === "front") return set;
   if(main.indexOf(cid) >= 0) return "main";
   /* an imported menu's ids are slugs of names: match on words too */
   var n = (cid + " " + (line.name || "")).toLowerCase();
@@ -3826,8 +3864,17 @@ function printJob(o, kind, auto){
     order: Object.assign({}, o, { rider: r ? r.name : "" }),
     tickets: kind === "kot" ? kotTickets(o) : [],
     money: money(o), offLabel: discountLabel(o), reviewUrl: reviewUrl() };
+  var ps = STORE.printSettings();
+  if(ps.mode === "agent" && STORE.live()){
+    /* the shop PC prints it; nothing opens here */
+    var stations = kind === "kot" ? job.tickets.map(function(t){ return t.station; }) : ["bill"];
+    STORE.sendPrint(JSON.parse(JSON.stringify(job))).then(function(){
+      shopToast((kind === "kot" ? "KOT" : "Bill") + " sent to " + stations.join(" + ") + " printer" + (stations.length > 1 ? "s" : "") + ".");
+    }).catch(function(e){ shopToast("Could not send to the printer: " + (e && e.message || e)); });
+    return;
+  }
   try{ localStorage.setItem("hayat_print", JSON.stringify(job)); }catch(e){}
-  var w = (C().kot || {}).paper === "58" ? "?w=58" : "";
+  var w = (ps.paper || (C().kot || {}).paper) === "58" ? "?w=58" : "";
   window.open("print.html" + w, "hayatprint");
 }
 function paintAdmin(main){
@@ -3868,6 +3915,7 @@ function paintAdmin(main){
           '<span class="pill">' + live.length + ' live' +
             (live.length ? '<small>' + rupee(tk.openSum) + '</small>' : '') + '</span>' +
           (gone.length ? '<span class="pill gone" title="Cancelled">' + gone.length + '</span>' : '') +
+          printerPill() +
         '</div>' +
       '</div>' +
 
@@ -4142,7 +4190,7 @@ function wireCards(main){
       var p = b.dataset.adv.split("|");
       var done = STORE.setStatus(p[0], p[1]);
       /* the kitchen tickets go the moment the kitchen is told */
-      if(p[1] === "accepted" && (C().kot || {}).autoPrint && done && (done.lines || []).length) printJob(done, "kot", true);
+      if(p[1] === "accepted" && autoKot() && done && (done.lines || []).length) printJob(done, "kot", true);
     };
   });
   main.querySelectorAll("[data-print]").forEach(function(b){
@@ -4989,10 +5037,28 @@ function officeDock(here){
     ["call",   "#/admin/call",   "\u260E",       "Phone order"],
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
-    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
-    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
-    ["google", "#/admin/google", "G",             "Google"]
+    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"]
   ];
+  /* the rest live in a drawer, so the dock fits any screen */
+  var M = [
+    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
+    ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],
+    ["sim",    "sim.html",       "\u23F1",       "Service sim", "Replay our bills on the floor plan"],
+    ["kds",    "kds.html",       "\uD83C\uDF73", "Kitchen screen", "Orders for each kitchen, tap Done"],
+    ["wait",   "waitlist.html",  "\u23F3",       "Waitlist",    "Guests waiting, quoted time, WhatsApp"],
+    ["clean",  "clean.html",     "\uD83E\uDDF9", "Cleaning",    "Today's cleaning, overdue, staff codes"]
+  ];
+  var inMore = M.some(function(m){ return m[0] === here; });
+  var more = '<div class="dockmore">' +
+    '<div class="dockdrawer" role="menu" hidden>' + M.map(function(m){
+      var on = m[0] === here, inner = '<span class="ddic">' + m[2] + '</span><span class="ddtx"><b>' + m[3] + '</b><small>' + m[4] + '</small></span>';
+      return m[1].charAt(0) === "#"
+        ? '<button class="dditem' + (on ? " on" : "") + '" role="menuitem" data-go="' + m[1] + '"' + (on ? ' aria-current="page"' : '') + '>' + inner + '</button>'
+        : '<a class="dditem" role="menuitem" href="' + m[1] + '">' + inner + '</a>';
+    }).join("") + '</div>' +
+    '<button class="dockbtn wide dmore' + (inMore ? " on" : "") + '" aria-haspopup="menu" aria-expanded="false" title="More">' +
+      '\u22EF<span class="dlab">' + (inMore ? M.filter(function(m){ return m[0] === here; })[0][3] : "More") + '</span></button>' +
+  '</div>';
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
     return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
@@ -5000,8 +5066,24 @@ function officeDock(here){
       b[2] + '<span class="dlab">' + b[3] + '</span>' +
       (b[0] === "riders" && n ? '<span class="dockn">' + n + '</span>' : '') +
       '</button>';
-  }).join("") + '</div>';
+  }).join("") + more + '</div>';
 }
+/* the More drawer: one handler for every repaint of the dock */
+document.addEventListener("click", function(e){
+  var t = e.target, btn = t.closest && t.closest(".dmore");
+  var open = document.querySelectorAll(".dockdrawer:not([hidden])");
+  if(btn){
+    var d = btn.parentNode.querySelector(".dockdrawer"), was = !d.hidden;
+    open.forEach(function(x){ x.hidden = true; });
+    d.hidden = was; btn.setAttribute("aria-expanded", was ? "false" : "true");
+    return;
+  }
+  if(t.closest && t.closest(".dockdrawer") && !t.closest(".dditem")) return;
+  open.forEach(function(x){ x.hidden = true; var b = x.parentNode.querySelector(".dmore"); if(b) b.setAttribute("aria-expanded","false"); });
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape") document.querySelectorAll(".dockdrawer:not([hidden])").forEach(function(x){ x.hidden = true; });
+});
 
 /* the word in front of a console's tabs: which book this is */
 function tabCap(t){ return '<span class="tabcap">' + esc(t) + '</span>'; }
@@ -5303,6 +5385,165 @@ function custStats(c){
    ------------------------------------------------------------ */
 var MA_OPEN = null;      /* the category whose dishes are showing */
 
+/* ============================================================
+   PRINTING, SET UP FROM THE DESK
+
+   Which printer is the mandi kitchen, which is the front, which
+   prints the bill; which categories go to which kitchen; paper
+   width. All of it lives in settings/print, and the shop PC's
+   print agent follows it live - nothing to edit on the PC.
+   ============================================================ */
+var PRINT_WATCHED = false;
+function printWatch(){
+  if(PRINT_WATCHED || !FB || !window.__printWatch) return;
+  PRINT_WATCHED = true;
+  window.__printWatch();
+}
+
+function agentState(){
+  var a = STORE.printAgent();
+  if(!a || !a.seen) return { ok:false, t:"Print agent has never connected" };
+  var age = Date.now() - a.seen;
+  if(age > 3 * 60000) return { ok:false, t:"Print agent last seen " + Math.round(age / 60000) + " min ago" + (a.host ? " on " + a.host : "") };
+  var bad = Object.keys(a.printers || {}).filter(function(k){ return a.printers[k] !== "ok"; });
+  if(bad.length) return { ok:false, t:bad.join(", ") + " printer not reachable" };
+  return { ok:true, t:"Print agent online" + (a.host ? " on " + a.host : "") };
+}
+
+/* the board's pill: only when the shop PC is meant to be printing */
+function printerPill(){
+  if(STORE.printSettings().mode !== "agent") return "";
+  printWatch();
+  var st = agentState();
+  return '<a class="pill' + (st.ok ? " quiet" : " warn") + '" href="#/admin/print" title="' + esc(st.t) + '">🖨 ' +
+    (st.ok ? "printing" : "printer!") + '</a>';
+}
+
+function viewPrintAdmin(main){
+  gate(main, function(){ paintPrintAdmin(main); });
+}
+
+function paintPrintAdmin(main){
+  printWatch();
+  var ps = STORE.printSettings(), st = agentState(), a = STORE.printAgent() || {};
+  var mode = ps.mode === "agent" ? "agent" : "browser";
+  var cats = (window.MENU || []);
+  var jobs = STORE.printJobs().slice(0, 6);
+  var prow = function(key, label, hint){
+    var v = ps[key] || "", ok = (a.printers || {})[key];
+    return '<div class="prow2">' +
+      '<span class="pdot2 ' + (!v ? "" : ok === "ok" ? "ok" : ok ? "bad" : "") + '"></span>' +
+      '<div class="ln"><b>' + esc(label) + '</b><small>' + esc(hint) + '</small></div>' +
+      '<input class="fld" data-pkey="' + key + '" placeholder="192.168.1.50  or  win:POS-80" value="' + esc(v) + '">' +
+    '</div>';
+  };
+
+  main.innerHTML = shell("Printing",
+    '<div class="editwrap wide printwrap">' +
+      '<h3 class="mini">Where tickets go</h3>' +
+      '<div class="modes">' +
+        '<button class="modeopt' + (mode === "browser" ? " on" : "") + '" data-pmode="browser">' +
+          '<b>This browser</b><small>A print window opens; you choose the printer each time.</small></button>' +
+        '<button class="modeopt' + (mode === "agent" ? " on" : "") + '" data-pmode="agent">' +
+          '<b>Shop PC printers</b><small>Silent. Tickets go straight to the kitchens and the counter.</small></button>' +
+      '</div>' +
+      (mode === "agent"
+        ? '<p class="agentline ' + (st.ok ? "ok" : "bad") + '"><span class="pdot2 ' + (st.ok ? "ok" : "bad") + '"></span>' + esc(st.t) +
+          (st.ok ? '' : ' · <a href="local-service/README-PRINT.txt" target="_blank">how to start it</a>') + '</p>'
+        : '') +
+
+      '<h3 class="mini">Printers</h3>' +
+      prow("main",  "Kitchen · main",  "mandi, alfaham, breads, meals") +
+      prow("front", "Kitchen · front", "shawaya, shawarma, fish, gravies, salads, juices") +
+      prow("bill",  "Counter · bills", "the customer's bill; blank = same as main") +
+      ((a.found || []).length
+        ? '<div class="found"><span class="ulbl">Found on the shop network</span>' + a.found.map(function(ip){
+            var used = ["main","front","bill"].filter(function(k){ return (ps[k] || "").split(":")[0] === ip; });
+            return '<span class="fchip">' + esc(ip) + (used.length ? ' <small>= ' + used.join(", ") + '</small>' :
+              ' <button class="linky" data-use="' + esc(ip) + '|main">main</button>' +
+              '<button class="linky" data-use="' + esc(ip) + '|front">front</button>' +
+              '<button class="linky" data-use="' + esc(ip) + '|bill">bill</button>') + '</span>';
+          }).join("") + '</div>'
+        : (mode === "agent" && st.ok ? '<p class="shopnote left">No printer answered on the network yet. Print the printer\'s self-test (hold its feed button 3\u20135 s) \u2014 the slip shows its IP \u2014 and type it above.</p>' : '')) +
+      '<p class="shopnote left">A LAN printer is its address (port 9100 assumed). A USB printer installed in Windows is <code>win:</code> and its name.</p>' +
+
+      '<h3 class="mini">Paper &amp; tickets</h3>' +
+      '<div class="pgrid">' +
+        '<label class="pcell"><span>Roll width</span><div class="segs">' +
+          '<button class="seg' + ((ps.paper || "80") === "80" ? " on" : "") + '" data-pset="paper|80">80 mm</button>' +
+          '<button class="seg' + (ps.paper === "58" ? " on" : "") + '" data-pset="paper|58">58 mm</button></div></label>' +
+        '<label class="pcell"><span>KOT when accepted</span><div class="segs">' +
+          '<button class="seg' + (autoKot() ? " on" : "") + '" data-pset="autoKot|1">Auto</button>' +
+          '<button class="seg' + (!autoKot() ? " on" : "") + '" data-pset="autoKot|0">By hand</button></div></label>' +
+        '<label class="pcell"><span>Bill copies</span><div class="segs">' +
+          [1,2].map(function(n){ return '<button class="seg' + ((+ps.copies_bill || 1) === n ? " on" : "") + '" data-pset="copies_bill|' + n + '">' + n + '</button>'; }).join("") +
+        '</div></label>' +
+      '</div>' +
+      '<input class="fld" data-pkey="address" placeholder="Address on the bill" value="' + esc(ps.address || C().address || "") + '">' +
+      '<input class="fld" data-pkey="phone" placeholder="Phone on the bill" value="' + esc(ps.phone || String(C().whatsapp || "").replace(/^91/, "")) + '">' +
+
+      '<h3 class="mini">Which kitchen cooks what</h3>' +
+      '<div class="lines">' + cats.map(function(c){
+        var cur = kotStation({ id: (c.items && c.items[0] || {}).id, name: c.name });
+        var set = (ps.stations || {})[c.id] || cur;
+        return '<div class="line"><div class="ln"><b>' + esc(label(c.name)) + '</b><small>' + (c.items || []).length + ' dishes</small></div>' +
+          '<div class="segs">' +
+            '<button class="seg' + (set === "main" ? " on" : "") + '" data-pst="' + esc(c.id) + '|main">Main</button>' +
+            '<button class="seg' + (set === "front" ? " on" : "") + '" data-pst="' + esc(c.id) + '|front">Front</button>' +
+          '</div></div>';
+      }).join("") + '</div>' +
+
+      '<div class="rowbtns">' +
+        '<button class="shopbtn ghost" id="ptest">Print a test ticket</button>' +
+      '</div>' +
+      (jobs.length
+        ? '<h3 class="mini">Recent</h3><div class="lines slim">' + jobs.map(function(j){
+            var res = j.result ? Object.keys(j.result).map(function(k){ return k + ": " + j.result[k]; }).join(" · ") : (j.done ? "printed" : "waiting…");
+            return '<div class="line"><div class="ln"><b>' + esc((j.kind || "").toUpperCase()) + ' · ' + esc((j.order || {}).id || "") + '</b>' +
+              '<small>' + esc(when(j.sentAt)) + ' · ' + esc(res) + '</small></div>' +
+              '<span class="pdot2 ' + (j.done ? "ok" : j.tries >= 3 ? "bad" : "") + '"></span></div>';
+          }).join("") + '</div>'
+        : '') +
+      '<div class="dockroom"></div>' +
+      officeDock("menu") +
+    '</div>', true);
+
+  main.querySelectorAll("[data-pmode]").forEach(function(b){
+    b.onclick = function(){ STORE.savePrintSettings({ mode: b.dataset.pmode }); paintPrintAdmin(main); };
+  });
+  main.querySelectorAll("[data-pkey]").forEach(function(n){
+    n.onchange = function(){ var p = {}; p[n.dataset.pkey] = n.value.trim(); STORE.savePrintSettings(p); shopToast("Saved."); };
+  });
+  main.querySelectorAll("[data-pset]").forEach(function(b){
+    b.onclick = function(){
+      var p = b.dataset.pset.split("|"), v = p[1], patch = {};
+      patch[p[0]] = p[0] === "autoKot" ? v === "1" : (p[0] === "copies_bill" ? +v : v);
+      STORE.savePrintSettings(patch); paintPrintAdmin(main);
+    };
+  });
+  main.querySelectorAll("[data-pst]").forEach(function(b){
+    b.onclick = function(){
+      var p = b.dataset.pst.split("|");
+      var stations = Object.assign({}, STORE.printSettings().stations || {});
+      stations[p[0]] = p[1];
+      STORE.savePrintSettings({ stations: stations }); paintPrintAdmin(main);
+    };
+  });
+  main.querySelectorAll("[data-use]").forEach(function(b){
+    b.onclick = function(){ var p = b.dataset.use.split("|"), patch = {}; patch[p[1]] = p[0]; STORE.savePrintSettings(patch); paintPrintAdmin(main); };
+  });
+  el("ptest").onclick = function(){
+    var o = { id:"TEST", name:"Test order", phone:"9846000000", addr:"Near Juma Masjid, Makkaraparamba", kind:"order", at:Date.now(),
+      note:"Less spicy, extra sauce", paid:false, source:"phone",
+      lines:[{ id:"chicken-mandi", name:"Chicken Mandi", label:"Half", q:2, price:320 },
+             { id:"fish-fry", name:"Fish Fry", label:"", q:1, price:180 },
+             { id:"mint-lime", name:"Mint Lime", label:"", q:2, price:60 }] };
+    o.total = 940;
+    printJob(o, "kot", true);
+    setTimeout(function(){ printJob(o, "bill", true); }, 400);
+  };
+}
+
 /* ---- Google, from the desk --------------------------------
    Everything Google lets an owner do without their API: open the
    profile, read the reviews, hand a guest the five-star link, print
@@ -5603,7 +5844,8 @@ function paintMenuAdmin(main){
   main.innerHTML =
     '<div class="shopwrap wide mapage">' +
       '<div class="mahead"><h2 class="shoph">Menus</h2>' +
-        '<span class="pill quiet">' + (menus.length + 1) + ' available</span></div>' +
+        '<span class="pill quiet">' + (menus.length + 1) + ' available</span>' +
+        '<a class="pill" href="#/admin/print" title="Kitchen and bill printers">\uD83D\uDDA8 Printing</a></div>' +
       '<p class="cqhint">One menu is served at a time - on the phone, the tablet and the phone-order screen. ' +
         'Import a CSV (<a href="menu-imports/TEMPLATE.csv" download>template</a> \u00b7 ' +
         '<a href="menu-imports/README.txt" target="_blank">how it works</a>), then make it active.</p>' +
@@ -6270,7 +6512,7 @@ function paintCall(main){
     STORE.setStatus(id, "accepted");      /* the office took it, so it is accepted */
     var placed = STORE.order(id);
     STORE.rememberCustomer(placed);
-    if((C().kot || {}).autoPrint && placed.lines.length) printJob(placed, "kot", true);
+    if(autoKot() && placed.lines.length) printJob(placed, "kot", true);
     CALL = { lines: [] };
     /* The customer was on the phone and has nothing in writing.
        WhatsApp opens with what they ordered, the total and the link
@@ -7833,7 +8075,7 @@ function route(p, main){
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
-           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google");
+           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google" && p[1] !== "print");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -7855,6 +8097,7 @@ function route(p, main){
     if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
     if(p[1] === "menu")   { REPAINT = function(){ viewMenuAdmin(main); }; REPAINT(); return true; }
     if(p[1] === "google") { REPAINT = function(){ viewGoogleAdmin(main); }; REPAINT(); return true; }
+    if(p[1] === "print")  { REPAINT = function(){ viewPrintAdmin(main); }; REPAINT(); return true; }
     if(p[1] === "c" && p[2]) { REPAINT = function(){ viewCustomer(main, p[2]); }; REPAINT(); return true; }
     if(p[1] === "o" && p[2]) { REPAINT = function(){ viewEdit(main, p[2]); }; REPAINT(); return true; }
     REPAINT = function(){ viewAdmin(main); }; REPAINT(); return true;
