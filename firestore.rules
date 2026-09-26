@@ -36,6 +36,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == "office";
     }
+    /* crew roles: office, captain, kitchen, cleaner, waiter (from the crew code they signed in with) */
+    function isCrew() {
+      return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    }
+    function hasRole(roles) {
+      return isCrew() && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
+    }
     function mine() {
       return request.auth.uid;
     }
@@ -186,7 +193,7 @@ service cloud.firestore {
        every customer's address, so six is the sensible length. */
     match /crew/{id} {
       allow read:  if id == "_list";
-      allow write: if false;
+      allow write: if isOffice();          /* the office hands out codes from the cleaning page */
     }
 
     /* ---- who you are, once you have proved it --------------
@@ -235,16 +242,33 @@ service cloud.firestore {
          vm_staff/{id}          names, each a waiter or a service agent
          vm_meta/sync           when the service last ran            */
     match /vm_bills/{id} { allow read: if isOffice(); allow write: if false; }
-    match /vm_open/{id}  { allow read: if isOffice(); allow write: if false; }
+    match /vm_open/{id}  { allow read: if isOffice() || hasRole(['kitchen','captain']); allow write: if false; }
     match /vm_days/{id}  { allow read: if isOffice(); allow write: if false; }
     match /vm_staff/{id} { allow read: if isOffice(); allow write: if false; }
-    match /vm_meta/{id}  { allow read: if isOffice(); allow write: if false; }
+    match /vm_meta/{id}  { allow read: if isCrew(); allow write: if false; }
 
     /* ---- kitchen screens and the waitlist ---------------------
          kds/{screen_invoice_round}  when a kitchen marked a KOT done
          waitlist/{id}               guests waiting (phone deleted after 7 days) */
-    match /kds/{id}      { allow read, write: if isOffice(); }
-    match /waitlist/{id} { allow read, write: if isOffice(); }
+    match /kds/{id}      { allow read, write: if isOffice() || hasRole(['kitchen','captain']); }
+    match /waitlist/{id} { allow read, write: if isOffice() || hasRole(['captain']); }
+
+    /* ---- cleaning -------------------------------------------
+         cleanplan/main      the master cleaning schedule (office edits)
+         cleanlog/{id}       one tick per task done: who, when, optional small photo
+         pushtok/{uid}       this phone's reminder token */
+    match /cleanplan/{id} { allow read: if isCrew(); allow write: if isOffice(); }
+    match /cleanlog/{id} {
+      allow read:   if isCrew();
+      allow create: if isCrew() && request.resource.data.uid == request.auth.uid
+                    && (!('photo' in request.resource.data) || request.resource.data.photo == null || request.resource.data.photo.size() < 90000);
+      allow update: if isOffice() || hasRole(['captain']);        /* verify / reject */
+      allow delete: if isOffice() || (isCrew() && resource.data.uid == request.auth.uid);
+    }
+    match /pushtok/{uid} {
+      allow read:  if isOffice();
+      allow write: if isCrew() && uid == request.auth.uid;
+    }
 
     /* ---- everything else is closed -------------------------- */
     match /{document=**} {

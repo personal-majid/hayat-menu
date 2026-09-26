@@ -2,6 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex"><title>Hayat Waitlist</title>
 <script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<script src="hayat-auth.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Jost:wght@400;500;600;700&display=swap">
 <style>
@@ -129,22 +130,20 @@ $('add').onclick=async()=>{ const name=$('nm').value.trim(), ph=$('ph').value.tr
   catch(e){ alert('Could not save: '+(e.code||e.message)); } };
 setInterval(()=>{ if(FB) render(); },30000);
 
-(async function(){ const cfg=window.CONFIG&&window.CONFIG.firebase, gate=h=>{ $('gate').innerHTML='<div class="msg">'+h+'</div>'; };
-  if(!cfg||!cfg.projectId) return gate('<b>Not connected.</b> Open this page from the website (office → ⋯ More → Waitlist).');
-  try{ const V='12.19.0', appM=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-app.js'), fs=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-firestore.js'), au=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-auth.js');
-    const app=appM.getApps().length?appM.getApp():appM.initializeApp(cfg), db=fs.getFirestore(app), auth=au.getAuth(app); FB={fs,db};
-    const user=await new Promise(ok=>{ const off=au.onAuthStateChanged(auth,u=>{ off(); ok(u); }); });
-    if(!user||user.isAnonymous) return gate('<b>Sign in first.</b> <a href="./#/admin">Open the office</a> on this tablet and sign in with the office Google account. It stays signed in.');
-    const fail=e=>gate(e&&e.code==='permission-denied'?'<b>Not allowed.</b> Publish the latest firestore.rules (they add the waitlist), and check this account is marked office.':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
+(async function(){ const gate=h=>{ $('gate').innerHTML='<div class="msg">'+h+'</div>'; };
+  let ctx; try{ ctx=await HayatAuth.start(); }catch(e){ return gate('<b>Not connected.</b> '+(e.message||e)); }
+  const go=()=>{ const fs=ctx.fs, db=ctx.db; FB={fs,db}; $('gate').innerHTML='';
+    const fail=e=>gate(e&&e.code==='permission-denied'?'<b>Not allowed.</b> Sign in as office or captain, and publish the latest firestore.rules.':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
     $('app').hidden=false;
     fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ META=d.exists()?d.data():null; render(); },()=>{});
     fs.onSnapshot(fs.collection(db,'vm_open'),s=>{ OPEN=s.docs.map(d=>d.data()); render(); },fail);
-    fs.onSnapshot(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',bizToday())),s=>{ TT=tableTime(s.docs.map(d=>d.data())); render(); },()=>{});
+    if(ctx.role==='office') fs.onSnapshot(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',bizToday())),s=>{ TT=tableTime(s.docs.map(d=>d.data())); render(); },()=>{});
     const since=new Date(Date.now()-36*3600e3);
     fs.onSnapshot(fs.query(fs.collection(db,'waitlist'),fs.where('addedAt','>=',since)),s=>{ LIST=s.docs.map(d=>Object.assign({id:d.id},d.data())); render(); },fail);
     /* privacy: phone numbers are not kept longer than a week */
     fs.getDocs(fs.query(fs.collection(db,'waitlist'),fs.where('addedAt','<',new Date(Date.now()-7*86400e3)),fs.limit(100))).then(s=>s.docs.forEach(d=>fs.deleteDoc(d.ref).catch(()=>{}))).catch(()=>{});
-    render();
-  }catch(e){ gate('<b>Could not start.</b> '+(e.code||e.message)); } })();
+    render(); };
+  if(!['office','captain'].includes(ctx.role)){ await HayatAuth.form($('gate'),ctx,['captain','office'],go,'Sign in once on this tablet (captain or office code).'); return; }
+  go(); })();
 </script>
 </body></html>

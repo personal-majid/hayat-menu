@@ -76,6 +76,7 @@ DEFAULTS = {
         "page_size": "1000", "retention_months": "0", "retention_days": "0", "outlier_minutes": "240",
         "staff_refresh_minutes": "60", "open_fast_seconds": "20",
     },
+    "push": {"enabled": "1", "site_url": "https://personal-majid.github.io/hayat-menu/", "morning": "10:15", "escalate_to": "office,captain"},
 }
 
 
@@ -666,6 +667,167 @@ def fast_open_loop(cfg, args, stop):
     lock.release()
 
 
+# ---------------------------------------------------------------- cleaning reminders (phone push)
+# Mirrors hayat-clean.js: the schedule lives in Firestore (cleanplan/main), each tick in cleanlog,
+# each phone's token in pushtok. Sends a task when it falls due, the late ones to the office/captain,
+# and a morning summary. Listens for changes (no polling reads), so it stays inside the free tier.
+
+def _plan_times(p, t, date):
+    d = dt.date.fromisoformat(date)
+    if t.get("weekly") is not None and (d.isoweekday() % 7) not in t["weekly"]:
+        return []
+    if t.get("monthly") and not (d.day == t["monthly"] and (d.month - 1) % (t.get("months") or 1) == 0):
+        return []
+    if t.get("at"):
+        return sorted(t["at"])
+    if t.get("every"):
+        out, m = [], t.get("from", p.get("open", 660))
+        to = t.get("to", p.get("close", 1470))
+        while m <= to:
+            r = any(w[0] <= m < w[1] for w in p.get("rush", []))
+            if not t.get("rushOnly") or r:
+                out.append(m)
+            nx = m + ((t.get("rushEvery") or t["every"]) if r else t["every"])
+            if not r:   # start each rush on time
+                starts = [w[0] for w in p.get("rush", []) if m < w[0] < nx]
+                if starts:
+                    nx = starts[0]
+            m = nx
+        return out
+    return []
+
+
+def _grace(t):
+    if t.get("every"):
+        return min(20, round((t.get("rushEvery") or t["every"]) / 2))
+    return 600 if (t.get("weekly") is not None or t.get("monthly")) else 30
+
+
+def _hm(m):
+    m = int(m) % 1440
+    h, mm = divmod(m, 60)
+    return f"{(h % 12) or 12}:{mm:02d} {'am' if h < 12 else 'pm'}"
+
+
+def reminder_loop(cfg, args, stop):
+    if not cfg.getint("push", "enabled") or getattr(args, "dry_run", None):
+        return
+    lock = SingleInstance(47813)
+    if not lock.ok:
+        return
+    try:
+        from firebase_admin import messaging
+        tgt = FirestoreTarget(cfg)
+    except BaseException:
+        log.exception("reminders: firebase not available")
+        return
+    db, zone, site = tgt.db, tz(cfg), cfg.get("push", "site_url").rstrip("/") + "/"
+    esc_roles = [r.strip() for r in cfg.get("push", "escalate_to").split(",") if r.strip()]
+    morning = cfg.get("push", "morning")
+    mh, mm_ = (int(x) for x in morning.split(":"))
+    state = {"plan": None, "tok": {}, "logs": {}, "day": None, "watch": None}
+    cache = Cache(HERE / "cache.db")
+
+    def on_plan(docs, changes, read_time):
+        for d in docs:
+            state["plan"] = d.to_dict()
+
+    def on_tok(docs, changes, read_time):
+        for ch in changes:
+            if ch.type.name == "REMOVED":
+                state["tok"].pop(ch.document.id, None)
+            else:
+                state["tok"][ch.document.id] = ch.document.to_dict()
+
+    def on_log(docs, changes, read_time):
+        for ch in changes:
+            x = ch.document.to_dict()
+            if ch.type.name == "REMOVED" or x.get("verified") is False:
+                state["logs"].pop(ch.document.id, None)
+            else:
+                state["logs"][ch.document.id] = x.get("occ")
+
+    w1 = db.collection("cleanplan").document("main").on_snapshot(on_plan)
+    w2 = db.collection("pushtok").on_snapshot(on_tok)
+
+    def send(tokens, title, body, tag):
+        tokens = [t for t in tokens if t]
+        if not tokens:
+            return 0
+        msgs = [messaging.Message(token=t, webpush=messaging.WebpushConfig(
+            notification=messaging.WebpushNotification(title=title, body=body, tag=tag, renotify=True,
+                                                       icon=site + "assets/icon-192.png"),
+            fcm_options=messaging.WebpushFCMOptions(link=site + "clean.html"))) for t in tokens]
+        try:
+            res = messaging.send_each(msgs)
+        except Exception:
+            log.exception("reminders: send failed")
+            return 0
+        for t, r in zip(tokens, res.responses):     # forget phones that uninstalled or blocked us
+            if not r.success and r.exception is not None and type(r.exception).__name__ in ("UnregisteredError", "SenderIdMismatchError"):
+                for uid, v in list(state["tok"].items()):
+                    if v.get("token") == t:
+                        try:
+                            db.collection("pushtok").document(uid).delete()
+                        except Exception:
+                            pass
+        return res.success_count
+
+    def once_key(k):
+        if cache.meta(k):
+            return False
+        cache.set_meta(k, "1")
+        cache.commit()
+        return True
+
+    log.info("cleaning reminders on")
+    while not stop.is_set():
+        try:
+            now = dt.datetime.now(zone)
+            day = (now - dt.timedelta(hours=5)).date().isoformat()
+            bm = now.hour * 60 + now.minute + (1440 if now.hour < 5 else 0)
+            if state["day"] != day:                      # a new business day: watch only today's ticks
+                if state["watch"]:
+                    state["watch"].unsubscribe()
+                state["logs"], state["day"] = {}, day
+                state["watch"] = db.collection("cleanlog").where("day", "==", day).on_snapshot(on_log)
+                stop.wait(3)
+            p = state["plan"]
+            if p and p.get("tasks"):
+                done = set(state["logs"].values())
+                toks = list(state["tok"].values())
+                by_role = lambda roles: [v.get("token") for v in toks if v.get("role") in roles]
+                for t in p["tasks"]:
+                    for m in _plan_times(p, t, day):
+                        occ = f"{t['id']}@{day}@{m}"
+                        if occ in done:
+                            continue
+                        if m <= bm < m + 3 and once_key("rem:" + occ):
+                            send(by_role([t.get("role", "cleaner")]), "🧹 " + t.get("name", "Cleaning"),
+                                 (t.get("ml") or "") + (" · " if t.get("ml") else "") + "Due " + _hm(m) + ". Tap ✓ when done.", t["id"])
+                        g = _grace(t)
+                        if m + g <= bm < m + g + 60 and once_key("esc:" + occ):
+                            late = bm - m
+                            send(by_role(esc_roles), "⚠ Late: " + t.get("name", "Cleaning"),
+                                 f"{late} min late (due {_hm(m)}). Role: {t.get('role', 'cleaner')}.", "late-" + t["id"])
+                            send(by_role([t.get("role", "cleaner")]), "⏰ Still to do: " + t.get("name", ""), f"{late} min late. Please do it now.", t["id"])
+                if (now.hour, now.minute) >= (mh, mm_) and bm < 900 and once_key("morning:" + day):
+                    for v in toks:
+                        mineT = [t for t in p["tasks"] if t.get("role") == v.get("role") and _plan_times(p, t, day)]
+                        if mineT:
+                            send([v.get("token")], "Good morning " + (v.get("name") or "").split(" ")[0] + " 🌞",
+                                 f"{len(mineT)} cleaning jobs today. Open the app to see them.", "morning")
+        except Exception:
+            log.exception("reminders pass failed")
+        stop.wait(30)
+    for w in (w1, w2, state["watch"]):
+        try:
+            w and w.unsubscribe()
+        except Exception:
+            pass
+    lock.release()
+
+
 def run_once(cfg, src: Source, dst, cache: Cache, since_override: dt.datetime | None = None) -> dict:
     zone = tz(cfg)
     pre = cfg.get("firebase", "collection_prefix")
@@ -1014,6 +1176,7 @@ def cmd_serve(cfg, args):
     import threading
     stop = threading.Event()
     threading.Thread(target=fast_open_loop, args=(cfg, args, stop), daemon=True).start()
+    threading.Thread(target=reminder_loop, args=(cfg, args, stop), daemon=True).start()
     host, port = cfg.get("serve", "host"), cfg.getint("serve", "port")
     srv = ThreadingHTTPServer((host, port), H)
     log.info("Hayat Live on http://%s:%s", socket.gethostname(), port)

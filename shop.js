@@ -71,8 +71,27 @@ function lsWrite(){
   fire();
 }
 DB = lsRead();
+
+/* ---- the customer book lives on this device ------------------
+   Firestore used to stream the whole customers collection to every
+   phone that opened the site: a read per customer, per device, per
+   visit. Now the book is a file on the office PC (localStorage), the
+   lookup while typing is local, and the cloud is asked for ONE
+   document only when a full number is in - and what it answers is
+   written back into the file, so the file is never older than the
+   last number looked up. */
+var CUST_KEY = "hayat_custbook";
+function custLoad(){
+  try{ return JSON.parse(localStorage.getItem(CUST_KEY)) || {}; }catch(e){ return {}; }
+}
+function custSave(){
+  try{ localStorage.setItem(CUST_KEY, JSON.stringify(DB.customers)); }catch(e){}
+}
+var CUST_PULLED = false;        /* the one-time full pull, when the file is empty */
+
 window.addEventListener("storage", function(e){
   if(e.key === KEY && !LIVE){ DB = lsRead(); fire(); }
+  if(e.key === CUST_KEY && LIVE){ DB.customers = custLoad(); fire(); }
 });
 if(CH) { var _on = CH.onmessage; CH.onmessage = function(){ if(!LIVE) DB = lsRead(); fire(); }; }
 
@@ -280,7 +299,7 @@ async function connectFirebase(cfg){
   }
   watch("orders", "orders");
   watch("riders", "riders");
-  watch("customers", "customers");
+  DB.customers = custLoad();       /* the book is local; see custLoad */
   watch("verify", "verify");
   watch("pings",  "pings");
   watch("menus",  "menus");
@@ -713,6 +732,52 @@ var STORE = {
       .sort(function(a,b){ return (b.lastAt || 0) - (a.lastAt || 0); });
   },
 
+  /* the lookup while a number is being typed: local only, never
+     the cloud. Any customer whose number contains the digits, the
+     ones it starts with first. */
+  customerMatch: function(q, max){
+    var d = digitsOnly(q);
+    if(d.length < 4) return [];
+    var all = STORE.customers(), starts = [], within = [];
+    for(var i = 0; i < all.length; i++){
+      var k = phoneKey(all[i].phone), at = k.indexOf(d);
+      if(at === 0) starts.push(all[i]);
+      else if(at > 0) within.push(all[i]);
+    }
+    return starts.concat(within).slice(0, max || 6);
+  },
+
+  /* a full number: one document from the cloud, written into the
+     local file whatever it says. Resolves with the customer or null. */
+  customerFetch: function(phone){
+    var id = phoneKey(phone);
+    if(!id || id.length < 10) return Promise.resolve(STORE.customer(phone));
+    if(!FB) return Promise.resolve(DB.customers[id] || null);
+    return FB.api.getDoc(FB.api.doc(FB.db, "customers", id)).then(function(d){
+      if(!d.exists()) return DB.customers[id] || null;
+      var row = Object.assign({ id:id }, d.data());
+      var was = JSON.stringify(DB.customers[id] || null);
+      DB.customers[id] = row;
+      if(JSON.stringify(row) !== was){ custSave(); fire(); }
+      return row;
+    }).catch(function(e){ console.warn("customerFetch", e); return DB.customers[id] || null; });
+  },
+
+  /* the whole book, once: for the customer page on a PC whose file
+     is empty, or when the office presses Refresh */
+  customersRefresh: function(){
+    if(!FB) return Promise.resolve(STORE.customers().length);
+    return FB.api.getDocs(FB.api.collection(FB.db, "customers")).then(function(snap){
+      var next = {};
+      snap.forEach(function(d){ next[d.id] = Object.assign({ id:d.id }, d.data()); });
+      /* what this device learned since is newer than the cloud only
+         if the cloud has nothing at all for that number */
+      Object.keys(DB.customers).forEach(function(k){ if(!next[k]) next[k] = DB.customers[k]; });
+      DB.customers = next; custSave(); fire();
+      return Object.keys(next).length;
+    });
+  },
+
   /* ---- where they were when they last opened the app -----
      Not the delivery address and never allowed to become it. A
      doorstep is a rider standing at a door; this is a phone
@@ -831,7 +896,7 @@ var STORE = {
     if(FB){
       FB.api.updateDoc(FB.api.doc(FB.db, "customers", id), patch)
         .catch(function(e){ console.warn("setVerified", e); });
-      fire();
+      custSave(); fire();
     } else lsWrite();
     return c;
   },
@@ -866,7 +931,7 @@ var STORE = {
     if(FB){
       FB.api.setDoc(FB.api.doc(FB.db, "customers", id), now, { merge:true })
         .catch(function(e){ console.warn("rememberCustomer", e); });
-      fire();
+      custSave(); fire();
     } else lsWrite();
     return now;
   },
@@ -4048,7 +4113,7 @@ function declineSheet(id){
   box.className = "sheetwrap"; box.id = "declSheet";
   box.innerHTML =
     '<div class="sheet">' +
-      '<div class="sheeth"><b>Decline ' + esc(o.id) + '</b>' +
+      '<div class="sheeth"><b>' + (o.status === "placed" ? "Decline " : "Cancel ") + esc(o.id) + '</b>' +
         '<button class="linky" id="declX">Keep it</button></div>' +
       '<p class="sheetsub">Why? The customer is told this.</p>' +
       DECLINE_WHY.map(function(w){
@@ -4061,7 +4126,7 @@ function declineSheet(id){
   box.querySelectorAll("[data-why]").forEach(function(b){
     b.onclick = function(){
       var w = DECLINE_WHY.filter(function(x){ return x.k === b.dataset.why; })[0];
-      STORE.setStatus(id, "cancelled", { declined: w.k, declinedAt: Date.now() });
+      STORE.setStatus(id, "cancelled", { declined: w.k, declinedAt: Date.now(), cancelBy: "office", cancelWhy: w.t });
       box.remove();
       /* the customer hears why, in their WhatsApp, in one tap */
       try{ window.open(waCustomer(o, "Hayat \u2014 order " + o.id + "\n\n" + w.msg), "_blank", "noopener"); }catch(e){}
@@ -4103,7 +4168,7 @@ function wireCards(main){
       shopToast("Saved " + n + " orders to Downloads.");
     };
   });
-  var dp = el("dayPick");
+  var dp = main.querySelector("#dayPick");
   if(dp) dp.onchange = function(){
     var v = dp.value; if(!v) return;
     var hm = openHourMin(), d = new Date(v + "T00:00:00"); d.setHours(hm[0], hm[1], 0, 0);
@@ -4924,28 +4989,10 @@ function officeDock(here){
     ["call",   "#/admin/call",   "\u260E",       "Phone order"],
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
-    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"]
+    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
+    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
+    ["google", "#/admin/google", "G",             "Google"]
   ];
-  /* the rest live in a drawer, so the dock fits any screen */
-  var M = [
-    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
-    ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],
-    ["sim",    "sim.html",       "\u23F1",       "Service sim", "Replay our bills on the floor plan"],
-    ["kds",    "kds.html",       "\uD83C\uDF73", "Kitchen screen", "Orders for each kitchen, tap Done"],
-    ["wait",   "waitlist.html",  "\u23F3",       "Waitlist",    "Guests waiting, quoted time, WhatsApp"],
-    ["clean",  "clean.html",     "\uD83E\uDDF9", "Cleaning",    "Today's cleaning, overdue, staff codes"]
-  ];
-  var inMore = M.some(function(m){ return m[0] === here; });
-  var more = '<div class="dockmore">' +
-    '<div class="dockdrawer" role="menu" hidden>' + M.map(function(m){
-      var on = m[0] === here, inner = '<span class="ddic">' + m[2] + '</span><span class="ddtx"><b>' + m[3] + '</b><small>' + m[4] + '</small></span>';
-      return m[1].charAt(0) === "#"
-        ? '<button class="dditem' + (on ? " on" : "") + '" role="menuitem" data-go="' + m[1] + '"' + (on ? ' aria-current="page"' : '') + '>' + inner + '</button>'
-        : '<a class="dditem" role="menuitem" href="' + m[1] + '">' + inner + '</a>';
-    }).join("") + '</div>' +
-    '<button class="dockbtn wide dmore' + (inMore ? " on" : "") + '" aria-haspopup="menu" aria-expanded="false" title="More">' +
-      '\u22EF<span class="dlab">' + (inMore ? M.filter(function(m){ return m[0] === here; })[0][3] : "More") + '</span></button>' +
-  '</div>';
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
     return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
@@ -4953,24 +5000,8 @@ function officeDock(here){
       b[2] + '<span class="dlab">' + b[3] + '</span>' +
       (b[0] === "riders" && n ? '<span class="dockn">' + n + '</span>' : '') +
       '</button>';
-  }).join("") + more + '</div>';
+  }).join("") + '</div>';
 }
-/* the More drawer: one handler for every repaint of the dock */
-document.addEventListener("click", function(e){
-  var t = e.target, btn = t.closest && t.closest(".dmore");
-  var open = document.querySelectorAll(".dockdrawer:not([hidden])");
-  if(btn){
-    var d = btn.parentNode.querySelector(".dockdrawer"), was = !d.hidden;
-    open.forEach(function(x){ x.hidden = true; });
-    d.hidden = was; btn.setAttribute("aria-expanded", was ? "false" : "true");
-    return;
-  }
-  if(t.closest && t.closest(".dockdrawer") && !t.closest(".dditem")) return;
-  open.forEach(function(x){ x.hidden = true; var b = x.parentNode.querySelector(".dmore"); if(b) b.setAttribute("aria-expanded","false"); });
-});
-document.addEventListener("keydown", function(e){
-  if(e.key === "Escape") document.querySelectorAll(".dockdrawer:not([hidden])").forEach(function(x){ x.hidden = true; });
-});
 
 /* the word in front of a console's tabs: which book this is */
 function tabCap(t){ return '<span class="tabcap">' + esc(t) + '</span>'; }
@@ -5766,6 +5797,8 @@ function paintCustomers(main){
             'title="Show only the ones nobody has confirmed yet">' +
             unver.length + ' unverified</button>' +
           '<span class="pill quiet">' + located + ' located</span>' +
+          '<button class="pill" id="cRefresh" title="Pull the whole book from the cloud once">' +
+            (CUST_PULLED ? 'Refreshed' : 'Refresh') + '</button>' +
         '</div>' +
       '</div>' +
 
@@ -5803,6 +5836,16 @@ function paintCustomers(main){
   main.querySelectorAll("[data-cv]").forEach(function(b){
     b.onclick = function(){ CVIEW = b.dataset.cv; paintCustomers(main); };
   });
+  var pull = function(){
+    CUST_PULLED = true;
+    var b = el("cRefresh"); if(b){ b.textContent = "Pulling…"; b.disabled = true; }
+    STORE.customersRefresh().then(function(n){
+      shopToast(n + " customers in the book.");
+    }).catch(function(){ shopToast("Could not reach the cloud."); CUST_PULLED = false; });
+  };
+  el("cRefresh").onclick = pull;
+  /* an empty file on a PC that is online: fill it once, unasked */
+  if(!all.length && STORE.live() && !CUST_PULLED) pull();
 
   main.querySelectorAll("[data-cs]").forEach(function(b){
     b.onclick = function(){
@@ -6147,116 +6190,78 @@ function viewCall(main){
 }
 
 function paintCall(main){
-  var known = CALL.phone ? STORE.customer(CALL.phone) : null;
-  var sub = CALL.lines.reduce(function(n,l){ return n + l.q * l.price; }, 0);
+  /* The form is built once. Every later call only refreshes the
+     parts that change, so a number half-typed is never thrown away
+     and the cursor never leaves the box. */
+  if(el("callForm")){ if(window.__callRefresh) window.__callRefresh(); return; }
 
   main.innerHTML = shell("Order by phone",
-    '<div class="callwrap">' +
-
-      '<input class="fld" id="clPhone" inputmode="tel" autocomplete="off" ' +
-        'placeholder="Their phone number" value="' + esc(CALL.phone || "") + '">' +
-
-      (known
-        ? '<div class="knownbox">' +
-            '<div class="kt"><b>' + esc(known.name || "This number has ordered before") + '</b>' +
-            '<small>' + esc(known.addr || "no address saved") +
-            (known.locFrom === "delivered"
-              ? ' \u00b7 doorstep known from a delivery'
-              : known.lat ? ' \u00b7 pin saved' : '') +
-            '</small></div>' +
-            '<a class="linky" href="#/admin/c/' + esc(known.id) + '">History</a>' +
-            '<button class="linky go" id="clUse">Use it</button>' +
-          '</div>'
-        : '') +
-
-      '<input class="fld" id="clName" autocomplete="off" placeholder="Name" value="' +
-        esc(CALL.name || "") + '">' +
-      '<textarea class="fld" id="clAddr" placeholder="Address \u2014 house, landmark, area">' +
-        esc(CALL.addr || "") + '</textarea>' +
-      '<input class="fld" id="clNote" autocomplete="off" placeholder="Note for the kitchen (optional)" value="' +
-        esc(CALL.note || "") + '">' +
-
-      '<h3 class="mini">What did they ask for?</h3>' +
-      (CALL.lines.length
-        ? '<div class="lines">' + CALL.lines.map(function(l, i){
-            return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
-              (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
-              '<div class="qty">' +
-                '<button data-cq="' + i + '|-1">\u2212</button>' +
-                '<span>' + l.q + '</span>' +
-                '<button data-cq="' + i + '|1">+</button>' +
-              '</div>' +
-              '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
-          }).join("") + '</div>' +
-          '<div class="total"><span>Total</span><b>' + rupee(sub) + '</b></div>'
-        : '<p class="shopsub">Nothing added yet.</p>') +
-
-      '<button class="shopbtn ghost findbtn" id="clFind">' +
-        '<span class="fi">\uD83D\uDD0D</span> Add from the menu</button>' +
-
-      '<button class="shopbtn" id="clGo">Put it on the board</button>' +
-      '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>' +
+    '<div class="callwrap" id="callForm">' +
+      '<div class="callgrid">' +
+        '<section class="callcol">' +
+          '<h3 class="mini">Who</h3>' +
+          '<input class="fld big" id="clPhone" inputmode="tel" autocomplete="off" ' +
+            'placeholder="Their phone number" value="' + esc(CALL.phone || "") + '">' +
+          '<div id="clCust"></div>' +
+          '<input class="fld" id="clName" autocomplete="off" placeholder="Name" value="' + esc(CALL.name || "") + '">' +
+          '<textarea class="fld" id="clAddr" placeholder="Address — house, landmark, area">' + esc(CALL.addr || "") + '</textarea>' +
+          '<input class="fld" id="clNote" autocomplete="off" placeholder="Note for the kitchen (optional)" value="' + esc(CALL.note || "") + '">' +
+        '</section>' +
+        '<section class="callcol">' +
+          '<h3 class="mini">What did they ask for?</h3>' +
+          '<div id="clUsual"></div>' +
+          '<div id="clLines"></div>' +
+          '<button class="shopbtn ghost findbtn" id="clFind"><span class="fi">🔍</span> Add from the menu</button>' +
+        '</section>' +
+      '</div>' +
+      '<div class="oedbar">' +
+        '<button class="shopbtn" id="clGo">Put it on the board</button>' +
+        '<button class="linky" data-go="#/admin">Back to orders</button>' +
+      '</div>' +
     '</div>', true);
 
-  /* typing a number is the lookup; no button to press */
-  var ph = el("clPhone");
-  ph.oninput = function(){
-    CALL.phone = ph.value;
-    var hit = STORE.customer(ph.value);
-    if(hit && digitsOnly(ph.value).length >= 10 && !CALL.name && !CALL.addr) useKnown(hit);
-    else paintCall(main);
-  };
+  var ph = el("clPhone"), fetchT = null;
 
-  function useKnown(k){
-    CALL.name = k.name || "";
-    CALL.addr = k.addr || "";
-    if(k.lat){ CALL.lat = k.lat; CALL.lng = k.lng; }
-    paintCall(main);
-    shopToast("Filled in from their last order.");
-  }
-  var use = el("clUse");
-  if(use) use.onclick = function(){ useKnown(known); };
-
+  /* the fields remember themselves; nothing repaints them */
   ["clName","clAddr","clNote"].forEach(function(id){
     var n = el(id);
-    if(n) n.oninput = function(){ CALL[id.slice(2).toLowerCase()] = n.value; };
+    n.oninput = function(){ CALL[id.slice(2).toLowerCase()] = n.value; };
   });
+
+  ph.oninput = function(){
+    CALL.phone = ph.value;
+    CALL.lat = CALL.lng = null;
+    var d = phoneKey(ph.value);
+    callCust();
+    if(d.length >= 10){
+      var hit = STORE.customer(ph.value);
+      if(hit) useKnown(hit, true);
+      /* the one cloud read: this number, once, after the typing stops */
+      clearTimeout(fetchT);
+      fetchT = setTimeout(function(){
+        STORE.customerFetch(ph.value).then(function(row){
+          if(!row || phoneKey(ph.value) !== row.id) return;
+          useKnown(row, true); callCust(); callUsual();
+        });
+      }, 400);
+    }
+  };
 
   el("clFind").onclick = function(){
     openFinder(function(did, lbl, price){
-      var it = dishById(did);
-      var k = did + "|" + lbl;
-      var hit = CALL.lines.filter(function(l){ return l.k === k; })[0];
-      if(hit) hit.q += 1;
-      else CALL.lines.push({ k:k, id:did, name: it ? label(it.name) : did,
-                             label:lbl, price:price, q:1 });
-      paintCall(main);
+      addLine(did, lbl, price, 1); callLines();
     }, "Add");
   };
 
-  main.querySelectorAll("[data-cq]").forEach(function(b){
-    b.onclick = function(){
-      var p = b.dataset.cq.split("|"), i = +p[0], d = +p[1];
-      CALL.lines[i].q += d;
-      CALL.lines = CALL.lines.filter(function(l){ return l.q > 0; });
-      paintCall(main);
-    };
-  });
-
   el("clGo").onclick = function(){
-    if(!CALL.lines.length){ shopToast("Add what they ordered first."); return; }
-    if(!digitsOnly(CALL.phone)){ shopToast("A phone number, please."); return; }
-    if(!CALL.addr){ shopToast("Where is it going?"); return; }
+    var sub = callSub();
+    if(!CALL.lines.length){ shopToast("Add what they ordered first."); el("clFind").focus(); return; }
+    if(!digitsOnly(CALL.phone)){ shopToast("A phone number, please."); ph.focus(); return; }
+    if(!CALL.addr){ shopToast("Where is it going?"); el("clAddr").focus(); return; }
 
     var o = {
-      name: CALL.name || "",
-      phone: CALL.phone,
-      addr: CALL.addr,
-      note: CALL.note || "",
-      lines: CALL.lines.slice(),
-      total: sub,
-      source: "phone",
-      custUid: null
+      name: CALL.name || "", phone: CALL.phone, addr: CALL.addr, note: CALL.note || "",
+      lines: CALL.lines.slice(), total: sub, source: "phone", custUid: null
     };
     if(CALL.lat){ o.lat = CALL.lat; o.lng = CALL.lng; }
 
@@ -6265,17 +6270,148 @@ function paintCall(main){
     STORE.setStatus(id, "accepted");      /* the office took it, so it is accepted */
     var placed = STORE.order(id);
     STORE.rememberCustomer(placed);
+    if((C().kot || {}).autoPrint && placed.lines.length) printJob(placed, "kot", true);
     CALL = { lines: [] };
     /* The customer was on the phone and has nothing in writing.
-       WhatsApp opens - the desktop app on the office PC - with
-       what they ordered, the total and the link that shows it
-       moving. The office presses send. */
+       WhatsApp opens with what they ordered, the total and the link
+       that shows it moving. The office presses send. */
     if(phoneKey(placed.phone)){
       try{ window.open(waCustomer(placed, msgAccepted(placed)), "_blank", "noopener"); }catch(e){}
     }
-    shopToast("Order " + id + " is on the board \u2014 WhatsApp is open to send them the link.");
+    shopToast("Order " + id + " is on the board — WhatsApp is open to send them the link.");
     location.hash = "#/admin";
   };
+
+  callRefresh();
+  if(!CALL.phone) ph.focus();
+
+  /* ---- the pieces ---- */
+  function callSub(){ return CALL.lines.reduce(function(n,l){ return n + l.q * l.price; }, 0); }
+
+  function useKnown(k, quiet){
+    var filled = false;
+    if(!CALL.name && k.name){ CALL.name = k.name; el("clName").value = k.name; filled = true; }
+    if(!CALL.addr && k.addr){ CALL.addr = k.addr; el("clAddr").value = k.addr; filled = true; }
+    if(k.lat){ CALL.lat = k.lat; CALL.lng = k.lng; }
+    if(filled && !quiet) shopToast("Filled in from their last order.");
+  }
+
+  function addLine(did, lbl, price, q){
+    var it = dishById(did), k = did + "|" + (lbl || "");
+    var hit = CALL.lines.filter(function(l){ return l.k === k; })[0];
+    if(hit) hit.q += q;
+    else CALL.lines.push({ k:k, id:did, name: it ? label(it.name) : did, label: lbl || "", price: price, q: q });
+  }
+
+  /* the customer box under the number: matches while typing, the
+     person once the number is whole */
+  function callCust(){
+    var box = el("clCust"); if(!box) return;
+    var d = phoneKey(CALL.phone || "");
+    var known = d.length >= 10 ? STORE.customer(CALL.phone) : null;
+    if(known){
+      var cs = custStats(known), last = cs.last;
+      box.innerHTML = '<div class="knownbox">' +
+        '<div class="kt"><b>' + esc(known.name || "This number has ordered before") +
+          (STORE.isVerified(known) ? ' <span class="vtag">✓</span>' : '') + '</b>' +
+          '<small>' + esc(known.addr || "no address saved") +
+            (known.locFrom === "delivered" ? ' · doorstep known' : known.lat ? ' · pin saved' : '') + '</small>' +
+          '<small>' + (cs.n ? cs.n + (cs.n === 1 ? ' order' : ' orders') + ' · ' + rupee(cs.spend) +
+            (last ? ' · last ' + dayLabel(dayStartOf(last.at)).toLowerCase() : '') : 'no orders on this device') + '</small>' +
+        '</div>' +
+        (last && (last.lines || []).length
+          ? '<button class="linky go" id="clRepeat" title="' + esc(orderLine(last)) + '">Repeat last</button>' : '') +
+        '<a class="linky" href="#/admin/c/' + esc(known.id) + '">History</a>' +
+      '</div>';
+      var rp = el("clRepeat");
+      if(rp) rp.onclick = function(){
+        (last.lines || []).forEach(function(l){ addLine(l.id, l.label || "", l.price, l.q); });
+        callLines(); shopToast("Same as last time — check the sizes.");
+      };
+      return;
+    }
+    var hits = d.length >= 4 ? STORE.customerMatch(CALL.phone, 6) : [];
+    if(!hits.length){
+      box.innerHTML = d.length >= 10 ? '<p class="shopnote left">New number — nothing in the book yet.</p>' : '';
+      return;
+    }
+    box.innerHTML = '<div class="matches">' + hits.map(function(c){
+      var cs = custStats(c);
+      return '<button class="cmatch" data-pick="' + esc(c.phone) + '">' +
+        '<b>' + esc(c.name || "No name") + '</b>' +
+        '<span>' + esc(prettyPhone(c.phone)) + '</span>' +
+        '<small>' + esc(shortAddr(c.addr) || "no address") + (cs.n ? ' · ' + cs.n + ' orders' : '') + '</small>' +
+      '</button>';
+    }).join("") + '</div>';
+    box.querySelectorAll("[data-pick]").forEach(function(b){
+      b.onclick = function(){
+        var c = STORE.customer(b.dataset.pick);
+        CALL.phone = c.phone; ph.value = c.phone;
+        useKnown(c, false); callCust(); callUsual();
+        STORE.customerFetch(c.phone).then(function(){ callCust(); });
+        el("clName").focus();
+      };
+    });
+  }
+
+  /* what this number usually has: the three most-ordered dishes,
+     one tap each, priced from today's menu */
+  function callUsual(){
+    var box = el("clUsual"); if(!box) return;
+    var id = phoneKey(CALL.phone || "");
+    if(id.length < 10){ box.innerHTML = ""; return; }
+    var tally = {};
+    STORE.orders().forEach(function(o){
+      if(phoneKey(o.phone) !== id || o.status === "cancelled") return;
+      (o.lines || []).forEach(function(l){
+        var k = l.id + "|" + (l.label || "");
+        tally[k] = tally[k] || { id:l.id, label:l.label || "", name:l.name, n:0, price:l.price };
+        tally[k].n += l.q;
+      });
+    });
+    var top = Object.keys(tally).map(function(k){ return tally[k]; })
+      .sort(function(a,b){ return b.n - a.n; }).slice(0, 3);
+    if(!top.length){ box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="usual"><span class="ulbl">Usual</span>' + top.map(function(t){
+      var it = dishById(t.id), ch = it ? choices(it).filter(function(c){ return c.label === t.label; })[0] : null;
+      var price = ch ? ch.price : t.price;
+      return '<button class="chip" data-usual="' + esc(t.id) + '|' + esc(t.label) + '|' + price + '">' +
+        esc(t.name) + (t.label ? ' · ' + esc(t.label) : '') + ' <small>×' + t.n + '</small></button>';
+    }).join("") + '</div>';
+    box.querySelectorAll("[data-usual]").forEach(function(b){
+      b.onclick = function(){ var p = b.dataset.usual.split("|"); addLine(p[0], p[1], +p[2], 1); callLines(); };
+    });
+  }
+
+  function callLines(){
+    var box = el("clLines"); if(!box) return;
+    var sub = callSub();
+    box.innerHTML = CALL.lines.length
+      ? '<div class="lines">' + CALL.lines.map(function(l, i){
+          return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
+            (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
+            '<div class="qty">' +
+              '<button data-cq="' + i + '|-1">−</button><span>' + l.q + '</span>' +
+              '<button data-cq="' + i + '|1">+</button>' +
+            '</div>' +
+            '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
+        }).join("") + '</div>' +
+        '<div class="total"><span>Total</span><b>' + rupee(sub) + '</b></div>'
+      : '<p class="shopsub">Nothing added yet.</p>';
+    box.querySelectorAll("[data-cq]").forEach(function(b){
+      b.onclick = function(){
+        var p = b.dataset.cq.split("|"), i = +p[0], dlt = +p[1];
+        CALL.lines[i].q += dlt;
+        CALL.lines = CALL.lines.filter(function(l){ return l.q > 0; });
+        callLines();
+      };
+    });
+    var go = el("clGo");
+    if(go) go.textContent = sub ? "Put it on the board · " + rupee(sub) : "Put it on the board";
+  }
+
+  function callRefresh(){ callCust(); callUsual(); callLines(); }
+  window.__callRefresh = callRefresh;
 }
 
 /* ---- the office editing one order -------------------------- */
@@ -6291,149 +6427,239 @@ function paintEdit(main, id){
       '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>', true);
     return;
   }
+  main.innerHTML = shell("Order " + o.id, '<div class="editwrap wide" id="oedPage">' + orderBody(o, false) + '</div>', true);
+  wireOrder(el("oedPage"), id, function(){ paintEdit(main, id); });
+}
+
+/* ============================================================
+   ONE ORDER, OPENED
+
+   The same editor everywhere: a panel that slides over the board
+   (the board stays where it was, nothing to find again), or the
+   full page at #/admin/o/<id> for a link somebody was sent.
+   Items on the left, the customer and the money on the right,
+   the one thing to do next in a bar that never scrolls away.
+   Fields save when you leave them - there is no Save to forget.
+   ============================================================ */
+function stPill(o){
+  var t = o.status === "cancelled" ? "Cancelled"
+        : (STEP[o.status] ? STEP[o.status].t : o.status);
+  return '<span class="stpill s-' + esc(o.status) + '">' + esc(t) + '</span>';
+}
+
+function orderBody(o, inPanel){
   var m = money(o), d = o.discount || { type:"pct", value:0 };
+  var at = FLOW.indexOf(o.status), next = FLOW[at + 1];
+  var rider = o.riderId ? STORE.rider(o.riderId) : null;
+  var lines = o.lines || [];
+  var ticket = (o.kind === "ticket") && !lines.length;
+  var open = o.status !== "cancelled" && o.status !== "delivered";
+  var cust = STORE.customer(o.phone), cs = cust ? custStats(cust) : null;
 
-  main.innerHTML = shell("Edit " + esc(o.id),
-    '<div class="editwrap">' +
-      '<h3 class="mini">What they ordered</h3>' +
-      '<div class="lines">' + (o.lines||[]).map(function(l,i){
-        return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
-          (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
-          '<div class="qty">' +
-            '<button data-eq="' + i + '|-1">&minus;</button><span>' + l.q + '</span>' +
-            '<button data-eq="' + i + '|1">+</button></div>' +
-          '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
-      }).join("") + '</div>' +
-      (o.lines && o.lines.length ? '' : '<p class="shopsub">Every line was removed.</p>') +
+  var waText = (o.status === "placed") ? msgAsk(o)
+             : (o.status === "accepted") ? msgAccepted(o)
+             : (o.status === "delivered") ? msgThanks(o)
+             : msgOnWay(o);
 
-      '<h3 class="mini">Discount</h3>' +
-      '<div class="disc">' +
-        '<button class="dtab' + (d.type==="pct"?" on":"") + '" data-dt="pct">%</button>' +
-        '<button class="dtab' + (d.type==="rs"?" on":"") + '" data-dt="rs">\u20B9</button>' +
-        '<input class="fld" id="edDisc" inputmode="numeric" placeholder="0" value="' +
-          (d.value || "") + '">' +
-      '</div>' +
-      '<p class="shopnote" style="text-align:left;margin:4px 0 0">' +
-        'Subtotal ' + rupee(m.sub) +
-        (m.off ? ' \u2212 ' + rupee(m.off) + ' (' + esc(discountLabel(o)) + ')' : '') +
-        ' = <b>' + rupee(m.total) + '</b></p>' +
+  /* the one thing to do next */
+  var step = "";
+  if(ticket) step = callBtn(o.phone, "Call " + (o.name || "them"), "shopbtn");
+  else if(!lines.length) step = '<span class="oedhint">No items yet — add from the menu.</span>';
+  else if(o.status === "accepted") step = '<button class="shopbtn" data-assignpick="' + esc(o.id) + '">Assign a rider</button>';
+  else if(next && open) step = '<button class="shopbtn" data-adv="' + esc(o.id) + '|' + next + '">' + esc(doWord(next)) + '</button>';
 
-      (o.kind === "ticket" && !(o.lines||[]).length
-        ? '<div class="tkhead"><b>\u260E They asked us to call</b>' +
-          '<small>Ring them, tap the items in as they say them, then ' +
-          'send it back on WhatsApp so they can check it.</small>' +
-          '<div class="tkrow">' + callBtn(o.phone, "Call " + (o.name || "them"), "shopbtn small") +
-          '</div></div>'
-        : '') +
+  return '<div class="oed' + (inPanel ? " inpanel" : "") + '">' +
+    '<div class="oedhead">' +
+      (inPanel ? '<button class="oedx" data-oclose="1" title="Close">✕</button>'
+               : '<button class="oedx" data-go="#/admin" title="Back to orders">‹</button>') +
+      '<div class="oedwho"><b>' + esc(o.name || prettyPhone(o.phone)) + '</b>' +
+        '<small>' + esc(o.id) + ' · ' + when(o.at) +
+          (o.source === "phone" ? ' · by phone' : '') +
+          (cs && cs.n > 1 ? ' \u00b7 ' + cs.n + ' orders, ' + rupee(cs.spend) : ' \u00b7 first order') +
+        '</small></div>' +
+      stPill(o) +
+    '</div>' +
 
-      /* One button, and the search opens over the middle of the
-         screen. A box down here is a box you scroll past. */
-      '<button class="shopbtn ghost findbtn" id="edFind">' +
-        '<span class="fi">\uD83D\uDD0D</span> Add something from the menu' +
-      '</button>' +
+    '<div class="oedquick">' +
+      callBtn(o.phone, "Call", "qbtn") +
+      '<a class="qbtn wa" target="_blank" rel="noopener" href="' + esc(waCustomer(o, waText)) + '">WhatsApp</a>' +
+      (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) + '">Map</a>' : '') +
+      (lines.length && o.status !== "placed"
+        ? '<button class="qbtn pr" data-print="' + esc(o.id) + '|kot">KOT</button>' +
+          '<button class="qbtn pr" data-print="' + esc(o.id) + '|bill">Bill</button>' : '') +
+      (cust ? '<a class="qbtn" href="#/admin/c/' + esc(cust.id) + '">History</a>' : '') +
+      (inPanel ? '<a class="qbtn nopanel" href="#/admin/o/' + esc(o.id) + '">Full page</a>' : '') +
+    '</div>' +
 
-      /* when the customer wants it, not when they asked */
-      '<h3 class="mini">Wanted for</h3>' +
-      '<div class="whenrow">' +
-        '<button class="wbtn' + (!o.wantAt ? " on" : "") + '" data-when="now">As soon as possible</button>' +
-        '<input class="fld" id="edWhen" type="datetime-local" value="' +
-          esc(o.wantAt ? localStamp(o.wantAt) : "") + '">' +
-      '</div>' +
+    '<div class="oedgrid">' +
+      '<section class="oedcol">' +
+        '<h3 class="mini">Items</h3>' +
+        (lines.length
+          ? '<div class="lines">' + lines.map(function(l,i){
+              return '<div class="line"><div class="ln"><b>' + esc(l.name) + '</b>' +
+                (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
+                (open ? '<div class="qty">' +
+                  '<button data-eq="' + i + '|-1">&minus;</button><span>' + l.q + '</span>' +
+                  '<button data-eq="' + i + '|1">+</button></div>'
+                  : '<span class="qty"><span>' + l.q + '×</span></span>') +
+                '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
+            }).join("") + '</div>'
+          : '<p class="shopsub">' + (ticket ? "They asked us to call. Ring them and tap the items in." : "Nothing on it.") + '</p>') +
+        (open ? '<button class="shopbtn ghost findbtn" id="edFind"><span class="fi">🔍</span> Add from the menu</button>' : '') +
+        '<div class="disc">' +
+          '<span class="dlbl">Discount</span>' +
+          '<button class="dtab' + (d.type==="pct"?" on":"") + '" data-dt="pct">%</button>' +
+          '<button class="dtab' + (d.type==="rs"?" on":"") + '" data-dt="rs">₹</button>' +
+          '<input class="fld" id="edDisc" inputmode="numeric" placeholder="0" value="' + (d.value || "") + '">' +
+        '</div>' +
+        '<div class="total sub"><span>Subtotal</span><b>' + rupee(m.sub) + '</b></div>' +
+        (m.off ? '<div class="total sub off"><span>' + esc(discountLabel(o)) + '</span><b>− ' + rupee(m.off) + '</b></div>' : '') +
+        '<div class="total"><span>Total</span><b>' + rupee(m.total) + '</b></div>' +
+        payBlock(o, "office") +
+      '</section>' +
 
-      '<h3 class="mini">Where it goes</h3>' +
-      '<input class="fld" id="edName"  placeholder="Name" value="' + esc(o.name) + '">' +
-      '<input class="fld" id="edPhone" placeholder="Phone" inputmode="tel" value="' + esc(o.phone) + '">' +
-      '<textarea class="fld" id="edAddr" placeholder="Address">' + esc(o.addr) + '</textarea>' +
-      '<input class="fld" id="edNote"  placeholder="Note" value="' + esc(o.note||"") + '">' +
+      '<section class="oedcol">' +
+        '<h3 class="mini">Customer</h3>' +
+        '<input class="fld" id="edName"  placeholder="Name" value="' + esc(o.name) + '">' +
+        '<input class="fld" id="edPhone" placeholder="Phone" inputmode="tel" value="' + esc(o.phone) + '">' +
+        '<textarea class="fld" id="edAddr" placeholder="Address">' + esc(o.addr || "") + '</textarea>' +
+        (o.doorAddr ? '<p class="shopnote left">Door last time: ' + esc(o.doorAddr) + '</p>' : '') +
+        '<input class="fld" id="edNote"  placeholder="Note for the kitchen" value="' + esc(o.note||"") + '">' +
 
-      '<button class="shopbtn" id="edSave">Save the changes</button>' +
-      /* A ticket has never been told anything yet, so the message
-         is the whole order rather than a list of changes. */
-      '<a class="shopbtn' + (o.kind === "ticket" ? "" : " ghost") +
-        '" id="edTell" target="_blank" rel="noopener" href="' +
-        esc(waCustomer(o, o.kind === "ticket" ? msgTaken(o) : msgChanged(o))) + '">' +
-        (o.kind === "ticket" ? "Send it to them on WhatsApp" : "Tell the customer on WhatsApp") +
-      '</a>' +
-      '<button class="shopbtn ghost" data-go="#/admin">Back without saving</button>' +
-      (o.status !== "cancelled" && o.status !== "delivered"
-        ? '<button class="shopbtn danger" id="edCancel">Cancel this order</button>' : '') +
-      payBlock(o, "office") +
-      noteThread(o, "A note for the rider or the customer\u2026") +
-    '</div>', true);
+        '<h3 class="mini">Wanted for</h3>' +
+        '<div class="whenrow">' +
+          '<button class="wbtn' + (!o.wantAt ? " on" : "") + '" data-when="now">As soon as possible</button>' +
+          '<input class="fld" id="edWhen" type="datetime-local" value="' + esc(o.wantAt ? localStamp(o.wantAt) : "") + '">' +
+        '</div>' +
 
-  wireNotes(main, id, function(){ paintEdit(main, id); });
-  wirePaid(main, function(){ paintEdit(main, id); });
+        '<h3 class="mini">Rider</h3>' +
+        '<div class="oedrider">' +
+          (rider ? '<b>🏍 ' + esc(rider.name) + '</b><small>' + esc(riderState(rider).t) + '</small>'
+                 : '<span class="oedhint">Nobody yet</span>') +
+          (open && at >= FLOW.indexOf("accepted")
+            ? '<button class="linky" data-assignpick="' + esc(o.id) + '">' + (rider ? "Change" : "Assign") + '</button>' : '') +
+        '</div>' +
+      '</section>' +
+    '</div>' +
 
-  /* quantities change in place so the total is always honest */
-  main.querySelectorAll("[data-eq]").forEach(function(b){
+    noteThread(o, "A note for the rider or the customer…") +
+
+    '<div class="oedbar">' +
+      step +
+      (open ? '<button class="linky warn" data-cancel="' + esc(o.id) + '">Cancel order</button>' : '') +
+      '<span class="oedsaved" id="edSaved"></span>' +
+    '</div>' +
+  '</div>';
+}
+
+function wireOrder(root, id, repaint){
+  var o = STORE.order(id); if(!o) return;
+  var d = o.discount || { type:"pct", value:0 };
+  var flash = function(t){ var s = el("edSaved"); if(s){ s.textContent = t; setTimeout(function(){ if(s.textContent === t) s.textContent = ""; }, 1800); } };
+
+  wireNotes(root, id, repaint);
+  wirePaid(root, repaint);
+  wireCards(root);                         /* adv, assign, print, decline: one place */
+
+  root.querySelectorAll("[data-oclose]").forEach(function(b){ b.onclick = closePanel; });
+
+  root.querySelectorAll("[data-eq]").forEach(function(b){
     b.onclick = function(){
       var p = b.dataset.eq.split("|"), i = +p[0], step = +p[1];
-      var lines = (o.lines||[]).slice();
+      var lines = (STORE.order(id).lines || []).slice();
       lines[i] = Object.assign({}, lines[i], { q: lines[i].q + step });
       lines = lines.filter(function(l){ return l.q > 0; });
-      STORE.edit(id, { lines: lines });
-      paintEdit(main, id);
+      STORE.edit(id, { lines: lines }); repaint();
     };
   });
-  main.querySelectorAll("[data-dt]").forEach(function(b){
-    b.onclick = function(){
-      STORE.edit(id, { discount: { type: b.dataset.dt, value: +(el("edDisc").value || 0) } });
-      paintEdit(main, id);
-    };
-  });
+  var disc = function(type){
+    STORE.edit(id, { discount: { type: type || d.type, value: +(el("edDisc").value || 0) } }); repaint();
+  };
+  root.querySelectorAll("[data-dt]").forEach(function(b){ b.onclick = function(){ disc(b.dataset.dt); }; });
+  var ed = el("edDisc"); if(ed){ ed.onchange = function(){ disc(); }; }
 
-  el("edFind").onclick = function(){
+  var f = el("edFind");
+  if(f) f.onclick = function(){
     openFinder(function(did, lbl, price){
-      var live  = STORE.order(id);
-      var lines = (live.lines || []).slice();
-      var it    = dishById(did);
-      var k     = did + "|" + lbl;
+      var lines = (STORE.order(id).lines || []).slice();
+      var it = dishById(did), k = did + "|" + lbl;
       var hit = lines.filter(function(l){ return (l.id + "|" + (l.label||"")) === k; })[0];
       if(hit) hit.q += 1;
-      else lines.push({ k:k, id:did, name: it ? label(it.name) : did,
-                        label:lbl, price:price, q:1 });
-      STORE.edit(id, { lines: lines });
-      /* the form behind is repainted so the total is honest even
-         while the palette is still open */
-      paintEdit(main, id);
+      else lines.push({ k:k, id:did, name: it ? label(it.name) : did, label:lbl, price:price, q:1 });
+      STORE.edit(id, { lines: lines }); repaint();
     }, "Add");
   };
 
-  main.querySelectorAll("[data-when]").forEach(function(b){
-    b.onclick = function(){
-      STORE.edit(id, { wantAt: null });
-      paintEdit(main, id);
-    };
+  root.querySelectorAll("[data-when]").forEach(function(b){
+    b.onclick = function(){ STORE.edit(id, { wantAt: null }); repaint(); };
   });
   var ew = el("edWhen");
   if(ew) ew.onchange = function(){
     var v = ew.value ? new Date(ew.value).getTime() : null;
-    STORE.edit(id, { wantAt: v || null });
-    paintEdit(main, id);
+    STORE.edit(id, { wantAt: v || null }); repaint();
   };
 
-  el("edSave").onclick = function(){
-    STORE.edit(id, {
+  /* the customer fields save themselves when you leave them */
+  var save = function(){
+    var patch = {
       name:  el("edName").value.trim(),
       phone: el("edPhone").value.trim(),
       addr:  el("edAddr").value.trim(),
-      note:  el("edNote").value.trim(),
-      discount: { type: d.type, value: +(el("edDisc").value || 0) }
-    });
-    /* A correction typed here is usually the office fixing what
-       the customer got wrong, so it belongs in the book too -
-       otherwise the same bad address comes back next time. */
+      note:  el("edNote").value.trim()
+    };
+    var live = STORE.order(id), changed = false;
+    for(var k in patch) if((live[k] || "") !== patch[k]) changed = true;
+    if(!changed) return;
+    STORE.edit(id, patch);
     STORE.rememberCustomer(STORE.order(id));
-    location.hash = "#/admin";
+    flash("Saved");
   };
+  ["edName","edPhone","edAddr","edNote"].forEach(function(k){
+    var n = el(k); if(n) n.onchange = save;
+  });
 
-  var cx = el("edCancel");
-  if(cx) cx.onclick = function(){
-    var why = window.prompt("Why is it cancelled? (optional)") || "";
-    STORE.cancel(id, "office", why);
-    location.hash = "#/admin";
-  };
+  root.querySelectorAll("[data-cancel]").forEach(function(b){
+    b.onclick = function(){ declineSheet(id); };
+  });
 }
+
+/* ---- the panel over the board ---------------------------- */
+var OPANEL = null;
+function orderPanel(id){
+  closePanel();
+  var box = document.createElement("div");
+  box.className = "sheetwrap opanel"; box.id = "oPanel";
+  box.innerHTML = '<div class="panel"><div id="oPanelBody"></div></div>';
+  document.body.appendChild(box);
+  OPANEL = id;
+  box.onclick = function(e){ if(e.target === box) closePanel(); };
+  panelPaint();
+}
+function panelPaint(){
+  if(!OPANEL) return;
+  var body = el("oPanelBody"), o = STORE.order(OPANEL);
+  if(!body || !o){ closePanel(); return; }
+  if(isTyping() && body.contains(document.activeElement)){ MISSED = true; return; }
+  var top = body.parentNode.scrollTop;
+  body.innerHTML = orderBody(o, true);
+  wireOrder(body, OPANEL, panelPaint);
+  body.parentNode.scrollTop = top;
+}
+function closePanel(){
+  var b = el("oPanel"); if(b) b.remove();
+  OPANEL = null;
+}
+/* on any office console, an order link opens the panel; the page
+   behind stays. A link marked nopanel, or one from anywhere else,
+   goes to the full page as before. */
+document.addEventListener("click", function(e){
+  var a = e.target && e.target.closest ? e.target.closest('a[href^="#/admin/o/"]') : null;
+  if(!a || a.classList.contains("nopanel")) return;
+  if(!/^#\/?admin(\/(who|riders|call|menu|google|c\/[^/]*))?$/.test(location.hash || "")) return;
+  e.preventDefault();
+  orderPanel(decodeURIComponent(a.getAttribute("href").split("/").pop()));
+}, true);
+document.addEventListener("keydown", function(e){ if(e.key === "Escape" && OPANEL) closePanel(); });
 
 /* the id of the rider whose row is open for editing, or null */
 var REDIT = null;
@@ -7220,8 +7446,10 @@ function shell(title, body, wide){
     return '<div class="shopwrap' + (wide ? " wide" : "") + '">' +
       '<h2 class="shoph">' + esc(title) + '</h2>' + body + '</div>';
 
+  /* office pages go back to the board, not to the customer's menu */
+  var office = /^#\/?admin/.test(location.hash || "");
   return '<div class="backbar">' +
-      '<button class="back" data-go="#/"><span class="a">‹</span>Menu</button>' +
+      '<button class="back" data-go="' + (office ? "#/admin" : "#/") + '"><span class="a">‹</span>' + (office ? "Orders" : "Menu") + '</button>' +
       '<span class="crumbtxt">' + esc(title) + '</span></div>' +
     '<div class="shopwrap' + (wide ? " wide" : "") + '">' +
       '<h2 class="shoph">' + esc(title) + '</h2>' + body + '</div>';
@@ -7585,6 +7813,7 @@ function repaintNow(){
   if(isTyping()){ MISSED = true; return; }
   MISSED = false;
   REPAINT();
+  if(OPANEL) panelPaint();               /* the order open over the board follows too */
 }
 
 /* when they finish typing, catch up on whatever was held back */
@@ -7594,6 +7823,7 @@ document.addEventListener("focusout", function(){
 
 function route(p, main){
   REPAINT = null;
+  closePanel();                           /* a new page; the order panel belongs to the old one */
   /* cart, checkout, an order: the customer is mid-task. The menu
      search in the header is for browsing and only distracts here. */
   try{ document.body.classList.toggle("inflow",

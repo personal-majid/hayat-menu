@@ -2556,19 +2556,76 @@ html[data-theme="paper"] .leaflet-pane.leaflet-traffic-pane,html[data-theme="pap
 .getapp.apk{text-decoration:none;color:inherit}
 .getapp.apk .shopbtn{margin:0;width:auto;flex:0 0 auto}
 
-/* ---- dock: the More drawer (Menu, Google, Service sim) ---- */
-.dockmore{position:relative;display:flex}
-.dockdrawer{position:absolute;right:0;bottom:calc(100% + 10px);min-width:270px;max-width:calc(100vw - 24px);
-  background:var(--card);border:1px solid var(--line2);border-radius:16px;box-shadow:var(--shadow);
-  padding:6px;display:grid;gap:2px;z-index:710}
-.dockdrawer[hidden]{display:none}
-.dditem{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:center;text-align:left;
-  width:100%;border:0;background:transparent;color:var(--cream);padding:10px 12px;border-radius:12px;
-  font:inherit;cursor:pointer;text-decoration:none}
-.dditem:hover,.dditem:focus-visible{background:color-mix(in srgb,var(--gold) 14%,transparent);outline:none}
-.dditem.on{background:color-mix(in srgb,var(--gold) 20%,transparent)}
-.ddic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:18px;font-weight:800;
-  border:1px solid var(--line2)}
-.ddtx b{display:block;font-weight:700} .ddtx small{display:block;color:var(--muted);font-size:var(--t-small)}
-html[data-theme="paper"] .dockdrawer{background:var(--card);border-color:var(--line2)}
-html[data-theme="paper"] .dditem{color:var(--ink)}
+/* ---- v137: one order, opened (panel over the board + full page) ---- */
+.editwrap.wide{max-width:980px}
+.oed{display:flex;flex-direction:column;gap:0}
+.oedhead{display:flex;align-items:center;gap:12px;padding:4px 0 12px;border-bottom:1px solid var(--line)}
+.oedx{flex:none;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  font:inherit;font-size:20px;line-height:1;cursor:pointer}
+.oedx:hover{background:var(--soft2)}
+.oedwho{flex:1;min-width:0}
+.oedwho b{display:block;font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oedwho small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.stpill{flex:none;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:6px 10px;border-radius:999px;
+  background:var(--soft2);color:var(--ink)}
+.stpill.s-placed{background:color-mix(in srgb,var(--hot) 16%,transparent);color:var(--hot)}
+.stpill.s-accepted{background:color-mix(in srgb,var(--gold) 22%,transparent);color:var(--gold2)}
+.stpill.s-assigned,.stpill.s-on_way{background:color-mix(in srgb,#2C6FB5 16%,transparent);color:#2C6FB5}
+.stpill.s-delivered{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.stpill.s-cancelled{background:var(--soft2);color:var(--muted);text-decoration:line-through}
+.oedquick{display:flex;gap:2px 14px;flex-wrap:wrap;padding:10px 0 4px}
+.oedquick .qbtn{font-size:12.5px;padding:6px 0}
+.oedgrid{display:grid;grid-template-columns:1fr;gap:0 32px}
+@media (min-width:860px){.oedgrid{grid-template-columns:1.1fr 1fr}}
+.oedcol h3.mini{margin-top:18px}
+.oedcol .fld{margin-bottom:8px}
+.disc .dlbl{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-right:auto}
+.oedrider{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r2);background:var(--soft3)}
+.oedrider b{font-size:15px}
+.oedrider small{display:block;font-size:12px;color:var(--muted)}
+.oedrider .linky{margin-left:auto}
+.oedhint{font-size:13px;color:var(--muted)}
+.shopnote.left{text-align:left;margin:-2px 0 8px}
+.oedbar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  margin:16px -16px -16px;padding:12px 16px;background:var(--chrome);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.oedbar .shopbtn{margin:0;flex:0 1 auto;min-width:200px}
+.oedbar .linky{margin-left:0}
+.oedsaved{margin-left:auto;font-size:12px;color:var(--green);font-weight:700}
+/* the panel: over the board on a desk, from the bottom on a phone */
+.sheetwrap.opanel{justify-content:flex-end;align-items:stretch;background:rgba(27,26,23,.35)}
+.opanel .panel{width:min(640px,100%);height:100%;overflow:auto;background:var(--bg);
+  box-shadow:-12px 0 40px rgba(0,0,0,.25);animation:panelIn .22s cubic-bezier(.22,.9,.3,1) both}
+.opanel #oPanelBody{padding:16px 16px 16px}
+.opanel .oedbar{margin:16px -16px 0}
+@keyframes panelIn{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:699px){
+  .sheetwrap.opanel{align-items:flex-end}
+  .opanel .panel{height:94%;border-radius:18px 18px 0 0;animation-name:sheetUp}
+  @keyframes sheetUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+}
+
+/* ---- v137: order by phone ---- */
+.callwrap{max-width:980px}
+.callgrid{display:grid;grid-template-columns:1fr;gap:0 32px}
+@media (min-width:860px){.callgrid{grid-template-columns:1fr 1.1fr}}
+.callcol h3.mini{margin-top:14px}
+.fld.big{font-size:20px;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.matches{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin:0 0 10px;background:var(--card)}
+.cmatch{display:grid;grid-template-columns:1fr auto;gap:0 10px;width:100%;text-align:left;padding:10px 13px;border:0;border-bottom:1px solid var(--line);
+  background:none;color:inherit;font:inherit;cursor:pointer}
+.cmatch:last-child{border-bottom:0}
+.cmatch:hover{background:var(--soft)}
+.cmatch b{font-size:14.5px}
+.cmatch span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cmatch small{grid-column:1/-1;font-size:12px;color:var(--muted)}
+.knownbox .kt small{display:block}
+.vtag{color:var(--green);font-size:13px}
+.usual{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.usual .ulbl{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.usual .chip{cursor:pointer;font:inherit;font-size:13px}
+.usual .chip small{opacity:.6;margin-left:3px}
+body.deskwork:not(.deskboard) .shopwrap.wide{max-width:1060px}
+body.deskwork:not(.deskboard) .shopwrap .oedbar{margin:16px -20px -120px;padding:12px 20px 14px}
+.sheetwrap.opanel{z-index:880}          /* over the bar and the dock (660), under the finder (900) */
+.oedbar .shopbtn{width:auto;flex:0 1 auto;min-width:220px;margin:0}
+.opanel .oedbar{position:sticky;bottom:0}

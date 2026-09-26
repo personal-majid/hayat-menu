@@ -2,6 +2,8 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex"><title>Hayat Kitchen Screen</title>
 <script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<script src="hayat-auth.js"></script>
+<script src="hayat-clean.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap">
 <style>
@@ -18,6 +20,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .tabs{display:flex;gap:6px} .tabs button{border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 14px;font-weight:600;color:var(--muted)}
 .tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 main{padding:12px 14px 40px}
+.cbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 14px 0;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,var(--bad) 18%,var(--card));border:2px solid var(--bad);font-size:17px;font-weight:600;animation:pulse 1.4s ease-in-out infinite}
+.cbar span{background:var(--card);border-radius:8px;padding:3px 10px;font-weight:500}
+.cbar[hidden]{display:none}
 .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));align-items:start}
 .tk{background:var(--card);border:2px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
 .tk .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -54,6 +59,7 @@ dialog label{display:flex;gap:10px;align-items:center;font-size:17px;padding:6px
   <button class="hb" id="thm" title="Light / dark">◐</button>
   <button class="hb" id="fs" title="Full screen">⤢</button>
 </header>
+<div class="cbar" id="cbar" hidden></div>
 <main id="main"><div class="empty">Loading…</div></main>
 <dialog id="dlg"><form method="dialog"><h3 style="margin-top:0">Stations on this screen</h3><div id="dlgBody"></div><p style="text-align:right;margin-bottom:0"><button class="hb" value="ok">Done</button></p></form></dialog>
 <script>
@@ -132,19 +138,28 @@ $('fs').onclick=()=>{ document.fullscreenElement?document.exitFullscreen():docum
 $('cfg').onclick=()=>{ const mine=new Set(stations()); $('dlgBody').innerHTML=Object.keys(KNAME).map(k=>'<label><input type="checkbox" value="'+k+'"'+(mine.has(k)?' checked':'')+'> '+KNAME[k]+'</label>').join('')+'<p style="color:var(--muted);font-size:14px">Saved on this tablet only.</p>';
   $('dlg').showModal(); $('dlg').onclose=()=>{ const v=[...$('dlgBody').querySelectorAll('input:checked')].map(i=>i.value); ST.custom[ST.screen]=v.length?v:SCREENS[ST.screen].st; save(); seen=new Set(); first=true; render(); }; };
 
-(async function(){ const cfg=window.CONFIG&&window.CONFIG.firebase;
+/* the pass is loud about late cleaning: washrooms, glass, floors that are overdue */
+let CPLAN=null, CLOGS=[], CLATE='';
+function cleanBar(){ const b=$('cbar'); if(!CPLAN){ b.hidden=true; return; }
+  const H=window.HayatClean, st=H.state(CPLAN,H.bizDate(),CLOGS,H.bizMin()), late=st.rows.filter(r=>r.st==='overdue'&&r.late<=120);
+  if(!late.length){ b.hidden=true; CLATE=''; return; }
+  b.hidden=false; b.innerHTML='🧹 Late cleaning:'+late.slice(0,6).map(r=>'<span>'+H.area(CPLAN,r.t.area).icon+' '+r.t.name+' · '+r.late+'′</span>').join('')+(late.length>6?'<span>+'+(late.length-6)+' more</span>':'');
+  const key=late.map(r=>r.id).join(','); if(key!==CLATE){ if(CLATE!==''||late.length) { if(ST.sound) beep(); } CLATE=key; } }
+setInterval(cleanBar,30000);
+(async function(){
   const stop=h=>{ $('main').innerHTML='<div class="msg">'+h+'</div>'; };
-  if(!cfg||!cfg.projectId) return stop('<b>Not connected.</b> Open this page from the website (office → ⋯ More → Kitchen screen).');
-  try{ const V='12.19.0', appM=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-app.js'), fs=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-firestore.js'), au=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-auth.js');
-    const app=appM.getApps().length?appM.getApp():appM.initializeApp(cfg), db=fs.getFirestore(app), auth=au.getAuth(app); FB={fs,db};
-    const user=await new Promise(ok=>{ const off=au.onAuthStateChanged(auth,u=>{ off(); ok(u); }); });
-    if(!user||user.isAnonymous) return stop('<b>Sign in first.</b> <a href="./#/admin">Open the office</a> on this tablet, sign in with the office Google account, then come back. It stays signed in.');
-    const fail=e=>stop(e&&e.code==='permission-denied'?'<b>This account is not marked as office.</b> Firebase console → Firestore → staff → this user → role = office. Also publish the latest firestore.rules (they add the kitchen screen).':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
+  let ctx; try{ ctx=await HayatAuth.start(); }catch(e){ return stop('<b>Not connected.</b> '+(e.message||e)); }
+  const go=async()=>{ const fs=ctx.fs, db=ctx.db; FB={fs,db};
+    const fail=e=>stop(e&&e.code==='permission-denied'?'<b>Not allowed.</b> This sign-in is not kitchen or office, or the latest firestore.rules are not published yet.':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
     fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ META=d.exists()?d.data():null; feed(); },fail);
     fs.onSnapshot(fs.collection(db,'vm_open'),snap=>{ OPEN=snap.docs.map(d=>d.data()); const live=new Set(OPEN.map(o=>String(o.invoiceId)));
       Object.keys(DONE).forEach(id=>{ if(!live.has(id.split('_')[1])) delete DONE[id]; }); render(); },fail);
     const since=new Date(Date.now()-12*3600e3);
     fs.onSnapshot(fs.query(fs.collection(db,'kds'),fs.where('doneAt','>=',since)),snap=>{ snap.docs.forEach(d=>{ DONE[d.id]=d.data(); }); render(); },fail);
-  }catch(e){ stop('<b>Could not start.</b> '+(e.code||e.message)); } })();
+    fs.onSnapshot(fs.doc(db,'cleanplan','main'),d=>{ CPLAN=d.exists()&&d.data().tasks?Object.assign({},HayatClean.DEFAULT_PLAN,d.data()):HayatClean.DEFAULT_PLAN; cleanBar(); },()=>{});
+    fs.onSnapshot(fs.query(fs.collection(db,'cleanlog'),fs.where('day','==',HayatClean.bizDate())),s=>{ CLOGS=s.docs.map(d=>d.data()); cleanBar(); },()=>{});
+  };
+  if(!['office','kitchen','captain'].includes(ctx.role)){ $('main').innerHTML=''; await HayatAuth.form($('main'),ctx,['kitchen','office','captain'],go,'Sign in once on this tablet with the kitchen code.'); return; }
+  go(); })();
 </script>
 </body></html>

@@ -98,8 +98,21 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .kbar{display:flex;gap:2px} .kbar i{width:10px;height:10px;border-radius:3px;background:var(--soft);border:1px solid var(--line)} .kbar i.on{background:#D39B2A;border-color:#D39B2A}
 .pt{min-width:40px;height:34px;border-radius:8px;display:grid;place-items:center;align-content:center;color:#fff;font:700 11px/1 "Jost",sans-serif;padding:0 4px}
 .pt i{font-style:normal;font-size:13px}
-.pslide{display:grid;gap:4px} .pslide input{width:100%} .pticks{display:grid;grid-template-columns:repeat(5,1fr);font-size:11.5px;color:var(--muted);text-align:center}
-.pticks span:first-child{text-align:left} .pticks span:last-child{text-align:right} .pticks b{color:var(--ink)}
+.pslide{position:relative;padding:6px 9px 0}
+.pslide input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;position:relative;z-index:2;cursor:pointer}
+.pslide input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--good) 0 var(--p,0%),var(--line) var(--p,0%) 100%)}
+.pslide input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--good) 0 var(--p,0%),var(--line) var(--p,0%) 100%)}
+.pslide input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--surface);border:3px solid var(--good);margin-top:-7px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.pslide input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--surface);border:3px solid var(--good);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.pslide input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--accent);outline-offset:2px}
+.pdots{position:absolute;left:9px;right:9px;top:14px;height:6px;pointer-events:none;z-index:1}
+.pdots i{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);background:var(--surface);border:2px solid var(--line)}
+.pdots i.on{border-color:var(--good);background:var(--good)}
+.pticks{position:relative;height:18px;margin:4px 9px 0;font-size:11.5px;color:var(--muted)}
+.pticks span{position:absolute;transform:translateX(-50%);white-space:nowrap;cursor:pointer} .pticks span:first-child{transform:none} .pticks span:last-child{transform:translateX(-100%)}
+.pticks b{color:var(--ink);font-weight:600}
+.pslide.custom input[type=range]::-webkit-slider-thumb{border-color:var(--muted)} .pslide.custom .pdots i.on{background:var(--muted);border-color:var(--muted)}
+.pname{font-weight:600;font-size:13.5px;margin-top:2px}
 .maps{display:grid;gap:14px} @media (min-width:760px){ .maps{grid-template-columns:1fr 1fr} }
 .tiles{display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
 .tg{display:grid;gap:3px} .tg b{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.04em}
@@ -128,6 +141,43 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .pulse{animation:pulse 1s ease-out infinite}
 @media (prefers-reduced-motion:reduce){ .pulse{animation:none} }
 .cmp{display:grid;gap:14px}
+.pbgrid{display:grid;gap:14px} @media (min-width:1000px){ .pbgrid{grid-template-columns:1fr 1fr} }
+.rhythm{display:flex;height:46px;border-radius:10px;overflow:hidden;margin-top:6px;border:1px solid var(--line)}
+.rhythm div{display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;text-align:center;line-height:1.1;padding:0 2px;min-width:0;overflow:hidden}
+.rhlab{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
+.sect td,.sect th{text-align:center} .sect td:first-child,.sect th:first-child{text-align:left}
+.op{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}
+.op.y{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)} .op.n{background:color-mix(in srgb,#C2362C 14%,transparent);color:#C2362C} .op.p{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.proto{display:grid;gap:8px} .pstep{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;border-left:4px solid var(--c);padding:6px 10px;background:color-mix(in srgb,var(--c) 6%,transparent);border-radius:0 8px 8px 0}
+.pstep b{font-size:14px} .pstep ul{margin:0;padding-left:18px;font-size:14px} .pstep li{margin:2px 0} .pstep .who{color:var(--muted);font-size:12px}
+.syncg{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))} .sy{border:1px solid var(--line);border-radius:10px;padding:10px} .sy b{display:block;font-size:15px;margin-bottom:2px} .sy .big{font-size:26px;float:right}
+.pbroles{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.rolec{border:1px solid var(--line);border-top:5px solid var(--c);border-radius:10px;padding:10px 12px} .rolec h3{margin:0 0 4px;font:600 16px "Jost",sans-serif} .rolec .ppl{font-size:13px;color:var(--muted);margin-bottom:6px}
+.rolec h4{margin:6px 0 2px;font:600 12px "Jost",sans-serif;letter-spacing:.08em;text-transform:uppercase} .rolec ul{margin:0;padding-left:18px;font-size:14px} .rolec .nv h4{color:#C2362C}
+.pbposters{display:none}
+@media print{ body.pbprint *{visibility:hidden} body.pbprint #pbPosters, body.pbprint #pbPosters *{visibility:visible} body.pbprint #pbPosters{display:block;position:absolute;left:0;top:0;width:100%}
+  .poster{page-break-after:always;border:6px solid var(--c);border-radius:18px;padding:24px;min-height:92vh;font-size:19px;color:#111;background:#fff}
+  .poster h1{font:700 40px "Jost",sans-serif;margin:0} .poster .sub{font-size:20px;color:#444;margin-bottom:10px} .poster li{margin:6px 0} .poster .nv{color:#B42318} }
+.rpgrid{display:grid;gap:14px} @media (min-width:1100px){ .rpgrid{grid-template-columns:1fr 1fr} }
+.rpt td,.rpt th{white-space:nowrap} .rpt td:first-child{white-space:normal}
+.rpbar{display:flex;align-items:center;gap:0;height:10px;min-width:120px;background:var(--soft);border-radius:3px;overflow:hidden;position:relative}
+.rpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);opacity:.35} .rpbar b{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+.rpbar.late b{background:#C2362C} .rpbar .tg{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.rph{font:600 15px "Jost",sans-serif;margin:4px 0 0} .rpsub{font-size:12.5px;color:var(--muted)}
+.pill2{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600}
+.pill2.bad{background:color-mix(in srgb,#C2362C 14%,transparent);color:#C2362C} .pill2.ok{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good)}
+.tmtbl td,.tmtbl th{text-align:left;vertical-align:middle} .tmtbl input,.tmtbl select{padding:5px 6px;font-size:13px}
+.tmtbl .sw2{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:6px}
+.tmtbl tr.off td{opacity:.45} .tmtbl .x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:15px}
+.tmgrid{display:grid;gap:14px} @media (min-width:1100px){ .tmgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)} }
+.tmcards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.tmc{border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px;background:var(--surface);display:grid;gap:4px}
+.tmc h3{margin:0;font:600 16px "Jost",sans-serif;display:flex;justify-content:space-between;gap:8px} .tmc h3 small{font-weight:500;color:var(--muted);font-size:12px}
+.tmc .rl{font-weight:600;color:var(--c)} .tmc ul{margin:2px 0 0;padding-left:18px;font-size:13px;color:var(--ink)} .tmc li{margin:1px 0}
+.tmc .mt{font-size:12.5px;color:var(--muted)}
+.tmk{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.tmload{height:8px;border-radius:4px;background:var(--soft);overflow:hidden;min-width:60px} .tmload div{height:100%}
+@media print{ body *{visibility:hidden} #tmCards,#tmCards *{visibility:visible} #tmCards{position:absolute;left:0;top:0;width:100%} .tmc{break-inside:avoid;border-color:#999} }
 .gwin{max-width:520px;flex:1} .gwin button{padding:6px 8px;font-size:12.5px;white-space:nowrap}
 .gantt{overflow:hidden}
 .lvdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);margin-right:6px;vertical-align:1px}
@@ -314,6 +364,9 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
     <button role="tab" id="t-sim" aria-selected="false" data-tab="sim">One order</button>
     <button role="tab" id="t-day" aria-selected="false" data-tab="day">Day report</button>
     <button role="tab" id="t-sug" aria-selected="false" data-tab="sug">Ideas</button>
+    <button role="tab" id="t-rpt" aria-selected="false" data-tab="rpt">Reports</button>
+    <button role="tab" id="t-team" aria-selected="false" data-tab="team">Team plan</button>
+    <button role="tab" id="t-play" aria-selected="false" data-tab="play">Playbook</button>
     <button role="tab" id="t-mix" aria-selected="false" data-tab="mix">Settings</button>
   </nav>
 
@@ -390,7 +443,9 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
        <div class="rsh">Whole day, A → B <small id="rsDay"></small></div>
        <div class="rsres" id="rsRes"></div>
        <div class="rsh">Plan <small>slide to compare</small></div>
-       <div class="pslide"><input type="range" id="rsSlide" min="0" max="4" step="1" aria-label="Plan step"><div class="pticks" id="rsTicks"></div></div>
+       <div class="pslide" id="rsSl"><div class="pdots" id="rsDots"></div><input type="range" id="rsSlide" min="0" max="4" step="1" aria-label="Plan step"></div>
+       <div class="pticks" id="rsTicks"></div>
+       <div class="pname" id="rsPname"></div>
        <div class="rsprelab" id="rsPreLab"></div>
        <div class="rsh">Staff on the floor</div>
        <div class="rsstaff" id="rsStaff"></div>
@@ -401,6 +456,52 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
      </div>
    </details></aside>
    </div>
+  </section>
+
+  <section id="p-rpt" hidden>
+    <div class="card">
+      <div class="row"><h2>Reports · ticket times &amp; parcels</h2><span class="note" id="rpNote"></span></div>
+      <div class="ctrls3" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <label class="f">Data<select id="rpSrc"><option value="sample">Your exports · Jul–Sep</option><option value="live">Live · from the shop</option></select></label>
+        <label class="f">Days<select id="rpRange"></select></label>
+        <label class="f">Parcel target (min)<input type="number" id="rpTarget" min="5" max="90" step="1"></label>
+      </div>
+    </div>
+    <div id="rpBody"></div>
+  </section>
+
+  <section id="p-play" hidden>
+    <div class="card pbhead">
+      <div class="row"><h2>Service playbook · how Hayat runs a rush</h2><div class="recbar"><button class="btn" id="pbPrint">🖨 Print station posters</button></div></div>
+      <div class="note">Built from your Team plan (who is on, their zone) and your bills (when the rush comes). Change people in Team plan and this updates.</div>
+      <div id="pbRhythm"></div>
+    </div>
+    <div class="pbgrid">
+      <div class="card"><h2>Quiet time · where everyone stands</h2><div class="planwrap" id="pbQ"></div><div class="lgbox" id="pbQl"></div></div>
+      <div class="card"><h2>Rush · where everyone stands</h2><div class="planwrap" id="pbR"></div><div class="lgbox" id="pbRl"></div></div>
+    </div>
+    <div class="card"><h2>Which areas are open</h2><div id="pbSec"></div></div>
+    <div class="card"><h2>Rush protocol · minute by minute</h2><div id="pbProto"></div></div>
+    <div class="card"><h2>Staying in sync · signals everyone uses</h2><div id="pbSync"></div></div>
+    <div class="card"><h2>Each role · do and never</h2><div class="pbroles" id="pbRoles"></div></div>
+    <div id="pbPosters" class="pbposters"></div>
+  </section>
+
+  <section id="p-team" hidden>
+    <div class="card">
+      <div class="row"><h2>Team plan · one team all day · kitchen packs parcels</h2>
+        <div class="recbar"><button class="btn primary" id="tmAuto">✨ Auto-plan</button><button class="btn" id="tmPrint">🖨 Print shift sheet</button></div></div>
+      <div class="note">Set who is on today and how experienced they are. Auto-plan puts each person where they help most, pairs new people with a buddy, and tests it on a real day.</div>
+      <div class="scroll"><table class="tmtbl" id="tmTbl"></table></div>
+      <div class="row" style="justify-content:flex-start;gap:12px"><button class="btn" id="tmAdd">+ Add person</button>
+        <label class="f" style="min-width:210px">Test on<select id="tmDay"></select></label>
+        <label class="f" style="min-width:230px">Layout<select id="tmLay"></select></label></div>
+    </div>
+    <div class="tmgrid">
+      <div class="card"><h2>How this team would do</h2><div id="tmRes"></div></div>
+      <div class="card"><h2>Where everyone stands</h2><div class="planwrap" id="tmMap"></div><div class="lgbox" id="tmLeg"></div></div>
+    </div>
+    <div class="card"><h2>Each person's job</h2><div class="tmcards" id="tmCards"></div></div>
   </section>
 
   <section id="p-sim" hidden>
@@ -673,6 +774,8 @@ const PREP=Object.assign({},PREP_DEF);
 function daySim(D, sc, bills, day, mix, staff){
   if(typeof staff==='number') staff={waiters:staff};
   staff=Object.assign({waiters:5,captains:0,runners:0,bussers:0},staff);
+  /* a named team: each person has a role, an optional zone (halls) and a skill speed */
+  if(staff.team&&staff.team.length){ const c=r=>staff.team.filter(p=>p.role===r).length; staff=Object.assign({},staff,{waiters:c('waiter'),captains:c('captain'),runners:c('runner'),bussers:c('busser')}); }
   const sim=makeSim(D,sc), rand=rng(day*7919+13), hw={}; mix.halls.forEach(h=>hw[h.k]=h.share);
   const todays=bills.filter(b=>b.d===day), busyUntil={}; D.T.forEach(t=>busyUntil[t.id]=-1);
   /* ---- the kitchen: each station has a few slots; dine-in KOTs and parcels queue for them ---- */
@@ -715,15 +818,19 @@ function daySim(D, sc, bills, day, mix, staff){
     tasks.push({type:'clear',bi,ready:b.mi+1,dur:secs(o.clear.len,1,90)/60,m:toM(o.clear.len,D),t:t.id,path:o.clear.path});
   }
   const W=[]; const add=(n,role,lab)=>{ for(let i=0;i<n;i++) W.push({i:W.length,role,lab:lab+' '+(i+1),free:-1e9,m:0,busy:0,idle:0,blocks:[]}); };
-  add(staff.waiters,'waiter','Waiter'); add(staff.captains,'captain','Captain'); add(staff.runners,'runner','Runner'); add(staff.bussers,'busser','Clearer');
+  if(staff.team&&staff.team.length) staff.team.forEach(p=>W.push({i:W.length,role:p.role,lab:p.lab,halls:p.halls||null,slow:p.slow||1,free:-1e9,m:0,busy:0,idle:0,blocks:[]}));
+  else { add(staff.waiters,'waiter','Waiter'); add(staff.captains,'captain','Captain'); add(staff.runners,'runner','Runner'); add(staff.bussers,'busser','Clearer'); }
   const roleFor=k=> (k.type==='order'||k.type==='bill')&&staff.captains?'captain': k.type==='food'&&staff.runners?'runner': k.type==='clear'&&staff.bussers?'busser':'waiter';
-  const pick=pool=>{ let w=pool[0]; for(const x of pool) if(x.free<w.free||(x.free===w.free&&x.m<w.m)) w=x; return w; };
+  const pick=pool=>{ if(!pool.length) return null; let w=pool[0]; for(const x of pool) if(x.free<w.free||(x.free===w.free&&x.m<w.m)) w=x; return w; };
   const pending=tasks.slice(), done=[];
   while(pending.length){ let bi=0; for(let i=1;i<pending.length;i++) if(pending[i].ready<pending[bi].ready) bi=i;
     const k=pending.splice(bi,1)[0], role=roleFor(k);
-    let w=pick(W.filter(x=>x.role===role));
-    if(!w || (role!=='waiter' && w.free>k.ready+2)){ const alt=pick(W.filter(x=>x.role==='waiter')); if(!w||alt.free<w.free) w=alt; }
-    k.start=Math.max(k.ready,w.free); k.wait=k.start-k.ready;
+    const hall=k.bi!=null?seated[k.bi].hall:null, inZ=x=>!x.halls||!hall||x.halls.includes(hall);
+    let w=pick(W.filter(x=>x.role===role&&inZ(x)));
+    if(w&&w.free>k.ready+3){ const any=pick(W.filter(x=>x.role===role)); if(any&&any.free+1<w.free) w=any; }     /* a free colleague helps a busy zone */
+    if(!w) w=pick(W.filter(x=>x.role===role));
+    if(!w || (role!=='waiter' && w.free>k.ready+2)){ const alt=pick(W.filter(x=>x.role==='waiter'&&inZ(x)))||pick(W.filter(x=>x.role==='waiter')); if(alt&&(!w||alt.free<w.free)) w=alt; }
+    k.start=Math.max(k.ready,w.free); k.wait=k.start-k.ready; if(w.slow&&w.slow!==1) k.dur*=w.slow;
     if(k.type==='food'){ const atKitchen=k.start+k.walkMin*0.45; k.idle=Math.max(0,k.readyActual-atKitchen); k.dur+=k.idle; w.idle+=k.idle;
       k.fwait=Math.max(0,atKitchen-k.readyActual); seated[k.bi].food=k.start+k.dur; }
     w.free=k.start+k.dur; w.m+=k.m; w.busy+=k.dur; w.blocks.push(k); k.w=w.i; done.push(k);
@@ -784,7 +891,7 @@ const hm=m=>{ m=Math.round(m); const h=Math.floor(m/60)%24, mm=((m%60)+60)%60; r
 const svg=$('plan');
 function mk(tag,a,p){ const e=document.createElementNS(NS,tag); for(const k in a) e.setAttribute(k,a[k]); p.appendChild(e); return e; }
 function paneSvg(id,host){ const c=svg.cloneNode(true); c.id=id; $(host).appendChild(c); return {svg:c,tr:mk('g',{},c),tb:mk('g',{},c),dot:mk('g',{},c)}; }
-const RP={A:paneSvg('rplanA','rmA'),B:paneSvg('rplanB','rmB')};
+const RP={A:paneSvg('rplanA','rmA'),B:paneSvg('rplanB','rmB')}, TMAPP=paneSvg('rplanT','tmMap'), PBQ=paneSvg('rplanQ','pbQ'), PBR=paneSvg('rplanR','pbR');   /* cloned before any route is drawn */
 const ov=mk('g',{},svg), tg=mk('g',{},svg);
 
 // ---- improvement chips
@@ -835,8 +942,8 @@ $('zoom').onclick=()=>{ $('pw').classList.toggle('zoom'); $('zoom').textContent=
 
 // ---- tabs + presets
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; save(); showTab(); lazy(); });
-function showTab(){ $('topk').hidden=S.tab!=='sim'; ['live','rush','sim','day','sug','mix'].forEach(t=>{ $('p-'+t).hidden=S.tab!==t; $('t-'+t).setAttribute('aria-selected',S.tab===t?'true':'false'); }); }
-function lazy(){ if(S.tab==='live') lvOpen(); if(S.tab==='rush') renderRush(); if(S.tab==='day') renderDay(); if(S.tab==='sug') renderSug(); }
+function showTab(){ $('topk').hidden=S.tab!=='sim'; ['live','rush','sim','day','sug','rpt','team','play','mix'].forEach(t=>{ $('p-'+t).hidden=S.tab!==t; $('t-'+t).setAttribute('aria-selected',S.tab===t?'true':'false'); }); }
+function lazy(){ if(S.tab==='play') renderPlay(); if(S.tab==='rpt') renderRpt(); if(S.tab==='team') renderTeam(); if(S.tab==='live') lvOpen(); if(S.tab==='rush') renderRush(); if(S.tab==='day') renderDay(); if(S.tab==='sug') renderSug(); }
 $('pr-today').onclick=()=>{ S.sc={}; save(); render(); };
 $('pr-low').onclick=()=>{ S.sc=Object.assign({},tiers()[0].sc); save(); render(); };
 $('pr-all').onclick=()=>{ S.sc=Object.fromEntries(IMPROVE.map(i=>[i.k,true])); save(); render(); };
@@ -970,11 +1077,25 @@ function renderItems(){
   $('combos').innerHTML=top.map(b=>'<div class="hbar"><span>'+b.name+'</span><div class="t"><div style="width:'+(b.n/m2*100)+'%;background:var(--food)"></div></div><b>'+fm(b.n/TOTB*100,0)+'%</b></div>').join('')+'<div class="note">Share of table bills. Drinks-only counter sales ('+fm(425)+' bills) are left out.</div>';
 }
 const agcache={};
-function agg(sc,st){ const k=JSON.stringify([onK(sc),st,S.halls]); if(agcache[k]) return agcache[k];
+let AGPROBE=null;
+function agg(sc,st){ const k=JSON.stringify([onK(sc),st,S.halls,S.kcap||{},S.kt||{}]); if(agcache[k]) return agcache[k];
+  if(AGPROBE){ AGPROBE.push([sc,st]); return {wkm:1,km:1,avgMax:0,worst:0}; }
   let w=0,a=0,mw=0,worst=0; for(const d of FULLDAYS){ const r=dsim(sc,d,st); w+=r.wkm; a+=r.km; mw+=r.maxWait; worst=Math.max(worst,r.maxWait); }
   const n=FULLDAYS.length; return agcache[k]={wkm:w/n,km:a/n,avgMax:mw/n,worst}; }
 let sugTimer=0;
-function renderSug(){ renderItems(); clearTimeout(sugTimer); sugTimer=setTimeout(buildSug,30); }
+/* The Ideas page needs ~30 plans × 23 days of simulation. Work it out in small slices so the
+   page stays responsive, show progress, and stop the moment you leave the tab (work done is kept). */
+let SUGRUN=0;
+function renderSug(){ renderItems(); const me=++SUGRUN, need=[];
+  AGPROBE=need; try{ buildSug(); }catch(e){} AGPROBE=null;
+  if(!need.length){ buildSug(); return; }
+  const jobs=[]; need.forEach(([sc,st])=>FULLDAYS.forEach(d=>jobs.push([sc,d,st]))); const tot=jobs.length;
+  $('sug').innerHTML='<div class="card"><div class="note" id="sugProg">Working out every idea over '+FULLDAYS.length+' days…</div><div class="recprog" style="max-width:none"><div id="sugBar"></div></div></div>';
+  const step=()=>{ if(me!==SUGRUN||S.tab!=='sug') return; const t0=performance.now();
+    while(jobs.length&&performance.now()-t0<30){ const [sc,d,st]=jobs.shift(); dsim(sc,d,st); }
+    const pc=Math.round((1-jobs.length/tot)*100); if($('sugBar')) $('sugBar').style.width=pc+'%'; if($('sugProg')) $('sugProg').textContent='Working out every idea over '+FULLDAYS.length+' days… '+pc+'%';
+    if(jobs.length) setTimeout(step,0); else buildSug(); };
+  setTimeout(step,0); }
 function buildSug(){
   const st=(w,r,b)=>({waiters:w,runners:r,bussers:b}), T=tiers(), W5=st(5,0,0);
   const base=agg({},W5), per=ev({});
@@ -1080,9 +1201,12 @@ function rSide(){
   $('rsRes').innerHTML=M.map(([l,k,u,d])=>{ const x=a[k],y=b[k], pc=x>0?(y-x)/x*100:0, cl=Math.abs(pc)<1?'':(pc<0?'hi':'lo');
     return '<div class="rsm"><small>'+l+'</small><b class="'+cl+'">'+fm(y,d)+u+'</b><em class="'+cl+'">'+(cl?(pc>0?'+':'')+fm(pc,0)+'%':'')+'</em><br><span>today '+fm(x,d)+u+'</span></div>'; }).join('');
   const P=PLANS(), cur=rPreset();
-  const sl=$('rsSlide'); sl.value=cur<0?0:cur; sl.style.opacity=cur<0?.45:1;
-  $('rsTicks').innerHTML=P.map((p,i)=>'<span>'+(i===cur?'<b>':'')+(i?i:'Today')+(p.rec?'★':'')+(i===cur?'</b>':'')+'</span>').join('');
-  sl.oninput=()=>{ const p=P[+sl.value]; rSet(p.sc,p.st); };
+  const sl=$('rsSlide'), N=P.length-1, pos=cur<0?0:cur; sl.max=N; sl.value=pos; sl.style.setProperty('--p',(pos/N*100)+'%'); $('rsSl').classList.toggle('custom',cur<0);
+  $('rsDots').innerHTML=P.map((p,i)=>'<i class="'+(i<=pos&&cur>=0?'on':'')+'" style="left:'+(i/N*100)+'%"></i>').join('');
+  $('rsTicks').innerHTML=P.map((p,i)=>'<span data-i="'+i+'" style="left:'+(i/N*100)+'%">'+(i===cur?'<b>':'')+(i?i:'Today')+(p.rec?' ★':'')+(i===cur?'</b>':'')+'</span>').join('');
+  $('rsTicks').querySelectorAll('span').forEach(x=>x.onclick=()=>{ const p=P[+x.dataset.i]; rSet(p.sc,p.st); });
+  $('rsPname').textContent=cur<0?'Your own plan':cur===0?'Today · no changes':'Step '+cur+(P[cur].rec?' ★ recommended':'')+' · '+P[cur].lab.replace(/^\+ /,'');
+  sl.oninput=()=>{ sl.style.setProperty('--p',(sl.value/N*100)+'%'); }; sl.onchange=()=>{ const p=P[+sl.value]; rSet(p.sc,p.st); };
   $('rsPreLab').textContent=cur<0?'Custom: your own mix of changes and staff. A and B shown side by side.':cur===0?'Today\'s way of working. Slide right to try a plan: the screen splits into A today | B plan.':P[cur].lab.replace(/^\+ /,'Adds ')+' — '+P[cur].sub+'.';
 
   const ST=[['waiters','Waiters',1,12],['captains','Captains',0,3],['runners','Food runners',0,4],['bussers','Table clearers',0,4]];
@@ -1320,11 +1444,9 @@ async function lvConnect(){
       const app=appM.getApps().length?appM.getApp():appM.initializeApp(cfg), db=fs.getFirestore(app), auth=au.getAuth(app);
       LV.fb={db,fs,au,auth};
       LV.user=await new Promise(ok=>{ const off=au.onAuthStateChanged(auth,u=>{ off(); ok(u); }); });
-      /* the office is a crew sign-in (name + code), not Google: any
-         signed-in identity listed in staff/<uid> as office may look */
-      if(!LV.user){ LV.state='signin'; return false; }
-      const sd=await fs.getDoc(fs.doc(db,'staff',LV.user.uid)).catch(()=>null);
-      if(!sd||!sd.exists()||sd.data().role!=='office'){ LV.state='signin'; return false; }
+      /* office = a Google account or a crew code (anonymous + staff record) with role office */
+      let role=null; if(LV.user){ try{ const sd=await fs.getDoc(fs.doc(db,'staff',LV.user.uid)); role=sd.exists()?sd.data().role:null; }catch(e){} }
+      if(!LV.user||role!=='office'){ LV.state='signin'; return false; }
       await lvWatch(); return true;
     }catch(e){ LV.state=(e&&e.code==='permission-denied')?'denied':'error'; LV.why=(e&&(e.code||e.message))||String(e); return false; }
   })();
@@ -1341,14 +1463,14 @@ async function lvWatch(){ const {db,fs}=LV.fb, fail=e=>{ LV.state=(e&&e.code==='
   clearInterval(LV.t); LV.t=setInterval(()=>{ if(S.tab==='live') lvRender(); },30000); }
 function lvOpen(){ lvRender(); lvConnect().then(()=>lvRender()); }
 
-const LVS={open:['🍽️','Ordered, eating','#2E7D5B'],more:['➕','Ordered more','#2C8C7A'],due:['🧾','Bill printed, not paid','#D39B2A'],late:['⏰','Seated over an hour','#C2362C'],pay:['💸','Waiting 10+ min to pay','#C2362C'],parcel:['🛍️','Parcel','#5B5A8C']};
+const LVS={plate:['⏰','Parcel late','#C2362C'],open:['🍽️','Ordered, eating','#2E7D5B'],more:['➕','Ordered more','#2C8C7A'],due:['🧾','Bill printed, not paid','#D39B2A'],late:['⏰','Seated over an hour','#C2362C'],pay:['💸','Waiting 10+ min to pay','#C2362C'],parcel:['🛍️','Parcel','#5B5A8C']};
 function lvState(o,now){ const a=tms(o.orderAt), d=tms(o.dueAt), m=a?(now-a)/60000:0;
-  if(o.type==='Parcel') return 'parcel'; if(o.status==='due'||d) return d&&(now-d)/60000>10?'pay':'due'; if(m>60) return 'late'; return (o.kotCount||0)>1?'more':'open'; }
+  if(o.type==='Parcel') return m>(S.ptarget||20)?'plate':'parcel'; if(o.status==='due'||d) return d&&(now-d)/60000>10?'pay':'due'; if(m>60) return 'late'; return (o.kotCount||0)>1?'more':'open'; }
 function lvRender(){
   if(!$('lvStatus')) return; const now=Date.now(), st=$('lvStatus'), dot=$('lvTabDot');
   const msg={idle:'Connecting…',connecting:'Connecting to the restaurant…',
     noconfig:'<b>Not connected.</b> This copy of the page has no Firebase settings. Open it from the website (the office → ⋯ More → Service sim).',
-    signin:'<b>Sign in first.</b> Live data is for the office only. <a href="./#/admin">Open the office</a>, sign in with your crew name and code, then come back here.',
+    signin:'<b>Sign in first.</b> Live data is for the office only. <a href="./#/admin">Open the office</a> and sign in (your name + code, or the office Google account), then come back here.',
     denied:'<b>This account can\'t see live data.</b> Firestore rules refused it — sign in to the office again, or publish firestore.rules.',
     error:'<b>Could not reach Firebase.</b> '+esc2(LV.why)};
   if(LV.state!=='live'){ st.className='lvbar'+(/denied|error/.test(LV.state)?' bad':''); st.innerHTML=msg[LV.state]||''; dot.className='lvdot';
@@ -1362,21 +1484,22 @@ function lvRender(){
   dot.className='lvdot '+(LV.meta&&!stale&&!err?'ok':'bad');
   // --- tables now
   const open=LV.open.map(o=>Object.assign({},o,{_s:lvState(o,now),_m:tms(o.orderAt)?Math.max(0,Math.round((now-tms(o.orderAt))/60000)):null}));
-  const dine=open.filter(o=>o._s!=='parcel'), guests=dine.reduce((a,o)=>a+(o.pax||0),0), due=open.filter(o=>o._s==='due'||o._s==='pay');
+  const plate=open.filter(o=>o._s==='plate'), dine=open.filter(o=>o._s!=='parcel'&&o._s!=='plate'), guests=dine.reduce((a,o)=>a+(o.pax||0),0), due=open.filter(o=>o._s==='due'||o._s==='pay');
   const longest=dine.reduce((a,o)=>Math.max(a,o._m||0),0);
   const T=LV.today, dineT=T.filter(b=>b.type!=='Parcel'), o2s=dineT.map(b=>b.orderToSettle).filter(x=>x!=null&&!0).filter((x,i)=>!dineT[i]||true);
   const good=dineT.filter(b=>b.orderToSettle!=null&&!b.outlier), avg=good.length?good.reduce((a,b)=>a+b.orderToSettle,0)/good.length:null;
   const sales=T.reduce((a,b)=>a+(+b.total||0),0);
   const K=[['Tables now',dine.length,guests?guests+' guests':'guests not entered'],['Bill printed, not paid',due.length,due.filter(o=>o._s==='pay').length?due.filter(o=>o._s==='pay').length+' waiting 10+ min':'',due.some(o=>o._s==='pay')],
     ['Longest table',longest?longest+'′':'–','since first order',longest>60],['Bills today',T.length,dineT.length+' dine-in · '+(T.length-dineT.length)+' parcel'],
-    ['Order → paid',avg!=null?fm(avg,0)+'′':'–','average today, dine-in'],['Sales today','₹'+fm(sales,0),'settled bills']];
+    ['Parcels late now',plate.length,'over '+(S.ptarget||20)+' min · '+open.filter(o=>o._s==='parcel').length+' on time',plate.length>0],['Order → paid',avg!=null?fm(avg,0)+'′':'–','average today, dine-in'],['Sales today','₹'+fm(sales,0),'settled bills']];
   $('lvKpis').innerHTML=K.map(([l,v,s,al])=>'<div class="lvk'+(al?' alert':'')+'"><span>'+l+'</span><b>'+v+'</b><small>'+(s||'&nbsp;')+'</small></div>').join('');
-  $('lvKey').innerHTML=['open','more','due','pay','late','parcel'].map(k=>'<span class="kc'+(/pay|late/.test(k)?' hot':'')+'" style="--c:'+LVS[k][2]+'"><i>'+LVS[k][0]+'</i><span class="kl">'+LVS[k][1]+'</span></span>').join('')+'<span class="knote">· number = table · minutes since first order</span>';
-  const secs={}; open.forEach(o=>{ const k=o._s==='parcel'?'PARCEL':(o.section||'?'); (secs[k]=secs[k]||[]).push(o); });
+  try{ document.title=(plate.length?'('+plate.length+' parcel'+(plate.length>1?'s':'')+' late) ':'')+'Hayat Service Sim'; }catch(e){}
+  $('lvKey').innerHTML=['open','more','due','pay','late','parcel','plate'].map(k=>'<span class="kc'+(/pay|late|plate/.test(k)?' hot':'')+'" style="--c:'+LVS[k][2]+'"><i>'+LVS[k][0]+'</i><span class="kl">'+LVS[k][1]+'</span></span>').join('')+'<span class="knote">· number = table · minutes since first order</span>';
+  const secs={}; open.forEach(o=>{ const k=(o._s==='parcel'||o._s==='plate')?'PARCEL':(o.section||'?'); (secs[k]=secs[k]||[]).push(o); });
   const ORD=['AC','NON AC','HUT','JUICY HUT','PARCEL'], names={'AC':'AC hall','NON AC':'Non-AC hall','HUT':'Huts','JUICY HUT':'Juice Hut','PARCEL':'Parcels'};
   const keys=Object.keys(secs).sort((a,b)=>(ORD.indexOf(a)+99)%99-(ORD.indexOf(b)+99)%99);
   $('lvTiles').innerHTML=keys.length?keys.map(k=>'<div class="lvsec"><b>'+(names[k]||k)+' · '+secs[k].length+'</b><div class="lvrow">'+secs[k].sort((a,b)=>(a.table||0)-(b.table||0)).map(o=>{ const c=LVS[o._s];
-      return '<div class="lvt'+(/pay|late/.test(o._s)?' alert':'')+'" style="background:'+c[2]+'" title="'+esc2((names[k]||k)+' '+(o.table||'')+' · '+c[1]+' · '+(o.taker||'')+' · '+(o.items||[]).map(i=>i.q+'× '+i.n).join(', '))+'"><span class="n">'+(o._s==='parcel'?'#'+(o.token||o.kot||''):(o.table||'?'))+'<i>'+c[0]+'</i></span><small>'+(o._m!=null?o._m+'′':'')+(o.pax?' · '+o.pax+' ppl':'')+'</small></div>'; }).join('')+'</div></div>').join('')
+      return '<div class="lvt'+(/pay|late|plate/.test(o._s)?' alert':'')+'" style="background:'+c[2]+'" title="'+esc2((names[k]||k)+' '+(o.table||'')+' · '+c[1]+' · '+(o.taker||'')+' · '+(o.items||[]).map(i=>i.q+'× '+i.n).join(', '))+'"><span class="n">'+(o._s==='parcel'?'#'+(o.token||o.kot||''):(o.table||'?'))+'<i>'+c[0]+'</i></span><small>'+(o._m!=null?o._m+'′':'')+(o.pax?' · '+o.pax+' ppl':'')+'</small></div>'; }).join('')+'</div></div>').join('')
     :'<div class="lvempty">No open tables right now.</div>';
   $('lvAsOf').textContent=open.length?open.length+' open':'';
   $('lvBoard').innerHTML=open.filter(o=>o._s!=='parcel').sort((a,b)=>(b._m||0)-(a._m||0)).slice(0,12).map(o=>{ const c=LVS[o._s], d=tms(o.dueAt);
@@ -1419,6 +1542,311 @@ function rFull(on){ const m=$('rBar').closest('.rmain'); if(!!on===m.classList.c
   setTimeout(()=>rDraw(true),60); }
 document.addEventListener('fullscreenchange',()=>{ const m=$('rBar')&&$('rBar').closest('.rmain'); if(m&&!document.fullscreenElement&&m.classList.contains('fs')){ m.classList.remove('fs'); rDraw(true); } });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const m=$('rBar')&&$('rBar').closest('.rmain'); if(m&&m.classList.contains('fs')) rFull(false); } });
+/* ======================= TEAM PLAN ======================= */
+const SKILL={lead:['Lead',1.0],exp:['Experienced',1.05],learn:['Learning',1.2],new:['New',1.35]};
+const TROLE={captain:'Captain',waiter:'Waiter',runner:'Food runner',busser:'Table clearer',off:'Off today'};
+const TZONE={all:['Whole floor',null],ac:['AC hall',['ac']],nonac:['Non-AC hall',['nonac']],jh:['Juice Hut & Huts',['juice','huts']],acn:['AC + Non-AC',['ac','nonac']]};
+const TCOL=['#2F5A74','#C2562C','#2E7D5B','#8A5BA6','#A8812F','#2C8C7A','#B04A6B','#5B5A8C','#6E7F2E','#3A7BA6'];
+const TEAM_DEF=[{n:'Viva',sk:'lead'},{n:'Guis',sk:'exp'},{n:"Guis's wife",sk:'exp'},{n:'Ring',sk:'learn'},{n:'Tan',sk:'learn'},{n:'New 1',sk:'new'},{n:'New 2',sk:'new'},{n:'New 3',sk:'new'}];
+function teamList(){ if(!Array.isArray(S.team)||!S.team.length){ S.team=TEAM_DEF.map(p=>Object.assign({on:true,role:'waiter',zone:'all',buddy:''},p)); teamAuto(false); } return S.team; }
+/* where each role stands between jobs */
+function homeOf(p){ const z=p.zone;
+  if(p.role==='captain') return ['cash','Cash counter, facing both halls'];
+  if(p.role==='runner') return ['kh','Kitchen pass: carry plates the moment the bell rings'];
+  if(p.role==='busser') return ['svc','Service station by door 9, between clearing runs'];
+  if(z==='ac') return ['a6_3','AC hall, near door 10 (to the kitchen walkway)'];
+  if(z==='nonac') return ['svc','Service station by door 9'];
+  if(z==='jh') return ['j3','Juice Hut walkway, watching the huts too'];
+  if(z==='acn') return ['a2_2','AC hall 2-seater side, covering both halls'];
+  /* whole-floor waiters still start from different spots, spread by where the tables are */
+  const L=teamList().filter(x=>x.on&&x.role==='waiter'&&x.zone==='all'), SP=[['a6_3','AC hall near door 10'],['svc','Service station by door 9 (non-AC)'],['a2_2','AC hall, 2-seater side'],['n6_2','Non-AC hall, middle'],['j3','Juice Hut walkway'],['n4_2','Non-AC hall, 4-seater side']];
+  const sp=SP[Math.max(0,L.indexOf(p))%SP.length]; return [sp[0],'Start at: '+sp[1]+'. Cover any table that needs you.']; }
+function dutiesOf(p){ const z=TZONE[p.zone][0];
+  return {captain:['Greet and seat guests, take every order and punch the KOT','Print and bring bills, take payment','Watch the order board: move people to where tables wait','Buddy for new staff: check their first tables'],
+    waiter:['Own your tables in '+z+': water, plates, glasses first','Carry food when your table’s bell rings','Top up drinks, offer juice and dessert','Help the next zone if yours is quiet'],
+    runner:['Stay at the kitchen pass during rush','Take plates to the table the moment they are ready','Bring mayo/chutney with mandi, alfaham, shawaya','Refill water bottles and glasses between runs'],
+    busser:['Clear every table within 5 minutes of guests leaving','Take plates to dish wash, wipe and reset the table','Restock the service station: plates, glasses, water','Tell the captain when a table is ready for new guests'],
+    off:['Not on today']}[p.role]; }
+/* Auto-plan tries many team set-ups on the chosen day and keeps the one with the fastest
+   service (seat to food, worst waits, time to order), then pairs learners with a buddy. */
+function teamAssign(T,o){ const on=T.filter(p=>p.on), rank=k=>['lead','exp','learn','new'].indexOf(k), q=on.slice().sort((a,b)=>rank(a.sk)-rank(b.sk));
+  const A={}; T.forEach(p=>A[p.n]={role:p.on?'waiter':'off',zone:'all'}); const take=f=>{ const i=q.findIndex(f); return i<0?null:q.splice(i,1)[0]; };
+  if(o.cap){ const c=take(p=>p.sk==='lead')||take(p=>p.sk==='exp'); if(c) A[c.n]={role:'captain',zone:'all'}; }
+  if(o.bus){ const b=take(p=>p.sk==='new')||take(p=>p.sk==='learn'); if(b) A[b.n]={role:'busser',zone:'all'}; }
+  if(o.run){ const r=take(p=>p.sk==='learn')||take(p=>p.sk==='new')||take(p=>p.sk==='exp'); if(r) A[r.n]={role:'runner',zone:'all'}; }
+  if(!q.length){ const back=on.find(p=>A[p.n].role!=='captain'); if(back) A[back.n]={role:'waiter',zone:'all'}; return A; }
+  if(o.zone&&q.length>=3){ const Z=['ac','nonac','ac','jh','nonac','ac','nonac','jh'];   /* best people to the busiest halls; the far Juice Hut goes to someone who knows the job, new staff stay near a buddy */
+    q.forEach((p,i)=>A[p.n]={role:'waiter',zone:Z[i%Z.length]}); if(!q.some(p=>A[p.n].zone==='jh')) A[q[q.length-1].n].zone='acn'; }
+  else q.forEach(p=>A[p.n]={role:'waiter',zone:'all'});
+  return A; }
+function teamAuto(render=true){ const T=teamList(), day=+S.tmday||20, sc=(PLANS()[+S.tmlay||0]||{sc:{}}).sc; let best=null, tried=0;
+  if(!T.some(p=>p.on)) return; const all=[];
+  for(const cap of [0,1]) for(const run of [0,1]) for(const bus of [0,1]) for(const zone of [0,1]){
+    const A=teamAssign(T,{cap,run,bus,zone}), st={team:T.filter(p=>A[p.n].role!=='off').map(p=>({lab:p.n,role:A[p.n].role,halls:TZONE[A[p.n].zone][1],slow:SKILL[p.sk][1]}))};
+    if(!st.team.some(x=>x.role==='waiter')) continue;
+    let r; try{ r=dayStats(dsim(sc,day,st)); }catch(e){ continue; } tried++;
+    const score=r.s2f+0.4*r.max+0.3*r.ow+0.2*r.clearMax+0.004*r.idle;
+    all.push({score,A,o:{cap,run,bus,zone},r,org:zone*2+bus+cap+run}); }
+  if(!all.length) return;
+  /* fastest plan, then the most organised plan that is almost as fast (every table has an owner, less walking) */
+  const fast=all.reduce((x,y)=>y.score<x.score?y:x);
+  const near=all.filter(c=>c.r.s2f<=fast.r.s2f+1&&c.r.max<=fast.r.max+2&&c.r.ow<=Math.max(4,fast.r.ow+2));
+  best=near.reduce((x,y)=>(y.org>x.org||(y.org===x.org&&y.r.wkm<x.r.wkm))?y:x);
+  /* smallest team that gives the same service: drop the least experienced first */
+  const onP=T.filter(p=>p.on).sort((a,b)=>['lead','exp','learn','new'].indexOf(a.sk)-['lead','exp','learn','new'].indexOf(b.sk)); let minN=onP.length;
+  for(let k=Math.min(4,onP.length);k<onP.length;k++){ const r=dayStats(dsim(sc,day,{team:onP.slice(0,k).map(p=>({lab:p.n,role:'waiter',halls:null,slow:SKILL[p.sk][1]}))}));
+    if(r.s2f<=fast.r.s2f+0.7&&r.max<=fast.r.max+2&&r.ow<=Math.max(3,fast.r.ow+2)){ minN=k; break; } }
+  S.tmmin=minN<onP.length?'Enough people: the best '+minN+' of your '+onP.length+' give about the same service on this day. The rest can do parcels, prep, cleaning, or take a day off.':'';
+  T.forEach(p=>{ Object.assign(p,best.A[p.n]); p.buddy=''; });
+  const pros=T.filter(p=>p.on&&(p.sk==='lead'||p.sk==='exp'));
+  T.filter(p=>p.on&&(p.sk==='learn'||p.sk==='new')).forEach(p=>{ const b=pros.find(x=>x.role==='waiter'&&(x.zone===p.zone||x.zone==='all'))||pros.find(x=>x.role==='captain')||pros[0]; p.buddy=b?b.n:''; });
+  const walkCut=all.filter(c=>!c.o.cap&&!c.o.run&&!c.o.bus&&!c.o.zone)[0];
+  S.tmwhy='Tried '+tried+' ways on '+dname(day)+'. Picked the most organised plan that is as fast as the best'+(best.r.s2f>fast.r.s2f+0.05?' (+'+fm(best.r.s2f-fast.r.s2f,1)+'′ seat → food)':'')+(walkCut&&walkCut.r.wkm-best.r.wkm>0.5?', with '+fm(walkCut.r.wkm-best.r.wkm,1)+' km less walking than everyone doing everything':'')+': '+(best.o.cap?'a captain takes orders & bills':'no captain')+', '+(best.o.run?'a food runner':'no runner')+', '+(best.o.bus?'a table clearer':'no clearer')+', '+(best.o.zone?'waiters by zone':'waiters cover the whole floor')+'.';
+  save(); if(render) renderTeam(); }
+function teamStaff(){ return {team:teamList().filter(p=>p.on&&p.role!=='off').map(p=>({lab:p.n,role:p.role,halls:TZONE[p.zone][1],slow:SKILL[p.sk][1]}))}; }
+function teamBreaks(){ const on=teamList().filter(p=>p.on&&p.role!=='off'), slots=[]; let t=15*60, used={};
+  // 30 min each between 3 and 6:30 pm, two at a time, never two from the same zone together
+  const out={}; const pend=on.slice();
+  while(pend.length&&t<18*60+30){ const zs=new Set(); let n=0; for(let i=0;i<pend.length&&n<2;){ const p=pend[i], z=p.role==='waiter'?p.zone:p.role; if(!zs.has(z)){ zs.add(z); out[p.n]=t; pend.splice(i,1); n++; } else i++; } t+=30; }
+  return out; }
+function tInit(n){ const w=String(n).replace(/'s\b/g,'').split(/\s+/).filter(Boolean), d=(n.match(/\d+/)||[])[0];
+  if(d) return (w[0][0]||'?').toUpperCase()+d; if(w.length>1) return (w[0][0]+w[1][0]).toUpperCase(); return w[0].slice(0,2); }
+function renderTeam(){ const T=teamList(), P=PLANS();
+  const tb=$('tmTbl'), names=T.map(p=>p.n);
+  tb.innerHTML='<tr><th>Name</th><th>On</th><th>Experience</th><th>Role</th><th>Zone</th><th>Buddy</th><th></th></tr>'+T.map((p,i)=>'<tr class="'+(p.on?'':'off')+'"><td><span class="sw2" style="background:'+TCOL[i%TCOL.length]+'"></span><input data-i="'+i+'" data-f="n" value="'+esc2(p.n)+'" style="width:130px"></td>'
+    +'<td><input type="checkbox" data-i="'+i+'" data-f="on" '+(p.on?'checked':'')+'></td>'
+    +'<td><select data-i="'+i+'" data-f="sk">'+Object.keys(SKILL).map(k=>'<option value="'+k+'"'+(p.sk===k?' selected':'')+'>'+SKILL[k][0]+'</option>').join('')+'</select></td>'
+    +'<td><select data-i="'+i+'" data-f="role">'+Object.keys(TROLE).map(k=>'<option value="'+k+'"'+(p.role===k?' selected':'')+'>'+TROLE[k]+'</option>').join('')+'</select></td>'
+    +'<td><select data-i="'+i+'" data-f="zone" '+(p.role!=='waiter'?'disabled':'')+'>'+Object.keys(TZONE).map(k=>'<option value="'+k+'"'+(p.zone===k?' selected':'')+'>'+TZONE[k][0]+'</option>').join('')+'</select></td>'
+    +'<td><select data-i="'+i+'" data-f="buddy"><option value="">—</option>'+names.filter(n=>n!==p.n).map(n=>'<option'+(p.buddy===n?' selected':'')+'>'+esc2(n)+'</option>').join('')+'</select></td>'
+    +'<td><button class="x" data-del="'+i+'" title="Remove">✕</button></td></tr>').join('');
+  tb.querySelectorAll('[data-f]').forEach(el=>el.onchange=()=>{ const p=T[+el.dataset.i], f=el.dataset.f; p[f]=f==='on'?el.checked:el.value; if(f==='on'&&!p.on) p.role='off'; if(f==='on'&&p.on&&p.role==='off') p.role='waiter'; if(f==='role'&&p.role!=='waiter') p.zone='all'; if(f!=='n'){ S.tmwhy=''; S.tmmin=''; } save(); renderTeam(); });
+  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ T.splice(+b.dataset.del,1); save(); renderTeam(); });
+  $('tmAdd').onclick=()=>{ T.push({n:'New '+(T.filter(p=>/^New \d/.test(p.n)).length+1),sk:'new',on:true,role:'waiter',zone:'all',buddy:''}); save(); renderTeam(); };
+  $('tmAuto').onclick=()=>teamAuto(true); $('tmPrint').onclick=()=>window.print();
+  const ds=$('tmDay'); if(!ds.options.length||ds.options.length!==DAYS.length){ ds.innerHTML=DAYS.map(d=>'<option value="'+d+'">'+dname(d)+' · '+BILLS.filter(b=>b.d===d).length+' tables'+(ESTDAYS.includes(d)?'':'')+'</option>').join(''); }
+  if(!DAYS.includes(+S.tmday)) S.tmday=DAYS.includes(20)?20:DAYS[DAYS.length-1]; ds.value=S.tmday; ds.onchange=()=>{ S.tmday=+ds.value; save(); renderTeam(); };
+  const ly=$('tmLay'); if(!ly.options.length) ly.innerHTML=P.map((p,i)=>'<option value="'+i+'">'+(i?'Step '+i+': '+p.lab.replace(/^\+ /,''):'Today (KOT printer down)')+'</option>').join(''); ly.value=S.tmlay||0; ly.onchange=()=>{ S.tmlay=+ly.value; save(); renderTeam(); };
+  // ---- test the plan
+  const day=+S.tmday, sc=P[+S.tmlay||0].sc, on=T.filter(p=>p.on&&p.role!=='off');
+  if(!on.some(p=>p.role==='waiter')){ $('tmRes').innerHTML='<div class="lvempty">Give at least one person the Waiter role.</div>'; }
+  else { const same={team:on.map(p=>({lab:p.n,role:'waiter',halls:null,slow:SKILL[p.sk][1]}))};
+    const a0=dayStats(dsim({},day,BASEST)), a=dayStats(dsim(sc,day,same)), B=dsim(sc,day,teamStaff()), b=dayStats(B);
+    const M=[['Seat → food, avg','s2f',1,'′'],['Longest wait for food pickup','max',0,'′'],['Longest wait to order','ow',0,'′'],['Longest wait to clear a table','clearMax',0,'′'],['Staff standing at the kitchen','idle',0,' min'],['Kitchen queue, avg','kavg',1,'′'],['Waiters walked','wkm',1,' km']];
+    let h=(S.tmwhy?'<div class="note">✨ '+esc2(S.tmwhy)+'</div>':'')+(S.tmmin?'<div class="lvbar warn" style="margin:6px 0">👥 '+esc2(S.tmmin)+'</div>':'')+'<div class="note">'+dname(day)+'. <b>Same people, no roles</b> = these '+on.length+' people all doing everything, like today. Layout: '+$('tmLay').options[$('tmLay').selectedIndex].text+'.</div>'
+      +'<div class="scroll"><table><tr><th></th><th>Today · 5 waiters</th><th>Same people, no roles</th><th>This plan</th></tr>'+M.map(([l,k,d,u])=>{ const x=a[k],y=b[k]; return '<tr><td>'+l+'</td><td style="color:var(--muted)">'+fm(a0[k],d)+u+'</td><td>'+fm(x,d)+u+'</td><td class="'+(y<x-0.05?'good':y>x+0.05?'bad':'')+'">'+fm(y,d)+u+'</td></tr>'; }).join('')+'</table></div>';
+    const span=Math.max(1,B.t1-B.t0), rows=B.W.map(w=>({w,busy:w.busy/span*100,km:w.m/1000,n:w.blocks.length}));
+    const hot=rows.filter(r=>r.busy>75).map(r=>r.w.lab), low=rows.filter(r=>r.busy<25).map(r=>r.w.lab);
+    h+='<h2 style="margin-top:12px">Load per person</h2><div class="scroll"><table><tr><th>Person</th><th>Role</th><th>Busy</th><th></th><th>Walked</th><th>Jobs</th></tr>'+rows.map(r=>{ const i=T.findIndex(p=>p.n===r.w.lab), c=r.busy>75?'#C2362C':r.busy>55?'#D39B2A':'#2E7D5B';
+      return '<tr><td><span class="sw2" style="background:'+TCOL[i%TCOL.length]+'"></span>'+esc2(r.w.lab)+'</td><td>'+TROLE[r.w.role]+(r.w.halls?' · '+TZONE[T[i].zone][0]:'')+'</td><td>'+fm(r.busy,0)+'%</td><td><div class="tmload"><div style="width:'+Math.min(100,r.busy)+'%;background:'+c+'"></div></div></td><td>'+fm(r.km,1)+' km</td><td>'+r.n+'</td></tr>'; }).join('')+'</table></div>';
+    h+='<div class="note" style="margin-top:6px">'+(hot.length?'⚠ Overloaded: <b>'+hot.map(esc2).join(', ')+'</b>, give them a helper or a smaller zone. ':'')+(low.length?'Lightly used: <b>'+low.map(esc2).join(', ')+'</b>, can cover another zone or do prep. ':'')+(!hot.length&&!low.length?'✓ Load is balanced.':'')+' Busy % is over the whole day; rush hours are much higher.</div>';
+    $('tmRes').innerHTML=h; }
+  // ---- map: tables tinted by who owns the zone, a pin for where each person stands
+  const TMAP=TMAPP; TMAP.tb.innerHTML=''; TMAP.dot.innerHTML=''; TMAP.tr.innerHTML='';
+  const owner={}; on.filter(p=>p.role==='waiter').forEach(p=>{ const hs=TZONE[p.zone][1]||['ac','nonac','juice','huts']; hs.forEach(h=>{ (owner[h]=owner[h]||[]).push(p); }); });
+  D.T.forEach(tbl=>{ const [x,y]=D.N[tbl.id], ow=owner[tbl.hall]||[]; const c=ow.length?TCOL[T.indexOf(ow[0])%TCOL.length]:'#999';
+    mk('circle',{cx:x,cy:y,r:30,fill:c,opacity:.28,stroke:c,'stroke-width':4},TMAP.tb); });
+  const spots={}; on.forEach(p=>{ const [nid]=homeOf(p); (spots[nid]=spots[nid]||[]).push(p); });
+  Object.keys(spots).forEach(nid=>{ const N=D.N[nid]; if(!N) return; spots[nid].forEach((p,j)=>{ const i=T.indexOf(p), x=N[0]+(j-(spots[nid].length-1)/2)*52, y=N[1]-44;
+    const g=mk('g',{},TMAP.dot); mk('title',{},g).textContent=p.n+' · '+TROLE[p.role]+' · '+homeOf(p)[1];
+    mk('circle',{cx:x,cy:y,r:24,fill:TCOL[i%TCOL.length],stroke:'#fff','stroke-width':5},g); const t=mk('text',{x,y:y+9,'font-size':24,'font-weight':700,fill:'#fff','text-anchor':'middle'},g); t.textContent=tInit(p.n); }); });
+  $('tmLeg').innerHTML=on.map(p=>{ const i=T.indexOf(p); return '<span class="lg"><i style="background:'+TCOL[i%TCOL.length]+'"></i>'+esc2(p.n)+' · '+TROLE[p.role]+(p.role==='waiter'?' ('+TZONE[p.zone][0]+')':'')+'</span>'; }).join('');
+  // ---- job cards (printable)
+  const br=teamBreaks();
+  $('tmCards').innerHTML=on.map(p=>{ const i=T.indexOf(p), [,where]=homeOf(p);
+    return '<div class="tmc" style="--c:'+TCOL[i%TCOL.length]+'"><h3>'+esc2(p.n)+'<small>'+SKILL[p.sk][0]+'</small></h3><div class="rl">'+TROLE[p.role]+(p.role==='waiter'?' · '+TZONE[p.zone][0]:'')+'</div>'
+      +'<div class="mt">📍 '+where+'</div>'+(p.buddy?'<div class="mt">🤝 Buddy: <b>'+esc2(p.buddy)+'</b>, ask them first</div>':'')+(br[p.n]!=null?'<div class="mt">☕ Break '+hm(br[p.n])+'–'+hm(br[p.n]+30)+'</div>':'')
+      +'<ul>'+dutiesOf(p).map(d=>'<li>'+d+'</li>').join('')+'</ul></div>'; }).join('')+'<div class="note" style="grid-column:1/-1">Rush hours: 12:30–2:30 pm and 7:30–10 pm. No breaks then. Quiet time 3–6:30 pm: breaks, restock, clean.</div>';
+}
+/* ======================= REPORTS =======================
+   1. Ticket times (dine-in): first KOT → bill printed → paid, by hour, zone, waiter, kitchen, item.
+   2. Parcel prep: first KOT → handed over (paid), against a target, by hour and kitchen.
+   VMENU has no "food ready" time, so these are the times it does record. */
+const RPD={sample:null,live:{},loading:false};
+const med=a=>{ if(!a.length) return null; const b=a.slice().sort((x,y)=>x-y), m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; };
+const pct=(a,p)=>{ if(!a.length) return null; const b=a.slice().sort((x,y)=>x-y); return b[Math.min(b.length-1,Math.floor(b.length*p))]; };
+const ZN={'AC':'AC hall','NON AC':'Non-AC hall','HUT':'Huts','JUICY HUT':'Juice Hut','PARCEL':'Parcel'};
+function tkFromSample(J){ return J.b.map(r=>({day:J.d[r[0]],sec:J.s[r[1]],parcel:J.s[r[1]]==='PARCEL',o:r[2],d:r[3]<0?null:r[3],s:r[4],taker:J.w[r[5]],kots:r[6],total:r[7],items:r[8]?r[8].map(([i,q])=>({n:J.i[i],q})):null})); }
+function tkFromVm(b){ const fix=w=>w?w.min+(b.day&&w.date>b.day?1440:0):null, o=fix(wall(b.orderAt)), sd=fix(wall(b.settledAt)); if(o==null||sd==null) return null;
+  return {day:b.day,sec:b.section||'?',parcel:b.type==='Parcel',o,d:fix(wall(b.dueAt)),s:sd,taker:b.taker||'?',kots:b.kotCount||1,total:+b.total||0,items:b.items||null}; }
+async function rpData(){ const src=$('rpSrc').value, rg=$('rpRange').value;
+  if(src==='sample'){ if(!RPD.sample){ const r=await fetch('sim-tickets.json'); if(!r.ok) throw new Error('sim-tickets.json not found next to this page'); RPD.sample=tkFromSample(await r.json()); }
+    const days=[...new Set(RPD.sample.map(t=>t.day))].sort(), n=rg==='all'?days.length:+rg, keep=new Set(days.slice(-n)); return {T:RPD.sample.filter(t=>keep.has(t.day)),days:days.slice(-n)}; }
+  if(!(await lvConnect())) throw new Error('sign in at the office first (Live data is office-only)');
+  const all=[...new Set([bizToday(),...LV.days])].sort().reverse(), n=rg==='all'?all.length:+rg, want=all.slice(0,n), T=[];
+  for(let i=0;i<want.length;i++){ const ds=want[i]; $('rpNote').textContent='Loading '+ds+' ('+(i+1)+'/'+want.length+')…';
+    if(ds===bizToday()) (LV.today||[]).forEach(b=>T.push(b)); else { const nn=VMKEY[ds]&&VMDOCS[VMKEY[ds]]?VMKEY[ds]:await vmLoadDay(ds); (VMDOCS[nn]||[]).forEach(b=>T.push(b)); } }
+  return {T:T.map(tkFromVm).filter(Boolean),days:want.slice().reverse()}; }
+function rpRanges(){ const src=$('rpSrc').value, r=$('rpRange'), cur=r.value;
+  const L=src==='sample'?[['7','Last 7 days (to 16 Sep)'],['14','Last 14 days'],['30','Last 30 days'],['all','All: 14 Jul – 16 Sep']]:[['1','Today'],['7','Last 7 days'],['14','Last 14 days'],['30','Last 30 days']];
+  r.innerHTML=L.map(([v,l])=>'<option value="'+v+'">'+l+'</option>').join(''); r.value=L.some(x=>x[0]===cur)?cur:(S.rprange&&L.some(x=>x[0]===S.rprange)?S.rprange:L[0][0]); }
+function hLab(m){ const h=Math.floor(m/60)%24; return ((h%12)||12)+(h<12?' am':' pm'); }
+function rpTable(head,rows){ return '<div class="scroll"><table class="rpt"><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+rows.join('')+'</table></div>'; }
+function rpBar(p50,p90,max,late,target){ return '<div class="rpbar'+(late?' late':'')+'"><i style="width:'+Math.min(100,(p90||0)/max*100)+'%"></i><b style="width:'+Math.min(100,(p50||0)/max*100)+'%"></b>'+(target?'<span class="tg" style="left:'+Math.min(100,target/max*100)+'%"></span>':'')+'</div>'; }
+async function renderRpt(){
+  if(!$('rpSrc').dataset.init){ $('rpSrc').dataset.init=1; $('rpSrc').value=S.rpsrc||'sample'; rpRanges(); $('rpTarget').value=S.ptarget||20;
+    $('rpSrc').onchange=()=>{ S.rpsrc=$('rpSrc').value; save(); rpRanges(); renderRpt(); }; $('rpRange').onchange=()=>{ S.rprange=$('rpRange').value; save(); renderRpt(); };
+    $('rpTarget').onchange=()=>{ S.ptarget=Math.max(5,+$('rpTarget').value||20); save(); renderRpt(); if(LV.state==='live') lvRender(); }; }
+  const body=$('rpBody'); body.innerHTML='<div class="card"><div class="note">Working it out…</div></div>'; $('rpNote').textContent='';
+  let D; try{ D=await rpData(); }catch(e){ body.innerHTML='<div class="lvbar bad">'+esc2(e.message||e)+'</div>'; $('rpNote').textContent=''; return; }
+  const src=$('rpSrc').value, T=D.T, tgt=S.ptarget||20, dine=T.filter(t=>!t.parcel), par=T.filter(t=>t.parcel);
+  const ok=t=>t.s-t.o>=0&&t.s-t.o<=240, dd=dine.filter(ok), pp=par.filter(ok), out=dine.length-dd.length+par.length-pp.length;
+  $('rpNote').textContent=D.days.length+' day'+(D.days.length>1?'s':'')+': '+(D.days[0]||'')+(D.days.length>1?' → '+D.days[D.days.length-1]:'')+' · '+T.length+' bills'+(out?' · '+out+' forgotten bills (over 4 h) left out':'');
+  const o2s=t=>t.s-t.o, o2d=t=>t.d!=null?t.d-t.o:null, d2s=t=>t.d!=null?t.s-t.d:null, f0=v=>v==null?'–':fm(v,0)+'′', f1=v=>v==null?'–':fm(v,1)+'′';
+  const kp=(l,v,sub,al)=>'<div class="lvk'+(al?' alert':'')+'"><span>'+l+'</span><b>'+v+'</b><small>'+(sub||'&nbsp;')+'</small></div>';
+  const grp=(arr,key)=>{ const g={}; arr.forEach(t=>{ const k=key(t); if(k==null) return; (g[k]=g[k]||[]).push(t); }); return g; };
+  const stOf=t=>t.items?[...new Set(t.items.flatMap(i=>vmStation(String(i.n).toUpperCase()).s||[]))].filter(x=>x!=='fridge'):null;
+  // ---------------- 1. ticket times ----------------
+  let h='<div class="card"><h2>1 · Ticket times · dine-in</h2><div class="rpsub">First KOT → bill printed (eating) → paid (waiting to pay). Median, and the slowest 1 in 10 (P90).</div>';
+  if(!dd.length) h+='<div class="lvempty">No dine-in bills in this range.</div>';
+  else { const all=dd.map(o2s), eat=dd.map(o2d).filter(x=>x!=null), pay=dd.map(d2s).filter(x=>x!=null&&x>=0), add=dd.filter(t=>t.kots>1).length/dd.length*100;
+    h+='<div class="lvkpis" style="margin:8px 0">'+kp('Tables',fm(dd.length),fm(dd.length/D.days.length,0)+' a day')+kp('First order → paid',f0(med(all)),'slowest 1 in 10: '+f0(pct(all,0.9)))+kp('Eating (KOT → bill)',f0(med(eat)),'P90 '+f0(pct(eat,0.9)))+kp('Waiting to pay',f0(med(pay)),pct(pay,0.9)>10?'P90 '+f0(pct(pay,0.9))+': too long':'P90 '+f0(pct(pay,0.9)),pct(pay,0.9)>10)+kp('Ordered more (add-on KOT)',fm(add,0)+'%','of tables')+'</div>';
+    const mx=Math.max(...dd.map(o2s).filter(x=>x<=240))*0.8||60;
+    const byH=grp(dd,t=>Math.floor(t.o/60)), hk=Object.keys(byH).map(Number).sort((a,b)=>a-b);
+    const rowsH=hk.map(k=>{ const a=byH[k].map(o2s), p=byH[k].map(d2s).filter(x=>x!=null&&x>=0); return '<tr><td>'+hLab(k*60)+'</td><td>'+byH[k].length+'</td><td>'+f0(med(a))+'</td><td>'+f0(pct(a,0.9))+'</td><td>'+f0(med(p))+'</td><td>'+rpBar(med(a),pct(a,0.9),90)+'</td></tr>'; });
+    const byZ=grp(dd,t=>t.sec), rowsZ=Object.keys(byZ).sort((a,b)=>byZ[b].length-byZ[a].length).map(k=>{ const a=byZ[k].map(o2s), p=byZ[k].map(d2s).filter(x=>x!=null&&x>=0), bill=byZ[k].reduce((x,t)=>x+t.total,0)/byZ[k].length;
+      return '<tr><td>'+(ZN[k]||k)+'</td><td>'+byZ[k].length+'</td><td>'+f0(med(a))+'</td><td>'+f0(pct(a,0.9))+'</td><td>'+f0(med(p))+'</td><td>₹'+fm(bill,0)+'</td></tr>'; });
+    const byW=grp(dd,t=>t.taker), rowsW=Object.keys(byW).filter(k=>byW[k].length>=5).sort((a,b)=>byW[b].length-byW[a].length).map(k=>{ const a=byW[k].map(o2s), p=byW[k].map(d2s).filter(x=>x!=null&&x>=0), bill=byW[k].reduce((x,t)=>x+t.total,0)/byW[k].length, ad=byW[k].filter(t=>t.kots>1).length/byW[k].length*100;
+      return '<tr><td>'+esc2(k)+'</td><td>'+byW[k].length+'</td><td>'+f0(med(a))+'</td><td>'+f0(med(p))+'</td><td>₹'+fm(bill,0)+'</td><td>'+fm(ad,0)+'%</td></tr>'; });
+    h+='<div class="rpgrid"><div><div class="rph">By hour of first order</div>'+rpTable(['Hour','Tables','Median','P90','To pay',''],rowsH)+'</div>'
+      +'<div><div class="rph">By zone</div>'+rpTable(['Zone','Tables','Median','P90','To pay','Avg bill'],rowsZ)+'<div class="rph" style="margin-top:10px">By waiter (who punched the KOT)</div>'+rpTable(['Waiter','Tables','Median','To pay','Avg bill','Add-on'],rowsW)+'</div></div>';
+    const withI=dd.filter(t=>t.items);
+    if(withI.length>=20){ const base=med(withI.map(o2d).filter(x=>x!=null));
+      const byS={}; withI.forEach(t=>(stOf(t)||[]).forEach(k=>(byS[k]=byS[k]||[]).push(t)));
+      const rowsS=Object.keys(byS).sort((a,b)=>med(byS[b].map(o2d).filter(x=>x!=null))-med(byS[a].map(o2d).filter(x=>x!=null))).map(k=>{ const e=byS[k].map(o2d).filter(x=>x!=null), m=med(e), dlt=m-base;
+        return '<tr><td>'+(KNAME[k]||k)+'</td><td>'+byS[k].length+'</td><td>'+f0(m)+'</td><td><span class="pill2 '+(dlt>2?'bad':dlt<-2?'ok':'')+'">'+(dlt>=0?'+':'')+fm(dlt,0)+'′</span></td></tr>'; });
+      const byI={}; withI.forEach(t=>[...new Set(t.items.map(i=>i.n))].forEach(n=>(byI[n]=byI[n]||[]).push(t)));
+      const rowsI=Object.keys(byI).filter(n=>byI[n].length>=8).map(n=>({n,c:byI[n].length,m:med(byI[n].map(o2d).filter(x=>x!=null))})).sort((a,b)=>b.m-a.m).slice(0,15)
+        .map(x=>'<tr><td>'+esc2(x.n)+'</td><td>'+x.c+'</td><td>'+f0(x.m)+'</td><td><span class="pill2 '+(x.m-base>3?'bad':'')+'">'+(x.m-base>=0?'+':'')+fm(x.m-base,0)+'′</span></td></tr>');
+      h+='<div class="rpgrid" style="margin-top:12px"><div><div class="rph">By kitchen</div><div class="rpsub">Tables that ordered from it: first KOT → bill. Baseline for all tables: '+f0(base)+'.</div>'+rpTable(['Kitchen','Tables','KOT → bill','vs all'],rowsS)+'</div>'
+        +'<div><div class="rph">Slowest items</div><div class="rpsub">Tables that ordered the item (at least 8). Slow items keep tables longer.</div>'+rpTable(['Item','Tables','KOT → bill','vs all'],rowsI)+'</div></div>'; }
+    else h+='<div class="rpsub" style="margin-top:8px">Item lines are only in the data for 1–16 Sep (sample) or real days from the shop. Pick a range that includes them for kitchen and item speed.</div>';
+    const slow=dd.slice().sort((a,b)=>o2s(b)-o2s(a)).slice(0,10);
+    h+='<div class="rph" style="margin-top:12px">Slowest 10 tables</div>'+rpTable(['Day','Zone','Waiter','First order','→ Paid','To pay','Items'],slow.map(t=>'<tr><td>'+t.day+'</td><td>'+(ZN[t.sec]||t.sec)+'</td><td>'+esc2(t.taker)+'</td><td>'+hm(t.o)+'</td><td><b>'+f0(o2s(t))+'</b></td><td>'+f0(d2s(t))+'</td><td>'+esc2(t.items?t.items.slice(0,4).map(i=>(i.q>1?i.q+'× ':'')+i.n).join(', '):'–')+'</td></tr>')); }
+  h+='</div>';
+  // ---------------- 2. parcels ----------------
+  h+='<div class="card"><h2>2 · Parcel &amp; delivery prep</h2><div class="rpsub">First KOT → handed over (paid). Target '+tgt+' min. Zomato and Swiggy rank restaurants on prep time, so late parcels cost orders.</div>';
+  if(!pp.length) h+='<div class="lvempty">No parcels in this range.</div>';
+  else { const a=pp.map(o2s), late=pp.filter(t=>o2s(t)>tgt), lp=late.length/pp.length*100;
+    const byH=grp(pp,t=>Math.floor(t.o/60)), hk=Object.keys(byH).map(Number).sort((x,y)=>x-y), worstH=hk.slice().sort((x,y)=>byH[y].filter(t=>o2s(t)>tgt).length-byH[x].filter(t=>o2s(t)>tgt).length)[0];
+    h+='<div class="lvkpis" style="margin:8px 0">'+kp('Parcels',fm(pp.length),fm(pp.length/D.days.length,0)+' a day · '+fm(pp.length/(pp.length+dd.length)*100,0)+'% of bills')+kp('Order → handed over',f0(med(a)),'slowest 1 in 10: '+f0(pct(a,0.9)))+kp('Late (over '+tgt+' min)',fm(lp,0)+'%',late.length+' parcels',lp>20)+kp('Worst hour',worstH!=null?hLab(worstH*60):'–',worstH!=null?byH[worstH].filter(t=>o2s(t)>tgt).length+' late':'')+'</div>';
+    const rowsH=hk.map(k=>{ const x=byH[k].map(o2s), l=byH[k].filter(t=>o2s(t)>tgt).length, lpc=l/byH[k].length*100; return '<tr><td>'+hLab(k*60)+'</td><td>'+byH[k].length+'</td><td>'+f0(med(x))+'</td><td>'+f0(pct(x,0.9))+'</td><td><span class="pill2 '+(lpc>25?'bad':lpc<10?'ok':'')+'">'+fm(lpc,0)+'%</span></td><td>'+rpBar(med(x),pct(x,0.9),60,lpc>25,tgt)+'</td></tr>'; });
+    const withI=pp.filter(t=>t.items), byS={}; withI.forEach(t=>(stOf(t)||[]).forEach(k=>(byS[k]=byS[k]||[]).push(t)));
+    const rowsS=Object.keys(byS).filter(k=>byS[k].length>=5).sort((x,y)=>med(byS[y].map(o2s))-med(byS[x].map(o2s))).map(k=>{ const x=byS[k].map(o2s), l=byS[k].filter(t=>o2s(t)>tgt).length/byS[k].length*100; return '<tr><td>'+(KNAME[k]||k)+'</td><td>'+byS[k].length+'</td><td>'+f0(med(x))+'</td><td><span class="pill2 '+(l>25?'bad':'')+'">'+fm(l,0)+'%</span></td></tr>'; });
+    const byD=grp(pp,t=>t.day), dk=Object.keys(byD).sort(), rowsD=dk.slice(-14).map(k=>{ const x=byD[k].map(o2s), l=byD[k].filter(t=>o2s(t)>tgt).length/byD[k].length*100; return '<tr><td>'+k+'</td><td>'+byD[k].length+'</td><td>'+f0(med(x))+'</td><td><span class="pill2 '+(l>25?'bad':l<10?'ok':'')+'">'+fm(l,0)+'%</span></td></tr>'; });
+    h+='<div class="rpgrid"><div><div class="rph">By hour of order</div><div class="rpsub">Bar: median, faint: P90, line: target.</div>'+rpTable(['Hour','Parcels','Median','P90','Late',''],rowsH)+'</div><div>'
+      +(rowsS.length?'<div class="rph">By kitchen</div>'+rpTable(['Kitchen','Parcels','Median','Late'],rowsS):'<div class="rpsub">Kitchen split needs item lines (1–16 Sep or live days).</div>')
+      +(dk.length>1?'<div class="rph" style="margin-top:10px">By day</div>'+rpTable(['Day','Parcels','Median','Late'],rowsD):'')+'</div></div>';
+    const slow=pp.slice().sort((x,y)=>o2s(y)-o2s(x)).slice(0,10);
+    h+='<div class="rph" style="margin-top:12px">Slowest 10 parcels</div>'+rpTable(['Day','Ordered','→ Handed over','Taken by','Items'],slow.map(t=>'<tr><td>'+t.day+'</td><td>'+hm(t.o)+'</td><td><b>'+f0(o2s(t))+'</b></td><td>'+esc2(t.taker)+'</td><td>'+esc2(t.items?t.items.slice(0,4).map(i=>(i.q>1?i.q+'× ':'')+i.n).join(', '):'–')+'</td></tr>'));
+    h+='<div class="note" style="margin-top:8px">Live alerts: open parcels older than '+tgt+' min turn red on <b>Live now</b>, and the browser tab shows how many are late.</div>'; }
+  h+='</div>';
+  // ---------------- 3. waiter scorecard ----------------
+  h+='<div class="card"><h2>3 · Waiter scorecard · dine-in</h2><div class="rpsub">Per person who punched the KOT (at least 10 tables). Best in each column in green. For coaching, not blame: a busy zone or a big party changes these numbers.</div>';
+  const DR=/JUICE|MOJITO|LIME|SHAKE|AVIL|LASSI/, DS=/SCOOP|ICE CREAM|SCOTCH SINGLE|BURFI|PEANUT|CANDY|FALOODA|PUDDING|KUNAFA|CAKE|DESSERT|SUNDAE|BROWNIE|CUSTARD/;
+  const byW=grp(dd,t=>t.taker), W=Object.keys(byW).filter(k=>byW[k].length>=10).map(k=>{ const a=byW[k], it=a.filter(t=>t.items);
+    const att=re=>it.length>=10?it.filter(t=>t.items.some(i=>re.test(String(i.n).toUpperCase()))).length/it.length*100:null;
+    return {k,n:a.length,day:a.length/D.days.length,bill:a.reduce((x,t)=>x+t.total,0)/a.length,tt:med(a.map(o2s)),pay:med(a.map(d2s).filter(x=>x!=null&&x>=0)),add:a.filter(t=>t.kots>1).length/a.length*100,dr:att(DR),ds:att(DS)}; }).sort((a,b)=>b.n-a.n);
+  if(!W.length) h+='<div class="lvempty">Not enough dine-in tables per person in this range.</div>';
+  else { const best=(key,hi)=>{ const v=W.map(x=>x[key]).filter(x=>x!=null); return v.length?(hi?Math.max(...v):Math.min(...v)):null; }, B={bill:best('bill',1),tt:best('tt',0),pay:best('pay',0),add:best('add',1),dr:best('dr',1),ds:best('ds',1)};
+    const c=(k,v,txt)=>'<td'+(v!=null&&W.length>1&&v===B[k]?' class="good"':'')+'>'+txt+'</td>';
+    h+=rpTable(['Waiter','Tables','A day','Avg bill','Table time','Wait to pay','Ordered more','Juice & mojito','Dessert'],W.map(x=>'<tr><td><b>'+esc2(x.k)+'</b>'+(x.k==='CASHIER'?' <span class="rpsub">(cashier punched it)</span>':'')+'</td><td>'+x.n+'</td><td>'+fm(x.day,1)+'</td>'+c('bill',x.bill,'₹'+fm(x.bill,0))+c('tt',x.tt,f0(x.tt))+c('pay',x.pay,f0(x.pay))+c('add',x.add,fm(x.add,0)+'%')+c('dr',x.dr,x.dr==null?'–':fm(x.dr,0)+'%')+c('ds',x.ds,x.ds==null?'–':fm(x.ds,1)+'%')+'</tr>'));
+    h+='<div class="rpsub" style="margin-top:6px">Juice &amp; mojito (fresh juice, lime, shake) / Dessert (scoops, burfi, peanut candy) = share of their tables that had one (needs item lines: 1–16 Sep or live days). Ordered more = tables with an add-on KOT. Research: servers upsell less when overloaded, so low add-ons in a rush can mean the zone is too big.</div>'; }
+  h+='</div>';
+  // ---------------- 4. forecast ----------------
+  h+='<div class="card"><h2>4 · Demand forecast · every 15 minutes</h2>';
+  const hist=src==='sample'?RPD.sample:T, hd=[...new Set(hist.map(t=>t.day))].sort();
+  if(hd.length<7) h+='<div class="lvempty">Needs at least a week of days. Pick "Last 30 days".</div>';
+  else { const last=hd[hd.length-1], nx=new Date(last+'T12:00:00'); nx.setDate(nx.getDate()+1);
+    const WDN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], fwd=S.fcwd!=null?+S.fcwd:nx.getDay();
+    const same=hd.filter(d=>new Date(d+'T12:00:00').getDay()===fwd).slice(-6), wts=same.map((d,i)=>i+1), wsum=wts.reduce((a,b)=>a+b,0)||1;
+    const slot=m=>Math.floor(m/15), sl={}; same.forEach((d,i)=>hist.filter(t=>t.day===d).forEach(t=>{ const k=slot(t.o), x=sl[k]||(sl[k]={di:0,pa:0}); if(t.parcel) x.pa+=wts[i]/wsum; else x.di+=wts[i]/wsum; }));
+    const ks=Object.keys(sl).map(Number), k0=Math.min(...ks.filter(k=>sl[k].di+sl[k].pa>=0.3),44), k1=Math.max(...ks.filter(k=>sl[k].di+sl[k].pa>=0.3),92), K=[]; for(let k=k0;k<=k1;k++) K.push(k);
+    const mx=Math.max(1,...K.map(k=>(sl[k]?sl[k].di+sl[k].pa:0))), dwell=31, tpw=+S.tpw||5;
+    /* tables seated at once ≈ arrivals in the last ~31 min; staff = tables ÷ tables per waiter, + a clearer when busy */
+    const occ=k=>{ let n=0; for(let j=k-Math.ceil(dwell/15)+1;j<=k;j++) n+=(sl[j]?sl[j].di:0); return n; };
+    const hrs={}; K.forEach(k=>{ const hh=Math.floor(k/4), o=occ(k); hrs[hh]=Math.max(hrs[hh]||0,o); });
+    const need=o=>o<0.5?1:Math.ceil(o/tpw)+(o>=8?1:0);
+    const dayTot=K.reduce((a,k)=>a+(sl[k]?sl[k].di+sl[k].pa:0),0), peakH=Object.keys(hrs).sort((a,b)=>hrs[b]-hrs[a])[0];
+    h+='<div class="row" style="justify-content:flex-start;gap:12px"><label class="f" style="min-width:170px">Forecast for<select id="fcWd">'+WDN.map((n,i)=>'<option value="'+i+'"'+(i===fwd?' selected':'')+'>'+n+(i===nx.getDay()?' (next day)':'')+'</option>').join('')+'</select></label><label class="f" style="min-width:150px">Tables per waiter<input type="number" id="fcTpw" min="2" max="10" value="'+tpw+'"></label>'
+      +'<div class="rpsub">Average of the last '+same.length+' '+WDN[fwd]+'s in the data, recent weeks count more. About <b>'+fm(dayTot,0)+' bills</b>; busiest '+(peakH!=null?hLab(peakH*60)+'–'+hLab(peakH*60+60):'')+' with ~<b>'+fm(hrs[peakH]||0,0)+' tables</b> seated at once.</div></div>';
+    h+='<div style="display:grid;grid-template-columns:repeat('+K.length+',minmax(0,1fr));gap:1px;align-items:end;height:130px;margin-top:10px">'+K.map(k=>{ const x=sl[k]||{di:0,pa:0}; return '<div title="'+hm(k*15)+' · '+fm(x.di,1)+' dine-in · '+fm(x.pa,1)+' parcels" style="display:flex;flex-direction:column-reverse;height:100%"><div style="height:'+(x.di/mx*100)+'%;background:var(--accent)"></div><div style="height:'+(x.pa/mx*100)+'%;background:#5B5A8C;opacity:.8"></div></div>'; }).join('')+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat('+K.length+',minmax(0,1fr));font-size:10.5px;color:var(--muted)">'+K.map(k=>'<span>'+(k%4===0?hLab(k*15).replace(' ',''):'')+'</span>').join('')+'</div>'
+      +'<div class="lgbox" style="margin-top:4px"><span class="lg"><i style="background:var(--accent)"></i>Dine-in tables arriving</span><span class="lg"><i style="background:#5B5A8C"></i>Parcels ordered</span></div>';
+    const H=Object.keys(hrs).map(Number).sort((a,b)=>a-b);
+    h+='<div class="rph" style="margin-top:12px">Staff needed on the floor</div>'+rpTable(['Hour','Tables at once','Parcels','Floor staff'],H.map(hh=>{ const pa=[0,1,2,3].reduce((a,q)=>a+(sl[hh*4+q]?sl[hh*4+q].pa:0),0), n=need(hrs[hh]); return '<tr><td>'+hLab(hh*60)+'</td><td>'+fm(hrs[hh],0)+'</td><td>'+fm(pa,0)+'</td><td><b>'+n+'</b> '+'👤'.repeat(Math.min(n,8))+'</td></tr>'; }));
+    h+='<div class="rpsub" style="margin-top:6px">Rule of thumb: one waiter per '+tpw+' seated tables, plus a table clearer when 8 or more tables are seated. Parcels are packed by the kitchen. Test the exact team in <b>Team plan</b>.</div>'; }
+  h+='</div>'; body.innerHTML=h;
+  const fw=$('fcWd'); if(fw) fw.onchange=()=>{ S.fcwd=+fw.value; save(); renderRpt(); };
+  const ft=$('fcTpw'); if(ft) ft.onchange=()=>{ S.tpw=Math.max(2,+ft.value||5); save(); renderRpt(); }; }
+/* ======================= PLAYBOOK ======================= */
+function pbRush(){ /* from the forecast when Reports has loaded your bills, else the usual Hayat rush */
+  const def=[[750,870],[1170,1320]];
+  try{ if(!RPD.sample) return {w:def,src:'usual Hayat rush'}; const by={}; RPD.sample.forEach(t=>{ const k=Math.floor(t.o/30); by[k]=(by[k]||0)+1; });
+    const days=new Set(RPD.sample.map(t=>t.day)).size, thr=Math.max(...Object.values(by))/days*0.55, ks=Object.keys(by).map(Number).sort((a,b)=>a-b).filter(k=>by[k]/days>=thr);
+    const w=[]; ks.forEach(k=>{ const a=k*30,b=a+30; if(w.length&&a<=w[w.length-1][1]) w[w.length-1][1]=b; else w.push([a,b]); });
+    const big=w.filter(x=>x[1]-x[0]>=60); return big.length?{w:big.slice(0,3),src:'your bills'}:{w:def,src:'usual Hayat rush'}; }catch(e){ return {w:def,src:'usual Hayat rush'}; } }
+function renderPlay(){ const T=teamList(), on=T.filter(p=>p.on&&p.role!=='off'), R=pbRush(), W=R.w, open=660, close=1470, few=on.length<6;
+  const L=W[0]||[750,870], DW=W[1]||[1170,1320];
+  // ---- rhythm bar
+  const blocks=[[600,open,'Prep','#6E7F2E'],[open,L[0]-30,'Open · quiet','#8A8F96'],[L[0]-30,L[0],'Get ready','#A8812F'],[L[0],L[1],'Lunch rush','#C2362C'],[L[1],L[1]+30,'Reset','#A8812F'],[L[1]+30,DW[0]-30,'Quiet · breaks','#2E7D5B'],[DW[0]-30,DW[0],'Get ready','#A8812F'],[DW[0],DW[1],'Dinner rush','#C2362C'],[DW[1],close,'Late','#8A8F96'],[close,close+45,'Close','#5B5A8C']].filter(b=>b[1]>b[0]);
+  const span=blocks[blocks.length-1][1]-blocks[0][0];
+  $('pbRhythm').innerHTML='<div class="rhythm">'+blocks.map(b=>'<div style="flex:'+(b[1]-b[0])+';background:'+b[3]+'" title="'+b[2]+' '+hm(b[0])+'–'+hm(b[1])+'">'+b[2]+'<br>'+hm(b[0]).replace(':00','')+'</div>').join('')+'</div><div class="note" style="margin-top:4px">Rush times from '+R.src+': '+W.map(w=>hm(w[0])+'–'+hm(w[1])).join(' and ')+'. '+(few?'<b style="color:#C2362C">Fewer than 6 people on: huts stay closed all day.</b>':'')+'</div>';
+  // ---- maps: quiet vs rush stands
+  const col=p=>TCOL[T.indexOf(p)%TCOL.length];
+  const pins=(P,list,legEl)=>{ P.tb.innerHTML=''; P.dot.innerHTML=''; P.tr.innerHTML=''; const spots={};
+    list.forEach(x=>{ (spots[x.node]=spots[x.node]||[]).push(x); });
+    Object.keys(spots).forEach(nid=>{ const N=D2N(nid); if(!N) return; spots[nid].forEach((x,j)=>{ const cx=N[0]+(j-(spots[nid].length-1)/2)*52, cy=N[1]-44, g=mk('g',{},P.dot);
+      mk('title',{},g).textContent=x.p.n+' · '+x.what; mk('circle',{cx,cy,r:24,fill:col(x.p),stroke:'#fff','stroke-width':5},g); const t=mk('text',{x:cx,y:cy+9,'font-size':24,'font-weight':700,fill:'#fff','text-anchor':'middle'},g); t.textContent=tInit(x.p.n); }); });
+    (list.closed||[]).forEach(h=>D.T.filter(t=>t.hall===h).forEach(t=>{ const [x,y]=D.N[t.id]; mk('circle',{cx:x,cy:y,r:30,fill:'#C2362C',opacity:.18},P.tb); const s=mk('text',{x,y:y+10,'font-size':30,'text-anchor':'middle',fill:'#C2362C'},P.tb); s.textContent='✕'; }));
+    legEl.innerHTML=list.map(x=>'<span class="lg"><i style="background:'+col(x.p)+'"></i>'+esc2(x.p.n)+': '+esc2(x.what)+'</span>').join('')+((list.closed||[]).length?'<span class="lg" style="color:#C2362C">✕ closed</span>':''); };
+  const D2N=id=>D.N[id];
+  const rush=on.map(p=>({p,node:homeOf(p)[0],what:TROLE[p.role]+(p.role==='waiter'?' · '+TZONE[p.zone][0]:'')}));
+  rush.closed=few?['huts']:[];
+  const cap=on.find(p=>p.role==='captain'), floor=on.filter(p=>p.role==='waiter').sort((a,b)=>['lead','exp','learn','new'].indexOf(a.sk)-['lead','exp','learn','new'].indexOf(b.sk));
+  const quiet=[]; if(cap) quiet.push({p:cap,node:'cash',what:'Captain · greets, seats, bills'});
+  if(floor[0]) quiet.push({p:floor[0],node:'svc',what:'Both halls (AC + Non-AC)'});
+  if(floor[1]) quiet.push({p:floor[1],node:'j3',what:'Juice Hut + covers breaks'});
+  on.filter(p=>!quiet.some(q=>q.p===p)).forEach((p,i)=>quiet.push({p,node:i%2?'dish':'svc',what:p.role==='busser'?'Clearing + cleaning list':(i%3===0?'Break (see Team plan)':'Restock, prep, cleaning list')}));
+  quiet.closed=['huts'];
+  pins(PBQ,quiet,$('pbQl')); pins(PBR,rush,$('pbRl'));
+  // ---- sections
+  const S=[['AC hall','y','y','y','y','p'],['Non-AC hall','y','y','y','y','y'],['Juice Hut dining','y','y','p','y','n'],['Huts',few?'n':'n',few?'n':'p',few?'n':'n',few?'n':'p','n']];
+  const lab={y:'Open',n:'Closed',p:'Limited'};
+  $('pbSec').innerHTML='<div class="scroll"><table class="sect"><tr><th>Area</th><th>Open · quiet<br><small>'+hm(open)+'</small></th><th>Lunch rush<br><small>'+hm(L[0])+'–'+hm(L[1])+'</small></th><th>Afternoon<br><small>'+hm(L[1])+'–'+hm(DW[0])+'</small></th><th>Dinner rush<br><small>'+hm(DW[0])+'–'+hm(DW[1])+'</small></th><th>Late<br><small>after '+hm(DW[1])+'</small></th></tr>'
+    +S.map(r=>'<tr><td><b>'+r[0]+'</b></td>'+r.slice(1).map(v=>'<td><span class="op '+v+'">'+lab[v]+'</span></td>').join('')+'</tr>').join('')+'</table></div>'
+    +'<ul class="note" style="margin:6px 0 0;padding-left:18px"><li><b>Huts</b>: far from every kitchen and the dish wash, 12-seaters used by small groups. Open only in rush, only for 6+ guests, only if 6+ staff are on.</li><li><b>Juice Hut</b> in the afternoon: drinks and waiting guests only; seat meals in the halls. Closes after the dinner rush.</li><li><b>AC hall</b> late: fill tables near door 10 first; close the far 6-seaters after '+hm(DW[1])+'.</li><li>Seat new guests in the <b>hall with the fewest seated tables</b>, never two tables to one waiter at the same minute.</li></ul>';
+  // ---- protocol
+  const who=r=>on.filter(p=>p.role===r).map(p=>p.n).join(', ')||'—';
+  const steps=[['#6E7F2E','T − 30 min','Stock up',[['Service station full: plates, glasses, water, tissues, cutlery, bill folders','Waiters'],['Mayo & chutney tubs filled at the mandi pass and shawaya counter','Kitchen'],['Parcel bags, boxes, foil stacked at the pass','Kitchen'],['Washrooms checked, glass doors wiped','Cleaner'],['Kitchen screen and bell tested; waitlist tablet on','Captain']]],
+    ['#A8812F','T − 10 min','Huddle, 5 minutes',[['Who is in which zone today (show the Rush map)','Captain'],['What is finished or short in the kitchen (86 list)','Kitchen → Captain'],['Big bookings, birthdays, VIPs','Captain'],['One rule to focus on today','Captain']]],
+    ['#C2362C','Rush','Run it',[['Captain seats in turn: the hall with the fewest seated tables, one new table per waiter at a time','Captain'],['Greet within 1 min, water within 2, order within 5','Zone waiter'],['Never walk empty-handed: food out, plates back','Everyone'],['Bell / kitchen screen = your table\'s food is ready: go now','Zone waiter'],['Clear plates as soon as a guest finishes; bill on the table when plates are cleared','Zone waiter'],['Table reset within 2 min of guests leaving','Clearer'],['Waitlist: real quote, offer the Juice Hut while they wait','Captain'],['No breaks, no phones on the floor','Everyone']]],
+    ['#2E7D5B','Rush + 30 min','Reset',[['Sweep & mop both halls, empty bins','Cleaner'],['Restock the service station','Waiters'],['Kitchen surfaces clean & sanitise','Kitchen'],['Breaks start: two at a time, never two from one zone','Captain']]],
+    ['#5B5A8C','Close','Close down',[['Kitchen floors & drains, dish wash area','Cleaner'],['All tables sanitised, chairs up','Waiters'],['Cash counted, report checked','Office'],['Cleaning app 100%: ask the captain to check','Captain']]]];
+  $('pbProto').innerHTML='<div class="proto">'+steps.map(([c,t,h,items])=>'<div class="pstep" style="--c:'+c+'"><div><b>'+t+'</b><div class="who">'+h+'</div></div><ul>'+items.map(([x,r])=>'<li>'+x+' <span class="who">· '+r+'</span></li>').join('')+'</ul></div>').join('')+'</div>';
+  // ---- sync signals
+  const sy=[['🔔','Food ready','The kitchen screen shows Done / the bell rings. The zone waiter of that table goes at once. If they are busy, the nearest free waiter takes it.'],
+    ['🧾','Bill','Bill goes down when main plates are cleared. Captain prints it; waiter brings it; cashier settles within 5 min.'],
+    ['✋','"Two hands"','Anyone walking to the kitchen picks up whatever is ready for their zone. Anyone walking back carries plates.'],
+    ['🪑','Seating rotation','Captain uses the waitlist page: free tables per hall. Next guest goes to the hall with the fewest seated tables.'],
+    ['🔴','Red on the kitchen screen','A card red for 5 min: the captain walks to that kitchen and asks what is holding it.'],
+    ['🧹','Late cleaning','Shows on the kitchen screen at the pass. The captain sends whoever is nearest.'],
+    ['📣','Help call','A waiter with 3+ tables waiting says "help AC" (or "help Non-AC"). The captain moves the lightest-loaded waiter for 10 minutes.'],
+    ['⏸','Consolidate','When fewer than 3 tables are seated in a hall, the captain merges zones and sends one person to break or cleaning.']];
+  $('pbSync').innerHTML='<div class="syncg">'+sy.map(x=>'<div class="sy"><span class="big">'+x[0]+'</span><b>'+x[1]+'</b><span class="note" style="font-size:14px;color:inherit">'+x[2]+'</span></div>').join('')+'</div>';
+  // ---- roles
+  const RC=[['captain','Captain','#2F5A74',['Greet, seat in rotation, quote waits honestly','Take orders when a zone is swamped','Print bills the moment plates clear','Watch the kitchen screen and waitlist; move people','Buddy for new staff: check their first tables'],['Never stand behind the counter during rush','Never seat two tables to one waiter at once']],
+    ['waiter','Zone waiter','#C2562C',['Own your tables: water, plates, glasses first','Take the order within 5 minutes','Go when the bell rings for your table','Pre-bus: clear finished plates straight away','Offer juice or dessert once plates are cleared'],['Never wait at the kitchen for food: the bell calls you','Never leave the floor in rush','Never walk empty-handed']],
+    ['busser','Table clearer','#2E7D5B',['Clear and reset every table within 2 minutes','Plates to dish wash, wipe, sanitise, set','Keep the service station stocked','Tell the captain when a table is ready'],['Never clear while guests are still eating','Never carry more than you can see over']],
+    ['runner','Food runner','#8A5BA6',['Stand at the kitchen pass in rush','Take food out the moment it is ready','Mayo and chutney with every mandi, alfaham, shawaya'],['Never take orders; keep the pass clear']],
+    ['kitchen','Kitchen pass','#D39B2A',['Tap Done on the kitchen screen the moment a KOT is plated','Call out parcels and pack them','Tell the captain what is running out'],['Never let a red card sit: shout for a runner']]];
+  $('pbRoles').innerHTML=RC.filter(r=>r[0]==='kitchen'||on.some(p=>p.role===r[0])).map(([k,n,c,dos,never])=>'<div class="rolec" style="--c:'+c+'"><h3>'+n+'</h3><div class="ppl">'+(k==='kitchen'?'Each kitchen':who(k))+'</div><h4>Do</h4><ul>'+dos.map(x=>'<li>'+x+'</li>').join('')+'</ul><div class="nv"><h4>Never</h4><ul>'+never.map(x=>'<li>'+x+'</li>').join('')+'</ul></div></div>').join('');
+  // ---- posters (print)
+  const post=[['Cash & captain','#2F5A74','Captain · '+who('captain'),RC[0][3],RC[0][4]],['AC hall','#C2562C','Waiters: '+on.filter(p=>p.role==='waiter'&&/ac/.test(p.zone)).map(p=>p.n).join(', '),RC[1][3],RC[1][4]],['Non-AC hall','#C2562C','Waiters: '+on.filter(p=>p.role==='waiter'&&(p.zone==='nonac'||p.zone==='acn'||p.zone==='all')).map(p=>p.n).join(', '),RC[1][3],RC[1][4]],
+    ['Service station','#2E7D5B','Clearer: '+who('busser'),RC[2][3].concat(['Restock at '+hm(L[0]-30)+', '+hm(L[1]+30)+', '+hm(DW[0]-30)]),RC[2][4]],['Kitchen pass','#D39B2A','All kitchens',RC[4][3],RC[4][4]],['Juice Hut','#8A5BA6','Waiter: '+on.filter(p=>p.zone==='jh').map(p=>p.n).join(', '),['Drinks and waiting guests in the afternoon','Meals go to the halls unless it is rush','Closes after the dinner rush'],['Never leave the huts unlocked when closed']]];
+  $('pbPosters').innerHTML=post.map(([t,c,sub,dos,never])=>'<div class="poster" style="--c:'+c+'"><h1>'+t+'</h1><div class="sub">'+esc2(sub||'')+' · Rush '+W.map(w=>hm(w[0])+'–'+hm(w[1])).join(', ')+'</div><h2>Do</h2><ul>'+dos.map(x=>'<li>'+x+'</li>').join('')+'</ul><h2 class="nv">Never</h2><ul class="nv">'+never.map(x=>'<li>'+x+'</li>').join('')+'</ul><h2>Signals</h2><ul><li>🔔 Bell / kitchen screen = your table\'s food is ready: go now</li><li>✋ Never walk empty-handed</li><li>🧾 Bill goes down when plates are cleared</li></ul></div>').join('');
+  $('pbPrint').onclick=()=>{ document.body.classList.add('pbprint'); setTimeout(()=>{ window.print(); document.body.classList.remove('pbprint'); },50); };
+}
 function rWindow(a,b){ rStop(); RS.t=Math.max(RS.t0,a); RS.stopAt=Math.min(RS.t1,b); rDraw(true); rPlay(); }
 function rStop(){ RS.playing=false; cancelAnimationFrame(RS.raf); $('rPlay').textContent='▶'; $('rPlay').classList.remove('on'); $('rPlay').setAttribute('aria-label','Play'); RS.stopAt=null; }
 function rPlay(){ const w=rWin()||{a:RS.t0,b:RS.t1}; if(RS.t<w.a||RS.t>=w.b-0.5) RS.t=w.a; RS.stopAt=w.b; RS.playing=true; $('rPlay').textContent='❚❚'; $('rPlay').classList.add('on'); $('rPlay').setAttribute('aria-label','Pause'); RS.last=performance.now();

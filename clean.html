@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><meta name="theme-color" content="#2E7D5B"><title>Hayat Cleaning</title>
+<script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<script src="assets/qr.js"></script>
+<script src="hayat-auth.js"></script>
+<script src="hayat-clean.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Jost:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@500;700&display=swap">
+<style>
+:root{--bg:#F5F4EF;--card:#FFFFFF;--ink:#1F2328;--muted:#5F6770;--line:#DDDAD2;--soft:#ECEAE3;--accent:#2F5A74;--good:#2E7D5B;--warn:#A8812F;--bad:#C2362C;--wa:#1FA855}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--bg:#121518;--card:#1B1F23;--ink:#E7E5E0;--muted:#9AA2AA;--line:#2E343A;--soft:#242A2F;--accent:#8DB8D3;--good:#5FB38A;--warn:#D2AE62;--bad:#E0584A} }
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 "Jost","Noto Sans Malayalam",system-ui,sans-serif}
+.ml{font-family:"Noto Sans Malayalam","Jost",sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px clamp(12px,2vw,24px);display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+header h1{margin:0;font:600 26px "Cormorant Garamond",Georgia,serif} header .sp{flex:1}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--muted);white-space:nowrap}
+.hb{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:7px 11px;font:500 14px "Jost",sans-serif;cursor:pointer;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:12px clamp(12px,2vw,24px) 60px;display:grid;gap:12px}
+nav.tabs{display:flex;gap:4px;background:var(--soft);border-radius:10px;padding:4px;overflow-x:auto}
+nav.tabs button{flex:1;min-width:max-content;border:0;background:transparent;color:var(--muted);font:500 14px "Jost",sans-serif;padding:8px 10px;border-radius:7px;cursor:pointer}
+nav.tabs button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+h2{margin:0;font:600 12px "Jost",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.note{color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--card)} .kpi b{display:block;font:700 26px "Jost",sans-serif} .kpi span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--good)}
+.tasks{display:grid;gap:10px}
+.task{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--card);border:2px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:10px 12px}
+.task .ic{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-size:28px;background:var(--soft)}
+.task .nm{font:600 18px "Jost","Noto Sans Malayalam",sans-serif;line-height:1.25} .task .ml{font-size:15px;color:var(--muted);display:block}
+.task .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.task.overdue{border-color:var(--bad);animation:pulse 1.4s ease-in-out infinite;border-left-color:var(--c)} .task.due{border-color:var(--warn)} .task.done{opacity:.6}
+@keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--bad) 20%,transparent)}} @media (prefers-reduced-motion:reduce){ .task.overdue{animation:none} }
+.st{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700}
+.st.overdue{background:var(--bad);color:#fff} .st.due{background:var(--warn);color:#fff} .st.soon{background:var(--soft)} .st.later{background:var(--soft);color:var(--muted)} .st.done{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)} .st.missed{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
+.go{border:0;background:var(--good);color:#fff;border-radius:12px;padding:14px 18px;font:700 20px "Jost",sans-serif;cursor:pointer;min-width:92px}
+.go.cam::before{content:"📷 "}
+.go:disabled{opacity:.5}
+.cloth{display:inline-flex;align-items:center;gap:6px;font-size:13px} .cloth i{width:14px;height:14px;border-radius:4px;display:inline-block}
+details.how{margin-top:4px} details.how summary{cursor:pointer;font-size:13px;color:var(--accent)} details.how ol{margin:4px 0 0;padding-left:20px;font-size:14px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;z-index:50;max-width:92vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+table{width:100%;border-collapse:collapse;font-size:14px} th{font:600 11px "Jost",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px;border-bottom:1px solid var(--line)} td{padding:7px 6px;border-bottom:1px solid var(--soft);vertical-align:middle}
+.scroll{overflow-x:auto}
+input,select{font:500 15px "Jost",sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 8px}
+.thumb{width:54px;height:54px;object-fit:cover;border-radius:8px;cursor:zoom-in;border:1px solid var(--line)}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;padding:7px 11px;font:600 14px "Jost",sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;gap:5px;align-items:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff} .btn.wa{background:var(--wa);border-color:var(--wa);color:#fff} .btn.warn{color:var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.stickers{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.stk{border:3px solid var(--c);border-radius:16px;padding:14px;text-align:center;background:#fff;color:#1F2328;break-inside:avoid}
+.stk .ic{font-size:42px} .stk b{display:block;font:700 22px "Jost",sans-serif} .stk .ml{display:block;font-size:17px;margin-bottom:6px} .stk img{width:180px;height:180px}
+.stk .band{background:var(--c);color:#fff;border-radius:8px;padding:5px;font-weight:700;margin-top:8px;font-size:14px}
+.big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:grid;place-items:center;z-index:60} .big img{max-width:94vw;max-height:88vh;border-radius:10px}
+.rules{columns:2 320px;font-size:15px} .rules li{margin:0 0 6px;break-inside:avoid}
+@media print{ header,nav.tabs,.noprint{display:none!important} body{background:#fff} .wrap{padding:0} .stickers{grid-template-columns:repeat(2,1fr)} .stk{page-break-inside:avoid;margin-bottom:10px} }
+</style></head><body>
+<header>
+  <h1>🧹 Cleaning</h1><span class="chip" id="who">…</span><span class="sp"></span>
+  <button class="hb" id="lang" title="English / Malayalam">മലയാളം</button>
+  <button class="hb" id="bell" title="Reminders on this phone">🔔 Reminders</button>
+  <a class="hb" href="./#/admin" id="office" hidden>← Office</a>
+  <button class="hb" id="out" title="Sign out on this phone">⎋</button>
+</header>
+<div class="wrap">
+  <nav class="tabs" id="tabs" hidden></nav>
+  <div id="main"><div class="card"><div class="note">Loading…</div></div></div>
+</div>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+<script>
+/* Hayat cleaning. Cleaners, waiters and kitchen staff see what is due now and tap ✓ (photo for washrooms and
+   kitchens). A QR sticker in each area opens that area directly. The office sees today's board, verifies
+   photos, sends each person their list on WhatsApp, edits the schedule, prints stickers and hands out codes.
+   Records are kept a year (FSSAI Schedule 4); photos are dropped after 30 days. */
+const $=id=>document.getElementById(id), HC=window.HayatClean, esc=HayatAuth.esc;
+let CTX=null, PLAN=JSON.parse(JSON.stringify(HC.DEFAULT_PLAN)), PLAN_SAVED=false, LOGS=[], TAB=null, LANG=localStorage.getItem('clean-lang')||'en', PEOPLE=[];
+const AREA=new URLSearchParams(location.search).get('a');
+const toast=(m,ms)=>{ const d=document.createElement('div'); d.className='toast'; d.textContent=m; document.body.appendChild(d); setTimeout(()=>d.remove(),ms||2600); };
+const T=(en,ml)=>LANG==='ml'&&ml?'<span class="ml">'+ml+'</span>':en;
+const today=()=>HC.bizDate(), nowM=()=>HC.bizMin();
+const isBoss=()=>CTX&&(CTX.role==='office'||CTX.role==='captain');
+function tm(v){ if(!v) return null; if(v.toMillis) return v.toMillis(); if(v.seconds!=null) return v.seconds*1000; const t=Date.parse(v); return isNaN(t)?null:t; }
+const clock=ms=>ms?new Date(ms+5.5*3600e3).toISOString().slice(11,16):'';
+function parseTime(s){ const m=/^(\d{1,2})[:.](\d{2})$/.exec(String(s).trim()); if(!m) return null; let v=+m[1]*60+ +m[2]; if(v<300) v+=1440; return v; }
+
+/* ---------------- logging a clean ---------------- */
+let PENDING=null;
+async function tick(row){ if(!CTX) return;
+  if(row.t.photo){ PENDING=row; $('cam').value=''; $('cam').click(); return; }
+  await save(row,null); }
+$('cam').onchange=async()=>{ const f=$('cam').files&&$('cam').files[0], row=PENDING; PENDING=null; if(!f||!row) return;
+  try{ const url=await shrink(f); await save(row,url); }catch(e){ toast('Photo failed: '+(e.message||e)); } };
+function shrink(file){ return new Promise((ok,no)=>{ const img=new Image(), r=new FileReader();
+  r.onload=()=>{ img.onload=()=>{ let w=img.width,h=img.height,M=520; if(w>h&&w>M){ h=h*M/w; w=M; } else if(h>M){ w=w*M/h; h=M; }
+      const c=document.createElement('canvas'); c.width=Math.round(w); c.height=Math.round(h); c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      let q=0.62, u=c.toDataURL('image/jpeg',q); while(u.length>85000&&q>0.25){ q-=0.1; u=c.toDataURL('image/jpeg',q); } ok(u); }; img.onerror=no; img.src=r.result; };
+  r.onerror=no; r.readAsDataURL(file); }); }
+async function save(row,photo){ const {fs,db}=CTX, d=today(), late=Math.max(0,nowM()-row.m);
+  const doc={occ:row.id,task:row.t.id,area:row.t.area,day:d,m:row.m,uid:CTX.user.uid,crew:CTX.crewId||'',name:CTX.name||'',role:CTX.role||'',at:fs.serverTimestamp(),late};
+  if(photo){ doc.photo=photo; const p=new Date(d+'T12:00:00Z'); p.setUTCDate(p.getUTCDate()+30); doc.purgeAt=p.toISOString().slice(0,10); }
+  try{ await fs.addDoc(fs.collection(db,'cleanlog'),doc); toast('✓ '+row.t.name+(late>HC.grace(row.t)?' · '+late+' min late':' · thank you')); if(navigator.vibrate) navigator.vibrate(60); }
+  catch(e){ toast('Not saved: '+(e.code||e.message)); } }
+
+/* ---------------- staff views ---------------- */
+function taskCard(r,withBtn){ const a=HC.area(PLAN,r.t.area), col=HC.COL[a.color]||HC.COL.green, how=HC.HOW[r.t.how]||[];
+  const stT={overdue:'Late '+r.late+' min',due:'Due now',soon:'In '+Math.max(0,r.m-nowM())+' min',later:HC.hm(r.m),done:'Done',missed:'Missed'}[r.st];
+  const last=r.last?' · last '+clock(tm(r.last.at))+' '+esc(r.last.name||''):'';
+  return '<div class="task '+r.st+'" style="--c:'+col.hex+'"><div class="ic">'+a.icon+'</div><div><div class="nm">'+(LANG==='ml'?'<span class="ml" style="color:inherit;font-size:18px">'+esc(r.t.ml||r.t.name)+'</span>':esc(r.t.name)+(r.t.ml?'<span class="ml">'+esc(r.t.ml)+'</span>':''))+'</div>'
+    +'<div class="sub"><span class="st '+r.st+'">'+stT+'</span> · '+T(esc(a.name),esc(a.ml))+' · '+HC.hm(r.m)+last+'</div>'
+    +'<div class="sub"><span class="cloth"><i style="background:'+col.hex+'"></i>'+T(col.en,col.ml)+'</span>'+(r.t.photo?' · 📷 photo':'')+'</div>'
+    +(how.length?'<details class="how"><summary>How</summary><ol>'+how.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details>':'')+'</div>'
+    +(withBtn&&r.st!=='done'&&r.st!=='missed'&&r.st!=='later'?'<button class="go'+(r.t.photo?' cam':'')+'" data-id="'+r.id+'">✓</button>':'<span></span>')+'</div>'; }
+function bindTicks(rows){ document.querySelectorAll('.go[data-id]').forEach(b=>b.onclick=async()=>{ const r=rows.find(x=>x.id===b.dataset.id); if(!r) return; b.disabled=true; await tick(r); setTimeout(()=>{ b.disabled=false; },1500); }); }
+function mine(rows){ const role=CTX.role; return rows.filter(r=>r.t.role===role||(role==='captain'&&r.t.role==='waiter')); }
+function viewNow(){ const S=HC.state(PLAN,today(),LOGS,nowM()), R=mine(S.rows), act=R.filter(r=>/overdue|due|soon/.test(r.st)), next=R.filter(r=>r.st==='later').slice(0,4);
+  const me=R.filter(r=>r.st!=='later'), dn=R.reduce((a,r)=>a+r.doneN,0);
+  $('main').innerHTML='<div class="kpis"><div class="kpi '+(act.some(r=>r.st==='overdue')?'bad':'')+'"><span>'+T('Now','ഇപ്പോൾ')+'</span><b>'+act.length+'</b></div><div class="kpi good"><span>'+T('Done today','ഇന്ന് ചെയ്തത്')+'</span><b>'+dn+'</b></div><div class="kpi"><span>'+T('Team today','ടീം')+'</span><b>'+S.pct+'%</b></div></div>'
+    +'<div class="tasks">'+(act.length?act.map(r=>taskCard(r,true)).join(''):'<div class="card" style="text-align:center;font-size:20px">✓ '+T('Nothing due right now','ഇപ്പോൾ ഒന്നുമില്ല')+'</div>')+'</div>'
+    +(next.length?'<h2 style="margin-top:6px">'+T('Next','അടുത്തത്')+'</h2><div class="tasks">'+next.map(r=>taskCard(r,false)).join('')+'</div>':'');
+  bindTicks(act); }
+function viewToday(){ const S=HC.state(PLAN,today(),LOGS,nowM()), R=mine(S.rows);
+  $('main').innerHTML='<div class="tasks">'+R.map(r=>taskCard(r,true)).join('')+'</div>'; bindTicks(R); }
+function viewArea(){ const a=HC.area(PLAN,AREA), S=HC.state(PLAN,today(),LOGS,nowM()), R=S.rows.filter(r=>r.t.area===AREA);
+  const lastAll=LOGS.filter(l=>l.area===AREA&&l.verified!==false).sort((x,y)=>(tm(y.at)||0)-(tm(x.at)||0))[0];
+  $('main').innerHTML='<div class="card" style="text-align:center"><div style="font-size:46px">'+a.icon+'</div><div style="font:700 26px Jost,sans-serif">'+esc(a.name)+'</div><div class="ml" style="font-size:18px;color:var(--muted)">'+esc(a.ml||'')+'</div>'
+    +'<div class="note">'+(lastAll?'Last cleaned '+clock(tm(lastAll.at))+' by '+esc(lastAll.name||'')+' · '+esc((PLAN.tasks.find(t=>t.id===lastAll.task)||{}).name||''):'Not cleaned yet today')+'</div></div>'
+    +'<div class="tasks">'+(R.length?R.map(r=>taskCard(r,true)).join(''):'<div class="card">No tasks here today.</div>')+'</div><div class="note" style="text-align:center"><a href="clean.html">All my tasks →</a></div>';
+  bindTicks(R); }
+function viewHow(){ const C=HC.COL;
+  $('main').innerHTML='<div class="card"><h2>Cloth colours · never mix</h2><div class="row">'+Object.keys(C).map(k=>'<span class="cloth" style="font-size:16px;margin-right:14px"><i style="background:'+C[k].hex+';width:22px;height:22px"></i>'+T(C[k].en,C[k].ml)+'</span>').join('')+'</div></div>'
+    +'<div class="card"><h2>Cleaning rules</h2><ol class="rules">'+['Clean as you go: wipe spills now','Clean first, then sanitise, and leave it wet for the time on the label','Red for toilets, blue for halls, yellow for kitchen, green for entrance and glass','Work from clean areas to dirty ones','Washrooms every 30 min in rush, every 60 min otherwise','Wet-floor sign up BEFORE you mop','Sweep before you mop; two buckets; mop your way out','Glass: spray the cloth, top to bottom, buff dry','Tap ✓ (and photo) right after, or it did not happen','Late tasks go to the captain, then to Majid','Chemicals labelled, never near food','Wash hands after cleaning, before touching food or plates'].map(x=>'<li>'+x+'</li>').join('')+'</ol></div>'
+    +Object.keys(HC.HOW).map(k=>'<div class="card"><h2>'+({wc:'Washroom',glass:'Glass',floor:'Floor',tables:'Tables & chairs',kitchen:'Kitchen surfaces',drains:'Drains',bins:'Bins',restock:'Restock',record:'Checks & records'})[k]+'</h2><ol style="margin:0;padding-left:20px">'+HC.HOW[k].map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol></div>').join(''); }
+
+/* ---------------- office views ---------------- */
+function viewBoard(){ const S=HC.state(PLAN,today(),LOGS,nowM()), rows=S.rows, over=rows.filter(r=>r.st==='overdue');
+  const photos=LOGS.filter(l=>l.photo&&l.verified==null).sort((a,b)=>(tm(b.at)||0)-(tm(a.at)||0));
+  const byRole={}; rows.forEach(r=>{ const k=r.t.role; (byRole[k]=byRole[k]||[]).push(r); });
+  $('main').innerHTML='<div class="kpis"><div class="kpi '+(S.pct<80?'bad':'good')+'"><span>Done so far today</span><b>'+S.pct+'%</b></div><div class="kpi '+(over.length?'bad':'')+'"><span>Late now</span><b>'+over.length+'</b></div><div class="kpi"><span>Ticks today</span><b>'+LOGS.filter(l=>l.verified!==false).length+'</b></div><div class="kpi"><span>Photos to check</span><b>'+photos.length+'</b></div></div>'
+    +(photos.length?'<div class="card"><h2>Check photos</h2><div class="scroll"><table>'+photos.slice(0,12).map(l=>{ const t=PLAN.tasks.find(x=>x.id===l.task)||{name:l.task}; return '<tr><td><img class="thumb" src="'+l.photo+'" data-big="'+l.id+'"></td><td><b>'+esc(t.name)+'</b><div class="note">'+esc(l.name)+' · '+clock(tm(l.at))+(l.late>HC.grace(t)?' · '+l.late+' min late':'')+'</div></td><td style="text-align:right;white-space:nowrap"><button class="btn" data-ok="'+l.id+'">✓ Good</button> <button class="btn warn" data-no="'+l.id+'">✗ Redo</button></td></tr>'; }).join('')+'</table></div></div>':'')
+    +['cleaner','waiter','kitchen','office'].filter(k=>byRole[k]).map(k=>'<div class="card"><h2>'+HC.ROLE[k]+'</h2><div class="scroll"><table><tr><th></th><th>Task</th><th>Status</th><th>Done</th><th>Last</th></tr>'+byRole[k].map(r=>{ const a=HC.area(PLAN,r.t.area);
+        return '<tr><td>'+a.icon+'</td><td><b>'+esc(r.t.name)+'</b><div class="note">'+esc(a.name)+' · '+HC.freqText(r.t)+'</div></td><td><span class="st '+r.st+'">'+({overdue:'Late '+r.late+'′',due:'Due',soon:'Soon',later:HC.hm(r.m),done:'Done',missed:'Missed'})[r.st]+'</span></td><td>'+r.doneN+'/'+r.count+'</td><td>'+(r.last?clock(tm(r.last.at))+' '+esc(r.last.name||''):'–')+'</td></tr>'; }).join('')+'</table></div></div>').join('');
+  document.querySelectorAll('[data-big]').forEach(i=>i.onclick=()=>{ const d=document.createElement('div'); d.className='big'; d.innerHTML='<img src="'+i.src+'">'; d.onclick=()=>d.remove(); document.body.appendChild(d); });
+  document.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>verify(b.dataset.ok,true));
+  document.querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>{ const why=prompt('What needs redoing? (they will see the task again)'); if(why!==null) verify(b.dataset.no,false,why); }); }
+async function verify(id,ok,why){ const {fs,db}=CTX; try{ await fs.updateDoc(fs.doc(db,'cleanlog',id),{verified:ok,vBy:CTX.name||'office',vAt:fs.serverTimestamp(),reason:why||null}); toast(ok?'Marked good':'Sent back to redo'); }catch(e){ toast('Not saved: '+(e.code||e.message)); } }
+function listText(p){ const S=HC.state(PLAN,today(),LOGS,-1), R=S.rows.filter(r=>r.t.role===p.role), d=new Date(today()+'T12:00:00Z');
+  const lines=R.map(r=>{ const t=r.t; return t.every?'• '+HC.freqText(t)+': '+t.name:'• '+HC.times(PLAN,t,today()).map(HC.hm).join(', ')+' · '+t.name; });
+  return 'Good morning '+p.name.split(' ')[0]+' 🌞\nToday\'s cleaning ('+d.toUTCString().slice(0,11)+'):\n'+lines.join('\n')+'\n\nTap ✓ in the app after each one: '+location.origin+location.pathname; }
+function viewSend(){ const P=PEOPLE.filter(p=>['cleaner','waiter','kitchen'].includes(p.role));
+  $('main').innerHTML='<div class="card"><h2>Send today\'s list · one tap each morning</h2><div class="note">Opens WhatsApp with the list ready; you press Send. Numbers are kept in the cleaning plan.</div><div class="scroll"><table><tr><th>Person</th><th>Role</th><th>WhatsApp</th><th></th></tr>'
+    +(P.length?P.map(p=>{ const ph=(PLAN.phones||{})[p.id]||''; return '<tr><td><b>'+esc(p.name)+'</b></td><td>'+HC.ROLE[p.role]+'</td><td><input data-ph="'+esc(p.id)+'" value="'+esc(ph)+'" placeholder="98xxxxxxxx" inputmode="tel" style="width:150px"></td><td>'+(ph?'<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/'+ph+'?text='+encodeURIComponent(listText(p))+'">📱 Send list</a>':'<span class="note">add number</span>')+'</td></tr>'; }).join(''):'<tr><td colspan="4" class="note">Add cleaners, waiters and kitchen staff in <b>Staff &amp; codes</b> first.</td></tr>')+'</table></div></div>'
+    +'<div class="card"><h2>Reminders on phones</h2><div class="note">Each person taps <b>🔔 Reminders</b> once on their own phone. The shop PC then sends each task at its time, and late tasks to the office. Needs the Web Push key in config.js (firebase.vapidKey).</div></div>';
+  document.querySelectorAll('[data-ph]').forEach(i=>i.onchange=async()=>{ let d=i.value.replace(/\D/g,''); if(d.length===10) d='91'+d; PLAN.phones=Object.assign({},PLAN.phones||{}); if(d) PLAN.phones[i.dataset.ph]=d; else delete PLAN.phones[i.dataset.ph]; await savePlan(true); viewSend(); }); }
+async function savePlan(quiet){ const {fs,db}=CTX; try{ await fs.setDoc(fs.doc(db,'cleanplan','main'),Object.assign({},PLAN,{savedAt:fs.serverTimestamp(),savedBy:CTX.name||''})); PLAN_SAVED=true; if(!quiet) toast('Schedule saved'); }catch(e){ toast('Not saved: '+(e.code||e.message)); } }
+function freqEdit(t){ if(t.every) return 'every '+t.every+(t.rushEvery?'/'+t.rushEvery:'')+(t.rushOnly?' rush':'');
+  const at=(t.at||[]).map(m=>{ m%=1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }).join(',');
+  if(t.weekly) return 'weekly '+t.weekly.map(d=>['sun','mon','tue','wed','thu','fri','sat'][d]).join(',')+' '+at;
+  if(t.monthly) return 'monthly '+t.monthly+(t.months>1?'/'+t.months:'')+' '+at; return 'daily '+at; }
+function freqParse(s,t){ s=String(s).trim().toLowerCase(); const o={}; let m;
+  if((m=/^every\s+(\d+)(?:\/(\d+))?(\s+rush)?$/.exec(s))){ o.every=+m[1]; if(m[2]) o.rushEvery=+m[2]; if(m[3]) o.rushOnly=true; }
+  else if((m=/^weekly\s+([a-z,]+)\s+([\d:.,\s]+)$/.exec(s))){ o.weekly=m[1].split(',').map(d=>['sun','mon','tue','wed','thu','fri','sat'].indexOf(d.slice(0,3))).filter(x=>x>=0); o.at=m[2].split(',').map(parseTime).filter(x=>x!=null); }
+  else if((m=/^monthly\s+(\d+)(?:\/(\d+))?\s+([\d:.,\s]+)$/.exec(s))){ o.monthly=+m[1]; o.months=m[2]?+m[2]:1; o.at=m[3].split(',').map(parseTime).filter(x=>x!=null); }
+  else if((m=/^(?:daily\s+)?([\d:.,\s]+)$/.exec(s))){ o.at=m[1].split(',').map(parseTime).filter(x=>x!=null); }
+  else return null;
+  ['every','rushEvery','rushOnly','at','weekly','monthly','months'].forEach(k=>delete t[k]); Object.assign(t,o); return t; }
+function viewPlan(){ const A=PLAN.areas;
+  $('main').innerHTML='<div class="card"><div class="row"><h2 style="flex:1">Master cleaning schedule</h2>'+(PLAN_SAVED?'':'<span class="chip">default, not saved yet</span>')+'<button class="btn primary" id="psave">Save</button><button class="btn" id="padd">+ Task</button><button class="btn warn" id="preset">Reset to default</button></div>'
+    +'<div class="note">How often: <code>every 60/30</code> (every 60 min, 30 in rush) · <code>every 30 rush</code> (rush only) · <code>daily 10:30,16:00</code> · <code>weekly mon 16:00</code> · <code>monthly 1/6 09:00</code> (day 1, every 6 months). Rush: '+PLAN.rush.map(w=>HC.hm(w[0])+'–'+HC.hm(w[1])).join(', ')+'.</div>'
+    +'<div class="scroll"><table><tr><th>Area</th><th>Task</th><th>Malayalam</th><th>Who</th><th>How often</th><th>📷</th><th></th></tr>'+PLAN.tasks.map((t,i)=>'<tr><td><select data-i="'+i+'" data-f="area">'+A.map(a=>'<option value="'+a.id+'"'+(a.id===t.area?' selected':'')+'>'+a.icon+' '+esc(a.name)+'</option>').join('')+'</select></td>'
+      +'<td><input data-i="'+i+'" data-f="name" value="'+esc(t.name)+'" style="width:220px"></td><td><input class="ml" data-i="'+i+'" data-f="ml" value="'+esc(t.ml||'')+'" style="width:200px"></td>'
+      +'<td><select data-i="'+i+'" data-f="role">'+Object.keys(HC.ROLE).map(r=>'<option value="'+r+'"'+(r===t.role?' selected':'')+'>'+HC.ROLE[r]+'</option>').join('')+'</select></td>'
+      +'<td><input data-i="'+i+'" data-f="freq" value="'+esc(freqEdit(t))+'" style="width:190px" title="'+esc(HC.freqText(t))+'"></td><td><input type="checkbox" data-i="'+i+'" data-f="photo"'+(t.photo?' checked':'')+'></td><td><button class="btn warn" data-del="'+i+'">✕</button></td></tr>').join('')+'</table></div></div>';
+  document.querySelectorAll('[data-f]').forEach(el=>el.onchange=()=>{ const t=PLAN.tasks[+el.dataset.i], f=el.dataset.f;
+    if(f==='freq'){ if(!freqParse(el.value,t)){ toast('Could not read "'+el.value+'"'); el.value=freqEdit(t); } else el.title=HC.freqText(t); }
+    else if(f==='photo') t.photo=el.checked; else t[f]=el.value; PLAN_SAVED=false; });
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ if(confirm('Remove this task?')){ PLAN.tasks.splice(+b.dataset.del,1); PLAN_SAVED=false; viewPlan(); } });
+  $('psave').onclick=()=>savePlan(); $('padd').onclick=()=>{ PLAN.tasks.push({id:'t'+Date.now().toString(36),area:A[0].id,role:'cleaner',photo:false,at:[960],how:'tables',name:'New task',ml:''}); viewPlan(); };
+  $('preset').onclick=()=>{ if(confirm('Replace the schedule with the default one? Phone numbers are kept.')){ const ph=PLAN.phones; PLAN=JSON.parse(JSON.stringify(HC.DEFAULT_PLAN)); PLAN.phones=ph||{}; PLAN_SAVED=false; viewPlan(); } }; }
+function viewQR(){ const base=location.origin+location.pathname;
+  $('main').innerHTML='<div class="card noprint"><div class="row"><h2 style="flex:1">QR stickers · one per area</h2><button class="btn primary" onclick="window.print()">🖨 Print</button></div><div class="note">Stick each one at the door or wall of that area. Staff scan it after cleaning and tap ✓. Laminate the washroom and kitchen ones.</div></div>'
+    +'<div class="stickers">'+PLAN.areas.map(a=>{ const col=(HC.COL[a.color]||HC.COL.green); return '<div class="stk" style="--c:'+col.hex+'"><div class="ic">'+a.icon+'</div><b>'+esc(a.name)+'</b><span class="ml">'+esc(a.ml||'')+'</span><img src="'+(window.qrSvg?window.qrSvg(base+'?a='+a.id,180):'')+'" alt="QR"><div style="font-weight:600;margin-top:4px">Scan after cleaning</div><div class="ml" style="font-size:14px">വൃത്തിയാക്കിയ ശേഷം സ്കാൻ ചെയ്യുക</div><div class="band">'+esc(col.en)+'</div></div>'; }).join('')+'</div>'; }
+async function viewStaff(){ const {fs,db}=CTX; PEOPLE=await HayatAuth.people(CTX);
+  $('main').innerHTML='<div class="card"><h2>Staff &amp; codes</h2><div class="note">Each person signs in once on their phone with their name and code. The office sign-in uses the same list. Codes are 6 digits; you see a new code only when you make it.</div>'
+    +'<div class="scroll"><table><tr><th>Name</th><th>Role</th><th></th></tr>'+PEOPLE.map((p,i)=>'<tr><td><b>'+esc(p.name)+'</b></td><td><select data-pi="'+i+'">'+['','office','captain','waiter','cleaner','kitchen'].map(r=>'<option value="'+r+'"'+((p.role||'')===r?' selected':'')+'>'+(r?HC.ROLE[r]:'(office list)')+'</option>').join('')+'</select></td><td style="white-space:nowrap"><button class="btn" data-code="'+i+'">New code</button> <button class="btn warn" data-rm="'+i+'">Remove</button></td></tr>').join('')+'</table></div>'
+    +'<div class="row"><input id="nName" placeholder="Name" style="width:180px"><select id="nRole">'+['cleaner','waiter','kitchen','captain','office'].map(r=>'<option value="'+r+'">'+HC.ROLE[r]+'</option>').join('')+'</select><button class="btn primary" id="nAdd">+ Add with a new code</button></div>'
+    +'<div class="note">Removing someone stops new sign-ins. A phone already signed in stays signed in until you delete its record in Firebase console → Firestore → staff.</div></div>';
+  const code=()=>String(Math.floor(100000+Math.random()*900000));
+  const writeList=async()=>{ await fs.setDoc(fs.doc(db,'crew','_list'),{people:PEOPLE.map(p=>({id:p.id,name:p.name,role:p.role||''}))}); };
+  const setCrew=async(p,c)=>{ const cur=await fs.getDoc(fs.doc(db,'crew',p.id)).catch(()=>null); const data={name:p.name,role:p.role||'office'}; if(c) data.code=c; else if(!(cur&&cur.exists())) data.code=code(); await fs.setDoc(fs.doc(db,'crew',p.id),data,{merge:true}); };
+  document.querySelectorAll('[data-pi]').forEach(s=>s.onchange=async()=>{ const p=PEOPLE[+s.dataset.pi]; p.role=s.value; try{ await setCrew(p); await writeList(); toast('Saved'); }catch(e){ toast('Not saved: '+(e.code||e.message)); } });
+  document.querySelectorAll('[data-code]').forEach(b=>b.onclick=async()=>{ const p=PEOPLE[+b.dataset.code], c=code(); try{ await setCrew(p,c); alert(p.name+'\'s new code: '+c+'\n\nWrite it down now; it is not shown again.'); }catch(e){ toast('Not saved: '+(e.code||e.message)); } });
+  document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ const p=PEOPLE[+b.dataset.rm]; if(!confirm('Remove '+p.name+'?')) return; try{ await fs.deleteDoc(fs.doc(db,'crew',p.id)); PEOPLE.splice(+b.dataset.rm,1); await writeList(); viewStaff(); }catch(e){ toast('Not saved: '+(e.code||e.message)); } });
+  $('nAdd').onclick=async()=>{ const name=$('nName').value.trim(); if(!name) return; const id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+Math.random().toString(36).slice(2,5), c=code(), p={id,name,role:$('nRole').value};
+    try{ await fs.setDoc(fs.doc(db,'crew',id),{name,role:p.role,code:c}); PEOPLE.push(p); await writeList(); alert(name+' ('+HC.ROLE[p.role]+')\nCode: '+c+'\n\nWrite it down now; it is not shown again.'); viewStaff(); }catch(e){ toast('Not saved: '+(e.code||e.message)); } }; }
+async function viewRecords(){ const {fs,db}=CTX, now=today(), mo=(S.recMonth||now.slice(0,7));
+  $('main').innerHTML='<div class="card"><div class="row"><h2 style="flex:1">Records · FSSAI Schedule 4 (keep 1 year)</h2><input type="month" id="rm" value="'+mo+'"><button class="btn" id="csv">⬇ CSV</button></div><div id="rbody" class="note">Loading…</div></div>';
+  $('rm').onchange=()=>{ S.recMonth=$('rm').value; viewRecords(); };
+  const first=mo+'-01', lastD=new Date(Date.UTC(+mo.slice(0,4),+mo.slice(5,7),0)).toISOString().slice(0,10);
+  let docs=[]; try{ const s=await fs.getDocs(fs.query(fs.collection(db,'cleanlog'),fs.where('day','>=',first),fs.where('day','<=',lastD))); docs=s.docs.map(d=>Object.assign({id:d.id},d.data())); }catch(e){ $('rbody').textContent='Could not load: '+(e.code||e.message); return; }
+  const days=[]; for(let d=new Date(first+'T12:00:00Z'); d.toISOString().slice(0,10)<=lastD&&d.toISOString().slice(0,10)<=now; d.setUTCDate(d.getUTCDate()+1)) days.push(d.toISOString().slice(0,10));
+  const rows=days.reverse().map(d=>{ const L=docs.filter(x=>x.day===d), st=HC.state(PLAN,d,L,d===now?nowM():9999); return '<tr><td>'+d+'</td><td><b style="color:'+(st.pct<80?'var(--bad)':'var(--good)')+'">'+st.pct+'%</b></td><td>'+st.done+'/'+st.due+'</td><td>'+L.filter(x=>x.photo).length+'</td><td>'+L.filter(x=>x.verified===false).length+'</td></tr>'; });
+  $('rbody').innerHTML='<div class="scroll"><table><tr><th>Day</th><th>Done</th><th>Tasks</th><th>Photos</th><th>Redo</th></tr>'+rows.join('')+'</table></div>';
+  $('csv').onclick=()=>{ const lines=[['day','time','task','area','by','role','minutes_late','verified','reason']].concat(docs.sort((a,b)=>(tm(a.at)||0)-(tm(b.at)||0)).map(l=>{ const t=PLAN.tasks.find(x=>x.id===l.task)||{name:l.task}; return [l.day,clock(tm(l.at)),t.name,HC.area(PLAN,l.area).name,l.name,l.role,l.late||0,l.verified==null?'':l.verified,l.reason||'']; }));
+    const csv=lines.map(r=>r.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(',')).join('\n'), a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='hayat-cleaning-'+mo+'.csv'; a.click(); }; }
+const S={};
+
+/* ---------------- tabs + boot ---------------- */
+function tabsFor(){ if(AREA) return []; if(CTX.role==='office') return [['board','Today'],['now','My tasks'],['send','Send lists'],['plan','Schedule'],['qr','QR stickers'],['staff','Staff & codes'],['rec','Records'],['how','How to']];
+  if(CTX.role==='captain') return [['board','Today'],['now','My tasks'],['send','Send lists'],['how','How to']]; return [['now','Now'],['today','Today'],['how','How to']]; }
+function render(){ if(!CTX||!CTX.role) return; const TB=tabsFor(); $('tabs').hidden=!TB.length;
+  if(!TAB||!TB.some(t=>t[0]===TAB)) TAB=TB.length?TB[0][0]:null;
+  $('tabs').innerHTML=TB.map(t=>'<button aria-pressed="'+(t[0]===TAB)+'" data-t="'+t[0]+'">'+t[1]+'</button>').join('');
+  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{ TAB=b.dataset.t; render(); });
+  if(AREA) return viewArea();
+  ({board:viewBoard,now:viewNow,today:viewToday,how:viewHow,send:viewSend,plan:viewPlan,qr:viewQR,staff:viewStaff,rec:viewRecords})[TAB](); }
+function softRender(){ if(['board','now','today'].includes(TAB)||AREA) render(); }
+setInterval(softRender,30000);
+$('lang').onclick=()=>{ LANG=LANG==='ml'?'en':'ml'; localStorage.setItem('clean-lang',LANG); $('lang').textContent=LANG==='ml'?'English':'മലയാളം'; render(); };
+$('lang').textContent=LANG==='ml'?'English':'മലയാളം';
+$('out').onclick=()=>{ if(confirm('Sign out on this phone?')) HayatAuth.signOut(CTX); };
+$('bell').onclick=async()=>{ if(!CTX||!CTX.role) return; const key=(window.CONFIG&&window.CONFIG.firebase&&window.CONFIG.firebase.vapidKey)||(window.CONFIG&&window.CONFIG.vapidKey);
+  if(!key) return toast('Reminders are not switched on yet: Majid needs to add the Web Push key to config.js.',4200);
+  if(!('Notification' in window)||!('serviceWorker' in navigator)) return toast('This phone\'s browser cannot show reminders. On iPhone, add this page to the Home Screen first.',4200);
+  try{ const perm=await Notification.requestPermission(); if(perm!=='granted') return toast('Notifications are blocked for this site. Allow them in the browser settings.',4200);
+    const reg=await navigator.serviceWorker.register('firebase-messaging-sw.js',{scope:'./fcm/'});
+    const mm=await import('https://www.gstatic.com/firebasejs/'+CTX.V+'/firebase-messaging.js'), msg=mm.getMessaging(CTX.app);
+    const token=await mm.getToken(msg,{vapidKey:key,serviceWorkerRegistration:reg});
+    await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'pushtok',CTX.user.uid),{token,crew:CTX.crewId||'',name:CTX.name||'',role:CTX.role,at:CTX.fs.serverTimestamp(),ua:navigator.userAgent.slice(0,90)});
+    mm.onMessage(msg,p=>{ toast('🔔 '+((p.notification&&p.notification.title)||'')+' '+((p.notification&&p.notification.body)||''),5000); if(navigator.vibrate) navigator.vibrate([80,60,80]); render(); });
+    $('bell').textContent='🔔 On'; toast('Reminders are on for this phone');
+  }catch(e){ toast('Could not turn on reminders: '+(e.code||e.message),4200); } };
+
+(async function boot(){
+  try{ CTX=await HayatAuth.start(); }catch(e){ $('main').innerHTML='<div class="card"><b>Could not start.</b> '+esc(e.message||e)+'</div>'; return; }
+  const after=()=>{ $('who').textContent=(CTX.name||'')+' · '+(HC.ROLE[CTX.role]||CTX.role); $('office').hidden=CTX.role!=='office';
+    const {fs,db}=CTX;
+    fs.onSnapshot(fs.doc(db,'cleanplan','main'),d=>{ if(d.exists()){ const x=d.data(); if(x&&Array.isArray(x.tasks)&&x.tasks.length){ PLAN=Object.assign({},HC.DEFAULT_PLAN,x); PLAN_SAVED=true; } } render(); },e=>{ toast('Schedule: '+(e.code||e.message)); render(); });
+    fs.onSnapshot(fs.query(fs.collection(db,'cleanlog'),fs.where('day','==',today())),s=>{ LOGS=s.docs.map(d=>Object.assign({id:d.id},d.data())); softRender(); },e=>toast('Log: '+(e.code||e.message)));
+    HayatAuth.people(CTX).then(p=>{ PEOPLE=p; });
+    if(CTX.role==='office'){ /* photos older than 30 days are dropped; the tick itself is kept a year */
+      fs.getDocs(fs.query(fs.collection(db,'cleanlog'),fs.where('purgeAt','<=',today()),fs.limit(60))).then(s=>s.docs.forEach(d=>fs.updateDoc(d.ref,{photo:null,purgeAt:fs.deleteField()}).catch(()=>{}))).catch(()=>{}); }
+    render(); };
+  if(!CTX.role){ $('who').textContent='not signed in'; await HayatAuth.form($('main'),CTX,['cleaner','waiter','kitchen','captain','office'],after,AREA?'Sign in once on this phone, then this sticker opens straight to the task.':null); return; }
+  after();
+})();
+</script>
+</body></html>
