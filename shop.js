@@ -4806,10 +4806,25 @@ function officeDock(here){
     ["call",   "#/admin/call",   "\u260E",       "Phone order"],
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
-    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
-    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
-    ["google", "#/admin/google", "G",             "Google"]
+    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"]
   ];
+  /* the rest live in a drawer, so the dock fits any screen */
+  var M = [
+    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
+    ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],
+    ["sim",    "sim.html",       "\u23F1",       "Service sim", "Replay our bills on the floor plan"]
+  ];
+  var inMore = M.some(function(m){ return m[0] === here; });
+  var more = '<div class="dockmore">' +
+    '<div class="dockdrawer" role="menu" hidden>' + M.map(function(m){
+      var on = m[0] === here, inner = '<span class="ddic">' + m[2] + '</span><span class="ddtx"><b>' + m[3] + '</b><small>' + m[4] + '</small></span>';
+      return m[1].charAt(0) === "#"
+        ? '<button class="dditem' + (on ? " on" : "") + '" role="menuitem" data-go="' + m[1] + '"' + (on ? ' aria-current="page"' : '') + '>' + inner + '</button>'
+        : '<a class="dditem" role="menuitem" href="' + m[1] + '">' + inner + '</a>';
+    }).join("") + '</div>' +
+    '<button class="dockbtn wide dmore' + (inMore ? " on" : "") + '" aria-haspopup="menu" aria-expanded="false" title="More">' +
+      '\u22EF<span class="dlab">' + (inMore ? M.filter(function(m){ return m[0] === here; })[0][3] : "More") + '</span></button>' +
+  '</div>';
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
     return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
@@ -4817,8 +4832,24 @@ function officeDock(here){
       b[2] + '<span class="dlab">' + b[3] + '</span>' +
       (b[0] === "riders" && n ? '<span class="dockn">' + n + '</span>' : '') +
       '</button>';
-  }).join("") + '</div>';
+  }).join("") + more + '</div>';
 }
+/* the More drawer: one handler for every repaint of the dock */
+document.addEventListener("click", function(e){
+  var t = e.target, btn = t.closest && t.closest(".dmore");
+  var open = document.querySelectorAll(".dockdrawer:not([hidden])");
+  if(btn){
+    var d = btn.parentNode.querySelector(".dockdrawer"), was = !d.hidden;
+    open.forEach(function(x){ x.hidden = true; });
+    d.hidden = was; btn.setAttribute("aria-expanded", was ? "false" : "true");
+    return;
+  }
+  if(t.closest && t.closest(".dockdrawer") && !t.closest(".dditem")) return;
+  open.forEach(function(x){ x.hidden = true; var b = x.parentNode.querySelector(".dmore"); if(b) b.setAttribute("aria-expanded","false"); });
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape") document.querySelectorAll(".dockdrawer:not([hidden])").forEach(function(x){ x.hidden = true; });
+});
 
 /* the word in front of a console's tabs: which book this is */
 function tabCap(t){ return '<span class="tabcap">' + esc(t) + '</span>'; }
