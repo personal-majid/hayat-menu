@@ -870,7 +870,7 @@ var STORE = {
   /* ---- the money ------------------------------------------
      Marked by a person, never guessed. UPI cannot tell a web
      page that it was paid, so whoever saw the money says so. */
-  setPaid: function(id, paid, mode){
+  setPaid: function(id, paid, mode, amt){
     var o = DB.orders[id];
     if(!o) return null;
     var who = myVoice();
@@ -878,7 +878,8 @@ var STORE = {
       paid: !!paid,
       payMode: paid ? (mode || "cash") : null,
       paidAt: paid ? Date.now() : null,
-      paidBy: paid ? who : null
+      paidBy: paid ? who : null,
+      paidAmt: paid && amt != null && amt !== o.total ? amt : null   /* only when it differs */
     };
     for(var k in patch) o[k] = patch[k];
     if(FB){
@@ -3240,8 +3241,44 @@ function riderState(r){
 function payTag(o){
   if(o.status !== "delivered" && !o.paid) return "";
   return o.paid
-    ? '<span class="ptag on">\u2713 paid</span>'
-    : '<span class="ptag off">unpaid</span>';
+    ? '<span class="ptag on" title="' + esc((o.payMode === "upi" ? "UPI" : "Cash") + (o.paidAmt != null ? " · " + rupee(o.paidAmt) : "")) + '">\u2713 paid</span>'
+    : '<button class="ptag off" data-paysheet="' + esc(o.id) + '" title="Take the money">unpaid \u203A</button>';
+}
+
+/* Taking the money, from the card: the amount is already typed,
+   two buttons say how it came. Change the amount only if it did. */
+function paySheet(id){
+  var o = STORE.order(id); if(!o) return;
+  var old = el("paySheet"); if(old) old.remove();
+  var u = upiCfg();
+  var box = document.createElement("div");
+  box.className = "sheetwrap"; box.id = "paySheet";
+  box.innerHTML =
+    '<div class="sheet pay">' +
+      '<div class="sheeth"><b>' + esc(o.name || prettyPhone(o.phone)) + ' \u00b7 ' + esc(o.id) + '</b>' +
+        '<button class="linky" id="payX">Cancel</button></div>' +
+      '<label class="payamt"><span>\u20B9</span><input id="payAmt" type="number" inputmode="numeric" value="' + (o.total || 0) + '"></label>' +
+      '<div class="payrow">' +
+        '<button class="shopbtn big" id="payCash">Cash</button>' +
+        (u ? '<button class="shopbtn big ghost" id="payUpi">UPI</button>' : '') +
+      '</div>' +
+      '<p class="shopnote">Tap what came in. Fix the number first only if it was different.</p>' +
+    '</div>';
+  document.body.appendChild(box);
+  var close = function(){ box.remove(); };
+  var take = function(mode){
+    var amt = Number(el("payAmt").value);
+    if(!(amt >= 0)){ shopToast("That is not an amount."); return; }
+    STORE.setPaid(id, true, mode, amt);
+    close();
+    shopToast(rupee(amt) + " " + (mode === "upi" ? "by UPI" : "cash") + " \u2014 done.");
+  };
+  el("payX").onclick = close;
+  box.onclick = function(e){ if(e.target === box) close(); };
+  el("payCash").onclick = function(){ take("cash"); };
+  var pu = el("payUpi"); if(pu) pu.onclick = function(){ take("upi"); };
+  onEnter(el("payAmt"), function(){ take("cash"); });
+  setTimeout(function(){ try{ el("payAmt").select(); }catch(e){} }, 50);
 }
 
 function noteTag(o){
@@ -3492,13 +3529,80 @@ function shiftStart(){
    board. It is still in the book and the list; the board is for
    what is happening, not what happened. Unpaid stays until it is
    paid, because unpaid is still happening. */
+/* Delivered and paid is finished; it leaves the board the moment
+   the money is marked and lives in the Day ledger. Unpaid stays,
+   because unpaid is still happening. */
 function onBoard(o){
   if(o.status === "cancelled") return false;
   if(o.status !== "delivered") return true;
-  if(!o.paid) return true;
-  var when = (o.log || []).filter(function(l){ return l.s === "delivered"; }).pop();
-  var t = when ? when.at : o.at;
-  return t >= shiftStart();
+  return !o.paid;
+}
+
+/* ---- the Day ledger: everything that happened, one day at a time.
+   A business day starts at opening time, so a delivery at half past
+   midnight belongs to the evening still going. */
+var DAYSEL = null;                                  /* start-of-day ms; null = today */
+function openHourMin(){
+  var h = (C().hours || {}).open || "11:00", p = h.split(":");
+  return [+p[0] || 0, +p[1] || 0];
+}
+function dayStartOf(ts){
+  var hm = openHourMin(), d = new Date(ts);
+  d.setHours(hm[0], hm[1], 0, 0);
+  if(d.getTime() > ts) d.setDate(d.getDate() - 1);
+  return d.getTime();
+}
+function dayLabel(start){
+  var t = dayStartOf(Date.now());
+  if(start === t) return "Today";
+  if(start === t - 86400000) return "Yesterday";
+  return new Date(start).toLocaleDateString(undefined, { weekday:"short", day:"numeric", month:"short" });
+}
+function orderDayAt(o){
+  var d = (o.log || []).filter(function(l){ return l.s === "delivered"; }).pop();
+  return o.paidAt || (d && d.at) || o.at;
+}
+function dayLedger(orders){
+  var start = DAYSEL == null ? dayStartOf(Date.now()) : DAYSEL, end = start + 86400000;
+  var rows = orders.filter(function(o){ var t = orderDayAt(o); return t >= start && t < end; })
+    .sort(function(a,b){ return orderDayAt(b) - orderDayAt(a); });
+  var done = rows.filter(function(o){ return o.status === "delivered"; });
+  var sum = function(list){ return list.reduce(function(n,o){ return n + (o.paid && o.paidAmt != null ? o.paidAmt : (o.total || 0)); }, 0); };
+  var cash = done.filter(function(o){ return o.paid && o.payMode !== "upi"; });
+  var upi  = done.filter(function(o){ return o.paid && o.payMode === "upi"; });
+  var open = done.filter(function(o){ return !o.paid; });
+  var canc = rows.filter(function(o){ return o.status === "cancelled"; });
+  var tile = function(n, t, cls){ return '<div class="dtile' + (cls ? " " + cls : "") + '"><b>' + n + '</b><small>' + t + '</small></div>'; };
+  return '<div class="conscroll ledger">' +
+    '<div class="dayhead">' +
+      '<button class="mini ghostmini" data-day="-1" title="Earlier">\u2039</button>' +
+      '<b class="daylbl">' + esc(dayLabel(start)) + '</b>' +
+      '<button class="mini ghostmini" data-day="1" title="Later"' + (start >= dayStartOf(Date.now()) ? ' disabled' : '') + '>\u203A</button>' +
+      (DAYSEL != null ? '<button class="linky" data-day="0">Today</button>' : '') +
+      '<input type="date" class="fld daypick" id="dayPick" value="' + new Date(start).toISOString().slice(0,10) + '">' +
+    '</div>' +
+    '<div class="dtiles">' +
+      tile(done.length, "delivered") + tile(rupee(sum(done)), "takings") +
+      tile(rupee(sum(cash)), "cash \u00b7 " + cash.length) + tile(rupee(sum(upi)), "UPI \u00b7 " + upi.length) +
+      tile(rupee(sum(open)), "unpaid \u00b7 " + open.length, open.length ? "warn" : "") +
+      (canc.length ? tile(canc.length, "cancelled", "dim") : "") +
+    '</div>' +
+    (rows.length
+      ? '<div class="lines">' + rows.map(function(o){
+          var r = o.riderId ? STORE.rider(o.riderId) : null;
+          return '<div class="line drow s-' + esc(o.status) + '">' +
+            '<span class="dt">' + when(orderDayAt(o)) + '</span>' +
+            '<div class="ln"><b>' + esc(o.name || prettyPhone(o.phone)) + '</b>' +
+              '<small>' + esc(orderLine(o)) + (r ? ' \u00b7 \uD83C\uDFCD ' + esc(shortName(r.name)) : '') + '</small></div>' +
+            '<span class="dtot">' + rupee(o.paid && o.paidAmt != null ? o.paidAmt : o.total) + '</span>' +
+            (o.status === "cancelled" ? '<span class="ptag dim">cancelled</span>'
+              : o.status === "delivered" ? payTag(o)
+              : '<span class="ptag live">' + esc(STEP[o.status].t) + '</span>') +
+            '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">' + esc(o.id) + '</a>' +
+          '</div>';
+        }).join("") + '</div>'
+      : '<p class="shopsub">Nothing on this day.</p>') +
+  '</div>';
 }
 
 /* what the day has done so far */
@@ -3581,7 +3685,7 @@ function paintAdmin(main){
         '<div class="tabs">' + tabCap("Orders") +
           ['board','list','map'].map(function(v){
             return '<button class="tab' + (ADVIEW===v ? " on" : "") + '" data-view="' + v + '">' +
-              (v==="board" ? "Board" : v==="list" ? "List" : "Map") + '</button>';
+              (v==="board" ? "Board" : v==="list" ? "Day" : "Map") + '</button>';
           }).join("") +
         '</div>' +
         '<div class="adminbar">' +
@@ -3606,9 +3710,7 @@ function paintAdmin(main){
           ? (orders.length ? boardHtml(orders.filter(onBoard))
                            : '<p class="shopsub">No orders yet.</p>')
 
-          : '<div class="conscroll">' +
-            (orders.length ? orders.map(orderCard).join("")
-                           : '<p class="shopsub">No orders yet.</p>') + '</div>') +
+          : dayLedger(orders)) +
       '</div>' +
 
       /* the two things you reach for, always in the same corner */
@@ -3867,6 +3969,25 @@ function wireCards(main){
   main.querySelectorAll("[data-decline]").forEach(function(b){
     b.onclick = function(){ declineSheet(b.dataset.decline); };
   });
+  main.querySelectorAll("[data-paysheet]").forEach(function(b){
+    b.onclick = function(e){ e.preventDefault(); paySheet(b.dataset.paysheet); };
+  });
+  main.querySelectorAll("[data-day]").forEach(function(b){
+    b.onclick = function(){
+      var d = +b.dataset.day, cur = DAYSEL == null ? dayStartOf(Date.now()) : DAYSEL;
+      DAYSEL = d === 0 ? null : Math.min(cur + d * 86400000, dayStartOf(Date.now()));
+      if(DAYSEL === dayStartOf(Date.now())) DAYSEL = null;
+      paintAdmin(main);
+    };
+  });
+  var dp = el("dayPick");
+  if(dp) dp.onchange = function(){
+    var v = dp.value; if(!v) return;
+    var hm = openHourMin(), d = new Date(v + "T00:00:00"); d.setHours(hm[0], hm[1], 0, 0);
+    DAYSEL = Math.min(d.getTime(), dayStartOf(Date.now()));
+    if(DAYSEL === dayStartOf(Date.now())) DAYSEL = null;
+    paintAdmin(main);
+  };
   main.querySelectorAll("[data-assignpick]").forEach(function(b){
     b.onclick = function(){ assignSheet(b.dataset.assignpick); };
   });
@@ -4655,16 +4776,10 @@ function officeDock(here){
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
     ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
     ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
-    ["google", "#/admin/google", "G",             "Google"],
-    /* its own page, not a console tab: the service simulator
-       (sim.html) replays our real bills on the floor plan */
-    ["sim",    "sim.html",       "\u23F1",       "Service sim"]
+    ["google", "#/admin/google", "G",             "Google"]
   ];
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
-    if(b[1].charAt(0) !== "#")
-      return '<a class="dockbtn wide" href="' + b[1] + '" title="' + b[3] +
-        '" style="text-decoration:none">' + b[2] + '<span class="dlab">' + b[3] + '</span></a>';
     return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
       '" title="' + b[3] + '"' + (on ? ' aria-current="page"' : '') + '>' +
       b[2] + '<span class="dlab">' + b[3] + '</span>' +
