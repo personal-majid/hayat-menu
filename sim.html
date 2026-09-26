@@ -18,7 +18,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font:400 15px/1.45 "Jost",system-ui,-apple-system,"Segoe UI",sans-serif;margin:0}
-.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:18px 48px;display:grid;gap:18px}
+.wrap{max-width:1920px;margin:0 auto;padding-inline:clamp(16px,2vw,32px);padding-block:18px 48px;display:grid;gap:18px}
 h1{font:600 32px/1.05 "Cormorant Garamond",Georgia,serif;margin:0;letter-spacing:.01em;text-wrap:balance}
 .sub{color:var(--muted);font-size:13px;margin-top:4px}
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
@@ -43,8 +43,15 @@ h2{font:600 12px/1 "Jost",sans-serif;letter-spacing:.14em;text-transform:upperca
 .clock{font:600 22px/1 "Jost",sans-serif;font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;accent-color:var(--accent)}
 .score{position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px);z-index:4;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
-.score table{font-size:13px} .score td,.score th{padding:4px 5px} .score td.b{font-weight:600}
+.score{display:grid;grid-template-columns:auto repeat(7,minmax(0,1fr));gap:6px;align-items:stretch;padding:6px}
+.score .sc{border:1px solid var(--line);border-radius:8px;padding:4px 6px;min-width:0}
+.score .sc small{display:block;font-size:10.5px;color:var(--muted,#777);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score .sc span{font-size:12.5px;white-space:nowrap} .score .sc b{font-size:13.5px;white-space:nowrap;display:inline-block}
+.score .clk{display:flex;flex-direction:column;justify-content:center;font-weight:600;font-size:13px;padding:0 6px;white-space:nowrap}
+.score .clk small{font-weight:400;font-size:10.5px;color:var(--muted,#777)}
 .score .hi{color:var(--good)} .score .lo{color:var(--food)}
+@media (max-width:1100px){ .score{grid-template-columns:repeat(4,minmax(0,1fr))} }
+@media (max-width:759px){ .score .sc span,.score .sc b{display:block} }
 .duo{display:grid;gap:10px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .maps{display:grid;gap:14px} @media (min-width:760px){ .maps{grid-template-columns:1fr 1fr} }
 .tiles{display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
@@ -71,6 +78,52 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .pulse{animation:pulse 1s ease-out infinite}
 @media (prefers-reduced-motion:reduce){ .pulse{animation:none} }
 .cmp{display:grid;gap:14px}
+.rlay{display:grid;gap:18px;align-items:start}
+.rmain{display:grid;gap:14px;min-width:0}
+.rside{min-width:0;order:-1}
+@media (min-width:1200px){
+  .rlay{grid-template-columns:minmax(0,1fr) 340px}
+  .rside{order:0;position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px);max-height:calc(100vh - 64px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+  .rside summary{pointer-events:none} .rside summary .chev{display:none}
+}
+.rside details{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.rside summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;gap:8px;align-items:center;font-weight:600}
+.rside summary::-webkit-details-marker{display:none}
+.rside summary small{font-weight:400;color:var(--muted);margin-left:auto;font-size:12px}
+.rsbody{display:grid;gap:10px;padding:0 12px 12px}
+.rsh{font:600 11px/1 "Jost",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;gap:6px}
+.rsh small{letter-spacing:0;text-transform:none;font-weight:400}
+.rsres{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rsm{border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.rsm small{display:block;font-size:11px;color:var(--muted)}
+.rsm b{font-size:17px;font-variant-numeric:tabular-nums} .rsm span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rsm em{font-style:normal;font-size:11.5px;font-weight:600;margin-left:4px}
+.rsm .hi{color:var(--good)} .rsm .lo{color:var(--food)}
+.rspre{display:flex;gap:4px;background:var(--soft);border-radius:9px;padding:3px}
+.rspre button{flex:1;border:0;background:transparent;border-radius:7px;padding:6px 0;font:600 13px "Jost",sans-serif;color:var(--muted);cursor:pointer}
+.rspre button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.rsprelab{font-size:12px;color:var(--muted);min-height:1.4em}
+.rsstaff{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stp{display:grid;grid-template-columns:26px 1fr 26px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:3px;text-align:center}
+.stp button{border:0;background:var(--soft);border-radius:6px;height:26px;font:600 15px "Jost",sans-serif;color:var(--ink);cursor:pointer}
+.stp button:disabled{opacity:.35;cursor:default}
+.stp b{font-size:15px;font-variant-numeric:tabular-nums;line-height:1.1} .stp small{display:block;font-size:10.5px;color:var(--muted);line-height:1.1}
+.tgrp{font-size:11.5px;color:var(--muted);margin:4px 0 2px}
+.tog{width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;border:0;border-bottom:1px solid var(--soft);background:transparent;color:var(--ink);padding:6px 2px;font:500 13px/1.25 "Jost",sans-serif;cursor:pointer}
+.tog .sw{width:30px;height:18px;border-radius:999px;background:var(--line);position:relative;transition:background .15s}
+.tog .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.tog[aria-pressed="true"] .sw{background:var(--good)} .tog[aria-pressed="true"] .sw::after{left:14px}
+.tog small{display:block;color:var(--muted);font-size:11px;font-weight:400}
+.tog .fx{font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;color:var(--muted)}
+.tog .fx.hi{color:var(--good)} .tog .fx.lo{color:var(--food)}
+.tog:disabled{opacity:.45;cursor:not-allowed}
+.recbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+@media (max-width:640px){ #p-rush .ctrls{grid-template-columns:1fr} #p-rush .recbar{justify-content:flex-start!important} }
+.recbar .btn.rec{border-color:#C2362C;color:#C2362C}
+.recbar .btn.rec.on{background:#C2362C;color:#fff}
+.recout{display:grid;gap:8px} .recout canvas,.recout video{width:100%;max-width:960px;border-radius:8px;border:1px solid var(--line);background:#F5F4EF}
+.recprog{height:6px;border-radius:3px;background:var(--soft);overflow:hidden;max-width:960px} .recprog div{height:100%;background:#C2362C;width:0}
+.dl{display:inline-block;background:var(--good);color:#fff;border-radius:8px;padding:8px 14px;font:600 14px "Jost",sans-serif;text-decoration:none}
 .steps{display:grid;gap:6px}
 .step{text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 12px;display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;font:500 14px "Jost",sans-serif;cursor:pointer}
 .step .n{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:var(--soft);font-size:12px;font-weight:700;color:var(--muted)}
@@ -103,9 +156,10 @@ select,input[type=number]{font:500 14px "Jost",sans-serif;color:var(--ink);backg
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);font:500 13px "Jost",sans-serif;border-radius:8px;padding:7px 12px;cursor:pointer}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
-.planwrap{overflow:auto;border-radius:8px;background:var(--paper);border:1px solid var(--line);max-height:78vh;-webkit-overflow-scrolling:touch}
-.planwrap svg{display:block;width:100%;height:auto}
-.planwrap.zoom svg{width:230%}
+.planwrap{overflow:hidden;border-radius:8px;background:var(--paper);border:1px solid var(--line)}
+.planwrap svg{display:block;width:100%;height:auto;max-height:calc(100vh - 120px)}
+.planwrap.zoom{overflow:auto;-webkit-overflow-scrolling:touch}
+.planwrap.zoom svg{width:230%;max-height:none}
 .planwrap svg text{text-anchor:middle;font-family:"Jost",Arial,sans-serif}
 .planwrap svg .lab{font-weight:600;letter-spacing:.08em}
 .planwrap svg .sub{font-weight:500;letter-spacing:.04em}
@@ -175,10 +229,16 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
   </nav>
 
   <section id="p-rush">
+   <div class="rlay">
+   <div class="rmain">
     <div class="card">
       <div class="ctrls">
         <label class="f">Day<select id="rDay"></select></label>
-        <label class="f">B = plan<select id="rPlan"></select></label>
+        <div class="recbar" style="justify-content:flex-end;align-self:end">
+          <select id="rRecWin" aria-label="What to record" style="width:auto"><option value="lunch">Lunch 12–2</option><option value="dinner">Dinner 8–10</option><option value="day">Whole day</option></select>
+          <select id="rRecLen" aria-label="Video length" style="width:auto"><option value="30">30 s video</option><option value="60" selected>1 min video</option><option value="120">2 min video</option></select>
+          <button class="btn rec" id="rRec">● Record video</button>
+        </div>
       </div>
       <div class="row">
         <div class="clock" id="rClk">–</div>
@@ -190,6 +250,7 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
       </div>
       <input type="range" id="rScrub" min="0" max="1000" value="0" aria-label="Time of day">
       <div class="note" id="rPlanTxt"></div>
+      <div class="recout" id="rRecOut" hidden></div>
     </div>
 
     <div class="score" id="rScore"></div>
@@ -218,8 +279,26 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
         <p style="margin:0">Each square is a table, grouped by area. Its colour says what the guests are waiting for, and the number is minutes since they sat down. A dashed square is empty. The floor maps show the same colours on the plan.</p>
         <p style="margin:0">The list under each map is the live order board, oldest and most urgent first, like the expo screen big chains use at the pass.</p>
         <p style="margin:0">The scoreboard tracks what chains measure: time to take the order, time from sitting to food on the table, plates left waiting after they are ready, and staff time lost standing at the kitchen.</p>
+        <p style="margin:0">The panel on the right builds plan B. Pick a step, add or remove staff, or switch single changes on and off. The number next to each change is what it would do to walking and to seat-to-food on this day, starting from your current plan B.</p>
+        <p style="margin:0">Record video makes a downloadable video of the replay right here in the browser. Keep this tab open until it finishes.</p>
       </div>
     </details>
+   </div>
+   <aside class="rside"><details id="rSideD" open>
+     <summary><span class="tagB">B</span><span id="rSideSum">Plan B</span><small><span class="chev">tap to change ▾</span></small></summary>
+     <div class="rsbody">
+       <div class="rsh">Whole day, A → B <small id="rsDay"></small></div>
+       <div class="rsres" id="rsRes"></div>
+       <div class="rsh">Quick plans</div>
+       <div class="rspre" id="rsPre"></div>
+       <div class="rsprelab" id="rsPreLab"></div>
+       <div class="rsh">Staff on the floor</div>
+       <div class="rsstaff" id="rsStaff"></div>
+       <div class="rsh">Changes <small>what each one does · walking · seat→food</small></div>
+       <div id="rsTog"></div>
+     </div>
+   </details></aside>
+   </div>
   </section>
 
   <section id="p-sim" hidden>
@@ -800,11 +879,14 @@ function stageAt(s,t){ const clrE=s.clearE!=null?s.clearE:s.dep+5;
   return 'clear'; }
 function buildRush(){
   const d=$('rDay'); d.innerHTML=''; DAYS.forEach(x=>{ const o=document.createElement('option'); o.value=x; o.textContent=dname(x)+' · '+BILLS.filter(b=>b.d===x).length+' bills'+(x===24?' (part)':''); d.appendChild(o); });
-  const p=$('rPlan'); p.innerHTML=''; PLANS().forEach((q,i)=>{ if(!i) return; const o=document.createElement('option'); o.value=i; o.textContent=q.lab.replace(/^\+ /,'Step '+i+': + ').replace(/^KOT/,'Step 1: KOT')+(q.rec?' ★':''); p.appendChild(o); });
   if(!DAYS.includes(+S.rday)) S.rday=20;
-  d.value=S.rday; p.value=S.rplan;
+  if(!S.rB||!S.rB.sc||!S.rB.st){ const q=PLANS()[+S.rplan]||PLANS()[3]; S.rB={sc:Object.assign({},q.sc),st:Object.assign({},q.st)}; }
+  S.rB.st=Object.assign({},BASEST,S.rB.st);
+  d.value=S.rday;
   d.onchange=()=>{ S.rday=+d.value; save(); renderRush(); };
-  p.onchange=()=>{ S.rplan=+p.value; save(); renderRush(); };
+  $('rRec').onclick=()=>{ REC.on?recStop(true):recStart(); };
+  const wide=matchMedia('(min-width:1200px)'); const fit=()=>{ if(wide.matches) $('rSideD').open=true; }; fit(); wide.addEventListener&&wide.addEventListener('change',fit);
+  if(!wide.matches) $('rSideD').open=false;
   $('rPlay').onclick=()=>{ RS.playing?rStop():rPlay(); };
   $('rLunch').onclick=()=>rWindow(12*60,14*60);
   $('rDinner').onclick=()=>rWindow(20*60,22*60);
@@ -815,15 +897,133 @@ function buildRush(){
   $('rLegend').innerHTML=Object.keys(STC).map(k=>'<span class="lg"><i style="background:'+STC[k]+'"></i>'+STN[k]+'</span>').join(' ')+' <span class="lg"><i style="border:1.5px dashed #999"></i>Empty</span> <span class="lg">Number = minutes since seated</span>';
 }
 function renderRush(){
-  const day=+S.rday, plan=PLANS()[+S.rplan]||PLANS()[3];
+  const day=+S.rday, plan=S.rB;
   RS.A=dsim({},day,BASEST); RS.B=dsim(plan.sc,day,plan.st);
-  $('rBname').textContent='Plan · step '+(+S.rplan); $('rBname2').textContent=$('rBname').textContent;
+  $('rBname').textContent=rPlanName(); $('rBname2').textContent=$('rBname').textContent;
+  rSide();
   const on=onK(plan.sc).map(k=>IMPROVE.find(i=>i.k===k).name);
   $('rPlanTxt').innerHTML='<b>B</b> = '+(on.length?on.join(', '):'today\'s layout')+' · '+staffTxt(plan.st)+'. <b>A</b> = today: KOT printer down, 5 waiters.';
   RS.t0=Math.floor(Math.min(RS.A.t0,RS.B.t0)/60)*60; RS.t1=Math.ceil(Math.max(RS.A.t1,RS.B.t1)/60)*60;
   if(RS.t<RS.t0||RS.t>RS.t1) RS.t=Math.max(RS.t0,12*60);
   rDraw(true);
 }
+// ---- plan B builder (side panel)
+function rPreset(){ return PLANS().findIndex(p=>same(onK(p.sc),onK(S.rB.sc))&&same(Object.assign({},BASEST,p.st),S.rB.st)); }
+function rPlanName(){ const i=rPreset(); return i<0?'Your plan':i===0?'Same as today':'Plan · step '+i; }
+function rSet(sc,st){ S.rB={sc:Object.assign({},sc),st:Object.assign({},BASEST,st)}; save(); const keep=RS.t; renderRush(); RS.t=keep; rDraw(true); }
+let RSIDE=0;
+function rSide(){
+  const day=+S.rday, a=dayStats(dsim({},day,BASEST)), b=dayStats(dsim(S.rB.sc,day,S.rB.st)), me=++RSIDE;
+  $('rSideSum').textContent=rPlanName(); $('rsDay').textContent=dname(day);
+  const M=[['Walked by waiters','wkm',' km',1],['Seat → food, avg','s2f','′',1],['Longest food pickup wait','max','′',0],['Staff standing at kitchen','idle',' min',0]];
+  $('rsRes').innerHTML=M.map(([l,k,u,d])=>{ const x=a[k],y=b[k], pc=x>0?(y-x)/x*100:0, cl=Math.abs(pc)<1?'':(pc<0?'hi':'lo');
+    return '<div class="rsm"><small>'+l+'</small><b class="'+cl+'">'+fm(y,d)+u+'</b><em class="'+cl+'">'+(cl?(pc>0?'+':'')+fm(pc,0)+'%':'')+'</em><br><span>today '+fm(x,d)+u+'</span></div>'; }).join('');
+  const P=PLANS(), cur=rPreset();
+  $('rsPre').innerHTML=P.map((p,i)=>'<button aria-pressed="'+(i===cur)+'" data-p="'+i+'" title="'+p.lab.replace(/"/g,'')+'">'+(i?i:'Today')+(p.rec?'★':'')+'</button>').join('');
+  $('rsPreLab').textContent=cur<0?'Custom: your own mix of changes and staff.':cur===0?'B = today\'s way of working.':P[cur].lab.replace(/^\+ /,'Adds ')+' — '+P[cur].sub+'.';
+  $('rsPre').querySelectorAll('button').forEach(x=>x.onclick=()=>{ const p=P[+x.dataset.p]; rSet(p.sc,p.st); });
+  const ST=[['waiters','Waiters',1,12],['captains','Captains',0,3],['runners','Food runners',0,4],['bussers','Table clearers',0,4]];
+  $('rsStaff').innerHTML=ST.map(([k,l,lo,hi])=>{ const v=S.rB.st[k]||0; return '<div class="stp"><button data-k="'+k+'" data-d="-1" '+(v<=lo?'disabled':'')+' aria-label="Fewer '+l+'">−</button><div><b>'+v+'</b><small>'+l+'</small></div><button data-k="'+k+'" data-d="1" '+(v>=hi?'disabled':'')+' aria-label="More '+l+'">+</button></div>'; }).join('');
+  $('rsStaff').querySelectorAll('button').forEach(x=>x.onclick=()=>{ const st=Object.assign({},S.rB.st); st[x.dataset.k]=(st[x.dataset.k]||0)+ +x.dataset.d; rSet(S.rB.sc,st); });
+  const box=$('rsTog'); box.innerHTML='';
+  GROUPS.forEach(([g,lab])=>{ const items=IMPROVE.filter(i=>i.grp===g); if(!items.length) return;
+    box.insertAdjacentHTML('beforeend','<div class="tgrp">'+lab+'</div>');
+    items.forEach(im=>{ const on=!!S.rB.sc[im.k], blocked=im.effort>=9;
+      const t=document.createElement('button'); t.className='tog'; t.id='tog-'+im.k; t.setAttribute('aria-pressed',on); t.disabled=blocked;
+      t.title=im.what+' '+im.why;
+      t.innerHTML='<span class="sw"></span><span>'+im.name+'<small>'+im.eff+(blocked?' · blocked by the wood store':'')+'</small></span><span class="fx">'+(blocked?'':'…')+'</span>';
+      t.onclick=()=>{ rSet(rFlip(S.rB.sc,im.k),S.rB.st); }; box.appendChild(t); }); });
+  // what each switch would do from here: one day-sim each, a few at a time so the page never freezes
+  const todo=IMPROVE.filter(i=>i.effort<9).map(i=>i.k);
+  const base=dsim(S.rB.sc,day,S.rB.st);
+  const run=()=>{ if(me!==RSIDE) return; const t0=performance.now();
+    while(todo.length&&performance.now()-t0<40){ const k=todo.shift(), r=dsim(rFlip(S.rB.sc,k),day,S.rB.st), el=$('tog-'+k); if(!el) continue;
+      /* what having this change does: with it minus without it, so minus is always better */
+      const sg=S.rB.sc[k]?-1:1, dk=sg*(r.wkm-base.wkm), ds=sg*(r.s2fAvg-base.s2fAvg), fx=el.querySelector('.fx');
+      const parts=[]; if(Math.abs(dk)>=0.05) parts.push((dk>0?'+':'−')+fm(Math.abs(dk),1)+' km'); if(Math.abs(ds)>=0.1) parts.push((ds>0?'+':'−')+fm(Math.abs(ds),1)+'′');
+      fx.textContent=parts.length?parts.join(' · '):'no change'; fx.className='fx '+((dk<-0.05||ds<-0.1)&&!(dk>0.05||ds>0.1)?'hi':(dk>0.05||ds>0.1)&&!(dk<-0.05||ds<-0.1)?'lo':''); }
+    if(todo.length) setTimeout(run,0); };
+  setTimeout(run,30);
+}
+function rFlip(sc,k){ const n=Object.assign({},sc); n[k]=!n[k]; if(k==='app'&&n.app) n.kot=true; if(k==='kot'&&!n.kot) n.app=false; if(!n[k]) delete n[k]; return n; }
+
+// ---- record the replay as a video, in the browser (MediaRecorder on a canvas)
+const REC={on:false};
+function recType(){ const L=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  return window.MediaRecorder?L.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } }):null; }
+function recBg(){ if(REC.bg) return REC.bg;
+  const c=RP.A.svg.cloneNode(true); [...c.children].slice(-3).forEach(g=>g.innerHTML=''); c.removeAttribute('id'); c.setAttribute('width',1480); c.setAttribute('height',1470);
+  const st=document.createElementNS(NS,'style'); st.textContent='text{text-anchor:middle;font-family:Jost,Arial,sans-serif}.lab{font-weight:600;letter-spacing:.08em}.sub{font-weight:500;letter-spacing:.04em}.dn,.dim{font-weight:600}.road{fill:#6E6A62;font-weight:600;letter-spacing:.3em}'; c.insertBefore(st,c.firstChild);
+  const src=new XMLSerializer().serializeToString(c).replace(/var\((--[a-z]+)\)/g,(m,v)=>css(v)||'#888');
+  REC.bg=new Promise((ok,no)=>{ const img=new Image(); img.onload=()=>ok(img); img.onerror=()=>no(new Error('floor plan did not render')); img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(src); });
+  return REC.bg; }
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function cMap(ctx,img,r,t,st,ox,oy,s,staff){
+  ctx.drawImage(img,ox,oy,1480*s,1470*s);
+  const P=(x,y)=>[ox+(x-20)*s,oy+y*s], byT={}; st.act.forEach(a=>byT[a.s.t]=a);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  D.T.forEach(tb=>{ const [x,y]=P(D.N[tb.id][0],D.N[tb.id][1]), a=byT[tb.id];
+    if(!a){ ctx.beginPath(); ctx.arc(x,y,24*s,0,7); ctx.fillStyle='#fff'; ctx.globalAlpha=.9; ctx.fill(); ctx.setLineDash([6*s,5*s]); ctx.lineWidth=3*s; ctx.strokeStyle='#9A9A9A'; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1; return; }
+    if(a.st==='ready'){ const ph=(t*4)%1; ctx.beginPath(); ctx.arc(x,y,(32+ph*16)*s,0,7); ctx.globalAlpha=.9*(1-ph); ctx.strokeStyle=STC.ready; ctx.lineWidth=(6+ph*14)*s; ctx.stroke(); ctx.globalAlpha=1; }
+    ctx.beginPath(); ctx.arc(x,y,32*s,0,7); ctx.fillStyle=STC[a.st]; ctx.fill(); ctx.lineWidth=5*s; ctx.strokeStyle='#fff'; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='700 '+Math.round(30*s)+'px Jost,Arial,sans-serif'; ctx.fillText(Math.max(0,Math.round(t-a.s.arr)),x,y+1); });
+  if(staff){ const col={waiter:css('--accent'),captain:css('--order'),runner:css('--run'),busser:css('--bill')};
+    r.W.forEach(w=>{ let p=null,last=null; for(const b of w.blocks){ if(b.start<=t&&t<b.start+b.dur){ p=along(b.path,(t-b.start)/b.dur); break; } if(b.start+b.dur<=t) last=b; else break; }
+      if(!p) p=last?D.N[last.path[last.path.length-1]]:D.N[{waiter:'cash',captain:'cash',runner:'kh',busser:'svc'}[w.role]];
+      const [x,y]=P(p[0],p[1]); rr(ctx,x-12*s,y-12*s,24*s,24*s,5*s); ctx.fillStyle=col[w.role]; ctx.fill(); ctx.lineWidth=3*s; ctx.strokeStyle='#fff'; ctx.stroke(); }); }
+}
+function recFrame(ctx,img,t,W,H){
+  const a=rStats(RS.A,t), b=rStats(RS.B,t), ink='#1F2328', mu='#5F6770';
+  ctx.fillStyle='#F5F4EF'; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.fillStyle=ink; ctx.font='600 40px "Cormorant Garamond",Georgia,serif'; ctx.fillText('Hayat · service replay',36,56);
+  ctx.fillStyle=mu; ctx.font='400 20px Jost,Arial,sans-serif'; ctx.fillText(dname(+S.rday)+' · real bills · A today vs B '+rPlanName().toLowerCase(),36,88);
+  ctx.textAlign='right'; ctx.fillStyle=ink; ctx.font='600 54px Jost,Arial,sans-serif'; ctx.fillText(hm(t),W-36,66);
+  const f=(v,d,u)=>v==null?'–':fm(v,d)+u, cmp=(x,y)=>x==null||y==null||Math.abs(x-y)<0.05?ink:(y<x?'#2E7D5B':'#C2562C');
+  const R=[['Tables with guests',a.occ,b.occ,0,''],['Waiting to order',a.cnt.order||0,b.cnt.order||0,0,''],['Food waiting',a.cnt.ready||0,b.cnt.ready||0,0,''],['At kitchen',a.standing,b.standing,0,''],['Take order',a.resp,b.resp,1,'′'],['Seat → food',a.s2f,b.s2f,1,'′'],['Walked',a.km,b.km,1,' km']];
+  const bw=(W-72-6*10)/7; R.forEach(([l,x,y,d,u],i)=>{ const X=36+i*(bw+10); rr(ctx,X,106,bw,62,10); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#DDDAD2'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.textAlign='left'; ctx.fillStyle=mu; ctx.font='400 15px Jost,Arial,sans-serif'; ctx.fillText(l,X+12,128);
+    ctx.fillStyle=ink; ctx.font='400 20px Jost,Arial,sans-serif'; const aTxt=f(x,d,u)+' → '; ctx.fillText(aTxt,X+12,156); const wA=ctx.measureText(aTxt).width;
+    ctx.fillStyle=l==='Tables with guests'?ink:cmp(x,y); ctx.font='700 22px Jost,Arial,sans-serif'; ctx.fillText(f(y,d,u),X+12+wA,156); });
+  const s=(H-190-60)/1470, mw=1480*s, gap=(W-2*mw)/3, oy=190;
+  [[RS.A,a,'A','Today',gap],[RS.B,b,'B',rPlanName(),gap*2+mw]].forEach(([r,st,tag,lab,ox])=>{
+    cMap(ctx,img,r,t,st,ox,oy,s,$('rStaff').checked);
+    ctx.save(); rr(ctx,ox,oy,mw,1470*s,10); ctx.strokeStyle='#DDDAD2'; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
+    rr(ctx,ox+14,oy+14,44,44,9); ctx.fillStyle=tag==='A'?mu:'#2E7D5B'; ctx.fill(); ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='700 24px Jost,Arial,sans-serif'; ctx.fillText(tag,ox+36,oy+37);
+    ctx.textAlign='left'; ctx.font='600 24px Jost,Arial,sans-serif'; const tw=ctx.measureText(lab).width; rr(ctx,ox+66,oy+16,tw+20,40,8); ctx.fillStyle='rgba(255,255,255,.92)'; ctx.fill(); ctx.fillStyle=ink; ctx.fillText(lab,ox+76,oy+37); ctx.textBaseline='alphabetic'; });
+  let x=gap; const y=H-24; ctx.font='400 17px Jost,Arial,sans-serif'; ctx.textAlign='left';
+  Object.keys(STC).forEach(k=>{ ctx.beginPath(); ctx.arc(x+8,y-6,8,0,7); ctx.fillStyle=STC[k]; ctx.fill(); ctx.fillStyle=mu; ctx.fillText(STN[k],x+22,y); x+=ctx.measureText(STN[k]).width+48; });
+  ctx.fillStyle=mu; ctx.fillText('Number = minutes since seated',x,y);
+}
+async function recStart(){
+  const type=recType(), out=$('rRecOut');
+  out.hidden=false;
+  if(!type||!HTMLCanvasElement.prototype.captureStream){ out.innerHTML='<div class="note">This browser cannot record video. Use Chrome or Edge on a computer, or Safari 14.1+.</div>'; return; }
+  let img; try{ img=await recBg(); }catch(e){ out.innerHTML='<div class="note">Could not draw the floor plan: '+e.message+'</div>'; return; }
+  rStop();
+  const win=$('rRecWin').value, secs=+$('rRecLen').value;
+  let a=win==='lunch'?12*60:win==='dinner'?20*60:RS.t0, b=win==='lunch'?14*60:win==='dinner'?22*60:RS.t1; a=Math.max(RS.t0,a); b=Math.min(RS.t1,b);
+  const W=1920,H=1080, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
+  out.innerHTML='<div class="recprog"><div id="rRecBar"></div></div><div class="note" id="rRecMsg">Recording '+hm(a)+'–'+hm(b)+' into a '+secs+' s video. Keep this tab open.</div>'; out.appendChild(cv);
+  const stream=cv.captureStream(30), chunks=[]; let mr;
+  try{ mr=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:8e6}); }catch(e){ mr=new MediaRecorder(stream); }
+  mr.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  Object.assign(REC,{on:true,mr,chunks,a,b,type,win});
+  $('rRec').textContent='■ Stop'; $('rRec').classList.add('on');
+  mr.onstop=()=>{ const real=(mr.mimeType||type||'video/webm'), ext=/mp4/.test(real)?'mp4':'webm', blob=new Blob(chunks,{type:real.split(';')[0]}), url=URL.createObjectURL(blob);
+    const name='Hayat_Rush_'+dname(+S.rday).replace(/ /g,'_')+'_'+win+'_'+rPlanName().replace(/[^A-Za-z0-9]+/g,'_')+'.'+ext;
+    out.innerHTML='<video controls playsinline src="'+url+'"></video><div class="recbar"><a class="dl" href="'+url+'" download="'+name+'">⬇ Download video</a><span class="note">'+name+' · '+fm(blob.size/1048576,1)+' MB'+(ext==='webm'?' · WebM plays in Chrome, VLC and WhatsApp desktop':'')+'</span></div>';
+    const l=out.querySelector('a.dl'); try{ l.click(); }catch(e){} };
+  mr.start(1000);
+  const t0=performance.now();
+  const loop=now=>{ if(!REC.on) return; const f=Math.min(1,(now-t0)/1000/secs), t=a+f*(b-a);
+    recFrame(ctx,img,t,W,H); const bar=$('rRecBar'); if(bar) bar.style.width=(f*100)+'%';
+    RS.t=t; rDraw(false);
+    if(f>=1){ recStop(false); return; } REC.raf=requestAnimationFrame(loop); };
+  recFrame(ctx,img,a,W,H); REC.raf=requestAnimationFrame(loop);
+}
+function recStop(cancel){ if(!REC.on) return; REC.on=false; cancelAnimationFrame(REC.raf); $('rRec').textContent='● Record video'; $('rRec').classList.remove('on');
+  try{ REC.mr.stop(); }catch(e){} if(cancel) { const m=$('rRecMsg'); if(m) m.textContent='Stopped early. Saving what was recorded…'; } rDraw(true); }
 function rWindow(a,b){ rStop(); RS.t=Math.max(RS.t0,a); RS.stopAt=Math.min(RS.t1,b); rDraw(true); rPlay(); }
 function rStop(){ RS.playing=false; cancelAnimationFrame(RS.raf); $('rPlay').textContent='Play'; RS.stopAt=null; }
 function rPlay(){ if(RS.t>=RS.t1-1) RS.t=RS.t0; RS.playing=true; $('rPlay').textContent='Pause'; RS.last=performance.now();
@@ -870,9 +1070,10 @@ function rDraw(force){ if(!RS.A) return; const t=RS.t, a=rStats(RS.A,t), b=rStat
   rTiles($('tlA'),a,t); rTiles($('tlB'),b,t); rBoard($('bdA'),a,t); rBoard($('bdB'),b,t);
   const f=(v,d,u)=>v==null?'–':fm(v,d)+u;
   const cmp=(x,y,lowGood=true)=>x==null||y==null?'':(Math.abs(x-y)<0.05?'':((y<x)===lowGood?'hi':'lo'));
-  const rows=[['Tables with guests',a.occ,b.occ,0,'',null],['Waiting to order',a.cnt.order||0,b.cnt.order||0,0,'',true],['Food ready, nobody picking up',a.cnt.ready||0,b.cnt.ready||0,0,'',true],
-    ['Staff standing at kitchen now',a.standing,b.standing,0,'',true],['Time to take order (last hour)',a.resp,b.resp,1,'′',true],['Seat to food on table (last hour)',a.s2f,b.s2f,1,'′',true],['Staff walked so far today',a.km,b.km,1,' km',true]];
-  $('rScore').innerHTML='<table><tr><th>'+hm(t)+'</th><th>A today</th><th>B plan</th></tr>'+rows.map(([l,x,y,d,u,lg])=>'<tr><td>'+l+'</td><td>'+f(x,d,u)+'</td><td class="b '+(lg==null?'':cmp(x,y,lg))+'">'+f(y,d,u)+'</td></tr>').join('')+'</table>';
+  const rows=[['Tables with guests','Tables with guests',a.occ,b.occ,0,'',null],['Waiting to order','Waiting to order',a.cnt.order||0,b.cnt.order||0,0,'',true],['Food waiting','Food ready, nobody picking up',a.cnt.ready||0,b.cnt.ready||0,0,'',true],
+    ['At kitchen','Staff standing at kitchen now',a.standing,b.standing,0,'',true],['Take order','Time to take order (last hour)',a.resp,b.resp,1,'′',true],['Seat → food','Seat to food on table (last hour)',a.s2f,b.s2f,1,'′',true],['Walked','Staff walked so far today',a.km,b.km,1,' km',true]];
+  /* one strip, not a table: it stays pinned while the tables scroll under it */
+  $('rScore').innerHTML='<div class="clk">'+hm(t)+'<small>A → B</small></div>'+rows.map(([l,tip,x,y,d,u,lg])=>'<div class="sc" title="'+tip+' · A today → B plan"><small>'+l+'</small><span>'+f(x,d,u)+' → </span><b class="'+(lg==null?'':cmp(x,y,lg))+'">'+f(y,d,u)+'</b></div>').join('');
 }
 
 buildChips(); buildSelects(); buildMix(); buildDay(); buildRush(); showTab(); render();
