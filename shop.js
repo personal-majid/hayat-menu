@@ -480,6 +480,8 @@ var STORE = {
            but the office may touch the customer records. The
            office promotes it the next time it looks. */
         o.doorLat = o.rLat; o.doorLng = o.rLng; o.doorAt = Date.now();
+        (function(oid, la, ln){ revGeocode(la, ln).then(function(words){
+          if(words && DB.orders[oid]) STORE.edit(oid, { doorAddr: words }); }); })(o.id, o.rLat, o.rLng);
       }
       if(ME.role === "office" || !LIVE) learnDoorsteps();
     }
@@ -2502,6 +2504,7 @@ function viewCheckout(main){
         :
           '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" rows="2" ' +
             'placeholder="House, landmark, area (optional)">' + esc(CO_DRAFT.text || "") + '</textarea>' +
+          '<button class="linky findpin" id="coFind">Find this address on the map</button>' +
           '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
             '<span class="spi">📍</span>' +
             '<span class="spt"><b id="coSpotT">' + (PIN ? "Pin set" : "Drop a pin") + '</b>' +
@@ -2535,6 +2538,19 @@ function viewCheckout(main){
     });
     var bp = el("coBackPick");
     if(bp) bp.onclick = function(){ CO_NEWADDR = false; viewCheckout(main); };
+    var fb = el("coFind");
+    if(fb) fb.onclick = function(){
+      var t = el("coAddr").value.trim();
+      if(!t){ shopToast("Type a landmark or area first."); el("coAddr").focus(); return; }
+      fb.textContent = "Looking\u2026";
+      geocode(t).then(function(hit){
+        if(!hit){ fb.textContent = "Not found \u2014 drop a pin instead"; return; }
+        PIN = { lat:hit.lat, lng:hit.lng }; CO_DRAFT.text = t;
+        var T = el("coSpotT"), S = el("coSpotS"), sp = el("coSpot");
+        if(T) T.textContent = "Pin set"; if(S) S.textContent = hit.name; if(sp) sp.classList.add("set");
+        fb.textContent = "Found: " + hit.name;
+      });
+    };
     var finish = function(text){
       CO_ADDR = { label: CO_DRAFT.label || nextLabel(me), text: text,
                   lat: PIN && PIN.lat, lng: PIN && PIN.lng };
@@ -2968,6 +2984,35 @@ function tileLayer(LF){
     maxZoom:19, attribution:"&copy; OpenStreetMap" });
 }
 
+function wireTrackPin(id){
+  var tp = el("trackPin");
+  if(!tp) return;
+  tp.onclick = function(){
+    if(!navigator.geolocation){ shopToast("This phone cannot share its location."); return; }
+    tp.textContent = "Finding you\u2026";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      STORE.edit(id, { lat:+pos.coords.latitude.toFixed(6), lng:+pos.coords.longitude.toFixed(6) });
+      shopToast("Got it. The rider can see your door now.");
+    }, function(){ tp.textContent = "Location is off on this phone"; },
+    { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
+  };
+}
+
+/* one line under the customer's map: how far, how fresh */
+function trackLine(o){
+  if(!o.lat) return "Rider left the kitchen \u00b7 " + staleness(o.rAt).txt +
+    '<br><button class="linky" id="trackPin">Share my location so you can see how far</button>';
+  var km = kmBetween(o.lat, o.lng, o.rLat, o.rLng);
+  var f = staleness(o.rAt);
+  var e = etaFor(o);
+  var where = (km < 0.2 ? "Almost at your door"
+             : e && e.min ? e.km.toFixed(1) + " km by road \u00b7 about " + e.min + " min"
+             : km < 1   ? Math.round(km*1000) + " m away"
+                        : km.toFixed(1) + " km away");
+  if(f.state !== "live") return "Last seen " + f.txt;
+  return where + " \u00b7 " + f.txt;
+}
+
 function drawTrackMap(o){
   var box = el("trackmap");
   if(!box || !o.rLat) return;
@@ -2999,6 +3044,7 @@ function drawTrackMap(o){
     TDOTS = ride;
 
     TMAP.fitBounds([dest, [o.rLat, o.rLng]], { padding:[40,40], maxZoom:16 });
+    TLINE = null; drawRoute(o.id);
     watchSize(box, TMAP);
   }).catch(function(){});
 }
@@ -3248,8 +3294,20 @@ function unlocked(){ try{ return sessionStorage.getItem("hayat_admin")==="1"; }c
    on one machine with no network. That path can only ever reach
    this browser's own data, which is why it is safe to keep.
    ------------------------------------------------------------ */
+/* One door, not two. Firestore takes a second or two to connect;
+   showing the offline passcode box in that second and then the
+   staff sign-in after it looked like two different passwords.
+   Wait a moment for the connection before deciding which door. */
+var GATE_WAITED = false;
 function gate(main, then){
   if(unlocked() || STORE.isOffice()) return then();
+
+  var cfg = C().firebase && C().firebase.projectId;
+  if(cfg && !STORE.live() && !STORE.fault() && !GATE_WAITED){
+    main.innerHTML = shell("Staff only", '<p class="shopsub">Connecting\u2026</p>');
+    setTimeout(function(){ GATE_WAITED = true; if(!unlocked() && !STORE.isOffice() && el("main")) gate(main, then); }, 4000);
+    return;
+  }
 
   if(!STORE.live()){
     main.innerHTML = shell("Staff only",
@@ -3435,6 +3493,8 @@ function paintAdmin(main){
   learnDoorsteps();
   checkCodes();
   var orders = STORE.orders(), riders = STORE.riders();
+  /* real road distance and minutes, once per order, from OSRM */
+  orders.forEach(function(o){ if(o.status !== "delivered" && o.status !== "cancelled") measureRoad(o); });
   var gone   = orders.filter(function(o){ return o.status === "cancelled"; });
   var live   = orders.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; });
   var done   = orders.filter(function(o){ return o.status === "delivered"; });
@@ -3646,7 +3706,8 @@ function boardCard(o){
         shown.map(function(t){ return '<div>' + esc(t) + '</div>'; }).join("") + more +
       '</div>') +
 
-    (where ? '<div class="bwhere" title="' + esc(o.addr || "") + '">' + esc(where) + '</div>' : '') +
+    (where ? '<div class="bwhere" title="' + esc(o.addr || "") + '">' + esc(where) +
+      (o.doorAddr ? ' <small class="door" title="Where the rider stood">\u00b7 door: ' + esc(o.doorAddr) + '</small>' : '') + '</div>' : '') +
 
     '<div class="bmoney">' +
       '<span class="btot">' + rupee(o.total) + '</span>' +
@@ -4044,6 +4105,114 @@ function distLabel(o){
    a distance in metres works; the reader below handles OSRM's
    shape, which several free hosts speak.
    ------------------------------------------------------------ */
+/* ---- words <-> pins, free (Nominatim, OpenStreetMap's own) ----
+   One request a second at most, and never on every keystroke: only
+   when somebody taps "Find it on the map" or a rider marks a door. */
+var GEO_LAST = 0;
+function geoWait(){ var now = Date.now(), gap = 1100 - (now - GEO_LAST); GEO_LAST = Math.max(now, GEO_LAST + 1100); return new Promise(function(d){ setTimeout(d, Math.max(0, gap)); }); }
+function geocode(text){
+  var box = [HOME.lng - 0.35, HOME.lat - 0.3, HOME.lng + 0.35, HOME.lat + 0.3].join(",");
+  var q = String(text || "").trim(); if(!q) return Promise.resolve(null);
+  if(!/malappuram|kerala/i.test(q)) q += ", Malappuram, Kerala";
+  return geoWait().then(function(){
+    return fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&viewbox=" + box +
+                 "&bounded=1&q=" + encodeURIComponent(q), { headers:{ "Accept-Language":"en" } });
+  }).then(function(r){ return r.json(); }).then(function(j){
+    var h = j && j[0]; if(!h) return null;
+    return { lat:+h.lat, lng:+h.lon, name:(h.display_name || "").split(",").slice(0, 3).join(",") };
+  }).catch(function(){ return null; });
+}
+function revGeocode(lat, lng){
+  return geoWait().then(function(){
+    return fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&lat=" + lat + "&lon=" + lng,
+                 { headers:{ "Accept-Language":"en" } });
+  }).then(function(r){ return r.json(); }).then(function(j){
+    if(!j || !j.address) return "";
+    var a = j.address;
+    return [a.amenity || a.shop || a.building, a.road, a.neighbourhood || a.suburb || a.village || a.town]
+      .filter(Boolean).filter(function(v,i,arr){ return arr.indexOf(v) === i; }).join(", ");
+  }).catch(function(){ return ""; });
+}
+
+/* ---- the rider's road to the door: minutes and the line ----
+   asked of OSRM at most once a minute per order while the ride is
+   live; the answer rides along with the position updates */
+var ETA = {};
+function etaFor(o){
+  var r = (C().routing) || {};
+  if(!r.enabled || !o.rLat || !o.lat) return null;
+  var e = ETA[o.id];
+  if(e && Date.now() - e.at < 60000 && e.from === o.rAt) return e;
+  if(e && e.busy) return e.min ? e : null;
+  var base = r.osrm || "https://router.project-osrm.org";
+  ETA[o.id] = Object.assign(e || {}, { busy:true });
+  fetch(base + "/route/v1/driving/" + o.rLng + "," + o.rLat + ";" + o.lng + "," + o.lat + "?overview=simplified&geometries=geojson")
+    .then(function(x){ return x.json(); }).then(function(j){
+      var leg = j && j.routes && j.routes[0]; if(!leg) throw 0;
+      ETA[o.id] = { at:Date.now(), from:o.rAt, min:Math.max(1, Math.round(leg.duration / 60)), km:leg.distance / 1000,
+                    line: leg.geometry && leg.geometry.coordinates.map(function(c){ return [c[1], c[0]]; }) };
+      var n = el("trackNote"); if(n) n.innerHTML = trackLine(STORE.order(o.id) || o);
+      drawRoute(o.id);
+    }).catch(function(){ ETA[o.id] = { at:Date.now(), from:o.rAt, fail:true }; });
+  return e && e.min ? e : null;
+}
+var TLINE = null;
+function drawRoute(id){
+  var e = ETA[id]; if(!TMAP || !e || !e.line || !window.L) return;
+  try{ if(TLINE) TMAP.removeLayer(TLINE); }catch(x){}
+  TLINE = window.L.polyline(e.line, { color:"#1B1A17", weight:3, opacity:.55, dashArray:"6 6" }).addTo(TMAP);
+}
+
+/* ---- the highway, live (TomTom flow, free developer key) ----
+   NH966 from Malappuram to Perinthalmanna in five points. Read every
+   five minutes while the office map is open; a point slower than
+   three quarters of its free-flow speed is "slow", under half "jam". */
+var NH966 = [
+  { n:"Malappuram",      lat:11.0512, lng:76.0781 },
+  { n:"Kootilangadi",    lat:11.0331, lng:76.1060 },
+  { n:"Makkaraparamba",  lat:11.0066, lng:76.1271 },
+  { n:"Vattalloor",      lat:10.9950, lng:76.1500 },
+  { n:"Perinthalmanna",  lat:10.9755, lng:76.2278 }
+];
+var TRAF = { at:0, pts:[], busy:false };
+function trafficKey(){ var t = C().traffic || {}; return t.tomtomKey || ""; }
+function readTraffic(){
+  var key = trafficKey(); if(!key || TRAF.busy || Date.now() - TRAF.at < 5 * 60000) return;
+  TRAF.busy = true;
+  Promise.all(NH966.map(function(p){
+    return fetch("https://api.tomtom.com/traffic/services/4/flowSegmentData/relative0/10/json?point=" +
+                 p.lat + "," + p.lng + "&unit=KMPH&key=" + encodeURIComponent(key))
+      .then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+        var d = j && j.flowSegmentData; if(!d) return Object.assign({}, p, { fail:true });
+        var ratio = d.freeFlowSpeed ? d.currentSpeed / d.freeFlowSpeed : 1;
+        return Object.assign({}, p, { now:d.currentSpeed, free:d.freeFlowSpeed, ratio:ratio,
+          state: d.roadClosure ? "closed" : ratio < 0.5 ? "jam" : ratio < 0.75 ? "slow" : "clear" });
+      }).catch(function(){ return Object.assign({}, p, { fail:true }); });
+  })).then(function(pts){
+    TRAF = { at:Date.now(), pts:pts, busy:false };
+    var box = el("admap"); if(box) trafficStrip(box);
+  });
+}
+function trafficStrip(box){
+  var old = box.querySelector(".trafstrip"); if(old) old.remove();
+  if(!trafficKey()) return;
+  var d = document.createElement("div"); d.className = "trafstrip";
+  var pts = TRAF.pts || [];
+  d.innerHTML = '<span class="trh">NH966</span>' + (pts.length
+    ? pts.map(function(p){
+        return '<span class="trp s-' + (p.state || "none") + '" title="' + esc(p.n) + (p.now != null ? " \u00b7 " + p.now + " of " + p.free + " km/h" : "") + '">' +
+          esc(p.n) + (p.now != null ? ' <b>' + p.now + '</b>' : ' <b>?</b>') + '</span>';
+      }).join('<span class="trarrow">\u2192</span>')
+    : '<span class="trp">reading\u2026</span>');
+  ["mousedown","touchstart","dblclick","wheel"].forEach(function(t){ d.addEventListener(t, function(e){ e.stopPropagation(); }, { passive:true }); });
+  box.appendChild(d);
+}
+function trafficLayer(LF, map){
+  var key = trafficKey(); if(!key) return;
+  LF.tileLayer("https://{s}.api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=" + encodeURIComponent(key),
+    { subdomains:"abcd", maxZoom:19, opacity:.85, attribution:"traffic &copy; TomTom" }).addTo(map);
+}
+
 function measureRoad(o){
   var r = (C().routing) || {};
   if(!r.enabled || !o.lat || !o.lng || o.roadKm || o.roadTried) return;
@@ -4438,6 +4607,8 @@ function drawAdminMap(list, blind){
     tileLayer(LF).addTo(AMAP);
 
     if(HEAT) drawClusters(AMAP, list);
+    trafficLayer(LF, AMAP);
+    trafficStrip(box); readTraffic();
 
     /* the restaurant, so the office can see how far each one is */
     LF.circleMarker([HOME.lat, HOME.lng], {

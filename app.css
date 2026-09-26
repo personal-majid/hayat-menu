@@ -2483,3 +2483,14 @@ html[data-theme="paper"] .leaflet-tile-pane{filter:saturate(.55) sepia(.18) brig
 .mrowm .rdot{background:var(--line2)} .mrowm.on .rdot{background:var(--green)}
 .mrowm .linky.go{color:var(--gold2);font-weight:800}
 label.shopbtn{cursor:pointer}
+/* ---- the highway strip on the office map ---- */
+.trafstrip{position:absolute;right:10px;top:150px;z-index:1100;display:flex;flex-wrap:wrap;align-items:center;gap:4px;
+  max-width:min(94%,560px);padding:6px 10px;border-radius:12px;background:rgba(255,255,255,.94);
+  box-shadow:0 2px 10px rgba(0,0,0,.12);font-size:12px;color:#1B2410;pointer-events:auto}
+.trh{font-weight:800;letter-spacing:.08em;font-size:10.5px;margin-right:4px;color:#7E6535}
+.trp{white-space:nowrap}.trp b{font-variant-numeric:tabular-nums}
+.trp.s-clear b{color:#4F7A2C}.trp.s-slow b{color:#C58A1A}.trp.s-jam b,.trp.s-closed b{color:#B3462B}
+.trarrow{opacity:.4}
+@media (max-width:860px){.trafstrip{top:auto;bottom:230px;right:8px;left:8px;max-width:none}}
+.findpin{display:block;margin:-4px 0 10px;font-size:13px}
+.bwhere .door{display:block;font-size:11px;opacity:.7;margin-top:2px;white-space:normal}

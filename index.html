@@ -948,8 +948,21 @@ window.CONFIG = {
      your own instance and nothing else changes.
      --------------------------------------------------------- */
   routing: {
-    enabled: false,
+    enabled: true,
     osrm: "https://router.project-osrm.org"
+  },
+
+  /* ---- 0c. LIVE TRAFFIC ON NH966 (optional, free) -------------
+     TomTom gives a developer key free of charge: 2,500 requests
+     and 50,000 map tiles a day, which is far more than the office
+     map uses. Leave empty and the map simply has no traffic.
+       1. developer.tomtom.com  ->  Register (free)
+       2. My Dashboard  ->  Apps  ->  Add app  ->  tick "Traffic API"
+          and "Maps API"
+       3. copy the key here.
+     It is a public key restricted to this website; nothing secret. */
+  traffic: {
+    tomtomKey: ""
   },
 
   /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
