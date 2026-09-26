@@ -961,6 +961,27 @@ window.CONFIG = {
           and "Maps API"
        3. copy the key here.
      It is a public key restricted to this website; nothing secret. */
+  /* ---- 0f. THE RIDER APP (APK) --------------------------------
+     GitHub builds it and publishes it at this fixed address (the
+     "rider-latest" release). The rider page offers it on Android.
+     Leave empty to offer nothing. */
+  riderApp: {
+    apk: "https://github.com/personal-majid/hayat-menu/releases/download/rider-latest/hayat-rider.apk"
+  },
+
+  /* ---- 0e. KITCHEN TICKETS (KOT) AND BILLS ------------------
+     Two kitchens. Categories listed under main print on the MAIN
+     ticket; everything else prints on FRONT (grill counter, fish,
+     gravies, salads, drinks). Category ids are the ones in
+     menu-data.js or the imported CSV (section name, lower-case,
+     spaces as dashes). autoPrint: tickets open the moment an order
+     is accepted. paper: "80" or "58" (mm roll). */
+  kot: {
+    autoPrint: true,
+    paper: "80",
+    main: ["mandi", "alfaham", "breads", "meals", "biryani", "beef", "mandi-rice"]
+  },
+
   /* ---- 0d. GOOGLE BUSINESS PROFILE (optional, free) --------
      Once Google approves API access (GOOGLE-BUSINESS.txt, step 2),
      make an OAuth client id (step 3) and paste it here. The admin's

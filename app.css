@@ -2552,3 +2552,6 @@ html[data-theme="paper"] .leaflet-pane.leaflet-traffic-pane,html[data-theme="pap
 .grow{display:flex;gap:8px;margin-top:8px}.grow .fld{margin:0;flex:1}.grow .mini{flex:0 0 auto}
 .shopnote.bad{color:var(--hot);text-align:left}
 .dtile .up{color:var(--green)}.dtile .down{color:var(--hot)}
+.qbtn.pr{font-weight:800;letter-spacing:.06em;color:var(--ink,#1B1A17)}
+.getapp.apk{text-decoration:none;color:inherit}
+.getapp.apk .shopbtn{margin:0;width:auto;flex:0 0 auto}

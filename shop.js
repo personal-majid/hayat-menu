@@ -3703,6 +3703,48 @@ function bundleFor(o){
   });
   return out.sort(function(a,b){ return a.km - b.km; });
 }
+/* ============================================================
+   KOT AND BILL
+   Two kitchens: MAIN (mandi, alfaham, breads, meals, biryani, beef)
+   and FRONT (the grill counter, fish, gravies, salads, drinks).
+   config.js -> kot.main lists the category ids that go to Main;
+   everything else is Front. A ticket per kitchen, a bill per order,
+   printed from print.html on an 80 mm roll.
+   ============================================================ */
+function kotMainCats(){
+  var k = C().kot || {};
+  return (k.main && k.main.length) ? k.main : ["mandi","alfaham","breads","meals","biryani","beef","mandi-rice"];
+}
+function catOfDish(id){
+  var hit = "";
+  (window.MENU || []).forEach(function(c){ (c.items || []).forEach(function(it){ if(it.id === id) hit = c.id; }); });
+  if(!hit) builtinMenu().forEach(function(c){ (c.items || []).forEach(function(it){ if(it.id === id) hit = c.id; }); });
+  return hit;
+}
+function kotStation(line){
+  var cid = catOfDish(line.id), main = kotMainCats();
+  if(main.indexOf(cid) >= 0) return "main";
+  /* an imported menu's ids are slugs of names: match on words too */
+  var n = (cid + " " + (line.name || "")).toLowerCase();
+  if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice$/.test(n) && !/fried rice|juice/.test(n)) return "main";
+  return "front";
+}
+function kotTickets(o){
+  var by = { main:[], front:[] };
+  (o.lines || []).forEach(function(l){ by[kotStation(l)].push(l); });
+  var order = (C().kot || {}).order || ["main","front"];
+  return order.filter(function(k){ return by[k].length; }).map(function(k){ return { station:k, lines:by[k] }; });
+}
+function printJob(o, kind, auto){
+  var r = o.riderId ? STORE.rider(o.riderId) : null;
+  var job = { kind:kind, at:Date.now(), auto:!!auto, site: base().replace(/^https?:\/\//, "").replace(/\/$/, ""),
+    order: Object.assign({}, o, { rider: r ? r.name : "" }),
+    tickets: kind === "kot" ? kotTickets(o) : [],
+    money: money(o), offLabel: discountLabel(o), reviewUrl: reviewUrl() };
+  try{ localStorage.setItem("hayat_print", JSON.stringify(job)); }catch(e){}
+  var w = (C().kot || {}).paper === "58" ? "?w=58" : "";
+  window.open("print.html" + w, "hayatprint");
+}
 function paintAdmin(main){
   learnDoorsteps();
   checkCodes();
@@ -3946,6 +3988,10 @@ function boardCard(o){
       (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
         '" title="Route from the shop">Map</a>' : '') +
       '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '" title="Edit or cancel">Edit' + noteTag(o) + '</a>' +
+      ((o.lines || []).length && o.status !== "placed"
+        ? '<button class="qbtn pr" data-print="' + esc(o.id) + '|kot" title="Print kitchen tickets">KOT</button>' +
+          '<button class="qbtn pr" data-print="' + esc(o.id) + '|bill" title="Print the bill">Bill</button>'
+        : '') +
       (o.status === "placed" && !ticket
         ? '<button class="qbtn declink" data-decline="' + esc(o.id) + '">Decline</button>' : '') +
     '</div>' +
@@ -4009,8 +4055,13 @@ function wireCards(main){
   main.querySelectorAll("[data-adv]").forEach(function(b){
     b.onclick = function(){
       var p = b.dataset.adv.split("|");
-      STORE.setStatus(p[0], p[1]);
+      var done = STORE.setStatus(p[0], p[1]);
+      /* the kitchen tickets go the moment the kitchen is told */
+      if(p[1] === "accepted" && (C().kot || {}).autoPrint && done && (done.lines || []).length) printJob(done, "kot", true);
     };
+  });
+  main.querySelectorAll("[data-print]").forEach(function(b){
+    b.onclick = function(e){ e.preventDefault(); var p = b.dataset.print.split("|"); var o = STORE.order(p[0]); if(o) printJob(o, p[1], true); };
   });
   main.querySelectorAll("[data-decline]").forEach(function(b){
     b.onclick = function(){ declineSheet(b.dataset.decline); };
@@ -6851,6 +6902,7 @@ function viewDriveHome(main){
 
   main.innerHTML = shell("Your deliveries",
     installBar() +
+    (canOfferInstall() ? "" : riderApkCard()) +
     '<div class="adminbar"><span class="pill">' + mine.length + ' to go</span>' +
       '<span class="pill quiet">' + done + ' done</span>' +
       '<button class="linky" id="rvOut">Not ' + esc(me.name) + '?</button></div>' +
@@ -7391,9 +7443,24 @@ function installSheet(asked){
   };
 }
 
+/* The real rider app: a foreground service that keeps the position
+   flowing with the screen off. Built by GitHub and published as a
+   release asset at a fixed address, so the rider page can link it.
+   Android only; inside the app itself there is nothing to offer. */
+function riderApkUrl(){ var r = C().riderApp || {}; return r.apk || ""; }
+function riderApkCard(){
+  if(!riderApkUrl() || native()) return "";
+  if(!/android/i.test(navigator.userAgent)) return "";
+  return '<a class="getapp apk" href="' + esc(riderApkUrl()) + '">' +
+    '<div class="gt"><b>Get the Hayat Rider app</b>' +
+      '<small>Location keeps going with the screen off, and jobs ring even when the phone is in your pocket. ' +
+      'Tap, then allow \u201cinstall from this source\u201d.</small></div>' +
+    '<span class="shopbtn small">Download</span></a>';
+}
 function installBar(){
   if(!canOfferInstall()) return "";
   var rider = riderApp();
+  if(rider && riderApkUrl() && /android/i.test(navigator.userAgent)) return riderApkCard();
   if(theOffer()){
     return '<div class="getapp" id="getApp">' +
       '<div class="gt"><b>' + (rider ? "Install the rider app" : "Add Hayat to your phone") + '</b>' +
