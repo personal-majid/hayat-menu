@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><title>Hayat Kitchen Screen</title>
+<script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#121518;--card:#1B1F23;--ink:#F1EFEA;--muted:#9AA2AA;--line:#2E343A;--good:#5FB38A;--warn:#E3B04B;--bad:#E0584A;--accent:#8DB8D3;--par:#A6A4D8}
+:root[data-theme="light"]{--bg:#F5F4EF;--card:#FFFFFF;--ink:#1F2328;--muted:#5F6770;--line:#DDDAD2;--good:#2E7D5B;--warn:#A8812F;--bad:#C2362C;--accent:#2F5A74;--par:#5B5A8C}
+*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.35 "Jost",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font:700 22px "Jost",sans-serif} header .sp{flex:1}
+.pill{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--good);border-color:var(--good)} .pill.bad{color:var(--bad);border-color:var(--bad);font-weight:600}
+.clock{font:700 22px "Jost",sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+.hb{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;font-size:15px}
+.tabs{display:flex;gap:6px} .tabs button{border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 14px;font-weight:600;color:var(--muted)}
+.tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+main{padding:12px 14px 40px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));align-items:start}
+.tk{background:var(--card);border:2px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.tk .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.tk .tb{font:700 24px "Jost",sans-serif} .tk .tb small{font:500 14px "Jost",sans-serif;color:var(--muted);margin-left:6px}
+.tk .age{font:700 26px "Jost",sans-serif;font-variant-numeric:tabular-nums}
+.tk.g{border-color:var(--good)} .tk.g .age{color:var(--good)} .tk.a{border-color:var(--warn)} .tk.a .age{color:var(--warn)}
+.tk.r{border-color:var(--bad);animation:pulse 1.2s ease-in-out infinite} .tk.r .age{color:var(--bad)}
+@keyframes pulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--bad) 25%,transparent)}} @media (prefers-reduced-motion:reduce){ .tk.r{animation:none} }
+.tags{display:flex;gap:6px;flex-wrap:wrap;padding:6px 12px 0} .tag{font-size:13px;font-weight:600;border-radius:6px;padding:2px 8px;background:var(--line)}
+.tag.par{background:color-mix(in srgb,var(--par) 30%,transparent);color:var(--ink)} .tag.add{background:color-mix(in srgb,var(--warn) 30%,transparent)}
+.it{list-style:none;margin:0;padding:8px 12px 10px;display:grid;gap:4px}
+.it li{font-size:20px;font-weight:600;display:flex;gap:10px;align-items:baseline;cursor:pointer;user-select:none}
+.it li .q{min-width:34px;text-align:right;color:var(--accent)} .it li.x{text-decoration:line-through;opacity:.45}
+.it li small{font-size:13px;font-weight:500;color:var(--muted)}
+.ft{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:auto}
+.done{border:0;background:var(--good);color:#fff;border-radius:10px;padding:12px 18px;font:700 18px "Jost",sans-serif}
+.empty{color:var(--muted);font-size:20px;text-align:center;padding:60px 0}
+.msg{max-width:640px;margin:60px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;font-size:17px}
+.msg a{color:var(--accent)}
+.recent{margin-top:18px;color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.recent button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:4px 10px;font-size:14px}
+dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;max-width:420px}
+dialog label{display:flex;gap:10px;align-items:center;font-size:17px;padding:6px 0}
+</style></head><body>
+<header>
+  <h1>🍳 <span id="stName">Kitchen</span></h1>
+  <div class="tabs" id="stTabs"></div>
+  <span class="sp"></span>
+  <span class="pill" id="count">–</span>
+  <span class="pill" id="feed">connecting…</span>
+  <span class="clock" id="clk"></span>
+  <button class="hb" id="snd" title="Sound on new orders">🔇</button>
+  <button class="hb" id="cfg" title="Which stations this screen shows">⚙</button>
+  <button class="hb" id="thm" title="Light / dark">◐</button>
+  <button class="hb" id="fs" title="Full screen">⤢</button>
+</header>
+<main id="main"><div class="empty">Loading…</div></main>
+<dialog id="dlg"><form method="dialog"><h3 style="margin-top:0">Stations on this screen</h3><div id="dlgBody"></div><p style="text-align:right;margin-bottom:0"><button class="hb" value="ok">Done</button></p></form></dialog>
+<script>
+/* Hayat kitchen screen. Reads open orders (vm_open) that the shop PC sends to Firebase every ~20 s,
+   shows only what this kitchen makes, one card per KOT round. "Done" is saved (kds collection) so
+   the office sees when food was ready. Office sign-in needed (same Google account as the office). */
+const $=id=>document.getElementById(id);
+const PREP={mandi:4,grill:10,fish:12,gravy:15,meals:3,bread:6.5,juice:5,tea:3,shawaya:8,fridge:0};
+const KNAME={mandi:'Mandi',grill:'Alfaham',fish:'Fish fry',gravy:'Gravy & Chinese',meals:'Meals',bread:'Porotta & chapati',juice:'Juice',tea:'Tea',shawaya:'Shawaya'};
+const SCREENS={mandi:{n:'Mandi kitchen',st:['mandi','grill','bread']},main:{n:'Main kitchen',st:['meals']},juice:{n:'Juice Hut block',st:['juice','tea','shawaya','fish','gravy']}};
+const SEC={'AC':'AC','NON AC':'Non-AC','HUT':'Hut','JUICY HUT':'Juice Hut','PARCEL':'Parcel'};
+let ST=JSON.parse(localStorage.getItem('kds-cfg')||'null')||{screen:new URLSearchParams(location.search).get('k')||'mandi',custom:{},sound:false,theme:'dark'};
+const q=new URLSearchParams(location.search).get('k'); if(q&&SCREENS[q]) ST.screen=q;
+const save=()=>{ try{ localStorage.setItem('kds-cfg',JSON.stringify(ST)); }catch(e){} };
+const stations=()=>ST.custom[ST.screen]||SCREENS[ST.screen].st;
+document.documentElement.dataset.theme=ST.theme==='light'?'light':'dark';
+
+function station(n){ n=String(n||'').toUpperCase();
+  if(/PARCEL|PAPER PLATE|PAPER GLASS|BILL ZERO/.test(n)) return [];
+  if(/MAYONNAISE/.test(n)) return ['mandi'];
+  if(/MANDI|ALFAHAM|ALFHAM|ALFAM|MASALAFAHAM/.test(n)){ if(/KING FISH/.test(n)) return ['mandi','fish']; if(/SHAWAYA/.test(n)) return ['mandi','shawaya'];
+    const s=[]; if(/MANDI/.test(n)) s.push('mandi'); if(/ALFAHAM|ALFHAM|ALFAM|MASALAFAHAM/.test(n)) s.push('grill'); return s; }
+  if(/SHAWAYA|SHAWARMA/.test(n)) return ['shawaya'];
+  if(/POROTTA|CHAPATI|RUMALI|KUBOOS/.test(n)) return ['bread'];
+  if(/MEALS|BIRIYANI|THOSAI|OMELETTE/.test(n)) return ['meals'];
+  if(/AILA|KING FISH|PRAWNS|MANDAL|POMFRET|FISH/.test(n)) return ['fish'];
+  if(/BUTTER CHICKEN|KADAI CHICKEN|PANEER|KORMA|PEPPER CHICKEN|HYDERABADI|MUSHROOM MASALA|VEG CURRY|VEG KADAI/.test(n)) return ['meals'];
+  if(/FRIED RICE|NOODLE|NOODEL|CHILLI(?! SODA)|MANCHURIAN|CHICKEN 65|GARLIC|DRAGON|LOLLIPOP|KONDATTAM|BROAST|BEEF|SOUP|GHEE|FRENCH|SALAD(?! WITH)/.test(n)) return ['gravy'];
+  if(/JUICE|MOJITO|LIME|AVILMILK|SHAKE|SCOOP|SCOTCH|FRUIT SALAD|TENDER|CHICCKU/.test(n)) return ['juice'];
+  if(/TEA|COFFE|MILK|BOOST/.test(n)) return ['tea'];
+  return []; }
+function tms(v){ if(!v) return null; if(typeof v==='object'){ if(v.toMillis) return v.toMillis(); if(v.seconds!=null) return v.seconds*1000; }
+  let s=String(v); if(!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s+='+05:30'; const t=Date.parse(s); return isNaN(t)?null:t; }
+const hm=ms=>new Date(ms+5.5*3600e3).toISOString().slice(11,16);
+
+let OPEN=[], DONE={}, META=null, FB=null, seen=new Set(), first=true, strike=new Set(JSON.parse(sessionStorage.getItem('kds-x')||'[]'));
+function tickets(){ const mine=new Set(stations()), out=[];
+  for(const o of OPEN){ const base=tms(o.orderAt), groups={};
+    for(const it of o.items||[]){ const st=station(it.n).filter(s=>mine.has(s)); if(!st.length) continue;
+      const t=tms(it.t)||base; const k=String(Math.round((t||0)/60000)); (groups[k]=groups[k]||{t,items:[],st:new Set()}).items.push(it); st.forEach(s=>groups[k].st.add(s)); }
+    const ks=Object.keys(groups).sort(); ks.forEach((k,idx)=>{ const g=groups[k], id=ST.screen+'_'+o.invoiceId+'_'+k;
+      const mg={}; g.items.forEach(it=>{ const n=String(it.n).trim(); (mg[n]=mg[n]||{n,q:0}).q+=(+it.q||1); }); g.items=Object.values(mg);
+      if(DONE[id]) return; out.push({id,inv:o.invoiceId,round:k,addon:idx>0||(g.t&&base&&g.t-base>60000),t:g.t,items:g.items,st:[...g.st],o}); }); }
+  return out.sort((a,b)=>(a.t||0)-(b.t||0)); }
+function render(){ const now=Date.now(), T=tickets();
+  $('stName').textContent=SCREENS[ST.screen].n; $('count').textContent=T.length+' open';
+  $('stTabs').innerHTML=Object.keys(SCREENS).map(k=>'<button aria-pressed="'+(k===ST.screen)+'" data-k="'+k+'">'+SCREENS[k].n+'</button>').join('');
+  $('stTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{ ST.screen=b.dataset.k; save(); seen=new Set(); first=true; render(); });
+  if(!T.length){ $('main').innerHTML='<div class="empty">No orders for '+SCREENS[ST.screen].n+' right now ✓</div>'+recentHtml(); bindRecent(); return; }
+  let fresh=0;
+  $('main').innerHTML='<div class="grid">'+T.map(k=>{ const age=k.t?Math.max(0,(now-k.t)/60000):0, prep=Math.max(...k.st.map(s=>PREP[s]||5)), c=age<prep?'g':age<prep+5?'a':'r', o=k.o;
+      if(!seen.has(k.id)){ seen.add(k.id); if(!first) fresh++; }
+      const par=o.type==='Parcel', where=par?'🛍️ #'+(o.token||o.kot||''):(SEC[o.section]||o.section||'')+' '+(o.table||'');
+      return '<div class="tk '+c+'"><div class="hd"><span class="tb">'+where+'<small>'+(o.taker||'')+'</small></span><span class="age">'+Math.floor(age)+'′</span></div>'
+        +'<div class="tags">'+(par?'<span class="tag par">Parcel · pack it</span>':'')+(k.addon?'<span class="tag add">+ Add-on</span>':'')+'<span class="tag">KOT '+(k.t?hm(k.t):'')+'</span></div>'
+        +'<ul class="it">'+k.items.map((it,i)=>{ const x=strike.has(k.id+'#'+i); return '<li class="'+(x?'x':'')+'" data-s="'+k.id+'#'+i+'"><span class="q">'+(it.q||1)+'×</span><span>'+it.n+'</span></li>'; }).join('')+'</ul>'
+        +'<div class="ft"><span>target '+Math.round(prep)+' min</span><button class="done" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">✓ Done</button></div></div>'; }).join('')+'</div>'+recentHtml();
+  $('main').querySelectorAll('li[data-s]').forEach(li=>li.onclick=()=>{ const s=li.dataset.s; strike.has(s)?strike.delete(s):strike.add(s); sessionStorage.setItem('kds-x',JSON.stringify([...strike])); li.classList.toggle('x'); });
+  $('main').querySelectorAll('.done').forEach(b=>b.onclick=()=>bump(b.dataset.id,b.dataset.inv,b.dataset.r));
+  bindRecent(); if(fresh&&ST.sound) beep(); first=false; }
+let RECENT=[];
+function recentHtml(){ return RECENT.length?'<div class="recent">Done just now: '+RECENT.slice(-5).reverse().map(r=>'<button data-u="'+r.id+'">↩ '+r.lab+'</button>').join('')+'</div>':''; }
+function bindRecent(){ document.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>unbump(b.dataset.u)); }
+async function bump(id,inv,round){ const k=tickets().find(x=>x.id===id); DONE[id]={local:true}; RECENT.push({id,lab:k?(k.o.type==='Parcel'?'Parcel #'+(k.o.token||''):(SEC[k.o.section]||'')+' '+(k.o.table||'')):id}); render();
+  try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'kds',id),{screen:ST.screen,inv:Number(inv)||inv,round,doneAt:FB.fs.serverTimestamp(),kotAt:k&&k.t?new Date(k.t):null,items:k?k.items.map(i=>i.n):[],table:k?(k.o.table||null):null,section:k?(k.o.section||null):null,parcel:k?k.o.type==='Parcel':false}); }
+  catch(e){ delete DONE[id]; RECENT=RECENT.filter(r=>r.id!==id); render(); alert('Could not save: '+(e.code||e.message)); } }
+async function unbump(id){ delete DONE[id]; RECENT=RECENT.filter(r=>r.id!==id); render(); try{ await FB.fs.deleteDoc(FB.fs.doc(FB.db,'kds',id)); }catch(e){} }
+let AC=null; function beep(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); [0,0.18].forEach(d=>{ const o=AC.createOscillator(), g=AC.createGain(); o.frequency.value=880; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(0.25,AC.currentTime+d); g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+d+0.15); o.start(AC.currentTime+d); o.stop(AC.currentTime+d+0.16); }); }catch(e){} }
+function feed(){ const f=$('feed'); if(!META){ f.className='pill bad'; f.textContent='no data from the shop PC yet'; return; }
+  const last=Math.max(tms(META.openAt)||0,tms(META.lastRunAt)||0), m=(Date.now()-last)/60000;
+  if(m>3){ f.className='pill bad'; f.textContent='⚠ orders '+Math.round(m)+' min old: is the shop PC on?'; } else { f.className='pill ok'; f.textContent='● live'; } }
+setInterval(()=>{ $('clk').textContent=hm(Date.now()); feed(); if(FB) render(); },15000); $('clk').textContent=hm(Date.now());
+$('snd').textContent=ST.sound?'🔔':'🔇'; $('snd').onclick=()=>{ ST.sound=!ST.sound; save(); $('snd').textContent=ST.sound?'🔔':'🔇'; if(ST.sound) beep(); };
+$('thm').onclick=()=>{ ST.theme=ST.theme==='light'?'dark':'light'; save(); document.documentElement.dataset.theme=ST.theme; };
+$('fs').onclick=()=>{ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{}); };
+$('cfg').onclick=()=>{ const mine=new Set(stations()); $('dlgBody').innerHTML=Object.keys(KNAME).map(k=>'<label><input type="checkbox" value="'+k+'"'+(mine.has(k)?' checked':'')+'> '+KNAME[k]+'</label>').join('')+'<p style="color:var(--muted);font-size:14px">Saved on this tablet only.</p>';
+  $('dlg').showModal(); $('dlg').onclose=()=>{ const v=[...$('dlgBody').querySelectorAll('input:checked')].map(i=>i.value); ST.custom[ST.screen]=v.length?v:SCREENS[ST.screen].st; save(); seen=new Set(); first=true; render(); }; };
+
+(async function(){ const cfg=window.CONFIG&&window.CONFIG.firebase;
+  const stop=h=>{ $('main').innerHTML='<div class="msg">'+h+'</div>'; };
+  if(!cfg||!cfg.projectId) return stop('<b>Not connected.</b> Open this page from the website (office → ⋯ More → Kitchen screen).');
+  try{ const V='12.19.0', appM=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-app.js'), fs=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-firestore.js'), au=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-auth.js');
+    const app=appM.getApps().length?appM.getApp():appM.initializeApp(cfg), db=fs.getFirestore(app), auth=au.getAuth(app); FB={fs,db};
+    const user=await new Promise(ok=>{ const off=au.onAuthStateChanged(auth,u=>{ off(); ok(u); }); });
+    if(!user||user.isAnonymous) return stop('<b>Sign in first.</b> <a href="./#/admin">Open the office</a> on this tablet, sign in with the office Google account, then come back. It stays signed in.');
+    const fail=e=>stop(e&&e.code==='permission-denied'?'<b>This account is not marked as office.</b> Firebase console → Firestore → staff → this user → role = office. Also publish the latest firestore.rules (they add the kitchen screen).':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
+    fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ META=d.exists()?d.data():null; feed(); },fail);
+    fs.onSnapshot(fs.collection(db,'vm_open'),snap=>{ OPEN=snap.docs.map(d=>d.data()); const live=new Set(OPEN.map(o=>String(o.invoiceId)));
+      Object.keys(DONE).forEach(id=>{ if(!live.has(id.split('_')[1])) delete DONE[id]; }); render(); },fail);
+    const since=new Date(Date.now()-12*3600e3);
+    fs.onSnapshot(fs.query(fs.collection(db,'kds'),fs.where('doneAt','>=',since)),snap=>{ snap.docs.forEach(d=>{ DONE[d.id]=d.data(); }); render(); },fail);
+  }catch(e){ stop('<b>Could not start.</b> '+(e.code||e.message)); } })();
+</script>
+</body></html>

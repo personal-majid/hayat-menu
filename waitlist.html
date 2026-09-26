@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><title>Hayat Waitlist</title>
+<script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Jost:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#F5F4EF;--card:#FFFFFF;--ink:#1F2328;--muted:#5F6770;--line:#DDDAD2;--soft:#ECEAE3;--accent:#2F5A74;--good:#2E7D5B;--warn:#A8812F;--bad:#C2362C;--wa:#1FA855}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--bg:#121518;--card:#1B1F23;--ink:#E7E5E0;--muted:#9AA2AA;--line:#2E343A;--soft:#242A2F;--accent:#8DB8D3;--good:#5FB38A;--warn:#D2AE62;--bad:#E0584A} }
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 "Jost",system-ui,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:14px clamp(12px,2vw,24px) 40px;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px} header h1{margin:0;font:600 30px "Cormorant Garamond",Georgia,serif} header .sp{flex:1}
+a{color:var(--accent)} .note{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+h2{margin:0;font:600 12px "Jost",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.free{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.fz{border:1px solid var(--line);border-radius:10px;padding:8px 12px} .fz b{display:block;font:700 24px "Jost",sans-serif} .fz span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.fz.ok b{color:var(--good)} .fz.full b{color:var(--bad)}
+.lay{display:grid;gap:14px} @media (min-width:960px){ .lay{grid-template-columns:360px minmax(0,1fr)} }
+label.f{display:grid;gap:4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+input,select{font:500 17px "Jost",sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.step{display:grid;grid-template-columns:48px 1fr 48px;gap:6px;align-items:center} .step button{height:46px;border-radius:10px;border:1px solid var(--line);background:var(--soft);font:700 22px "Jost",sans-serif;color:var(--ink);cursor:pointer}
+.step b{text-align:center;font:700 26px "Jost",sans-serif}
+.chips{display:flex;flex-wrap:wrap;gap:6px} .chips button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font:500 15px "Jost",sans-serif;color:var(--ink);cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 14px;font:600 15px "Jost",sans-serif;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-size:17px;padding:12px}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:#fff}
+.quote{border-radius:10px;padding:10px 12px;background:color-mix(in srgb,var(--accent) 10%,var(--card));font-size:15px}
+.quote b{font-size:22px}
+.g{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+.row .pos{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:700 18px "Jost",sans-serif;background:var(--soft)}
+.row.next .pos{background:var(--good);color:#fff} .row.notified{border-color:var(--wa)} .row.late{border-color:var(--bad)}
+.row .nm{font:600 18px "Jost",sans-serif} .row .sub{font-size:13px;color:var(--muted)}
+.row .act{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.row .act .btn{padding:8px 10px;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.stats div{border:1px solid var(--line);border-radius:10px;padding:8px 12px} .stats b{display:block;font:700 22px "Jost",sans-serif} .stats span{font-size:12px;color:var(--muted)}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;font-size:17px}
+.empty{color:var(--muted);text-align:center;padding:26px 0}
+</style></head><body>
+<div class="wrap">
+  <header><a href="./#/admin" style="text-decoration:none;font-weight:600">← Office</a><h1>Waitlist</h1><span class="sp"></span><span class="note" id="live">connecting…</span></header>
+  <div id="gate"></div>
+  <div id="app" hidden>
+    <div class="card"><h2>Tables free now · from VMENU</h2><div class="free" id="free"></div><div class="note">Counts open bills per area against the tables on the floor plan. A table shows free from the moment its bill is paid.</div></div>
+    <div class="lay" style="margin-top:14px">
+      <div class="card">
+        <h2>Add guest</h2>
+        <label class="f">Name<input id="nm" autocomplete="off" placeholder="Name"></label>
+        <label class="f">WhatsApp number<input id="ph" inputmode="tel" autocomplete="off" placeholder="98xxxxxxxx"></label>
+        <div class="f" style="display:grid;gap:4px"><span class="note" style="text-transform:uppercase;letter-spacing:.06em;font-size:12px">Guests</span><div class="step"><button id="pm">−</button><b id="pn">2</b><button id="pp">+</button></div></div>
+        <div><span class="note" style="text-transform:uppercase;letter-spacing:.06em;font-size:12px">Area</span><div class="chips" id="area"></div></div>
+        <label class="f">Note<input id="nt" autocomplete="off" placeholder="baby chair, birthday…"></label>
+        <div class="quote" id="quote"></div>
+        <button class="btn primary" id="add">+ Add to waitlist</button>
+      </div>
+      <div class="card">
+        <h2>Waiting · <span id="wc">0</span></h2>
+        <div class="g" id="list"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+/* Hayat waitlist. Guests are saved in Firebase (waitlist, office only). Quoted wait comes from the live
+   VMENU copy: free tables per area now, and when the tables in use are likely to leave. WhatsApp uses
+   a normal wa.me link, so staff tap Send; no paid API. */
+const $=id=>document.getElementById(id);
+const CAP={'AC':10,'NON AC':7,'HUT':2,'JUICY HUT':6};             /* tables on the floor plan */
+const AN={'any':'Any','AC':'AC hall','NON AC':'Non-AC hall','HUT':'Huts','JUICY HUT':'Juice Hut'};
+const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function tms(v){ if(!v) return null; if(typeof v==='object'){ if(v.toMillis) return v.toMillis(); if(v.seconds!=null) return v.seconds*1000; }
+  let s=String(v); if(!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s+='+05:30'; const t=Date.parse(s); return isNaN(t)?null:t; }
+const hm=ms=>new Date(ms+5.5*3600e3).toISOString().slice(11,16);
+function phone(p){ let d=String(p||'').replace(/\D/g,''); if(d.length===10) d='91'+d; if(d.length===11&&d[0]==='0') d='91'+d.slice(1); return d; }
+function bizToday(){ return new Date(Date.now()-5*3600e3+5.5*3600e3).toISOString().slice(0,10); }
+let FB=null, OPEN=[], LIST=[], TT=32, party=2, area='any', META=null;
+
+/* typical table time today (first order → paid, dine-in), else 32 min */
+function tableTime(bills){ const x=bills.filter(b=>b.type!=='Parcel'&&b.orderToSettle>5&&b.orderToSettle<150).map(b=>b.orderToSettle).sort((a,b)=>a-b); return x.length>=10?x[x.length>>1]:32; }
+function freeNow(){ const f={}; Object.keys(CAP).forEach(k=>f[k]={cap:CAP[k],used:0,ends:[]});
+  const now=Date.now(); OPEN.filter(o=>o.type!=='Parcel').forEach(o=>{ const k=CAP[o.section]!=null?o.section:null; if(!k) return; f[k].used++;
+    const st=tms(o.orderAt)||now, due=tms(o.dueAt), end=due?due+6*60000:st+TT*60000; f[k].ends.push(Math.max(now+3*60000,end)); });
+  Object.values(f).forEach(z=>z.ends.sort((a,b)=>a-b)); return f; }
+/* wait for the n-th guest in line for an area (n from 0) */
+function quote(ar,n){ const f=freeNow(), ks=ar==='any'?Object.keys(CAP).filter(k=>k!=='HUT'):[ar];
+  let free=0, ends=[]; ks.forEach(k=>{ free+=Math.max(0,f[k].cap-f[k].used); ends=ends.concat(f[k].ends); }); ends.sort((a,b)=>a-b);
+  if(n<free) return 0; const e=ends[n-free]; if(!e) return 45; return Math.max(5,Math.ceil((e-Date.now())/60000/5)*5); }
+function waiting(){ return LIST.filter(w=>w.status==='waiting'||w.status==='notified').sort((a,b)=>(tms(a.addedAt)||Date.now())-(tms(b.addedAt)||Date.now())); }
+function posIn(w){ const L=waiting(); return L.filter(x=>(tms(x.addedAt)||Date.now())<=(tms(w.addedAt)||Date.now())&&(w.area==='any'||x.area==='any'||x.area===w.area)).length-1; }
+function waMsg(w,kind,mins){ const n=(w.name||'').split(' ')[0];
+  const t=kind==='ready'?'Hi '+n+', your table for '+w.party+' is ready at Hayat Fish & Mandi 🙂 Please come to the counter in the next 5 minutes.'
+    :'Hi '+n+', welcome to Hayat Fish & Mandi. You are #'+(posIn(w)+1)+' on our list'+(mins?', about '+mins+' minutes':'')+'. We will message you here when your table is ready.';
+  return 'https://wa.me/'+phone(w.phone)+'?text='+encodeURIComponent(t); }
+
+function render(){ const f=freeNow();
+  $('free').innerHTML=Object.keys(CAP).map(k=>{ const fr=Math.max(0,f[k].cap-f[k].used); return '<div class="fz '+(fr?'ok':'full')+'"><span>'+AN[k]+'</span><b>'+fr+' free</b><span>'+f[k].used+' of '+f[k].cap+' in use'+(fr?'':' · next ~'+Math.max(1,Math.round((f[k].ends[0]-Date.now())/60000))+' min')+'</span></div>'; }).join('');
+  $('area').innerHTML=Object.keys(AN).map(k=>'<button aria-pressed="'+(k===area)+'" data-a="'+k+'">'+AN[k]+'</button>').join('');
+  $('area').querySelectorAll('button').forEach(b=>b.onclick=()=>{ area=b.dataset.a; render(); });
+  const ahead=waiting().filter(x=>area==='any'||x.area==='any'||x.area===area).length, q=quote(area,ahead);
+  $('quote').innerHTML=q===0?'<b>Table now</b> · seat them straight away'+(party>=8?'<br><span class="note">8+ guests: the 12-seater or a hut</span>':''):'Quote: <b>about '+q+' min</b> · #'+(ahead+1)+' in line'+(party>=8?'<br><span class="note">8+ guests: the 12-seater or a hut may take longer</span>':'');
+  const L=waiting(), now=Date.now();
+  $('wc').textContent=L.length;
+  $('list').innerHTML=L.length?L.map((w,i)=>{ const waited=Math.round((now-(tms(w.addedAt)||now))/60000), late=w.quoted!=null&&waited>w.quoted+5, q2=quote(w.area,posIn(w));
+    return '<div class="row'+(q2===0?' next':'')+(w.status==='notified'?' notified':'')+(late?' late':'')+'"><span class="pos">'+(i+1)+'</span><div><div class="nm">'+esc(w.name||'Guest')+' · '+w.party+'</div>'
+      +'<div class="sub">'+AN[w.area||'any']+' · waiting '+waited+' min'+(w.quoted!=null?' (quoted '+w.quoted+')':'')+(w.status==='notified'?' · 📱 told '+hm(tms(w.notifiedAt)||now):'')+(q2===0?' · <b style="color:var(--good)">table free</b>':' · ~'+q2+' min more')+(w.note?' · '+esc(w.note):'')+'</div></div>'
+      +'<div class="act">'+(w.phone?'<a class="btn wa" target="_blank" rel="noopener" data-ready="'+w.id+'" href="'+waMsg(w,'ready')+'">📱 Table ready</a>':'')+'<button class="btn" data-seat="'+w.id+'">🪑 Seated</button><button class="btn" data-left="'+w.id+'" title="Left without a table">✕</button></div></div>'; }).join('')
+    :'<div class="empty">Nobody waiting 🙂</div>';
+  $('list').querySelectorAll('[data-ready]').forEach(a=>a.onclick=()=>upd(a.dataset.ready,{status:'notified',notifiedAt:FB.fs.serverTimestamp()}));
+  $('list').querySelectorAll('[data-seat]').forEach(b=>b.onclick=()=>upd(b.dataset.seat,{status:'seated',seatedAt:FB.fs.serverTimestamp()}));
+  $('list').querySelectorAll('[data-left]').forEach(b=>b.onclick=()=>{ if(confirm('Mark as left without a table?')) upd(b.dataset.left,{status:'left',leftAt:FB.fs.serverTimestamp()}); });
+  const today=LIST.filter(w=>w.day===bizToday()), seated=today.filter(w=>w.status==='seated'), left=today.filter(w=>w.status==='left');
+  const act=seated.map(w=>((tms(w.seatedAt)||now)-(tms(w.addedAt)||now))/60000).filter(x=>x>=0), avg=act.length?act.reduce((a,b)=>a+b,0)/act.length:null;
+  const qd=seated.filter(w=>w.quoted!=null).map(w=>((tms(w.seatedAt)||now)-(tms(w.addedAt)||now))/60000-w.quoted), qa=qd.length?qd.reduce((a,b)=>a+b,0)/qd.length:null;
+  $('stats').innerHTML='<div><b>'+today.length+'</b><span>added today</span></div><div><b>'+seated.length+'</b><span>seated</span></div><div><b style="color:'+(left.length?'var(--bad)':'inherit')+'">'+left.length+'</b><span>left without a table</span></div><div><b>'+(avg==null?'–':Math.round(avg)+'′')+'</b><span>real wait, average</span></div><div><b>'+(qa==null?'–':(qa>0?'+':'')+Math.round(qa)+'′')+'</b><span>vs the quote</span></div>';
+  const run=META?Math.max(tms(META.openAt)||0,tms(META.lastRunAt)||0):0; $('live').textContent=run?(Date.now()-run<4*60000?'● live from VMENU':'⚠ table data '+Math.round((Date.now()-run)/60000)+' min old'):'waiting for the shop PC'; }
+async function upd(id,data){ try{ await FB.fs.updateDoc(FB.fs.doc(FB.db,'waitlist',id),data); }catch(e){ alert('Could not save: '+(e.code||e.message)); } }
+$('pm').onclick=()=>{ party=Math.max(1,party-1); $('pn').textContent=party; render(); }; $('pp').onclick=()=>{ party=Math.min(30,party+1); $('pn').textContent=party; render(); };
+$('add').onclick=async()=>{ const name=$('nm').value.trim(), ph=$('ph').value.trim(); if(!name){ $('nm').focus(); return; }
+  if(ph&&phone(ph).length<11){ alert('Check the phone number'); return; }
+  const ahead=waiting().filter(x=>area==='any'||x.area==='any'||x.area===area).length, q=quote(area,ahead);
+  const doc={name,phone:ph?phone(ph):'',party,area,note:$('nt').value.trim(),status:'waiting',quoted:q,day:bizToday(),addedAt:FB.fs.serverTimestamp()};
+  try{ const ref=await FB.fs.addDoc(FB.fs.collection(FB.db,'waitlist'),doc);
+    if(doc.phone&&confirm('Send '+name+' their wait time on WhatsApp?')) window.open(waMsg(Object.assign({id:ref.id,addedAt:Date.now()},doc),'quote',q),'_blank','noopener');
+    $('nm').value=''; $('ph').value=''; $('nt').value=''; party=2; $('pn').textContent=2; area='any'; render(); }
+  catch(e){ alert('Could not save: '+(e.code||e.message)); } };
+setInterval(()=>{ if(FB) render(); },30000);
+
+(async function(){ const cfg=window.CONFIG&&window.CONFIG.firebase, gate=h=>{ $('gate').innerHTML='<div class="msg">'+h+'</div>'; };
+  if(!cfg||!cfg.projectId) return gate('<b>Not connected.</b> Open this page from the website (office → ⋯ More → Waitlist).');
+  try{ const V='12.19.0', appM=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-app.js'), fs=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-firestore.js'), au=await import('https://www.gstatic.com/firebasejs/'+V+'/firebase-auth.js');
+    const app=appM.getApps().length?appM.getApp():appM.initializeApp(cfg), db=fs.getFirestore(app), auth=au.getAuth(app); FB={fs,db};
+    const user=await new Promise(ok=>{ const off=au.onAuthStateChanged(auth,u=>{ off(); ok(u); }); });
+    if(!user||user.isAnonymous) return gate('<b>Sign in first.</b> <a href="./#/admin">Open the office</a> on this tablet and sign in with the office Google account. It stays signed in.');
+    const fail=e=>gate(e&&e.code==='permission-denied'?'<b>Not allowed.</b> Publish the latest firestore.rules (they add the waitlist), and check this account is marked office.':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
+    $('app').hidden=false;
+    fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ META=d.exists()?d.data():null; render(); },()=>{});
+    fs.onSnapshot(fs.collection(db,'vm_open'),s=>{ OPEN=s.docs.map(d=>d.data()); render(); },fail);
+    fs.onSnapshot(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',bizToday())),s=>{ TT=tableTime(s.docs.map(d=>d.data())); render(); },()=>{});
+    const since=new Date(Date.now()-36*3600e3);
+    fs.onSnapshot(fs.query(fs.collection(db,'waitlist'),fs.where('addedAt','>=',since)),s=>{ LIST=s.docs.map(d=>Object.assign({id:d.id},d.data())); render(); },fail);
+    /* privacy: phone numbers are not kept longer than a week */
+    fs.getDocs(fs.query(fs.collection(db,'waitlist'),fs.where('addedAt','<',new Date(Date.now()-7*86400e3)),fs.limit(100))).then(s=>s.docs.forEach(d=>fs.deleteDoc(d.ref).catch(()=>{}))).catch(()=>{});
+    render();
+  }catch(e){ gate('<b>Could not start.</b> '+(e.code||e.message)); } })();
+</script>
+</body></html>

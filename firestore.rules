@@ -240,6 +240,12 @@ service cloud.firestore {
     match /vm_staff/{id} { allow read: if isOffice(); allow write: if false; }
     match /vm_meta/{id}  { allow read: if isOffice(); allow write: if false; }
 
+    /* ---- kitchen screens and the waitlist ---------------------
+         kds/{screen_invoice_round}  when a kitchen marked a KOT done
+         waitlist/{id}               guests waiting (phone deleted after 7 days) */
+    match /kds/{id}      { allow read, write: if isOffice(); }
+    match /waitlist/{id} { allow read, write: if isOffice(); }
+
     /* ---- everything else is closed -------------------------- */
     match /{document=**} {
       allow read, write: if false;

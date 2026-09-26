@@ -74,7 +74,7 @@ DEFAULTS = {
     "sync": {
         "interval_seconds": "120", "first_sync_since": "2026-07-01", "overlap_minutes": "20",
         "page_size": "1000", "retention_months": "0", "retention_days": "0", "outlier_minutes": "240",
-        "staff_refresh_minutes": "60",
+        "staff_refresh_minutes": "60", "open_fast_seconds": "20",
     },
 }
 
@@ -276,8 +276,8 @@ class Shaper:
             q, p, a = num(pick(r, self.c_qty)), num(pick(r, self.c_price)), num(pick(r, self.c_amt))
             if a is None and q is not None and p is not None:
                 a = num(q * p)
-            out.append({"n": str(name).strip(), "q": q, "p": p, "a": a})
             rt = self.t(pick(r, ["running_ord_time"]))
+            out.append({"n": str(name).strip(), "q": q, "p": p, "a": a, "t": rt})   # t = the KOT this line came on (None = first KOT)
             if rt:
                 kot_times.add(rt)
         return out, kot_times
@@ -594,6 +594,78 @@ ROLES = {
 }
 
 
+def sync_open(cfg, src, dst, cache, shaper, stats):
+    """Tables still eating: send the ones that changed, delete the ones that closed.
+    Run by every tick, and every few seconds by the local service for the kitchen screens."""
+    v = cfg["vmenu"]
+    C = cfg.get("firebase", "collection_prefix") + "open"
+    opens = src.open_orders()
+    if opens is None:
+        stats["open_now"] = None
+        return stats
+    idc = v.get("open_id_column")
+    ids = [r.get(idc) for r in opens]
+    items = src.items_for(v.get("open_items_table"), idc, ids)
+    now_ids, batch = set(), []
+    for r in opens:
+        i = str(r.get(idc))
+        now_ids.add(i)
+        doc = shaper.open(r, items.get(i, []))
+        h = fingerprint(doc)
+        if cache.get_hash(C, i) != h:
+            batch.append((i, doc))
+        cache.put(C, i, h, doc["day"], doc)
+    if batch:
+        dst.put_many(C, batch)
+    gone = sorted(cache.ids(C) - now_ids)
+    if gone:
+        dst.delete_many(C, gone)
+        for i in gone:
+            cache.drop(C, i)
+    stats.update(open_now=len(now_ids), open_sent=len(batch), open_closed=len(gone))
+    cache.commit()
+    return stats
+
+
+def fast_open_loop(cfg, args, stop):
+    """Kitchen screens need new KOTs in seconds, not every 2 minutes. Only open orders,
+    only when something changed, so Firebase writes stay small."""
+    every = cfg.getint("sync", "open_fast_seconds")
+    if every <= 0:
+        return
+    lock = SingleInstance(47812)
+    if not lock.ok:
+        log.info("fast open-orders loop already running elsewhere")
+        return
+    log.info("fast open-orders loop every %ss", every)
+    dst, cache, shaper, last_beat = None, None, None, 0.0
+    while not stop.is_set():
+        try:
+            if dst is None:
+                dst = make_target(cfg, args)
+                cache = Cache(HERE / "cache.db")
+            src = Source(cfg)
+            try:
+                if shaper is None:
+                    shaper = Shaper(cfg, src.item_master())
+                st = sync_open(cfg, src, dst, cache, shaper, {})
+            finally:
+                src.close()
+            if st.get("open_sent") or st.get("open_closed"):
+                log.info("fast open: %s", json.dumps(st))
+            if time.time() - last_beat > 300:      # tell the screens the feed is alive, every 5 min
+                try:
+                    dst.merge(cfg.get("firebase", "collection_prefix") + "meta", "sync", {"openAt": dt.datetime.now(tz(cfg)), "openEvery": every})
+                except Exception:
+                    log.exception("open heartbeat failed")
+                last_beat = time.time()
+        except Exception:
+            log.exception("fast open-orders pass failed")
+            dst, cache, shaper = None, None, None
+        stop.wait(every)
+    lock.release()
+
+
 def run_once(cfg, src: Source, dst, cache: Cache, since_override: dt.datetime | None = None) -> dict:
     zone = tz(cfg)
     pre = cfg.get("firebase", "collection_prefix")
@@ -641,31 +713,7 @@ def run_once(cfg, src: Source, dst, cache: Cache, since_override: dt.datetime | 
         cache.set_meta("cursor", newest.isoformat())
 
     # 2. open orders: a full snapshot each run; small (only tables in progress)
-    opens = src.open_orders()
-    if opens is None:
-        stats["open_now"] = None
-    else:
-        idc = v.get("open_id_column")
-        ids = [r.get(idc) for r in opens]
-        items = src.items_for(v.get("open_items_table"), idc, ids)
-        now_ids, batch = set(), []
-        for r in opens:
-            i = str(r.get(idc))
-            now_ids.add(i)
-            doc = shaper.open(r, items.get(i, []))
-            h = fingerprint(doc)
-            if cache.get_hash(C["open"], i) != h:
-                batch.append((i, doc))
-            cache.put(C["open"], i, h, doc["day"], doc)
-        if batch:
-            dst.put_many(C["open"], batch)
-        gone = sorted(cache.ids(C["open"]) - now_ids)
-        if gone:
-            dst.delete_many(C["open"], gone)
-            for i in gone:
-                cache.drop(C["open"], i)
-        stats.update(open_now=len(now_ids), open_sent=len(batch), open_closed=len(gone))
-        cache.commit()
+    sync_open(cfg, src, dst, cache, shaper, stats)
 
     # 3. day summaries for every day that changed
     for day in sorted(d for d in touched_days if d):
@@ -963,6 +1011,9 @@ def cmd_serve(cfg, args):
             finally:
                 c.db.close()
 
+    import threading
+    stop = threading.Event()
+    threading.Thread(target=fast_open_loop, args=(cfg, args, stop), daemon=True).start()
     host, port = cfg.get("serve", "host"), cfg.getint("serve", "port")
     srv = ThreadingHTTPServer((host, port), H)
     log.info("Hayat Live on http://%s:%s", socket.gethostname(), port)
@@ -971,6 +1022,7 @@ def cmd_serve(cfg, args):
         srv.serve_forever()
     except KeyboardInterrupt:
         pass
+    stop.set()
     return 0
 
 

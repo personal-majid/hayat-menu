@@ -2555,3 +2555,20 @@ html[data-theme="paper"] .leaflet-pane.leaflet-traffic-pane,html[data-theme="pap
 .qbtn.pr{font-weight:800;letter-spacing:.06em;color:var(--ink,#1B1A17)}
 .getapp.apk{text-decoration:none;color:inherit}
 .getapp.apk .shopbtn{margin:0;width:auto;flex:0 0 auto}
+
+/* ---- dock: the More drawer (Menu, Google, Service sim) ---- */
+.dockmore{position:relative;display:flex}
+.dockdrawer{position:absolute;right:0;bottom:calc(100% + 10px);min-width:270px;max-width:calc(100vw - 24px);
+  background:var(--card);border:1px solid var(--line2);border-radius:16px;box-shadow:var(--shadow);
+  padding:6px;display:grid;gap:2px;z-index:710}
+.dockdrawer[hidden]{display:none}
+.dditem{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:center;text-align:left;
+  width:100%;border:0;background:transparent;color:var(--cream);padding:10px 12px;border-radius:12px;
+  font:inherit;cursor:pointer;text-decoration:none}
+.dditem:hover,.dditem:focus-visible{background:color-mix(in srgb,var(--gold) 14%,transparent);outline:none}
+.dditem.on{background:color-mix(in srgb,var(--gold) 20%,transparent)}
+.ddic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:18px;font-weight:800;
+  border:1px solid var(--line2)}
+.ddtx b{display:block;font-weight:700} .ddtx small{display:block;color:var(--muted);font-size:var(--t-small)}
+html[data-theme="paper"] .dockdrawer{background:var(--card);border-color:var(--line2)}
+html[data-theme="paper"] .dditem{color:var(--ink)}
