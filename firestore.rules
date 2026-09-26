@@ -204,6 +204,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    /* ---- the VMENU copy -------------------------------------
+       Written only by the sync service on the shop PC, which uses
+       a Firebase admin key and so is not bound by these rules.
+       Bills carry amounts and staff names: office eyes only.
+
+         vm_bills/{invoiceid}   settled bills, items inside
+         vm_open/{id}           tables still eating
+         vm_days/{YYYY-MM-DD}   one summary per business day
+         vm_staff/{id}          names, each a waiter or a service agent
+         vm_meta/sync           when the service last ran            */
+    match /vm_bills/{id} { allow read: if isOffice(); allow write: if false; }
+    match /vm_open/{id}  { allow read: if isOffice(); allow write: if false; }
+    match /vm_days/{id}  { allow read: if isOffice(); allow write: if false; }
+    match /vm_staff/{id} { allow read: if isOffice(); allow write: if false; }
+    match /vm_meta/{id}  { allow read: if isOffice(); allow write: if false; }
+
     /* ---- everything else is closed -------------------------- */
     match /{document=**} {
       allow read, write: if false;

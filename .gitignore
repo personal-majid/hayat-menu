@@ -17,3 +17,12 @@ __pycache__/
 *.mjs
 
 Claude outputs/
+
+# local VMENU sync service: secrets and local data stay on the shop PC
+local-service/config.ini
+local-service/firebase-key.json
+local-service/*.json.key
+local-service/cache.db
+local-service/logs/
+local-service/.venv/
+local-service/discover_report.txt

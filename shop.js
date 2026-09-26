@@ -553,13 +553,13 @@ var STORE = {
        somewhere, and the office wants to see where before the
        next job's first ping. */
     var r = o.riderId ? DB.riders[o.riderId] : null;
-    if(r){ r.lat = o.rLat; r.lng = o.rLng; r.at = o.rAt; }
+    if(r){ r.lat = o.rLat; r.lng = o.rLng; r.at = o.rAt; r.seen = o.rAt; if(r.offAuto){ r.offAuto = false; r.avail = true; } }
     if(FB){
       FB.api.updateDoc(FB.api.doc(FB.db, "orders", id),
         { rLat:o.rLat, rLng:o.rLng, rAt:o.rAt })
         .catch(function(e){ console.warn("ping", e); });
       if(r) FB.api.updateDoc(FB.api.doc(FB.db, "riders", r.id),
-        { lat:r.lat, lng:r.lng, at:r.at })
+        { lat:r.lat, lng:r.lng, at:r.at, seen:r.at, offAuto:false, avail:r.avail })
         .catch(function(e){ console.warn("ping rider", e); });
       fire();
     } else lsWrite();
@@ -916,18 +916,39 @@ var STORE = {
      The office should never have to guess. A rider who has gone
      home is not "quiet", they are off, and an order assigned to
      them is an order nobody is carrying. */
-  setAvailable: function(id, on){
+  setAvailable: function(id, on, why){
     var r = DB.riders[id];
     if(!r) return null;
     r.avail = !!on;
     r.availAt = Date.now();
+    r.offAuto = (!on && why === "auto");
     if(FB){
       FB.api.updateDoc(FB.api.doc(FB.db, "riders", id),
-        { avail: !!on, availAt: r.availAt })
+        { avail: !!on, availAt: r.availAt, offAuto: r.offAuto })
         .catch(function(e){ console.warn("setAvailable", e); });
       fire();
     } else lsWrite();
     return r.avail;
+  },
+
+  /* The rider's phone, saying "still here" once a minute while the
+     app is open, job or no job. This is what "available" is judged
+     against; a rider the office cannot reach is not available,
+     whatever the switch says. A phone the office switched off for
+     silence switches itself back on the moment it speaks. */
+  beat: function(id){
+    var r = DB.riders[id];
+    if(!r) return;
+    var now = Date.now();
+    if(r.seen && now - r.seen < 55000) return;
+    r.seen = now;
+    var patch = { seen: now };
+    if(r.offAuto){ r.avail = true; r.offAuto = false; patch.avail = true; patch.offAuto = false; }
+    if(FB){
+      FB.api.updateDoc(FB.api.doc(FB.db, "riders", id), patch)
+        .catch(function(e){ console.warn("beat", e); });
+      if(patch.avail) fire();
+    } else lsWrite();
   },
 
   /* Sign a rider's phone out from the office.
@@ -2006,13 +2027,16 @@ var MDISH = null;       /* the one dish whose sizes are showing */
 function csvRows(text){
   var rows = [], row = [], cell = "", q = false;
   text = String(text || "").replace(/^\uFEFF/, "");
+  /* Excel in some locales writes semicolons; the first line says which */
+  var first = text.split(/\r?\n/)[0] || "";
+  var SEP = (first.split(";").length > first.split(",").length) ? ";" : ",";
   for(var i = 0; i < text.length; i++){
     var ch = text[i];
     if(q){
       if(ch === '"'){ if(text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
       else cell += ch;
     } else if(ch === '"') q = true;
-    else if(ch === ","){ row.push(cell); cell = ""; }
+    else if(ch === SEP){ row.push(cell); cell = ""; }
     else if(ch === "\n" || ch === "\r"){
       if(ch === "\r" && text[i+1] === "\n") i++;
       row.push(cell); rows.push(row); row = []; cell = "";
@@ -3184,10 +3208,15 @@ var VOICE = {
 /* A rider's real state, from what they said and what their
    phone has actually been doing. "Available" a week ago with no
    position since is not available. */
+var QUIET_MIN = 30, OFF_MIN = 60;      /* silent this long = unreachable; this long = switched off */
+function riderSeen(r){ return Math.max(r.seen || 0, r.at || 0); }
 function riderState(r){
   if(!r) return { k:"gone", t:"unknown" };
   if(!r.uid && !r.claimedAt) return { k:"gone", t:"not signed in" };
-  if(r.avail === false)      return { k:"off",  t:"off duty" };
+  if(r.avail === false)      return { k:"off",  t: r.offAuto ? "switched off \u2014 phone silent since " + (riderSeen(r) ? when(riderSeen(r)) : "sign-in") : "off duty" };
+  var seen = riderSeen(r);
+  if(seen && Date.now() - seen > QUIET_MIN * 60000)
+    return { k:"gone", t:"not reachable \u00b7 last seen " + staleness(seen).txt, lost:true };
 
   var carrying = STORE.orders().filter(function(o){
     return o.riderId === r.id &&
@@ -3489,12 +3518,48 @@ function takings(orders){
   return t;
 }
 
+/* A rider whose phone has said nothing for an hour is switched off
+   by the office, automatically, so the assign sheet stops offering
+   them. The phone switches them back on when it speaks again. */
+function tendRiders(riders){
+  riders.forEach(function(r){
+    if(r.avail === false || r.off) return;
+    var seen = riderSeen(r);
+    if(seen && Date.now() - seen > OFF_MIN * 60000) STORE.setAvailable(r.id, false, "auto");
+  });
+}
+/* the cash a rider is carrying today, and what they still have to collect */
+function pouchOf(r){
+  var since = shiftStart(), cash = 0, due = 0, n = 0;
+  STORE.orders().forEach(function(o){
+    if(o.riderId !== r.id) return;
+    if(o.status === "delivered" && o.at >= since && o.paid && o.payMode === "cash"){ cash += o.total || 0; n++; }
+    if((o.status === "assigned" || o.status === "on_way") || (o.status === "delivered" && !o.paid && o.at >= since)) due += o.total || 0;
+  });
+  return { cash:cash, due:due, n:n };
+}
+/* Who is already going that way. For each rider with a live trip,
+   the nearest of their drop pins to this order's pin. Under two
+   kilometres is a bundle worth suggesting. */
+function bundleFor(o){
+  if(!o || !o.lat) return [];
+  var out = [];
+  STORE.riders().forEach(function(r){
+    var jobs = STORE.orders().filter(function(x){ return x.riderId === r.id && x.id !== o.id && (x.status === "assigned" || x.status === "on_way") && x.lat; });
+    if(!jobs.length) return;
+    var best = null;
+    jobs.forEach(function(x){ var km = kmBetween(o.lat, o.lng, x.lat, x.lng); if(!best || km < best.km) best = { km:km, job:x }; });
+    if(best && best.km <= 2) out.push({ r:r, km:best.km, job:best.job, jobs:jobs.length });
+  });
+  return out.sort(function(a,b){ return a.km - b.km; });
+}
 function paintAdmin(main){
   learnDoorsteps();
   checkCodes();
   var orders = STORE.orders(), riders = STORE.riders();
   /* real road distance and minutes, once per order, from OSRM */
   orders.forEach(function(o){ if(o.status !== "delivered" && o.status !== "cancelled") measureRoad(o); });
+  tendRiders(riders);
   var gone   = orders.filter(function(o){ return o.status === "cancelled"; });
   var live   = orders.filter(function(o){ return o.status !== "delivered" && o.status !== "cancelled"; });
   var done   = orders.filter(function(o){ return o.status === "delivered"; });
@@ -3668,6 +3733,13 @@ function boardCard(o){
     act = '<button class="mini" data-adv="' + o.id + '|' + next + '">' +
           esc(doWord(next)) + '</button>';
   }
+  /* a rider who has gone quiet is a job nobody is carrying */
+  var rst = rider ? riderState(rider) : null;
+  if(rider && (o.status === "assigned" || o.status === "on_way") && rst && (rst.lost || rst.k === "off")){
+    act = '<div class="bflag"><b>' + esc(shortName(rider.name)) + ' ' + esc(rst.lost ? "not reachable" : "is off duty") + '</b>' +
+      '<small>' + esc(rst.t) + '</small>' +
+      '<button class="mini" data-assignpick="' + o.id + '">Give it to someone else</button></div>' + act;
+  }
 
   /* Before it is accepted the office may still want to talk to the
      customer - a missing item, an address that reads oddly, a price
@@ -3805,10 +3877,22 @@ function wireCards(main){
    the doorway better than a flag does. */
 function assignSheet(id){
   var o = STORE.order(id); if(!o) return;
+  var bundles = bundleFor(o), bundleOf = {};
+  bundles.forEach(function(b){ bundleOf[b.r.id] = b; });
+  var rank = function(r){
+    var st = riderState(r);
+    if(bundleOf[r.id]) return 0;                 /* already going that way */
+    if(st.k === "free") return 1;
+    if(st.k === "busy") return 2;
+    if(st.k === "quiet") return 3;
+    if(st.k === "off") return 4;
+    return 5;                                    /* gone: unreachable or never signed in */
+  };
+  var near = function(r){ return (r.lat && o.lat) ? kmBetween(r.lat, r.lng, o.lat, o.lng) : 99; };
   var all = Object.keys(DB.riders).map(function(k){ return DB.riders[k]; })
     .sort(function(a,b){
-      var ra = (a.off ? 2 : a.avail === false ? 1 : 0), rb = (b.off ? 2 : b.avail === false ? 1 : 0);
-      return ra - rb || String(a.name).localeCompare(String(b.name));
+      return rank(a) - rank(b) || (bundleOf[a.id] ? bundleOf[a.id].km - bundleOf[b.id].km : near(a) - near(b)) ||
+             String(a.name).localeCompare(String(b.name));
     });
   var old = el("asgSheet"); if(old) old.remove();
   var box = document.createElement("div");
@@ -3819,12 +3903,16 @@ function assignSheet(id){
         '<button class="linky" id="asgX">Cancel</button></div>' +
       (all.length
         ? all.map(function(r){
-            var state = r.off ? "signed out" : r.avail === false ? "off duty" : (r.uid || r.claimedAt) ? "available" : "not signed in yet";
-            var busy = STORE.orders().filter(function(x){ return x.riderId === r.id && (x.status === "assigned" || x.status === "on_way"); }).length;
-            return '<button class="sheetopt rider' + (r.off || r.avail === false ? " dim" : "") + '" data-asg="' + esc(r.id) + '">' +
-              '<span class="rdot ' + (r.off ? "off" : r.avail === false ? "away" : "on") + '"></span>' +
-              '<b>' + esc(r.name) + '</b>' +
-              '<small>' + esc(state) + (busy ? ' \u00b7 ' + busy + ' on the go' : '') + '</small>' +
+            var st = riderState(r), bd = bundleOf[r.id];
+            var dim = r.off || st.k === "off" || st.lost;
+            var line = bd
+              ? "already heading to " + shortName(bd.job.name) + " \u00b7 " + (bd.km < 1 ? Math.round(bd.km * 1000) + " m" : bd.km.toFixed(1) + " km") + " from this one"
+              : st.k === "free" && r.lat && o.lat ? "free \u00b7 " + near(r).toFixed(1) + " km away"
+              : st.t;
+            return '<button class="sheetopt rider' + (dim ? " dim" : "") + (bd ? " suggest" : "") + '" data-asg="' + esc(r.id) + '">' +
+              '<span class="rdot ' + (r.off || st.k === "off" ? "off" : st.lost ? "lost" : st.k === "busy" ? "busy" : "on") + '"></span>' +
+              '<b>' + esc(r.name) + (bd ? ' <em>Bundle</em>' : '') + '</b>' +
+              '<small>' + esc(line) + '</small>' +
             '</button>';
           }).join("")
         : '<p class="sheetsub">No riders yet.</p>') +
@@ -4567,10 +4655,16 @@ function officeDock(here){
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
     ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
     ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
-    ["google", "#/admin/google", "G",             "Google"]
+    ["google", "#/admin/google", "G",             "Google"],
+    /* its own page, not a console tab: the service simulator
+       (sim.html) replays our real bills on the floor plan */
+    ["sim",    "sim.html",       "\u23F1",       "Service sim"]
   ];
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
+    if(b[1].charAt(0) !== "#")
+      return '<a class="dockbtn wide" href="' + b[1] + '" title="' + b[3] +
+        '" style="text-decoration:none">' + b[2] + '<span class="dlab">' + b[3] + '</span></a>';
     return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
       '" title="' + b[3] + '"' + (on ? ' aria-current="page"' : '') + '>' +
       b[2] + '<span class="dlab">' + b[3] + '</span>' +
@@ -5063,7 +5157,10 @@ function paintMenuAdmin(main){
   var fileIn = el("mcsv");
   if(fileIn) fileIn.onchange = function(){
     var f = fileIn.files && fileIn.files[0]; if(!f) return;
-    var note = el("mcsvNote");
+    /* the page may have repainted under the file dialog (a Firestore
+       change does that), so find the note each time, and never trust
+       it to be there */
+    var say = function(m){ var n = el("mcsvNote"); if(n) n.textContent = m; shopToast(m); };
     var rd = new FileReader();
     rd.onload = function(){
       try{
@@ -5072,11 +5169,11 @@ function paintMenuAdmin(main){
         if(name === null) return;
         var id = slugId(name) + "-" + Date.now().toString(36).slice(-4);
         STORE.saveMenu({ id: id, name: (name || f.name).trim(), cats: parsed.cats, file: f.name });
-        note.textContent = "Imported " + parsed.count + " dishes in " + parsed.cats.length + " sections. Make it active when you are ready.";
         paintMenuAdmin(main);
-        var n2 = el("mcsvNote"); if(n2) n2.textContent = note.textContent;
-      }catch(e){ note.textContent = "Could not read that file: " + (e.message || e); }
+        say("Imported " + parsed.count + " dishes in " + parsed.cats.length + " sections. Make it active when you are ready.");
+      }catch(e){ say("Could not read that file: " + (e && e.message || e)); }
     };
+    rd.onerror = function(){ say("Could not open that file."); };
     rd.readAsText(f, "utf-8");
   };
 
@@ -5872,11 +5969,15 @@ function paintRiders(main){
             '<button class="linky" data-save="' + esc(r.id) + '">Save</button>' +
             '<button class="linky" data-rcancel="1">Cancel</button></div>';
         }
-        var st = riderState(r);
-        return '<div class="line rline s-' + st.k + '">' +
+        var st = riderState(r), pouch = pouchOf(r);
+        return '<div class="line rline s-' + st.k + (st.lost ? " lost" : "") + '">' +
           '<span class="rdot" title="' + esc(st.t) + '"></span>' +
           '<div class="ln"><b>' + esc(r.name) + '</b>' +
             '<small>' + esc(prettyPhone(r.phone)) + ' \u00b7 ' + esc(st.t) + '</small>' +
+            (pouch.cash || pouch.due
+              ? '<small class="pouch">' + (pouch.cash ? rupee(pouch.cash) + ' cash in pouch (' + pouch.n + ')' : '') +
+                (pouch.cash && pouch.due ? ' \u00b7 ' : '') + (pouch.due ? rupee(pouch.due) + ' still to collect' : '') + '</small>'
+              : '') +
             (r.uid || r.claimedAt ? '' :
               '<small class="pend">Has not signed in \u2014 code ' +
               esc(r.code || "?") + '</small>') +
@@ -7178,6 +7279,15 @@ if(riderApp()){
     document.addEventListener("DOMContentLoaded", paint);
     if(document.readyState !== "loading") paint();
 
+    /* "still here", once a minute while the app is on screen */
+    var beat = function(){
+      if(document.visibilityState !== "visible") return;
+      var me = whoAmI(); if(me) STORE.beat(me.id);
+    };
+    setInterval(beat, 60000);
+    document.addEventListener("visibilitychange", beat);
+    setTimeout(beat, 1500);
+
     /* data-go is how every button in shop.js navigates */
     document.addEventListener("click", function(e){
       var g = e.target.closest && e.target.closest("[data-go]");
@@ -7215,6 +7325,7 @@ function rowControl(it){
 }
 
 window.SHOP = {
+  parseMenuCsv: parseMenuCsv,        /* so a test can feed it a file */
   route: route,
   dishButtons: dishButtons,
   rowControl: rowControl,

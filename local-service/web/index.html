@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hayat Live</title>
+<style>
+:root{--bg:#F5F4EF;--card:#fff;--ink:#1F2328;--muted:#5F6770;--line:#DDDAD2;--soft:#ECEAE3;--accent:#2F5A74;--open:#3A7BA6;--due:#C98A1B;--late:#C2362C;--good:#2E7D5B;--agent:#7A5AA6}
+@media (prefers-color-scheme:dark){:root{--bg:#121518;--card:#1B1F23;--ink:#E7E5E0;--muted:#9AA2AA;--line:#2E343A;--soft:#242A2F;--accent:#8DB8D3;--open:#6FA8D0;--due:#D9A84A;--late:#E0645A;--good:#5FB38A;--agent:#B39AD8;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:12px 16px 40px;display:grid;gap:14px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h1{margin:0;font:700 22px/1.1 Georgia,serif}
+.chip{font-size:13px;font-weight:600;border-radius:999px;padding:4px 10px;border:1px solid currentColor}
+.ok{color:var(--good)} .bad{color:var(--late)} .warn{color:var(--due)}
+nav{display:flex;gap:4px;background:var(--soft);border-radius:10px;padding:4px;position:sticky;top:0;z-index:5}
+nav button{flex:1;border:0;background:transparent;color:var(--muted);font:600 14px system-ui;padding:9px 4px;border-radius:7px;cursor:pointer}
+nav button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+section{display:grid;gap:14px}
+[hidden]{display:none!important}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kpi span{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.kpi b{font-size:22px;font-variant-numeric:tabular-nums}
+.kpi small{display:block;color:var(--muted);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px}
+h2{margin:0;font:700 12px system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.grid{display:flex;flex-wrap:wrap;gap:8px}
+.tile{width:108px;border-radius:10px;padding:8px;color:#fff;display:grid;gap:2px;font-size:12px;position:relative}
+.tile b{font-size:18px} .tile .m{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.tile.open{background:var(--open)} .tile.due{background:var(--due)} .tile.alert{outline:3px solid var(--late);outline-offset:2px}
+.empty{color:var(--muted);font-size:14px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th{font:700 11px system-ui;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--soft);text-align:right}
+th:first-child,td:first-child{text-align:left}
+.role{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;border:1px solid currentColor}
+.r-waiter{color:var(--open)} .r-service_agent{color:var(--agent)} .r-cashier{color:var(--muted)} .r-unassigned{color:var(--late)}
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px}
+.bars div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;position:relative;min-height:2px}
+.bars div span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select,button.b{font:15px system-ui;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button.b{cursor:pointer;font-weight:600} button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.note{font-size:13px;color:var(--muted)}
+.cols{display:grid;gap:14px} @media(min-width:800px){.cols{grid-template-columns:1fr 1fr}}
+#pinbox{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:20}
+#pinbox .card{width:min(320px,90vw)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Hayat Live</h1><span class="chip" id="sync">…</span></header>
+  <nav>
+    <button data-t="now" aria-selected="true">Now</button>
+    <button data-t="day" aria-selected="false">Day report</button>
+    <button data-t="staff" aria-selected="false">Staff</button>
+    <button data-t="sim" aria-selected="false">Simulator</button>
+  </nav>
+
+  <section id="t-now">
+    <div class="kpis" id="nowk"></div>
+    <div id="nowgrid" class="cols"></div>
+    <p class="note">Blue = eating or waiting for food · amber = bill printed, waiting to pay · red outline = open over 45 min, or bill printed over 10 min ago. Refreshes every 30 seconds from VMENU (through this PC).</p>
+  </section>
+
+  <section id="t-day" hidden>
+    <div class="row"><input type="date" id="dayin"><button class="b" id="prev">‹</button><button class="b" id="next">›</button></div>
+    <div class="kpis" id="dayk"></div>
+    <div class="cols">
+      <div class="card"><h2>By section</h2><div class="scroll"><table id="sect"></table></div></div>
+      <div class="card"><h2>Orders by hour</h2><div class="bars" id="hours"></div><div style="height:14px"></div></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>Waiters</h2><div class="scroll"><table id="waiters"></table></div><div class="note" id="agents"></div></div>
+      <div class="card"><h2>Most ordered</h2><div class="scroll"><table id="items"></table></div></div>
+    </div>
+    <div class="card"><h2>Slow to pay (bill printed → paid over 10 min)</h2><div class="scroll"><table id="slow"></table></div></div>
+  </section>
+
+  <section id="t-staff" hidden>
+    <div class="card">
+      <h2>Add a service agent</h2>
+      <div class="note">Runners, table clearers, captains and helpers. They don't take orders in VMENU, so add them here.</div>
+      <div class="row"><input id="newname" placeholder="Name"><button class="b primary" id="add">Add</button></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>Waiters <span class="role r-waiter">take orders</span></h2><div class="scroll"><table id="st-waiter"></table></div></div>
+      <div class="card"><h2>Service agents <span class="role r-service_agent">help on the floor</span></h2><div class="scroll"><table id="st-service_agent"></table></div></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>Not set yet</h2><div class="scroll"><table id="st-unassigned"></table></div></div>
+      <div class="card"><h2>Cashier</h2><div class="scroll"><table id="st-cashier"></table></div></div>
+    </div>
+    <p class="note">Names come from VMENU automatically. Roles are kept on this PC and copied to Firebase on the next sync.</p>
+  </section>
+
+  <section id="t-sim" hidden>
+    <div class="card"><h2>Service simulator</h2><p class="note" style="margin:0">Replays your real bills on the floor plan and compares today's way of working with the optimized plan.</p><div class="row"><a class="b primary" href="/sim" target="_blank" style="text-decoration:none;padding:8px 14px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600">Open simulator</a></div></div>
+  </section>
+</div>
+
+<div id="pinbox" hidden><div class="card"><h2>Office PIN</h2><input id="pinin" type="password" inputmode="numeric" placeholder="PIN"><button class="b primary" id="pinok">Open</button><div class="note" id="pinerr"></div></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fm=(v,d=0)=>v==null?'–':(+v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
+const rs=v=>v==null?'–':'₹'+fm(v);
+let PIN=''; try{PIN=localStorage.getItem('hayat_live_pin')||''}catch(e){}
+let STAFF=[], ROLES={};
+async function api(path,opt={}){
+  const r=await fetch(path,{...opt,headers:{'Content-Type':'application/json','X-Pin':PIN,...(opt.headers||{})}});
+  if(r.status===401){ $('pinbox').hidden=false; throw new Error('pin'); }
+  return r.json();
+}
+$('pinok').onclick=async()=>{ PIN=$('pinin').value.trim(); try{localStorage.setItem('hayat_live_pin',PIN)}catch(e){}
+  try{ await api('/api/status'); $('pinbox').hidden=true; refresh(); }catch(e){ $('pinerr').textContent='Wrong PIN'; } };
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b)); ['now','day','staff','sim'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t); if(b.dataset.t==='day') loadDay(); if(b.dataset.t==='staff') loadStaff(); });
+const since=iso=>iso?(Date.now()-new Date(iso).getTime())/60000:null;
+const roleOf=(name,id)=>{ const s=STAFF.find(x=>(id!=null&&x.vmenu_id===id)||x.name===name); return s?s.role:'unassigned'; };
+const nameOf=(name,id)=>{ const s=STAFF.find(x=>id!=null&&x.vmenu_id===id); return s?s.name:name; };
+
+async function status(){
+  const s=await api('/api/status'); ROLES=s.roles||{};
+  const m=since(s.lastOkAt), el=$('sync');
+  if(s.lastError&&(!s.lastOkAt||new Date(s.lastRunAt)>=new Date(s.lastOkAt))){ el.className='chip bad'; el.textContent='Sync problem'; el.title=s.lastError; }
+  else if(m==null){ el.className='chip warn'; el.textContent='Not synced yet'; }
+  else if(m>10){ el.className='chip bad'; el.textContent='Last sync '+fm(m)+' min ago'; }
+  else { el.className='chip ok'; el.textContent='Synced '+(m<1?'just now':fm(m)+' min ago'); }
+}
+async function loadNow(){
+  const rows=await api('/api/open'); const by={};
+  rows.forEach(o=>(by[o.section||'Other']=by[o.section||'Other']||[]).push(o));
+  let late=0,due=0,longest=0;
+  const html=Object.keys(by).sort().map(sec=>{
+    const tiles=by[sec].sort((a,b)=>(a.table||0)-(b.table||0)).map(o=>{
+      const m=since(o.orderAt)||0, dm=o.dueAt?since(o.dueAt):null, isDue=o.status==='due', alert=(!isDue&&m>45)||(isDue&&dm>10);
+      if(alert) late++; if(isDue) due++; longest=Math.max(longest,m);
+      return `<div class="tile ${isDue?'due':'open'} ${alert?'alert':''}" title="${(o.items||[]).map(i=>i.q+'× '+i.n).join(', ')}"><b>${o.type==='Parcel'?'Parcel':'T'+(o.table??'?')}</b><span class="m">${fm(m)}′</span><span>${isDue?'bill printed '+fm(dm)+'′ ago':(o.kotCount>1?o.kotCount+' orders':'1 order')}</span><span>${o.taker||''}</span><span>${rs(o.total)}</span></div>`; }).join('');
+    return `<div class="card"><h2>${sec} · ${by[sec].length}</h2><div class="grid">${tiles}</div></div>`; }).join('');
+  $('nowgrid').innerHTML=html||'<div class="card empty">No open orders right now.</div>';
+  $('nowk').innerHTML=`<div class="kpi"><span>Open now</span><b>${rows.length}</b></div><div class="kpi"><span>Waiting to pay</span><b>${due}</b></div><div class="kpi"><span>Need attention</span><b class="${late?'bad':''}">${late}</b></div><div class="kpi"><span>Longest open</span><b>${fm(longest)}′</b></div>`;
+}
+function bizToday(){ const d=new Date(Date.now()-5*3600e3); return d.toISOString().slice(0,10); }
+$('dayin').value=bizToday(); $('dayin').onchange=loadDay;
+$('prev').onclick=()=>{ const d=new Date($('dayin').value); d.setDate(d.getDate()-1); $('dayin').value=d.toISOString().slice(0,10); loadDay(); };
+$('next').onclick=()=>{ const d=new Date($('dayin').value); d.setDate(d.getDate()+1); $('dayin').value=d.toISOString().slice(0,10); loadDay(); };
+async function loadDay(){
+  if(!STAFF.length){ const st=await api('/api/staff'); STAFF=st.staff; }
+  const r=await api('/api/day?d='+$('dayin').value), s=r.summary;
+  if(!s){ $('dayk').innerHTML='<div class="kpi"><span>No bills for this day</span><b>–</b></div>'; ['sect','waiters','items','slow'].forEach(i=>$(i).innerHTML=''); $('hours').innerHTML=''; $('agents').textContent=''; return; }
+  $('dayk').innerHTML=[['Bills',fm(s.bills),fm(s.dineIn)+' dine-in · '+fm(s.parcel)+' parcel'],['Revenue',rs(s.revenue),''],['Table time',fm(s.occAvg,0)+'′','first order → paid, average'],['Wait to pay',fm(s.payWaitAvg,1)+'′','bill printed → paid'],['Ordered again',s.addonShare==null?'–':fm(s.addonShare*100)+'%','of dine-in tables']]
+    .map(([a,b,c])=>`<div class="kpi"><span>${a}</span><b>${b}</b><small>${c}</small></div>`).join('');
+  $('sect').innerHTML='<tr><th>Section</th><th>Bills</th><th>Revenue</th><th>Table time</th><th>Wait to pay</th></tr>'+Object.entries(s.sections).sort((a,b)=>b[1].bills-a[1].bills).map(([k,v])=>`<tr><td>${k}</td><td>${v.bills}</td><td>${rs(v.revenue)}</td><td>${fm(v.occAvg)}′</td><td>${fm(v.payWaitAvg,1)}′</td></tr>`).join('');
+  const hrs=Object.entries(s.byHour).map(([h,n])=>[+h,n]).sort((a,b)=>((a[0]+19)%24)-((b[0]+19)%24)); const mx=Math.max(1,...hrs.map(x=>x[1]));
+  $('hours').innerHTML=hrs.map(([h,n])=>`<div style="height:${n/mx*100}%" title="${n} orders"><span>${(h%12||12)}${h<12?'a':'p'}</span></div>`).join('');
+  const rows=Object.entries(s.takers).map(([name,v])=>({...v,name:nameOf(name,v.id),role:roleOf(name,v.id)}));
+  const lab={waiter:'Waiter',service_agent:'Service agent',cashier:'Cashier',unassigned:'Not set'};
+  $('waiters').innerHTML='<tr><th>Name</th><th>Role</th><th>Bills</th><th>Revenue</th><th>Table time</th></tr>'+rows.sort((a,b)=>b.bills-a.bills).map(v=>`<tr><td>${v.name}</td><td><span class="role r-${v.role}">${lab[v.role]||v.role}</span></td><td>${v.bills}</td><td>${rs(v.revenue)}</td><td>${fm(v.occAvg)}′</td></tr>`).join('');
+  const agents=STAFF.filter(x=>x.role==='service_agent'&&x.active);
+  $('agents').textContent=agents.length?'Service agents on the team: '+agents.map(a=>a.name).join(', ')+'.':'No service agents added yet (Staff tab).';
+  $('items').innerHTML='<tr><th>Item</th><th>Qty</th></tr>'+(s.topItems||[]).slice(0,12).map(i=>`<tr><td>${i.n}</td><td>${fm(i.q)}</td></tr>`).join('');
+  const slow=r.bills.filter(b=>b.type==='Dine-in'&&!b.outlier&&b.dueToSettle>10).sort((a,b)=>b.dueToSettle-a.dueToSettle);
+  $('slow').innerHTML=slow.length?'<tr><th>Table</th><th>Section</th><th>Waiter</th><th>Waited</th><th>Bill</th></tr>'+slow.slice(0,15).map(b=>`<tr><td>T${b.table}</td><td>${b.section}</td><td>${b.taker}</td><td>${fm(b.dueToSettle)}′</td><td>${rs(b.total)}</td></tr>`).join(''):'<tr><td class="empty">None — good.</td></tr>';
+}
+async function loadStaff(){
+  const st=await api('/api/staff'); STAFF=st.staff; ROLES=st.roles;
+  const opts=r=>Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${k===r?'selected':''}>${v}</option>`).join('');
+  ['waiter','service_agent','unassigned','cashier'].forEach(role=>{
+    const list=STAFF.filter(s=>s.role===role&&s.active);
+    $('st-'+role).innerHTML=list.length?list.map(s=>`<tr><td>${s.name}<div class="note">${s.source==='manual'?'added here':'from VMENU'}</div></td><td><select data-id="${s.id}">${opts(s.role)}</select></td>${s.source==='manual'?`<td><button class="b" data-rm="${s.id}">Remove</button></td>`:'<td></td>'}</tr>`).join(''):'<tr><td class="empty">Nobody</td></tr>';
+  });
+  document.querySelectorAll('select[data-id]').forEach(el=>el.onchange=async()=>{ await api('/api/staff',{method:'POST',body:JSON.stringify({id:el.dataset.id,role:el.value})}); loadStaff(); });
+  document.querySelectorAll('button[data-rm]').forEach(el=>el.onclick=async()=>{ await api('/api/staff',{method:'POST',body:JSON.stringify({id:el.dataset.rm,active:false})}); loadStaff(); });
+}
+$('add').onclick=async()=>{ const n=$('newname').value.trim(); if(!n) return; await api('/api/staff',{method:'POST',body:JSON.stringify({name:n,role:'service_agent'})}); $('newname').value=''; loadStaff(); };
+async function refresh(){ try{ await status(); await loadNow(); }catch(e){} }
+refresh(); setInterval(refresh,30000);
+</script>
+</body>
+</html>

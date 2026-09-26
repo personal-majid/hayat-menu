@@ -137,7 +137,7 @@ window.CONFIG = {
        3. copy the key here.
      It is a public key restricted to this website; nothing secret. */
   traffic: {
-    tomtomKey: ""
+    tomtomKey: "HYkJEbqymD918pvRduuffu7Q9a3ifHCl"
   },
 
   /* ---- 1. INSTAGRAM HANDLE (no @) -------------------------- */
