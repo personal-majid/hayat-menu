@@ -246,6 +246,7 @@ service cloud.firestore {
     match /vm_days/{id}  { allow read: if isOffice(); allow write: if false; }
     match /vm_staff/{id} { allow read: if isOffice(); allow write: if false; }
     match /vm_meta/{id}  { allow read: if isCrew(); allow write: if false; }
+    match /vm_daylog/{day} { allow read: if isCrew(); allow write: if false; }   /* one JSON per day, from daylog.py */
 
     /* ---- kitchen screens and the waitlist ---------------------
          kds/{screen_invoice_round}  when a kitchen marked a KOT done

@@ -66,8 +66,8 @@ DEFAULTS = {
         "item_qty_columns": "itemquantity,quantity,qty",
         "item_price_columns": "itemprice,price,rate,unitprice",
         "item_amount_columns": "itemtotal,totalprice,amount,total",
-        "item_id_columns": "itemid,item_id,productid",
-        "items_master_table": "", "items_master_id": "itemid", "items_master_name": "itemname",
+        "item_id_columns": "itemid,item_id,productid,itemcode,barcode",
+        "items_master_table": "svr_itemparent", "items_master_id": "basebarcode", "items_master_name": "itemname",
     },
     "serve": {"host": "0.0.0.0", "port": "8765", "pin": "", "sim_file": "../sim.html"},
     "firebase": {"key_file": "firebase-key.json", "project_id": "h-menu", "collection_prefix": "vm_"},
@@ -227,12 +227,14 @@ class Source:
         sec, emp = v.get("sections_table"), v.get("employees_table")
         cols = {c.lower() for c in self.columns(t)}
         sel, join = "h.*", ""
-        if self.has(sec) and "secid" in cols:
+        sec_col = "secid" if "secid" in cols else ("sectionid" if "sectionid" in cols else None)
+        emp_col = "ordtakerid" if "ordtakerid" in cols else ("staffid" if "staffid" in cols else None)
+        if self.has(sec) and sec_col:
             sel += ", s.sectionname AS _section"
-            join += f" LEFT JOIN `{sec}` s ON s.sectionid = h.secid"
-        if self.has(emp) and "ordtakerid" in cols:
+            join += f" LEFT JOIN `{sec}` s ON s.sectionid = h.{sec_col}"
+        if self.has(emp) and emp_col:
             sel += ", e.employeename AS _taker"
-            join += f" LEFT JOIN `{emp}` e ON e.employeeid = h.ordtakerid"
+            join += f" LEFT JOIN `{emp}` e ON e.employeeid = h.{emp_col}"
         return self.q(f"SELECT {sel} FROM `{t}` h{join}")
 
     def employees(self):
@@ -493,9 +495,12 @@ class FirestoreTarget:
         else:
             if not key.exists():
                 raise SystemExit(f"Firebase key not found: {key}")
-            app = firebase_admin.initialize_app(credentials.Certificate(str(key)),
-                                                {"projectId": cfg.get("firebase", "project_id")}) \
-                if not firebase_admin._apps else firebase_admin.get_app()
+            try:
+                app = firebase_admin.initialize_app(credentials.Certificate(str(key)),
+                                                    {"projectId": cfg.get("firebase", "project_id")}) \
+                    if not firebase_admin._apps else firebase_admin.get_app()
+            except ValueError:
+                app = firebase_admin.get_app()       # another thread got there first
         self.fs = firestore
         self.db = firestore.client(app)
         self.writes = self.deletes = 0
@@ -605,6 +610,11 @@ def sync_open(cfg, src, dst, cache, shaper, stats):
         stats["open_now"] = None
         return stats
     idc = v.get("open_id_column")
+    if opens and idc not in opens[0]:
+        for alt in ("transactionid", "invoiceid", "id"):
+            if alt in opens[0]:
+                idc = alt
+                break
     ids = [r.get(idc) for r in opens]
     items = src.items_for(v.get("open_items_table"), idc, ids)
     now_ids, batch = set(), []
