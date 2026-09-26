@@ -2483,15 +2483,19 @@ html[data-theme="paper"] .leaflet-tile-pane{filter:saturate(.55) sepia(.18) brig
 .mrowm .rdot{background:var(--line2)} .mrowm.on .rdot{background:var(--green)}
 .mrowm .linky.go{color:var(--gold2);font-weight:800}
 label.shopbtn{cursor:pointer}
-/* ---- the highway strip on the office map ---- */
-.trafstrip{position:absolute;right:10px;top:150px;z-index:1100;display:flex;flex-wrap:wrap;align-items:center;gap:4px;
-  max-width:min(94%,560px);padding:6px 10px;border-radius:12px;background:rgba(255,255,255,.94);
-  box-shadow:0 2px 10px rgba(0,0,0,.12);font-size:12px;color:#1B2410;pointer-events:auto}
-.trh{font-weight:800;letter-spacing:.08em;font-size:10.5px;margin-right:4px;color:#7E6535}
+/* ---- the highway pill on the office map ---- */
+.trafstrip{position:absolute;right:56px;top:100px;z-index:1100;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:auto}
+.trpill{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:0;border-radius:999px;
+  background:rgba(255,255,255,.94);box-shadow:0 2px 10px rgba(0,0,0,.12);font:inherit;font-size:12px;color:#1B2410;cursor:pointer}
+.trh{font-weight:800;letter-spacing:.08em;font-size:10.5px;color:#7E6535}
+.trword{font-weight:700}.trchev{opacity:.5;margin-left:2px}
+.trafstrip.s-clear .trword{color:#4F7A2C}.trafstrip.s-slow .trword{color:#C58A1A}.trafstrip.s-jam .trword{color:#B3462B}
+.trpts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:4px;max-width:min(94vw,560px);padding:7px 10px;border-radius:12px;
+  background:rgba(255,255,255,.94);box-shadow:0 2px 10px rgba(0,0,0,.12);font-size:12px;color:#1B2410}
 .trp{white-space:nowrap}.trp b{font-variant-numeric:tabular-nums}
 .trp.s-clear b{color:#4F7A2C}.trp.s-slow b{color:#C58A1A}.trp.s-jam b,.trp.s-closed b{color:#B3462B}
 .trarrow{opacity:.4}
-@media (max-width:860px){.trafstrip{top:auto;bottom:230px;right:8px;left:8px;max-width:none}}
+@media (max-width:860px){.trafstrip{top:auto;bottom:236px;right:8px}}
 .findpin{display:block;margin:-4px 0 10px;font-size:13px}
 .bwhere .door{display:block;font-size:11px;opacity:.7;margin-top:2px;white-space:normal}
 /* ---- riders: reachability, bundles, pouch ---- */
@@ -2534,20 +2538,3 @@ button.ptag{font:inherit;cursor:pointer;border:0}
 .maphome a{font-size:18px;line-height:30px;text-align:center;width:30px;height:30px;display:block;color:#1B2410;text-decoration:none}
 html[data-theme="paper"] .leaflet-pane.leaflet-traffic-pane,html[data-theme="paper"] .leaflet-traffic-pane{filter:none}
 .leaflet-traffic-pane img{filter:none !important}
-
-/* ---- dock: the More drawer (Menu, Google, Service sim) ---- */
-.dockmore{position:relative;display:flex}
-.dockdrawer{position:absolute;right:0;bottom:calc(100% + 10px);min-width:270px;max-width:calc(100vw - 24px);
-  background:var(--card);border:1px solid var(--line2);border-radius:16px;box-shadow:var(--shadow);
-  padding:6px;display:grid;gap:2px;z-index:710}
-.dockdrawer[hidden]{display:none}
-.dditem{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:center;text-align:left;
-  width:100%;border:0;background:transparent;color:var(--cream);padding:10px 12px;border-radius:12px;
-  font:inherit;cursor:pointer;text-decoration:none}
-.dditem:hover,.dditem:focus-visible{background:color-mix(in srgb,var(--gold) 14%,transparent);outline:none}
-.dditem.on{background:color-mix(in srgb,var(--gold) 20%,transparent)}
-.ddic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:18px;font-weight:800;
-  border:1px solid var(--line2)}
-.ddtx b{display:block;font-weight:700} .ddtx small{display:block;color:var(--muted);font-size:var(--t-small)}
-html[data-theme="paper"] .dockdrawer{background:var(--card);border-color:var(--line2)}
-html[data-theme="paper"] .dditem{color:var(--ink)}

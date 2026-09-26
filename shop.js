@@ -3781,18 +3781,13 @@ function paintAdmin(main){
    only a safety net for a connection that fell asleep. It runs while a
    ride is live and the map is open, and stops the moment it is not. */
 var LIVETIMER = null;
-function onBoardPage(){
-  var h = (location.hash || "").replace(/^#\/?/, "").split("/").filter(Boolean);
-  return h[0] === "admin" && !/^(riders|call|who|menu|google|c|o)$/.test(h[1] || "");
-}
+/* While a ride is live the office map is kept fresh by moving the
+   dots and re-wording "last seen" - never by rebuilding the map.
+   (It used to repaint the whole page every 15 s, which tore the map
+   down and put it back with a reload of tiles: the "rezoom".) */
 function liveWatch(on, main){
   if(on && !LIVETIMER){
-    LIVETIMER = setInterval(function(){
-      /* only the board repaints itself. Opened the Menu (or any other
-         office page) from the map? Stop, or the map paints over it. */
-      if(!onBoardPage()) return liveWatch(false);
-      paintAdmin(main);
-    }, 15000);
+    LIVETIMER = setInterval(function(){ try{ nudgePins(); }catch(e){} }, 15000);
   } else if(!on && LIVETIMER){
     clearInterval(LIVETIMER); LIVETIMER = null;
   }
@@ -4416,17 +4411,36 @@ function readTraffic(){
     var box = el("admap"); if(box) trafficStrip(box);
   });
 }
+/* One small pill, not a banner: "NH966 · all clear" or "NH966 · slow
+   at Kootilangadi". Tap to open the five points; the choice sticks. */
 function trafficStrip(box){
   var old = box.querySelector(".trafstrip"); if(old) old.remove();
   if(!trafficKey()) return;
-  var d = document.createElement("div"); d.className = "trafstrip";
+  var open = false; try{ open = localStorage.getItem("hayat_trafopen") === "1"; }catch(e){}
   var pts = TRAF.pts || [];
-  d.innerHTML = '<span class="trh">NH966</span>' + (pts.length
-    ? pts.map(function(p){
-        return '<span class="trp s-' + (p.state || "none") + '" title="' + esc(p.n) + (p.now != null ? " \u00b7 " + p.now + " of " + p.free + " km/h" : "") + '">' +
-          esc(p.n) + (p.now != null ? ' <b>' + p.now + '</b>' : ' <b>?</b>') + '</span>';
-      }).join('<span class="trarrow">\u2192</span>')
-    : '<span class="trp">reading\u2026</span>');
+  var bad = pts.filter(function(p){ return p.state === "jam" || p.state === "closed"; });
+  var slow = pts.filter(function(p){ return p.state === "slow"; });
+  var word = !pts.length ? "reading\u2026"
+           : bad.length ? (bad[0].state === "closed" ? "closed" : "jam") + " at " + bad[0].n
+           : slow.length ? "slow at " + slow[0].n
+           : pts.every(function(p){ return p.fail; }) ? "no data"
+           : "all clear";
+  var cls = bad.length ? "s-jam" : slow.length ? "s-slow" : pts.length ? "s-clear" : "s-none";
+  var d = document.createElement("div"); d.className = "trafstrip " + cls + (open ? " open" : "");
+  d.innerHTML =
+    '<button class="trpill" title="NH966 Malappuram \u2192 Perinthalmanna">' +
+      '<span class="trh">NH966</span> <span class="trword">' + esc(word) + '</span>' +
+      '<span class="trchev">' + (open ? "\u2039" : "\u203A") + '</span></button>' +
+    (open && pts.length
+      ? '<div class="trpts">' + pts.map(function(p){
+          return '<span class="trp s-' + (p.state || "none") + '" title="' + esc(p.n) + (p.now != null ? " \u00b7 " + p.now + " of " + p.free + " km/h" : "") + '">' +
+            esc(p.n) + ' <b>' + (p.now != null ? p.now : "?") + '</b></span>';
+        }).join('<span class="trarrow">\u2192</span>') + '</div>'
+      : '');
+  d.querySelector(".trpill").onclick = function(){
+    try{ localStorage.setItem("hayat_trafopen", open ? "0" : "1"); }catch(e){}
+    trafficStrip(box);
+  };
   ["mousedown","touchstart","dblclick","wheel"].forEach(function(t){ d.addEventListener(t, function(e){ e.stopPropagation(); }, { passive:true }); });
   box.appendChild(d);
 }
@@ -4792,25 +4806,10 @@ function officeDock(here){
     ["call",   "#/admin/call",   "\u260E",       "Phone order"],
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
-    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"]
+    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
+    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
+    ["google", "#/admin/google", "G",             "Google"]
   ];
-  /* the rest live in a drawer, so the dock fits any screen */
-  var M = [
-    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
-    ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],
-    ["sim",    "sim.html",       "\u23F1",       "Service sim", "Replay our bills on the floor plan"]
-  ];
-  var inMore = M.some(function(m){ return m[0] === here; });
-  var more = '<div class="dockmore">' +
-    '<div class="dockdrawer" role="menu" hidden>' + M.map(function(m){
-      var on = m[0] === here, inner = '<span class="ddic">' + m[2] + '</span><span class="ddtx"><b>' + m[3] + '</b><small>' + m[4] + '</small></span>';
-      return m[1].charAt(0) === "#"
-        ? '<button class="dditem' + (on ? " on" : "") + '" role="menuitem" data-go="' + m[1] + '"' + (on ? ' aria-current="page"' : '') + '>' + inner + '</button>'
-        : '<a class="dditem" role="menuitem" href="' + m[1] + '">' + inner + '</a>';
-    }).join("") + '</div>' +
-    '<button class="dockbtn wide dmore' + (inMore ? " on" : "") + '" aria-haspopup="menu" aria-expanded="false" title="More">' +
-      '\u22EF<span class="dlab">' + (inMore ? M.filter(function(m){ return m[0] === here; })[0][3] : "More") + '</span></button>' +
-  '</div>';
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
     return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
@@ -4818,24 +4817,8 @@ function officeDock(here){
       b[2] + '<span class="dlab">' + b[3] + '</span>' +
       (b[0] === "riders" && n ? '<span class="dockn">' + n + '</span>' : '') +
       '</button>';
-  }).join("") + more + '</div>';
+  }).join("") + '</div>';
 }
-/* the More drawer: one handler for every repaint of the dock */
-document.addEventListener("click", function(e){
-  var t = e.target, btn = t.closest && t.closest(".dmore");
-  var open = document.querySelectorAll(".dockdrawer:not([hidden])");
-  if(btn){
-    var d = btn.parentNode.querySelector(".dockdrawer"), was = !d.hidden;
-    open.forEach(function(x){ x.hidden = true; });
-    d.hidden = was; btn.setAttribute("aria-expanded", was ? "false" : "true");
-    return;
-  }
-  if(t.closest && t.closest(".dockdrawer") && !t.closest(".dditem")) return;
-  open.forEach(function(x){ x.hidden = true; var b = x.parentNode.querySelector(".dmore"); if(b) b.setAttribute("aria-expanded","false"); });
-});
-document.addEventListener("keydown", function(e){
-  if(e.key === "Escape") document.querySelectorAll(".dockdrawer:not([hidden])").forEach(function(x){ x.hidden = true; });
-});
 
 /* the word in front of a console's tabs: which book this is */
 function tabCap(t){ return '<span class="tabcap">' + esc(t) + '</span>'; }
@@ -7275,7 +7258,7 @@ function route(p, main){
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
            p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google");
   rideMode(p[0] === "drive");
-  if(!onBoardPage()) liveWatch(false, main);
+  if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
   if(!p.length && wantsLanding()){
     REPAINT = function(){ viewLanding(main); };
@@ -7353,12 +7336,17 @@ function nudgePins(){
   }catch(e){}
 }
 
+/* Seven collections arrive one after another at boot, each firing a
+   change. Painting once per collection rebuilt the office map seven
+   times. Real changes are coalesced into one paint a beat later. */
+var PAINT_DUE = null;
 STORE.onChange(function(){
   if(applyMenu()){ LASTSIG = ""; }        /* a menu switch is a repaint, always */
   var sig = quietSig();
   if(sig === LASTSIG){ nudgePins(); return; }
   LASTSIG = sig;
-  repaintNow();
+  if(PAINT_DUE) return;
+  PAINT_DUE = setTimeout(function(){ PAINT_DUE = null; repaintNow(); }, 250);
   /* a rider signed in on this phone gets told about work wherever
      they are in the RIDER app. The customer app is a different
      front door; a phone that once signed in as a rider must not
