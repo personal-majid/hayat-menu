@@ -3209,14 +3209,18 @@ var VOICE = {
 /* A rider's real state, from what they said and what their
    phone has actually been doing. "Available" a week ago with no
    position since is not available. */
-var QUIET_MIN = 30, OFF_MIN = 60;      /* silent this long = unreachable; this long = switched off */
+/* Riders close the app between jobs; that is normal, not a fault.
+   Silence only matters while they are carrying something (15 min),
+   and only a whole shift of silence (3 h) switches them off. */
+var QUIET_MIN = 15, OFF_MIN = 180;
 function riderSeen(r){ return Math.max(r.seen || 0, r.at || 0); }
 function riderState(r){
   if(!r) return { k:"gone", t:"unknown" };
   if(!r.uid && !r.claimedAt) return { k:"gone", t:"not signed in" };
-  if(r.avail === false)      return { k:"off",  t: r.offAuto ? "switched off \u2014 phone silent since " + (riderSeen(r) ? when(riderSeen(r)) : "sign-in") : "off duty" };
-  var seen = riderSeen(r);
-  if(seen && Date.now() - seen > QUIET_MIN * 60000)
+  if(r.avail === false)      return { k:"off",  t: r.offAuto ? "off \u2014 app closed since " + (riderSeen(r) ? when(riderSeen(r)) : "sign-in") + " \u00b7 back on when it opens" : "off duty" };
+  var seen = riderSeen(r), quiet = seen && Date.now() - seen > QUIET_MIN * 60000;
+  var onJob = STORE.orders().some(function(o){ return o.riderId === r.id && (o.status === "assigned" || o.status === "on_way"); });
+  if(quiet && onJob)
     return { k:"gone", t:"not reachable \u00b7 last seen " + staleness(seen).txt, lost:true };
 
   var carrying = STORE.orders().filter(function(o){
@@ -3234,7 +3238,8 @@ function riderState(r){
              lat: newest.rLat, lng: newest.rLng, at: newest.rAt,
              jobs: carrying };
   }
-  return { k:"free", t: r.avail ? "free" : "free · not marked available",
+  return { k:"free", t: (r.avail ? "free" : "free \u00b7 not marked available") +
+             (quiet ? " \u00b7 app closed " + staleness(seen).txt : ""),
            jobs: [] };
 }
 
@@ -3730,7 +3735,6 @@ function paintAdmin(main){
       /* Opening the map is a fresh look, so it starts on the
          restaurant. Panning about while it is already open is
          remembered, so a repaint does not yank it back. */
-      if(b.dataset.view === "map" && ADVIEW !== "map") AVIEW = null;
       ADVIEW = b.dataset.view;
       try{ localStorage.setItem("hayat_adview", ADVIEW); }catch(e){}
       paintAdmin(main);
@@ -3753,7 +3757,6 @@ function paintAdmin(main){
       var k = b.dataset.mf;
       MFILT.on[k] = !MFILT.on[k];
       saveFilter();
-      AVIEW = null;              /* a new question deserves a fresh view */
       paintAdmin(main);
     };
   });
@@ -3761,7 +3764,6 @@ function paintAdmin(main){
   if(hb) hb.onclick = function(){
     HEAT = !HEAT;
     try{ localStorage.setItem("hayat_mapheat", HEAT ? "1" : "0"); }catch(e){}
-    AVIEW = null;
     paintAdmin(main);
   };
 
@@ -3769,7 +3771,6 @@ function paintAdmin(main){
     b.onclick = function(){
       MFILT.range = b.dataset.mr;
       saveFilter();
-      AVIEW = null;
       paintAdmin(main);
     };
   });
@@ -3780,9 +3781,18 @@ function paintAdmin(main){
    only a safety net for a connection that fell asleep. It runs while a
    ride is live and the map is open, and stops the moment it is not. */
 var LIVETIMER = null;
+function onBoardPage(){
+  var h = (location.hash || "").replace(/^#\/?/, "").split("/").filter(Boolean);
+  return h[0] === "admin" && !/^(riders|call|who|menu|google|c|o)$/.test(h[1] || "");
+}
 function liveWatch(on, main){
   if(on && !LIVETIMER){
-    LIVETIMER = setInterval(function(){ paintAdmin(main); }, 15000);
+    LIVETIMER = setInterval(function(){
+      /* only the board repaints itself. Opened the Menu (or any other
+         office page) from the map? Stop, or the map paints over it. */
+      if(!onBoardPage()) return liveWatch(false);
+      paintAdmin(main);
+    }, 15000);
   } else if(!on && LIVETIMER){
     clearInterval(LIVETIMER); LIVETIMER = null;
   }
@@ -4238,7 +4248,11 @@ function orderCard(o){
    the view survives a repaint so a status change does not yank the
    map back to the start.
    ------------------------------------------------------------ */
-var AMAP = null, AVIEW = null, RMARKS = {};
+var AMAP = null, RMARKS = {};
+/* where the office left the map: kept on this device, so a repaint,
+   a tab, a reload or tomorrow morning all open exactly there */
+var AVIEW = (function(){ try{ return JSON.parse(localStorage.getItem("hayat_mapview")) || null; }catch(e){ return null; } })();
+function saveView(){ try{ AVIEW ? localStorage.setItem("hayat_mapview", JSON.stringify(AVIEW)) : localStorage.removeItem("hayat_mapview"); }catch(e){} }
 var ADVIEW = "board";
 try{ ADVIEW = localStorage.getItem("hayat_adview") || "board"; }catch(e){}
 
@@ -4418,8 +4432,12 @@ function trafficStrip(box){
 }
 function trafficLayer(LF, map){
   var key = trafficKey(); if(!key) return;
-  LF.tileLayer("https://{s}.api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=" + encodeURIComponent(key),
-    { subdomains:"abcd", maxZoom:19, opacity:.85, attribution:"traffic &copy; TomTom" }).addTo(map);
+  /* its own pane above the base tiles, so the paper theme's sepia
+     does not wash the reds and greens out; thick lines so a road
+     reads at town zoom */
+  try{ if(!map.getPane("traffic")){ map.createPane("traffic"); map.getPane("traffic").style.zIndex = 350; } }catch(e){}
+  LF.tileLayer("https://{s}.api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?thickness=12&key=" + encodeURIComponent(key),
+    { pane:"traffic", subdomains:"abcd", maxZoom:19, opacity:.9, attribution:"traffic &copy; TomTom" }).addTo(map);
 }
 
 function measureRoad(o){
@@ -4774,10 +4792,25 @@ function officeDock(here){
     ["call",   "#/admin/call",   "\u260E",       "Phone order"],
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
-    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"],
-    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu"],
-    ["google", "#/admin/google", "G",             "Google"]
+    ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"]
   ];
+  /* the rest live in a drawer, so the dock fits any screen */
+  var M = [
+    ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
+    ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],
+    ["sim",    "sim.html",       "\u23F1",       "Service sim", "Replay our bills on the floor plan"]
+  ];
+  var inMore = M.some(function(m){ return m[0] === here; });
+  var more = '<div class="dockmore">' +
+    '<div class="dockdrawer" role="menu" hidden>' + M.map(function(m){
+      var on = m[0] === here, inner = '<span class="ddic">' + m[2] + '</span><span class="ddtx"><b>' + m[3] + '</b><small>' + m[4] + '</small></span>';
+      return m[1].charAt(0) === "#"
+        ? '<button class="dditem' + (on ? " on" : "") + '" role="menuitem" data-go="' + m[1] + '"' + (on ? ' aria-current="page"' : '') + '>' + inner + '</button>'
+        : '<a class="dditem" role="menuitem" href="' + m[1] + '">' + inner + '</a>';
+    }).join("") + '</div>' +
+    '<button class="dockbtn wide dmore' + (inMore ? " on" : "") + '" aria-haspopup="menu" aria-expanded="false" title="More">' +
+      '\u22EF<span class="dlab">' + (inMore ? M.filter(function(m){ return m[0] === here; })[0][3] : "More") + '</span></button>' +
+  '</div>';
   return '<div class="condock">' + B.map(function(b){
     var on = b[0] === here;
     return '<button class="dockbtn wide' + (on ? " on" : "") + '" data-go="' + b[1] +
@@ -4785,8 +4818,24 @@ function officeDock(here){
       b[2] + '<span class="dlab">' + b[3] + '</span>' +
       (b[0] === "riders" && n ? '<span class="dockn">' + n + '</span>' : '') +
       '</button>';
-  }).join("") + '</div>';
+  }).join("") + more + '</div>';
 }
+/* the More drawer: one handler for every repaint of the dock */
+document.addEventListener("click", function(e){
+  var t = e.target, btn = t.closest && t.closest(".dmore");
+  var open = document.querySelectorAll(".dockdrawer:not([hidden])");
+  if(btn){
+    var d = btn.parentNode.querySelector(".dockdrawer"), was = !d.hidden;
+    open.forEach(function(x){ x.hidden = true; });
+    d.hidden = was; btn.setAttribute("aria-expanded", was ? "false" : "true");
+    return;
+  }
+  if(t.closest && t.closest(".dockdrawer") && !t.closest(".dditem")) return;
+  open.forEach(function(x){ x.hidden = true; var b = x.parentNode.querySelector(".dmore"); if(b) b.setAttribute("aria-expanded","false"); });
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape") document.querySelectorAll(".dockdrawer:not([hidden])").forEach(function(x){ x.hidden = true; });
+});
 
 /* the word in front of a console's tabs: which book this is */
 function tabCap(t){ return '<span class="tabcap">' + esc(t) + '</span>'; }
@@ -4907,9 +4956,18 @@ function drawAdminMap(list, blind){
     /* the kitchen sits in the middle: the office reads distance from it */
     /* Three kilometres round the shop, stretched to hold anyone
        further out. The office's view of its own patch, every time. */
-    if(AVIEW) AMAP.setView(AVIEW.c, AVIEW.z);
+    if(AVIEW && AVIEW.c) AMAP.setView(AVIEW.c, AVIEW.z);
     else frameMap(AMAP, pts);
-    AMAP.on("moveend", function(){ AVIEW = { c: AMAP.getCenter(), z: AMAP.getZoom() }; });
+    AMAP.on("moveend", function(){ AVIEW = { c: AMAP.getCenter(), z: AMAP.getZoom() }; saveView(); });
+    /* one button to go back to the whole picture */
+    var home = LF.control({ position:"topright" });
+    home.onAdd = function(){
+      var d = LF.DomUtil.create("div", "leaflet-bar maphome");
+      d.innerHTML = '<a href="#" title="Show everything">\u2302</a>';
+      LF.DomEvent.on(d, "click", function(e){ LF.DomEvent.stop(e); AVIEW = null; saveView(); frameMap(AMAP, pts); });
+      return d;
+    };
+    home.addTo(AMAP);
     watchSize(box, AMAP);
   }).catch(function(err){
     box.innerHTML = '<div class="mapfail">The map is not loading here.<br><small>' +
@@ -7217,7 +7275,7 @@ function route(p, main){
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
            p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google");
   rideMode(p[0] === "drive");
-  if(p[0] !== "admin") liveWatch(false, main);
+  if(!onBoardPage()) liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
   if(!p.length && wantsLanding()){
     REPAINT = function(){ viewLanding(main); };
