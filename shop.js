@@ -5044,6 +5044,7 @@ function officeDock(here){
     ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
     ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],
     ["print",  "#/admin/print",  "\uD83D\uDDA8", "Printing",    "Kitchen and bill printers, KOT split"],
+    ["owner",  "owner.html",     "\uD83D\uDCCA", "Owner board", "Live sales, tables, kitchens, purchases"],
     ["sim",    "sim.html",       "\u23F1",       "Service sim", "Replay our bills on the floor plan"],
     ["kds",    "kds.html",       "\uD83C\uDF73", "Kitchen screen", "Orders for each kitchen, tap Done"],
     ["wait",   "waitlist.html",  "\u23F3",       "Waitlist",    "Guests waiting, quoted time, WhatsApp"],

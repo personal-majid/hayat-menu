@@ -12,6 +12,9 @@ edit or void, table moves and joins, the due bill, settlement and how it
 was paid. Open tables are in the log while they eat; when the bill is
 settled the same record simply gains its settled fields.
 
+Purchases of the day (supplier, bill, every line with cost and quantity)
+sit beside the bills in the same file under "purchases".
+
 Every run (2 min) reads the day again and appends only what changed -
 locally into the day file, and in Firebase with a merge into the same
 document. Nothing is ever rewritten wholesale, nothing is deleted.
@@ -40,6 +43,12 @@ LOG = logging.getLogger("hayat.daylog")
 OUT = HERE / "daylog"
 
 KIND = {0: "dine", 1: "vpos", 2: "catering", 3: "counter", 4: "delivery"}
+import re
+DM = re.compile(r"(^|[^A-Z])DM([^A-Z]|$)", re.I)      # staff write "DM" on the order = home delivery
+
+
+def is_dm(*texts) -> bool:
+    return any(t and DM.search(str(t)) for t in texts)
 PAY = {1: "cash", 2: "card", 3: "credit", 4: "multi"}
 
 
@@ -92,6 +101,14 @@ class Masters:
         self.staff = {str(r["employeeid"]): r["employeename"] for r in q("SELECT employeeid, employeename FROM svr_employeeparent")} if src.has("svr_employeeparent") else {}
         self.sections = {str(r["sectionid"]): r["sectionname"] for r in q("SELECT sectionid, sectionname FROM svr_sectionparent")} if src.has("svr_sectionparent") else {}
         self.reasons = {str(r["reasonid"]): r["reasoncode"] for r in q("SELECT reasonid, reasoncode FROM svr_reasonparent")} if src.has("svr_reasonparent") else {}
+        self.store = {}
+        if src.has("svr_inv_store_items_child"):
+            for r in q("SELECT id AS i, itemname AS n, categoryid AS c, baseunitid AS u FROM svr_inv_store_items_child"):
+                self.store[str(r["i"])] = r
+        self.storecats = {str(r["id"]): r["categoryname"] for r in q("SELECT id, categoryname FROM svr_inv_store_item_parent")} if src.has("svr_inv_store_item_parent") else {}
+        self.units = {str(r["id"]): r["baseunitname"] for r in q("SELECT id, baseunitname FROM svr_inv_baseuniparent")} if src.has("svr_inv_baseuniparent") else {}
+        self.suppliers = {str(r["supplerid"]): r["supplername"] for r in q("SELECT supplerid, supplername FROM svr_supplerparent")} if src.has("svr_supplerparent") else {}
+        self.supplier_by_ac = {str(r["acid"]): r["supplername"] for r in q("SELECT acid, supplername FROM svr_supplerparent") if r.get("acid")} if src.has("svr_supplerparent") else {}
         self.tables = {}
         if src.has("svr_tableparent"):
             for r in q("SELECT tableid, tableno, sectionid, chair_count, locationx, locationy, sts FROM svr_tableparent"):
@@ -106,6 +123,16 @@ class Masters:
             return {"n": f"item {i}", "kit": None, "cat": None}
         return {"n": r["n"], "kit": self.kitchens.get(str(r["k"])) or (str(r["k"]) if r["k"] else None),
                 "cat": self.cats.get(str(r["c"]))}
+
+    def pitem(self, i, typ=None):
+        """a purchase line: a store item (raw material) or a menu item"""
+        r = self.store.get(str(i))
+        if r:
+            return {"n": r["n"], "cat": self.storecats.get(str(r["c"])), "unit": self.units.get(str(r["u"]))}
+        m = self.items.get(str(i))
+        if m:
+            return {"n": m["n"], "cat": self.cats.get(str(m["c"])), "unit": None}
+        return {"n": f"item {i}", "cat": None, "unit": None}
 
     def table(self, tid, section_id=None):
         """VMENU stores the table NUMBER within a section on orders; the master has ids.
@@ -151,13 +178,20 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
         created = iso(b.get("order_time"))
         kots = sorted({t for t in [created, iso(b.get("running_order"))] + list(kot_times) if t})
         tbl = m.table(b.get("tablename"), b.get("secid"))
+        sec = m.sections.get(str(b.get("secid"))) or ""
+        t = n(b.get("type"))
+        # VMENU stamps type=0 on nearly everything; the parcel flag and the
+        # PARCEL section say what it really was
+        kind = "delivery" if (t == 4 or is_dm(b.get("remarks"))) else "catering" if t == 2 else \
+               "counter" if (t == 3 or b.get("parceltype") == "Q" or "PARCEL" in sec.upper()) else "dine"
         recs[key] = {
             "key": key, "kot": n(b.get("kotno")), "invoiceId": b["invoiceid"], "billNo": n(b.get("billno")),
             "status": "settled",
-            "kind": KIND.get(n(b.get("type")), "dine") if n(b.get("type")) is not None else "dine",
+            "kind": kind,
             "parcelType": b.get("parceltype"),
-            "section": m.sections.get(str(b.get("secid"))), "sectionId": n(b.get("secid")),
-            "table": (tbl or {}).get("tableno") or b.get("tablename"), "chairs": n((tbl or {}).get("chair_count")),
+            "section": sec or None, "sectionId": n(b.get("secid")),
+            "table": ((tbl or {}).get("tableno") or b.get("tablename")) if kind == "dine" else None,
+            "chairs": n((tbl or {}).get("chair_count")) if kind == "dine" else None,
             "pax": n(b.get("pax")),
             "waiter": m.who(b.get("ordtakerid")), "waiterId": n(b.get("ordtakerid")),
             "cashier": m.who(b.get("empid")), "cashierId": n(b.get("empid")), "counter": n(b.get("counterid")),
@@ -203,14 +237,16 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
             kots = sorted({t for t in [created, iso(o.get("running_order"))] + list(kot_times) if t})
             tbl = m.table(o.get("tableno"), o.get("sectionid"))
             pt = o.get("parceltype")
-            kind = "delivery" if (n(o.get("deliveryboy")) or n(o.get("takeawaytype")) == 4) else \
-                   ("counter" if (pt == "Q" or n(o.get("quickparcel")) == 1) else "dine")
+            osec = m.sections.get(str(o.get("sectionid"))) or ""
+            kind = "delivery" if (n(o.get("deliveryboy")) or n(o.get("takeawaytype")) == 4 or is_dm(o.get("comments"), o.get("cus_address"))) else \
+                   ("counter" if (pt == "Q" or n(o.get("quickparcel")) == 1 or "PARCEL" in osec.upper()) else "dine")
             recs[key] = {
                 "key": key, "kot": o["transactionid"], "invoiceId": None, "billNo": None,
                 "status": "due" if o.get("duebill_time") else "open",
                 "kind": kind, "parcelType": pt,
-                "section": m.sections.get(str(o.get("sectionid"))), "sectionId": n(o.get("sectionid")),
-                "table": (tbl or {}).get("tableno") or o.get("tableno"), "chairs": n((tbl or {}).get("chair_count")),
+                "section": osec or None, "sectionId": n(o.get("sectionid")),
+                "table": ((tbl or {}).get("tableno") or o.get("tableno")) if kind == "dine" else None,
+                "chairs": n((tbl or {}).get("chair_count")) if kind == "dine" else None,
                 "pax": n(o.get("pax")),
                 "waiter": m.who(o.get("staffid")), "waiterId": n(o.get("staffid")),
                 "cashier": None, "cashierId": None, "counter": n(o.get("counterid")),
@@ -259,6 +295,42 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
     return recs
 
 
+def read_purchases(src, m: Masters, day: str, start_hour: int) -> dict:
+    """What came in today: every purchase bill with its lines."""
+    lo, hi = day_bounds(day, start_hour)
+    q = src.q
+    out = {}
+    if not src.has("svr_inv_purchase_item_parent"):
+        return out
+    heads = q("SELECT * FROM svr_inv_purchase_item_parent WHERE donetime >= %s AND donetime < %s", (lo, hi))
+    ids = [h["id"] for h in heads]
+    lines = {}
+    if ids and src.has("svr_inv_purchase_item_details"):
+        marks = ",".join(["%s"] * len(ids))
+        for r in q(f"SELECT * FROM svr_inv_purchase_item_details WHERE purid IN ({marks})", ids):
+            lines.setdefault(str(r["purid"]), []).append(r)
+    for h in heads:
+        items = []
+        for l in lines.get(str(h["id"]), []):
+            it = m.pitem(l.get("itemid"), l.get("type"))
+            items.append({"id": l.get("itemid"), "n": it["n"], "cat": it["cat"],
+                          "unit": m.units.get(str(l.get("baseunitid"))) or it["unit"],
+                          "q": n(l.get("quantity")), "cost": n(l.get("unitcoast")), "total": n(l.get("ptotal")),
+                          "foc": n(l.get("foc")), "tax": n(l.get("pur_taxper")), "kitchen": m.kitchens.get(str(l.get("kitchid")))})
+        key = f"p{h['id']}"
+        rec = {
+            "key": key, "id": h["id"], "at": iso(h.get("donetime")), "billNo": (str(h.get("bill_no") or "").strip() or None),
+            "supplier": m.supplier_by_ac.get(str(h.get("supacid"))) or m.suppliers.get(str(h.get("supacid"))) or (f"supplier {h.get('supacid')}" if h.get("supacid") else None),
+            "by": m.who(h.get("doneby")), "total": n(h.get("Bill_total")), "discount": n(h.get("billdisc")) or n(h.get("discount")),
+            "gst": n(h.get("gst_totalinc")) or n(h.get("gst_totalexc")), "delivery": n(h.get("deliverychrg")),
+            "due": iso(h.get("duedate")), "remarks": (str(h.get("remarks") or "").strip() or None),
+            "lines": len(items), "items": items,
+        }
+        rec["ver"] = rec_hash(rec)
+        out[key] = rec
+    return out
+
+
 # ---------------------------------------------------------------- the day file + Firebase
 
 def load_local(day: str) -> dict:
@@ -291,11 +363,40 @@ def firestore(cfg):
     return fs.client()
 
 
+MASTERS_SENT = None
+def push_masters(db, m: Masters):
+    """The floor: every table with its chairs, section and position, plus the
+    kitchens and staff - one small doc the owner page draws the room from."""
+    global MASTERS_SENT
+    doc = {
+        "tables": [{"id": r["tableid"], "name": r["tableno"], "section": m.sections.get(str(r["sectionid"])),
+                    "sectionId": r["sectionid"], "chairs": n(r["chair_count"]), "x": n(r["locationx"]), "y": n(r["locationy"]),
+                    "active": r.get("sts") == "A"} for r in m.tables.values()],
+        "sections": m.sections, "kitchens": m.kitchens, "staff": m.staff,
+        "updatedAt": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    sig = hashlib.sha1(json.dumps({k: v for k, v in doc.items() if k != "updatedAt"}, sort_keys=True, default=str).encode()).hexdigest()
+    if sig == MASTERS_SENT:
+        return
+    db.collection("vm_meta").document("floor").set(doc)
+    MASTERS_SENT = sig
+
+
 def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     fresh = read_day(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5), with_open)
+    purchases = read_purchases(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5))
     doc = load_local(day)
     have = doc["records"]
+    havep = doc.setdefault("purchases", {})
+    changedp = {}
+    for key, r in purchases.items():
+        old = havep.get(key)
+        if old and old.get("ver") == r["ver"]:
+            continue
+        r["updated"] = now
+        havep[key] = r
+        changedp[key] = r
     changed = {}
     for key, r in fresh.items():
         old = have.get(key)
@@ -315,14 +416,21 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
     settled = sum(1 for r in have.values() if r.get("status") == "settled")
     doc.update({"updatedAt": now, "count": len(have), "settled": settled,
                 "open": sum(1 for r in have.values() if r.get("status") in ("open", "due")),
-                "revenue": round(sum((r.get("total") or 0) for r in have.values() if r.get("status") == "settled"), 2)})
+                "revenue": round(sum((r.get("total") or 0) for r in have.values() if r.get("status") == "settled"), 2),
+                "purchaseCount": len(havep), "purchaseTotal": round(sum((p.get("total") or 0) for p in havep.values()), 2)})
     save_local(doc)
-    if changed and db is not None:
+    if (changed or changedp) and db is not None:
         payload = {"day": day, "updatedAt": now, "count": doc["count"], "settled": doc["settled"], "open": doc["open"],
-                   "revenue": doc["revenue"], "records": changed}
+                   "revenue": doc["revenue"], "purchaseCount": doc["purchaseCount"], "purchaseTotal": doc["purchaseTotal"]}
+        if changed:
+            payload["records"] = changed
+        if changedp:
+            payload["purchases"] = changedp
         db.collection("vm_daylog").document(day).set(payload, merge=True)
-    LOG.info("day %s: %d records, %d changed, %d settled, %d open", day, len(have), len(changed), settled, doc["open"])
-    return {"day": day, "records": len(have), "changed": len(changed), "settled": settled, "open": doc["open"]}
+    if with_open and db is not None:
+        push_masters(db, m)
+    LOG.info("day %s: %d records, %d changed, %d settled, %d open, %d purchases", day, len(have), len(changed), settled, doc["open"], len(havep))
+    return {"day": day, "records": len(have), "changed": len(changed), "settled": settled, "open": doc["open"], "purchases": len(havep), "purchaseTotal": doc["purchaseTotal"]}
 
 
 def main(argv):
