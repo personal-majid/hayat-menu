@@ -15,7 +15,7 @@ settled the same record simply gains its settled fields.
 Purchases of the day (supplier, bill, every line with cost and quantity)
 sit beside the bills in the same file under "purchases".
 
-Every run (2 min) reads the day again and appends only what changed -
+Every run (1 min) reads the day again and appends only what changed -
 locally into the day file, and in Firebase with a merge into the same
 document. Nothing is ever rewritten wholesale, nothing is deleted.
 
@@ -26,6 +26,8 @@ document. Nothing is ever rewritten wholesale, nothing is deleted.
 from __future__ import annotations
 
 import argparse
+import os
+import threading
 import datetime as dt
 import hashlib
 import json
@@ -44,11 +46,26 @@ OUT = HERE / "daylog"
 
 KIND = {0: "dine", 1: "vpos", 2: "catering", 3: "counter", 4: "delivery"}
 import re
-DM = re.compile(r"(^|[^A-Z])DM([^A-Z]|$)", re.I)      # staff write "DM" on the order = home delivery
+# What the counter writes on an order tells us what it really is:
+#   DM, HD, "delivery", "home delivery", "deliver to ..."   -> home delivery
+#   CO, C/O, "parcel", "take away", "takeaway", "pack"        -> packed, collected at the counter
+DELIVERY_WORDS = re.compile(r"(^|[^A-Z0-9])(DM|HD|H\.D|DELIVER\w*|HOME ?DEL\w*)([^A-Z0-9]|$)", re.I)
+COUNTER_WORDS = re.compile(r"(^|[^A-Z0-9])(CO|C/O|C\.O|PARCEL|TAKE ?AWAY|TA|PACK\w*|PARCE\w*)([^A-Z0-9]|$)", re.I)
+
+
+def note_kind(*texts):
+    """delivery / counter / None, from the free text on the order"""
+    for t in texts:
+        if t and DELIVERY_WORDS.search(str(t)):
+            return "delivery"
+    for t in texts:
+        if t and COUNTER_WORDS.search(str(t)):
+            return "counter"
+    return None
 
 
 def is_dm(*texts) -> bool:
-    return any(t and DM.search(str(t)) for t in texts)
+    return note_kind(*texts) == "delivery"
 PAY = {1: "cash", 2: "card", 3: "credit", 4: "multi"}
 
 
@@ -182,8 +199,9 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
         t = n(b.get("type"))
         # VMENU stamps type=0 on nearly everything; the parcel flag and the
         # PARCEL section say what it really was
-        kind = "delivery" if (t == 4 or is_dm(b.get("remarks"))) else "catering" if t == 2 else \
-               "counter" if (t == 3 or b.get("parceltype") == "Q" or "PARCEL" in sec.upper()) else "dine"
+        noted = note_kind(b.get("remarks"), b.get("cus_address"))
+        kind = "delivery" if (t == 4 or noted == "delivery") else "catering" if t == 2 else \
+               "counter" if (t == 3 or noted == "counter" or b.get("parceltype") == "Q" or "PARCEL" in sec.upper()) else "dine"
         recs[key] = {
             "key": key, "kot": n(b.get("kotno")), "invoiceId": b["invoiceid"], "billNo": n(b.get("billno")),
             "status": "settled",
@@ -238,8 +256,9 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
             tbl = m.table(o.get("tableno"), o.get("sectionid"))
             pt = o.get("parceltype")
             osec = m.sections.get(str(o.get("sectionid"))) or ""
-            kind = "delivery" if (n(o.get("deliveryboy")) or n(o.get("takeawaytype")) == 4 or is_dm(o.get("comments"), o.get("cus_address"))) else \
-                   ("counter" if (pt == "Q" or n(o.get("quickparcel")) == 1 or "PARCEL" in osec.upper()) else "dine")
+            noted = note_kind(o.get("comments"), o.get("cus_address"), o.get("cus_name"))
+            kind = "delivery" if (n(o.get("deliveryboy")) or n(o.get("takeawaytype")) == 4 or noted == "delivery") else \
+                   ("counter" if (noted == "counter" or pt == "Q" or n(o.get("quickparcel")) == 1 or "PARCEL" in osec.upper()) else "dine")
             recs[key] = {
                 "key": key, "kot": o["transactionid"], "invoiceId": None, "billNo": None,
                 "status": "due" if o.get("duebill_time") else "open",
@@ -378,7 +397,7 @@ def push_masters(db, m: Masters):
     sig = hashlib.sha1(json.dumps({k: v for k, v in doc.items() if k != "updatedAt"}, sort_keys=True, default=str).encode()).hexdigest()
     if sig == MASTERS_SENT:
         return
-    db.collection("vm_meta").document("floor").set(doc)
+    db.collection("vm_meta").document("floor").set(doc, timeout=30)
     MASTERS_SENT = sig
 
 
@@ -426,7 +445,7 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
             payload["records"] = changed
         if changedp:
             payload["purchases"] = changedp
-        db.collection("vm_daylog").document(day).set(payload, merge=True)
+        db.collection("vm_daylog").document(day).set(payload, merge=True, timeout=30)
     if with_open and db is not None:
         push_masters(db, m)
     LOG.info("day %s: %d records, %d changed, %d settled, %d open, %d purchases", day, len(have), len(changed), settled, doc["open"], len(havep))
@@ -450,6 +469,17 @@ def main(argv):
 
     cfg = VS.load_config(Path(a.config))
     start_hour = cfg.getint("vmenu", "day_start_hour", fallback=5)
+
+    if a.cmd == "tick":
+        # Task Scheduler fires every minute and will not start a second copy
+        # while one runs - so a tick that hangs (database or internet stall)
+        # would silently stop the log for good. A hung tick is killed at 55 s;
+        # the next minute starts clean and catches up.
+        def die():
+            LOG.error("tick took too long - killed; next minute retries")
+            os._exit(3)
+        threading.Timer(55, die).start()
+
     src = VS.Source(cfg)
     m = Masters(src)
     db = None if a.no_upload else firestore(cfg)
@@ -470,6 +500,8 @@ def main(argv):
                 time.sleep(0.2)
     finally:
         src.close()
+        if a.cmd == "tick":
+            os._exit(0)                      # cancels the watchdog and Firestore's background threads
     return 0
 
 

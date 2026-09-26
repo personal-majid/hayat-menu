@@ -57,6 +57,7 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .ki{display:flex;gap:8px;padding:4px 0;border-top:1px dashed var(--line);font-size:13px}
 .ki .q{min-width:26px;font-weight:800} .ki .w{flex:1} .ki .t{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
 .ki.rdy .w{text-decoration:line-through;color:var(--muted)}
+.ki.del{border-left:3px solid var(--s3);padding-left:6px}
 table{width:100%;border-collapse:collapse;font-size:13px} th{font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 6px;border-bottom:1px solid var(--line2)} td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums} td.r,th.r{text-align:right}
 tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{background:color-mix(in srgb,var(--s4) 12%,transparent)}
 .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--soft2)}
@@ -178,17 +179,30 @@ function floor(){
       const age=mins(r.createdAt,tsNow()); const cls=r.status==='due'?'due':age>75?'late':'on';
       return `<div class="tbl ${cls}" title="${esc((r.items||[]).map(i=>i.q+'× '+i.n).join('\n'))}"><span class="age">${age}m</span><b>${esc(t.name)}</b><small>${esc(r.waiter||'')}${r.pax?' · '+r.pax+' pax':''}</small><small>${r.kotCount} KOT · ${rs(sum(r))}</small><small>${r.status==='due'?'BILL PRINTED':(r.foodReady||0)+'/'+(r.items||[]).length+' ready'}</small></div>`;
     }).join('')).join('')+
-    (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}"><span class="age">${age}m</span><b>${r.kind==='delivery'?'🛵':'🎟'}${esc(r.token||r.kot)}</b><small>${esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items · ${rs(sum(r))}</small></div>`; }).join(''):'')+
+    (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}"><span class="age">${age}m</span><b>${r.kind==='delivery'?'🛵':'🎟'}${esc(r.token||r.kot)}</b><small>${r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt):r.status==='due'?'billed · with rider':'cooking'):esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items · ${rs(sum(r))}</small></div>`; }).join(''):'')+
   '</div></div>';
 }
 
+/* A delivery ticket stays open long after the food left - the rider is on the
+   road and the bill closes when he is back. The kitchen must not keep seeing
+   it. A line belongs on the pass while it is unfinished AND, for a delivery,
+   only until it was dispatched / billed or 35 min after its KOT. */
+const COOK_WINDOW=35;
+function onPass(i,r){
+  if(i.ready==='ready') return false;
+  if(r.kind!=='delivery') return true;
+  if(r.dispatchAt||r.status==='due') return false;
+  const age=i.kotAt?mins(i.kotAt,tsNow()):0;
+  return age<=COOK_WINDOW;
+}
 function kitchens(){
   const open=recs().filter(r=>r.status==='open'||r.status==='due');
-  const cols={main:[],front:[]};
-  open.forEach(r=>(r.items||[]).forEach(i=>cols[station(i)].push({i,r})));
-  const col=(k,label)=>{ const L=cols[k].sort((a,b)=>String(a.i.kotAt||'').localeCompare(String(b.i.kotAt||''))); const pend=L.filter(x=>x.i.ready!=='ready');
-    return `<div class="kcol"><h3>${label} <span>${pend.reduce((n,x)=>n+(x.i.q||0),0)} to cook</span></h3>`+(L.length?L.map(x=>`<div class="ki${x.i.ready==='ready'?' rdy':''}"><span class="q">${x.i.q}×</span><span class="w">${esc(x.i.n)} <small style="color:var(--muted)">· ${esc(x.r.kind==='dine'?x.r.table:(x.r.kind==='delivery'?'🛵 ':'🎟 ')+(x.r.token||x.r.kot))}</small></span><span class="t">${hm(x.i.kotAt)}${x.i.kotAt?' · '+mins(x.i.kotAt,tsNow())+'m':''}</span></div>`).join(''):'<div class="note">Nothing on the pass.</div>')+'</div>'; };
-  return `<div class="card wide"><h2>Kitchens · live <span class="n">${cols.main.length+cols.front.length} lines open</span></h2><div class="kit">${col('main','Main kitchen')}${col('front','Front kitchen')}</div></div>`;
+  const cols={main:[],front:[]}; let outDel=0;
+  open.forEach(r=>(r.items||[]).forEach(i=>{ if(r.kind==='delivery'&&!onPass(i,r)&&i.ready!=='ready'){ outDel++; return; } cols[station(i)].push({i,r}); }));
+  const who=r=>r.kind==='dine'?esc(r.table):(r.kind==='delivery'?'🛵 ':'🎟 ')+esc(r.token||r.kot);
+  const col=(k,label)=>{ const L=cols[k].filter(x=>onPass(x.i,x.r)).sort((a,b)=>String(a.i.kotAt||'').localeCompare(String(b.i.kotAt||'')));
+    return `<div class="kcol"><h3>${label} <span>${L.reduce((n,x)=>n+(x.i.q||0),0)} to cook</span></h3>`+(L.length?L.map(x=>`<div class="ki${x.r.kind==='delivery'?' del':''}"><span class="q">${x.i.q}×</span><span class="w">${esc(x.i.n)} <small style="color:var(--muted)">· ${who(x.r)}</small></span><span class="t">${hm(x.i.kotAt)}${x.i.kotAt?' · '+mins(x.i.kotAt,tsNow())+'m':''}</span></div>`).join(''):'<div class="note">Nothing on the pass.</div>')+'</div>'; };
+  return `<div class="card wide"><h2>Kitchens · live <span class="n">${cols.main.length+cols.front.length} lines to cook${outDel?' · '+outDel+' delivery lines already out':''}</span></h2><div class="kit">${col('main','Main kitchen')}${col('front','Front kitchen')}</div></div>`;
 }
 
 function hourly(){
@@ -323,7 +337,7 @@ function render(){
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${purchases()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
-    `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every 2 min.</div>`;
+    `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute.</div>`;
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-csv]').forEach(b=>b.onclick=()=>csv(b.dataset.csv));
