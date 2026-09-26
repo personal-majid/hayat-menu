@@ -2476,3 +2476,10 @@ html[data-theme="paper"] .shopsub,html[data-theme="paper"] .pinnote{font-family:
 .crow.v-busier .cm{color:var(--hot)}
 .crow.v-quieter .cm{color:var(--green)}
 .crow.us{background:var(--accentwash)}
+/* paper: OSM tiles, quietened to sit with the cream */
+html[data-theme="paper"] .leaflet-tile-pane{filter:saturate(.55) sepia(.18) brightness(1.03)}
+.mask{flex:0 0 auto;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;padding:8px 4px}
+.mrowm.on{background:var(--accentwash)}
+.mrowm .rdot{background:var(--line2)} .mrowm.on .rdot{background:var(--green)}
+.mrowm .linky.go{color:var(--gold2);font-weight:800}
+label.shopbtn{cursor:pointer}

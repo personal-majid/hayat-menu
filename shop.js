@@ -742,6 +742,52 @@ var STORE = {
      and appends anything it has not seen. */
   layout: function(){ return (DB.menus && DB.menus.layout) || {}; },
 
+  /* ---- imported menus ------------------------------------
+     menus/{id} = { id, name, at, by, cats:[...] } from a CSV;
+     menus/active = { id } says which one the shop is serving.
+     No pointer, or a pointer to nothing, means the built-in file. */
+  /* Firestore refuses an array inside an array, and a dish's sizes
+     are exactly that, so the sections travel as one JSON string. */
+  menus: function(){
+    var m = DB.menus || {};
+    return Object.keys(m).filter(function(k){ return k !== "layout" && k !== "active" && m[k] && m[k].json; })
+      .map(function(k){ return Object.assign({}, m[k], { cats: menuCats(m[k]) }); })
+      .sort(function(a,b){ return (b.at||0) - (a.at||0); });
+  },
+  activeMenuId: function(){ var a = (DB.menus || {}).active; return (a && a.id) || ""; },
+  saveMenu: function(m){
+    m = Object.assign({}, m, { at: Date.now(), by: myVoice(), json: JSON.stringify(m.cats || []) });
+    delete m.cats;
+    DB.menus = DB.menus || {};
+    DB.menus[m.id] = m;
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "menus", m.id), m)
+        .catch(function(e){ console.warn("saveMenu", e); });
+      fire();
+    } else lsWrite();
+    return m;
+  },
+  setActiveMenu: function(id){
+    DB.menus = DB.menus || {};
+    var a = { id: id || "", at: Date.now(), by: myVoice() };
+    DB.menus.active = a;
+    if(FB){
+      FB.api.setDoc(FB.api.doc(FB.db, "menus", "active"), a)
+        .catch(function(e){ console.warn("setActiveMenu", e); });
+      fire();
+    } else lsWrite();
+    return a;
+  },
+  dropMenu: function(id){
+    if(!DB.menus || !DB.menus[id]) return;
+    delete DB.menus[id];
+    if(STORE.activeMenuId() === id) STORE.setActiveMenu("");
+    if(FB){
+      FB.api.deleteDoc(FB.api.doc(FB.db, "menus", id)).catch(function(e){ console.warn("dropMenu", e); });
+      fire();
+    } else lsWrite();
+  },
+
   saveLayout: function(l){
     l = Object.assign({}, l, { at: Date.now(), by: myVoice() });
     DB.menus = DB.menus || {};
@@ -1950,6 +1996,109 @@ var MQ = "";            /* what they typed in search */
 var MOPEN = {};         /* category id -> open */
 var MDISH = null;       /* the one dish whose sizes are showing */
 
+/* ============================================================
+   MENUS FROM A CSV
+   section, section_ml, item, sub, sizes, price, note
+   sizes: "Qtr=160|Half=320|Full=600" - label=price, | between.
+   ============================================================ */
+function csvRows(text){
+  var rows = [], row = [], cell = "", q = false;
+  text = String(text || "").replace(/^\uFEFF/, "");
+  for(var i = 0; i < text.length; i++){
+    var ch = text[i];
+    if(q){
+      if(ch === '"'){ if(text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if(ch === '"') q = true;
+    else if(ch === ","){ row.push(cell); cell = ""; }
+    else if(ch === "\n" || ch === "\r"){
+      if(ch === "\r" && text[i+1] === "\n") i++;
+      row.push(cell); rows.push(row); row = []; cell = "";
+    } else cell += ch;
+  }
+  if(cell.length || row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(function(r){ return r.some(function(c){ return String(c).trim(); }); });
+}
+function slugId(t){
+  return String(t || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "x";
+}
+function menuCats(doc){
+  if(!doc) return null;
+  if(doc.cats) return doc.cats;
+  try{ return JSON.parse(doc.json || "[]"); }catch(e){ return []; }
+}
+var BUILTIN_MENU = null;                 /* menu-data.js, kept whole */
+function builtinMenu(){ if(!BUILTIN_MENU) BUILTIN_MENU = (window.MENU || []).slice(); return BUILTIN_MENU; }
+function photoFor(name){
+  var key = slugId(name), hit = null;
+  builtinMenu().forEach(function(c){ (c.items || []).forEach(function(it){
+    if(!hit && slugId(it.name) === key) hit = it; }); });
+  return hit;
+}
+/* the tablet's rail wants a little picture per section */
+function catIcon(name){
+  var n = String(name || "").toLowerCase();
+  var twin = builtinMenu().filter(function(c){ return slugId(c.name) === slugId(name); })[0];
+  if(twin && twin.ic) return twin.ic;
+  var pick = [["mandi","\uD83C\uDF57"],["alfaham","\uD83D\uDD25"],["shawaya","\uD83C\uDF56"],["beef","\uD83E\uDD69"],
+    ["broast","\uD83C\uDF57"],["chicken","\uD83C\uDF57"],["starter","\uD83C\uDF62"],["chilli","\uD83C\uDF36"],
+    ["curr","\uD83C\uDF5B"],["soup","\uD83C\uDF72"],["bread","\uD83E\uDED3"],["rice","\uD83C\uDF5C"],["noodle","\uD83C\uDF5C"],
+    ["shawarma","\uD83C\uDF2F"],["salad","\uD83E\uDD57"],["sea","\uD83D\uDC1F"],["fish","\uD83D\uDC1F"],["meal","\uD83C\uDF5B"],
+    ["juice","\uD83E\uDD64"],["mojito","\uD83C\uDF79"],["shake","\uD83E\uDD64"],["dessert","\uD83C\uDF68"],
+    ["hot","\u2615"],["tea","\u2615"],["coffee","\u2615"]];
+  for(var i = 0; i < pick.length; i++) if(n.indexOf(pick[i][0]) >= 0) return pick[i][1];
+  return "\uD83C\uDF7D";
+}
+function parseMenuCsv(text){
+  var rows = csvRows(text);
+  if(!rows.length) throw new Error("The file is empty.");
+  var head = rows[0].map(function(h){ return String(h).trim().toLowerCase(); });
+  var col = function(n){ return head.indexOf(n); };
+  if(col("section") < 0 || col("item") < 0) throw new Error("Needs at least the columns: section, item.");
+  var cats = [], byId = {}, seen = {};
+  rows.slice(1).forEach(function(r){
+    var get = function(n){ var i = col(n); return i < 0 ? "" : String(r[i] || "").trim(); };
+    var sec = get("section"), name = get("item");
+    if(!sec || !name) return;
+    var cid = slugId(sec);
+    if(!byId[cid]){ byId[cid] = { id: cid, name: sec, ml: get("section_ml"), ic: catIcon(sec), items: [] }; cats.push(byId[cid]); }
+    else if(!byId[cid].ml && get("section_ml")) byId[cid].ml = get("section_ml");
+    var id = slugId(name); var n = 1; while(seen[id]){ id = slugId(name) + "-" + (++n); } seen[id] = 1;
+    var it = { id: id, name: name };
+    if(get("sub")) it.sub = get("sub");
+    if(get("note")) it.note = get("note");
+    var sizes = get("sizes");
+    if(sizes){
+      it.opts = sizes.split("|").map(function(x){ var kv = x.split("=");
+          var lb = String(kv[0] || "").trim().replace(/\bQtr\b/i, "Quarter");
+          return [lb, Number(String(kv[1] || "").replace(/[^\d.]/g, ""))]; })
+        .filter(function(kv){ return kv[0] && !isNaN(kv[1]); });
+    } else if(get("price") && !isNaN(Number(get("price").replace(/[^\d.]/g, "")))){
+      it.price = Number(get("price").replace(/[^\d.]/g, ""));
+    }
+    if(!it.opts && it.price == null) it.ask = true;         /* listed, not buyable */
+    var twin = photoFor(name);
+    if(twin){ if(twin.img) it.img = twin.img; if(twin.ig) it.ig = twin.ig; if(twin.desc && !it.sub) it.desc = twin.desc; }
+    byId[cid].items.push(it);
+  });
+  if(!cats.length) throw new Error("No rows with a section and an item.");
+  return { cats: cats, count: cats.reduce(function(n,c){ return n + c.items.length; }, 0) };
+}
+/* what the shop serves right now: the active import, or the file.
+   window.MENU is what every screen reads, so it is what changes. */
+var MENU_APPLIED = "";
+function applyMenu(){
+  builtinMenu();
+  var id = STORE.activeMenuId(), m = id && DB.menus && DB.menus[id];
+  var cats = m ? menuCats(m) : null;
+  var want = cats && cats.length ? id + ":" + (m.at || 0) : "";
+  if(want === MENU_APPLIED) return false;
+  MENU_APPLIED = want;
+  window.MENU = want ? cats.map(function(c){ return Object.assign({}, c, { items: (c.items || []).slice() }); }) : builtinMenu().slice();
+  try{ if(window.MENU_CHANGED) window.MENU_CHANGED(); }catch(e){}
+  return true;
+}
+
 function liveMenu(){
   var L = STORE.layout(), hide = L.hide || {}, order = L.cats || [];
   var cats = (window.MENU || []).filter(function(c){
@@ -1975,7 +2124,7 @@ function liveMenu(){
 function onSale(it){
   if(!it || it.off === true) return false;
   if((STORE.layout().off || {})[it.id]) return false;
-  return choices(it).length > 0;
+  return choices(it).length > 0 || !!it.ask;
 }
 function fromPrice(it){
   var ch = choices(it);
@@ -2017,9 +2166,11 @@ function dishRow(it, c){
       '<div class="mtext">' +
         '<b>' + esc(it.name) + '</b>' +
         (it.sub ? '<small>' + esc(it.sub) + '</small>' : '') +
-        '<span class="mprice">' + esc(fromPrice(it)) + '</span>' +
+        '<span class="mprice">' + esc(ch.length ? fromPrice(it) : (it.note || "Ask")) + '</span>' +
       '</div>' +
-      (one
+      (!ch.length
+        ? '<span class="mask">' + esc(it.note && it.note.length < 12 ? it.note : "Ask") + '</span>'
+        : one
         ? '<span class="rowadd" data-row="' + esc(it.id) + '|' + esc(ch[0].label) + '">' +
             addControl(it.id, ch[0].label, ch[0].price) + '</span>'
         : '<button class="mpick" data-sizes="' + esc(it.id) + '">' +
@@ -2049,7 +2200,7 @@ var CAT_ML = { mandi:"\u0d2e\u0d28\u0d4d\u0d24\u0d3f", alfaham:"\u0d05\u0d7d\u0d
 function catBlock(c){
   var open = !!MOPEN[c.id];
   var items = (c.items || []).filter(onSale);
-  var ml = CAT_ML[c.id];
+  var ml = c.ml || CAT_ML[c.id];
   return '<section class="mcat' + (open ? " open" : "") + '">' +
     '<button class="mcathead" data-cat="' + esc(c.id) + '">' +
       '<span class="mcatname">' + esc(c.name) +
@@ -2809,44 +2960,12 @@ function viewOrder(main, id){
 
 /* the customer's own little map: their pin, and the rider closing in */
 var TMAP = null, TDOTS = null;
-/* The map's paper: on the paper theme a pale Carto basemap that
-   sits with the cream; elsewhere OpenStreetMap's own tiles. Both
-   free, both attributed. */
+/* OpenStreetMap's own tiles, everywhere: free, no key, no account.
+   (CARTO's pale basemap looked right on paper and then started
+   answering "API key needed".) The paper theme tints these in CSS. */
 function tileLayer(LF){
-  var paper = document.documentElement.getAttribute("data-theme") === "paper";
-  return paper
-    ? LF.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        maxZoom:19, subdomains:"abcd",
-        attribution:"&copy; OpenStreetMap &copy; CARTO" })
-    : LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom:19, attribution:"&copy; OpenStreetMap" });
-}
-
-function wireTrackPin(id){
-  var tp = el("trackPin");
-  if(!tp) return;
-  tp.onclick = function(){
-    if(!navigator.geolocation){ shopToast("This phone cannot share its location."); return; }
-    tp.textContent = "Finding you\u2026";
-    navigator.geolocation.getCurrentPosition(function(pos){
-      STORE.edit(id, { lat:+pos.coords.latitude.toFixed(6), lng:+pos.coords.longitude.toFixed(6) });
-      shopToast("Got it. The rider can see your door now.");
-    }, function(){ tp.textContent = "Location is off on this phone"; },
-    { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
-  };
-}
-
-/* one line under the customer's map: how far, how fresh */
-function trackLine(o){
-  if(!o.lat) return "Rider left the kitchen \u00b7 " + staleness(o.rAt).txt +
-    '<br><button class="linky" id="trackPin">Share my location so you can see how far</button>';
-  var km = kmBetween(o.lat, o.lng, o.rLat, o.rLng);
-  var f = staleness(o.rAt);
-  var where = (km < 0.2 ? "Almost at your door"
-             : km < 1   ? Math.round(km*1000) + " m away"
-                        : km.toFixed(1) + " km away");
-  if(f.state !== "live") return "Last seen " + f.txt;
-  return where + " \u00b7 " + f.txt;
+  return LF.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom:19, attribution:"&copy; OpenStreetMap" });
 }
 
 function drawTrackMap(o){
@@ -4688,8 +4807,36 @@ function paintMenuAdmin(main){
   var L = layoutOf();
   var byId = {}; (window.MENU || []).forEach(function(c){ byId[c.id] = c; });
 
+  var menus = STORE.menus(), active = STORE.activeMenuId();
+  var count = function(cats){ return (cats || []).reduce(function(n,c){ return n + (c.items || []).length; }, 0); };
+  var menuRow = function(id, name, sub, on, canDrop){
+    return '<div class="line mrowm' + (on ? " on" : "") + '">' +
+      '<span class="rdot"></span>' +
+      '<div class="ln"><b>' + esc(name) + '</b><small>' + esc(sub) + '</small></div>' +
+      (on ? '<span class="pill quiet">Serving now</span>'
+          : '<button class="linky go" data-mact="' + esc(id) + '">Make active</button>') +
+      (canDrop && !on ? '<button class="linky warn" data-mdrop="' + esc(id) + '">Remove</button>' : '') +
+    '</div>';
+  };
+
   main.innerHTML =
     '<div class="shopwrap wide mapage">' +
+      '<div class="mahead"><h2 class="shoph">Menus</h2>' +
+        '<span class="pill quiet">' + (menus.length + 1) + ' available</span></div>' +
+      '<p class="cqhint">One menu is served at a time - on the phone, the tablet and the phone-order screen. ' +
+        'Import a CSV (<a href="menu-imports/TEMPLATE.csv" download>template</a> \u00b7 ' +
+        '<a href="menu-imports/README.txt" target="_blank">how it works</a>), then make it active.</p>' +
+      '<div class="lines">' +
+        menuRow("", "Built-in menu", count(builtinMenu()) + " dishes \u00b7 menu-data.js, with photos", !active, false) +
+        menus.map(function(m){
+          return menuRow(m.id, m.name, count(m.cats) + " dishes \u00b7 imported " + when(m.at), active === m.id, true);
+        }).join("") +
+      '</div>' +
+      '<div class="rowbtns">' +
+        '<label class="shopbtn ghost" for="mcsv">Import a CSV<input type="file" id="mcsv" accept=".csv,text/csv" hidden></label>' +
+      '</div>' +
+      '<p class="shopnote" id="mcsvNote"></p>' +
+
       '<div class="mahead"><h2 class="shoph">Arrange the menu</h2>' +
         '<span class="pill quiet">' + L.cats.filter(function(id){ return !L.hide[id]; }).length +
           ' of ' + L.cats.length + ' showing</span></div>' +
@@ -4725,6 +4872,42 @@ function paintMenuAdmin(main){
     '</div>';
 
   var save = function(){ STORE.saveLayout(L); paintMenuAdmin(main); };
+
+  /* ---- menus: activate, remove, import ---- */
+  main.querySelectorAll("[data-mact]").forEach(function(b){
+    b.onclick = function(){
+      STORE.setActiveMenu(b.dataset.mact);
+      applyMenu(); LASTSIG = "";
+      shopToast(b.dataset.mact ? "Serving the imported menu now." : "Back to the built-in menu.");
+      paintMenuAdmin(main);
+    };
+  });
+  main.querySelectorAll("[data-mdrop]").forEach(function(b){
+    b.onclick = function(){
+      var m = DB.menus[b.dataset.mdrop];
+      if(!confirm("Remove \u201c" + (m ? m.name : b.dataset.mdrop) + "\u201d? Orders already placed keep their lines.")) return;
+      STORE.dropMenu(b.dataset.mdrop); applyMenu(); LASTSIG = ""; paintMenuAdmin(main);
+    };
+  });
+  var fileIn = el("mcsv");
+  if(fileIn) fileIn.onchange = function(){
+    var f = fileIn.files && fileIn.files[0]; if(!f) return;
+    var note = el("mcsvNote");
+    var rd = new FileReader();
+    rd.onload = function(){
+      try{
+        var parsed = parseMenuCsv(rd.result);
+        var name = prompt("Name this menu:", f.name.replace(/\.csv$/i, ""));
+        if(name === null) return;
+        var id = slugId(name) + "-" + Date.now().toString(36).slice(-4);
+        STORE.saveMenu({ id: id, name: (name || f.name).trim(), cats: parsed.cats, file: f.name });
+        note.textContent = "Imported " + parsed.count + " dishes in " + parsed.cats.length + " sections. Make it active when you are ready.";
+        paintMenuAdmin(main);
+        var n2 = el("mcsvNote"); if(n2) n2.textContent = note.textContent;
+      }catch(e){ note.textContent = "Could not read that file: " + (e.message || e); }
+    };
+    rd.readAsText(f, "utf-8");
+  };
 
   main.querySelectorAll("[data-maopen]").forEach(function(b){
     b.onclick = function(){ MA_OPEN = (MA_OPEN === b.dataset.maopen) ? null : b.dataset.maopen; paintMenuAdmin(main); };
@@ -6688,8 +6871,11 @@ function quietSig(){
     var y = DB.riders[rk[j]];
     r[rk[j]] = [y.name, y.phone, y.avail, y.off, y.uid, y.claimedAt, y.code];
   }
+  var mm = DB.menus || {};
   return JSON.stringify([o, r, Object.keys(DB.customers).length, Object.keys(DB.verify).length,
-                         Object.keys(DB.pings).length, DB.menus && DB.menus.layout && DB.menus.layout.at]);
+                         Object.keys(DB.pings).length, mm.layout && mm.layout.at, mm.active && mm.active.id,
+                         Object.keys(mm).map(function(k){ return k + ":" + (mm[k] && mm[k].at); }).join(","),
+                         Object.keys(DB.crowd || {}).map(function(k){ return DB.crowd[k] && DB.crowd[k].at; }).join(",")]);
 }
 var LASTSIG = "";
 
@@ -6723,6 +6909,7 @@ function nudgePins(){
 }
 
 STORE.onChange(function(){
+  if(applyMenu()){ LASTSIG = ""; }        /* a menu switch is a repaint, always */
   var sig = quietSig();
   if(sig === LASTSIG){ nudgePins(); return; }
   LASTSIG = sig;
@@ -6833,6 +7020,7 @@ if(riderApp()){
 }
 
 /* ---------- boot ------------------------------------------- */
+try{ applyMenu(); }catch(e){}          /* an imported menu, before anything draws */
 (function(){
   var cfg = C().firebase;
   if(!cfg || !cfg.projectId) return;          /* demo mode, this browser only */

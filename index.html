@@ -2837,10 +2837,14 @@ function restoreScroll(){
   });
 }
 
+/* shop.js swaps window.MENU when the office activates an imported
+   menu; every screen here reads MENU, so redraw from the top */
+window.MENU_CHANGED = function(){ try{ drawNav(null); route(); }catch(e){} };
 function route(){
   closeOverlay();                      /* a sheet must never survive a page change */
   if(search.value.trim()) return viewSearch(search.value.trim());
-  const p=(location.hash||"#/").slice(2).split("/").filter(Boolean);
+  /* "#/admin" is the form; "#admin" is what people type. Both work. */
+  const p=(location.hash||"#/").replace(/^#\/?/,"").split("/").filter(Boolean);
   /* cart, checkout, order tracking, the office and the rider all live in
      shop.js. It returns true when it has taken the page. */
   try{ if(window.SHOP && SHOP.route(p, main)){ drawNav(null); restoreScroll(); return; } }catch(e){}
