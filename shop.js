@@ -269,11 +269,7 @@ async function connectFirebase(cfg){
      archive files in the repo (archive/YYYY-MM.json), read only when
      the Day ledger asks for such a day. Reads stop growing with age. */
   function watch(name, into){
-    var src = fsMod.collection(db, name);
-    if(name === "orders"){
-      try{ src = fsMod.query(src, fsMod.where("at", ">=", Date.now() - WINDOW_DAYS * 86400000)); }catch(e){}
-    }
-    fsMod.onSnapshot(src, function(snap){
+    fsMod.onSnapshot(fsMod.collection(db, name), function(snap){
       var next = {};
       snap.forEach(function(d){ next[d.id] = Object.assign({ id:d.id }, d.data()); });
       DB[into] = next;
@@ -3574,78 +3570,34 @@ function orderDayAt(o){
   var d = (o.log || []).filter(function(l){ return l.s === "delivered"; }).pop();
   return o.paidAt || (d && d.at) || o.at;
 }
-var WINDOW_DAYS = 60;                      /* what the office keeps live */
-var ARCH = { index:null, months:{} };      /* archive/index.json and the months fetched */
+/* ---- BACKUP --------------------------------------------------
+   Firestore keeps everything; this is the copy for the drawer. One
+   JSON with every collection, or one month of orders. Saved by the
+   browser to Downloads; nothing is removed from Firestore. */
 function monthKey(ts){ var d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
-function loadArchiveIndex(){
-  if(ARCH.index) return Promise.resolve(ARCH.index);
-  return fetch("archive/index.json", { cache:"no-store" }).then(function(r){ return r.ok ? r.json() : { months:[] }; })
-    .then(function(j){ ARCH.index = j && j.months ? j : { months:[] }; return ARCH.index; })
-    .catch(function(){ ARCH.index = { months:[] }; return ARCH.index; });
+function saveJson(name, data){
+  var blob = new Blob([JSON.stringify(data, null, 1)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
 }
-function loadArchiveMonth(m){
-  if(ARCH.months[m]) return Promise.resolve(ARCH.months[m]);
-  return fetch("archive/" + m + ".json", { cache:"no-store" }).then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(j){ var list = (j && j.orders) || []; ARCH.months[m] = list; return list; })
-    .catch(function(){ ARCH.months[m] = []; return []; });
-}
-/* the ledger for an old day: fetch that month's file, then repaint */
-function archivedFor(start){
-  var m = monthKey(start), m2 = monthKey(start + 86400000);
-  var have = ARCH.months[m] && (m === m2 || ARCH.months[m2]);
-  if(have) return (ARCH.months[m] || []).concat(m === m2 ? [] : (ARCH.months[m2] || []));
-  loadArchiveIndex().then(function(ix){
-    var want = [m, m2].filter(function(k, i, a){ return a.indexOf(k) === i && ix.months.indexOf(k) >= 0; });
-    if(!want.length){ ARCH.months[m] = ARCH.months[m] || []; ARCH.months[m2] = ARCH.months[m2] || []; return; }
-    Promise.all(want.map(loadArchiveMonth)).then(function(){ if(REPAINT) REPAINT(); });
+function backupAll(){
+  var stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  saveJson("hayat-backup-" + stamp + ".json", {
+    made: Date.now(), site: base(),
+    orders: DB.orders, customers: DB.customers, riders: DB.riders, menus: DB.menus, crowd: DB.crowd, verify: DB.verify
   });
-  return null;                                  /* not yet: the ledger says "looking" */
+  return Object.keys(DB.orders).length;
 }
-
-/* ---- ARCHIVE A MONTH -------------------------------------------
-   1. Download: every finished order of that month, as one JSON file.
-   2. The office saves it as archive/YYYY-MM.json, adds the month to
-      archive/index.json, ships.
-   3. Prune: only after the site can be seen serving that file, and
-      only what the file holds, order by order. Nothing is deleted on
-      trust. */
-function archiveDownload(m){
-  var start = new Date(m + "-01T00:00:00").getTime();
-  var d = new Date(start); d.setMonth(d.getMonth() + 1); var end = d.getTime();
-  var fs = FB && FB.api;
-  var fetchOld = fs
-    ? fs.getDocs(fs.query(fs.collection(FB.db, "orders"), fs.where("at", ">=", start), fs.where("at", "<", end)))
-        .then(function(snap){ var out = []; snap.forEach(function(x){ out.push(Object.assign({ id:x.id }, x.data())); }); return out; })
-    : Promise.resolve(STORE.orders().filter(function(o){ return o.at >= start && o.at < end; }));
-  return fetchOld.then(function(list){
-    var done = list.filter(function(o){ return o.status === "delivered" || o.status === "cancelled"; });
-    var blob = new Blob([JSON.stringify({ month:m, made:Date.now(), count:done.length, orders:done }, null, 1)], { type:"application/json" });
-    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = m + ".json"; document.body.appendChild(a); a.click(); a.remove();
-    return done.length;
-  });
-}
-function archivePrune(m){
-  if(!FB) return Promise.reject(new Error("Only with the live database."));
-  ARCH.months[m] = null;
-  return fetch("archive/" + m + ".json", { cache:"no-store" }).then(function(r){
-    if(!r.ok) throw new Error("archive/" + m + ".json is not on the site yet. Save it, add the month to archive/index.json, ship, then try again.");
-    return r.json();
-  }).then(function(j){
-    var ids = (j.orders || []).map(function(o){ return o.id; });
-    if(!ids.length) throw new Error("That file holds no orders.");
-    if(!confirm("The site is serving " + m + ".json with " + ids.length + " orders. Delete exactly those from Firestore?")) throw new Error("Cancelled.");
-    var fs = FB.api, chain = Promise.resolve(), n = 0;
-    ids.forEach(function(id){ chain = chain.then(function(){ return fs.deleteDoc(fs.doc(FB.db, "orders", id)).then(function(){ n++; }); }); });
-    return chain.then(function(){ ARCH.months[m] = j.orders || []; return n; });
-  });
+function backupMonth(m){
+  var list = STORE.orders().filter(function(o){ return monthKey(o.at) === m; });
+  saveJson("hayat-orders-" + m + ".json", { month:m, made:Date.now(), count:list.length, orders:list });
+  return list.length;
 }
 
 function dayLedger(orders){
   var start = DAYSEL == null ? dayStartOf(Date.now()) : DAYSEL, end = start + 86400000;
-  var old = start < Date.now() - WINDOW_DAYS * 86400000;
-  var pool = orders, looking = false;
-  if(old){ var arch = archivedFor(start); if(arch) pool = orders.concat(arch); else looking = true; }
-  var rows = pool.filter(function(o){ var t = orderDayAt(o); return t >= start && t < end; })
+  var looking = false;
+  var rows = orders.filter(function(o){ var t = orderDayAt(o); return t >= start && t < end; })
     .sort(function(a,b){ return orderDayAt(b) - orderDayAt(a); });
   var done = rows.filter(function(o){ return o.status === "delivered"; });
   var sum = function(list){ return list.reduce(function(n,o){ return n + (o.paid && o.paidAmt != null ? o.paidAmt : (o.total || 0)); }, 0); };
@@ -3668,8 +3620,7 @@ function dayLedger(orders){
       tile(rupee(sum(open)), "unpaid \u00b7 " + open.length, open.length ? "warn" : "") +
       (canc.length ? tile(canc.length, "cancelled", "dim") : "") +
     '</div>' +
-    (looking ? '<p class="shopsub">Looking in the archive\u2026</p>' : '') +
-    archiveBar() +
+    backupBar() +
     (rows.length
       ? '<div class="lines">' + rows.map(function(o){
           var r = o.riderId ? STORE.rider(o.riderId) : null;
@@ -3684,24 +3635,20 @@ function dayLedger(orders){
             '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">' + esc(o.id) + '</a>' +
           '</div>';
         }).join("") + '</div>'
-      : (looking ? '' : '<p class="shopsub">Nothing on this day.</p>')) +
+      : '<p class="shopsub">Nothing on this day.</p>') +
   '</div>';
 }
 
-/* months old enough to archive, and what to do with each */
-function archiveBar(){
-  var cut = Date.now() - WINDOW_DAYS * 86400000;
-  var months = {}; STORE.orders().forEach(function(o){ if(o.at < cut && (o.status === "delivered" || o.status === "cancelled")) months[monthKey(o.at)] = (months[monthKey(o.at)] || 0) + 1; });
-  var keys = Object.keys(months).sort();
-  if(!keys.length) return "";
-  return '<div class="archbar"><b>Older than ' + WINDOW_DAYS + ' days, still in Firestore</b>' +
-    keys.map(function(m){
-      return '<span class="archm">' + m + ' \u00b7 ' + months[m] + ' orders ' +
-        '<button class="linky" data-arch="' + m + '">Download</button>' +
-        '<button class="linky warn" data-prune="' + m + '">Prune</button></span>';
+/* a copy for the drawer: everything, or one month */
+function backupBar(){
+  var months = {}; STORE.orders().forEach(function(o){ months[monthKey(o.at)] = (months[monthKey(o.at)] || 0) + 1; });
+  var keys = Object.keys(months).sort().reverse();
+  return '<div class="archbar"><b>Backup \u00b7 a JSON copy on this computer</b>' +
+    '<span class="archm"><button class="linky go" data-backup="all">Everything (' + Object.keys(DB.orders).length + ' orders + customers, riders, menus)</button></span>' +
+    keys.slice(0, 6).map(function(m){
+      return '<span class="archm">' + m + ' \u00b7 ' + months[m] + ' <button class="linky" data-backup="' + m + '">Download</button></span>';
     }).join("") +
-    '<small>Download \u2192 save as archive/' + (keys[0]) + '.json \u2192 add the month to archive/index.json \u2192 SHIP \u2192 Prune. ' +
-    'Prune deletes only what the site is already serving.</small></div>';
+    '<small>Saved to Downloads. Firestore keeps everything; this is the copy for the drawer.</small></div>';
 }
 
 /* what the day has done so far */
@@ -4079,11 +4026,11 @@ function wireCards(main){
       paintAdmin(main);
     };
   });
-  main.querySelectorAll("[data-arch]").forEach(function(b){
-    b.onclick = function(){ b.textContent = "\u2026"; archiveDownload(b.dataset.arch).then(function(n){ b.textContent = "Downloaded " + n; }).catch(function(e){ shopToast(String(e.message || e)); b.textContent = "Download"; }); };
-  });
-  main.querySelectorAll("[data-prune]").forEach(function(b){
-    b.onclick = function(){ b.textContent = "\u2026"; archivePrune(b.dataset.prune).then(function(n){ shopToast("Pruned " + n + " orders. The Day ledger reads them from the archive now."); paintAdmin(main); }).catch(function(e){ shopToast(String(e.message || e)); b.textContent = "Prune"; }); };
+  main.querySelectorAll("[data-backup]").forEach(function(b){
+    b.onclick = function(){
+      var n = b.dataset.backup === "all" ? backupAll() : backupMonth(b.dataset.backup);
+      shopToast("Saved " + n + " orders to Downloads.");
+    };
   });
   var dp = el("dayPick");
   if(dp) dp.onchange = function(){

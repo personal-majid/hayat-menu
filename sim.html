@@ -51,7 +51,13 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .tctl input[type=range]{flex:1 1 160px;min-width:120px}
 .tctl{flex-wrap:wrap}
 .tctl select.tsel{width:auto;flex:none;padding:5px 6px;font-size:12.5px;max-width:230px}
-.btn.rec{padding:6px 10px}
+.btn.rec{padding:6px 10px} .btn.fsb{padding:5px 10px;font-size:15px}
+.rmain.fs{position:fixed;inset:0;z-index:60;overflow:auto;background:var(--bg);padding:8px 12px 16px;gap:8px}
+.rmain.fs > .card, .rmain.fs > details, .rmain.fs > .row{display:none}
+.rmain.fs .tbar{top:0}
+.rmain.fs .key{font-size:12px}
+#p-rush .rmain.fs .planwrap svg{max-height:calc(100vh - 150px)}
+.rmain.fs .btn.fsb{background:var(--accent);color:#fff;border-color:var(--accent)}
 .key{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:12.5px}
 .kc{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px 2px 3px;background:color-mix(in srgb,var(--c) 12%,var(--surface));color:var(--ink);border:1px solid color-mix(in srgb,var(--c) 45%,transparent)}
 .kc i{width:20px;height:20px;border-radius:50%;background:var(--c);display:inline-grid;place-items:center;font-style:normal;font-size:11px}
@@ -157,6 +163,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   .rlay{grid-template-columns:minmax(0,1fr) 340px}
   .rside{order:0;position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px);max-height:calc(100vh - 64px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
   .rside summary{pointer-events:none} .rside summary .chev{display:none}
+}
+.sidetog{display:none;width:100%;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:10px;padding:5px 8px;font:500 12.5px "Jost",sans-serif;cursor:pointer;margin-bottom:6px;text-align:right}
+.sidetog .st-shut{display:none}
+@media (min-width:1200px){
+  .sidetog{display:block}
+  .rlay.side-off{grid-template-columns:minmax(0,1fr) 46px}
+  .rlay.side-off .rside details{display:none}
+  .rlay.side-off .sidetog{writing-mode:vertical-rl;padding:12px 6px;text-align:center;color:var(--ink);font-weight:600;height:auto}
+  .rlay.side-off .sidetog .st-open{display:none} .rlay.side-off .sidetog .st-shut{display:inline}
+  .rlay.side-off .sidetog .tagB{writing-mode:horizontal-tb;margin-bottom:6px}
 }
 .rside details{background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .rside summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;gap:8px;align-items:center;font-weight:600}
@@ -323,7 +339,7 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
     <div class="card">
       <div class="ctrls">
         <label class="f">Day<select id="rDay"></select></label>
-        <div class="note" style="align-self:end" id="rWinNote"></div>
+        <div class="recbar" style="align-self:end;justify-content:flex-end"><span class="note" id="rWinNote"></span><label class="f" style="min-width:150px">Video length<select id="rRecLen"></select></label></div>
       </div>
       <div class="note" id="rPlanTxt"></div>
       <div class="recout" id="rRecOut" hidden></div>
@@ -336,7 +352,7 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
         <input type="range" id="rScrub" min="0" max="1000" value="0" aria-label="Time of day">
         <select id="rWin" class="tsel" aria-label="Which part of the day" title="Which part of the day"></select>
         <select id="rSpd" class="tsel tspd" aria-label="Speed" title="Speed"></select>
-        <select id="rRecLen" class="tsel tlen" aria-label="Video length" title="Video length"></select>
+        <button class="btn fsb" id="rFs" aria-label="Full screen" title="Full screen (Esc to leave)">⤢</button>
         <button class="btn rec" id="rRec">● Record</button>
       </div>
       <div class="score" id="rScore"></div>
@@ -368,7 +384,7 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
       </div>
     </details>
    </div>
-   <aside class="rside"><details id="rSideD" open>
+   <aside class="rside"><button class="sidetog" id="rSideTog" aria-expanded="true" title="Hide the plan panel"><span class="st-open">⟩ Hide</span><span class="st-shut"><span class="tagB">B</span>Plan ⟨</span></button><details id="rSideD" open>
      <summary><span class="tagB">B</span><span id="rSideSum">Plan B</span><small><span class="chev">tap to change ▾</span></small></summary>
      <div class="rsbody">
        <div class="rsh">Whole day, A → B <small id="rsDay"></small></div>
@@ -1022,10 +1038,13 @@ function buildRush(){
   S.rB.st=Object.assign({},BASEST,S.rB.st);
   d.onchange=()=>rPickDay(d.value);
   $('lvReplay').onclick=()=>{ if(!LV.todayN) return; S.rday=LV.todayN; S.rvm=bizToday(); S.rwin='day'; save(); S.tab='rush'; showTab(); rDayOptions(); $('rDayLab').textContent=dname(+S.rday); renderRush(); };
-  $('rRec').onclick=()=>{ REC.on?recStop(true):recStart(); };
+  $('rRec').onclick=()=>{ if(REC.on) recStop(true); else { rFull(true); recStart(); } };
+  $('rFs').onclick=()=>rFull(!$('rBar').closest('.rmain').classList.contains('fs'));
+  const lay=$('rSideTog').closest('.rlay'), sideSet=off=>{ lay.classList.toggle('side-off',off); $('rSideTog').setAttribute('aria-expanded',!off); $('rSideTog').title=off?'Show the plan panel':'Hide the plan panel'; };
+  sideSet(!!S.sideOff); $('rSideTog').onclick=()=>{ S.sideOff=!lay.classList.contains('side-off'); save(); sideSet(S.sideOff); setTimeout(()=>rDraw(true),50); };
   const wide=matchMedia('(min-width:1200px)'); const fit=()=>{ if(wide.matches) $('rSideD').open=true; }; fit(); wide.addEventListener&&wide.addEventListener('change',fit);
   if(!wide.matches) $('rSideD').open=false;
-  $('rPlay').onclick=()=>{ RS.playing?rStop():rPlay(); };
+  $('rPlay').onclick=()=>{ if(RS.playing) rStop(); else { rFull(true); rPlay(); } };
   $('rWin').onchange=()=>{ S.rwin=$('rWin').value; save(); const w=rWin(); rStop(); RS.t=w.a; rDraw(true); rSpeedLabels(); };
   $('rSpd').innerHTML=SPEEDS.map(([v,l])=>'<option value="'+v+'">'+l+'</option>').join(''); $('rSpd').value=S.rspd||2;
   $('rSpd').onchange=()=>{ S.rspd=+$('rSpd').value; save(); rSpeedLabels(); };
@@ -1173,14 +1192,14 @@ async function recStart(){
   mr.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
   Object.assign(REC,{on:true,mr,chunks,a,b,type,win});
   $('rRec').textContent='■ Stop'; $('rRec').classList.add('on');
-  mr.onstop=()=>{ const real=(mr.mimeType||type||'video/webm'), ext=/mp4/.test(real)?'mp4':'webm', blob=new Blob(chunks,{type:real.split(';')[0]}), url=URL.createObjectURL(blob);
+  mr.onstop=()=>{ rFull(false); setTimeout(()=>{ try{ $('rRecOut').scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} },120); const real=(mr.mimeType||type||'video/webm'), ext=/mp4/.test(real)?'mp4':'webm', blob=new Blob(chunks,{type:real.split(';')[0]}), url=URL.createObjectURL(blob);
     const name='Hayat_Rush_'+dname(+S.rday).replace(/ /g,'_')+'_'+win+'_'+rPlanName().replace(/[^A-Za-z0-9]+/g,'_')+'.'+ext;
     out.innerHTML='<video controls playsinline src="'+url+'"></video><div class="recbar"><a class="dl" href="'+url+'" download="'+name+'">⬇ Download video</a><span class="note">'+name+' · '+fm(blob.size/1048576,1)+' MB'+(ext==='webm'?' · WebM plays in Chrome, VLC and WhatsApp desktop':'')+'</span></div>';
     const l=out.querySelector('a.dl'); try{ l.click(); }catch(e){} };
   mr.start(1000);
   const t0=performance.now();
   const loop=now=>{ if(!REC.on) return; const f=Math.min(1,(now-t0)/1000/secs), t=a+f*(b-a);
-    recFrame(ctx,img,t,W,H); const bar=$('rRecBar'); if(bar) bar.style.width=(f*100)+'%';
+    recFrame(ctx,img,t,W,H); const bar=$('rRecBar'); if(bar) bar.style.width=(f*100)+'%'; $('rRec').textContent='■ Stop · '+Math.round(f*100)+'%';
     RS.t=t; rDraw(false);
     if(f>=1){ recStop(false); return; } REC.raf=requestAnimationFrame(loop); };
   recFrame(ctx,img,a,W,H); REC.raf=requestAnimationFrame(loop);
@@ -1376,6 +1395,15 @@ async function rPickDay(v){ const d=$('rDay');
   else { S.rday=+v; S.rvm=null; }
   save(); $('rDayLab').textContent=dname(+S.rday); rDayOptions(); renderRush(); }
 let RZ=0; window.addEventListener('resize',()=>{ clearTimeout(RZ); RZ=setTimeout(()=>{ if(S.tab==='day') renderDay(); },200); });
+/* full screen while playing or recording: the real Fullscreen API where the browser has it,
+   a fixed overlay where it does not (iPhone). Esc or ⤢ leaves. */
+function rFull(on){ const m=$('rBar').closest('.rmain'); if(!!on===m.classList.contains('fs')) return;
+  m.classList.toggle('fs',!!on);
+  try{ if(on){ if(m.requestFullscreen&&!document.fullscreenElement) m.requestFullscreen().catch(()=>{}); }
+       else if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(e){}
+  setTimeout(()=>rDraw(true),60); }
+document.addEventListener('fullscreenchange',()=>{ const m=$('rBar')&&$('rBar').closest('.rmain'); if(m&&!document.fullscreenElement&&m.classList.contains('fs')){ m.classList.remove('fs'); rDraw(true); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const m=$('rBar')&&$('rBar').closest('.rmain'); if(m&&m.classList.contains('fs')) rFull(false); } });
 function rWindow(a,b){ rStop(); RS.t=Math.max(RS.t0,a); RS.stopAt=Math.min(RS.t1,b); rDraw(true); rPlay(); }
 function rStop(){ RS.playing=false; cancelAnimationFrame(RS.raf); $('rPlay').textContent='▶'; $('rPlay').classList.remove('on'); $('rPlay').setAttribute('aria-label','Play'); RS.stopAt=null; }
 function rPlay(){ const w=rWin()||{a:RS.t0,b:RS.t1}; if(RS.t<w.a||RS.t>=w.b-0.5) RS.t=w.a; RS.stopAt=w.b; RS.playing=true; $('rPlay').textContent='❚❚'; $('rPlay').classList.add('on'); $('rPlay').setAttribute('aria-label','Pause'); RS.last=performance.now();
