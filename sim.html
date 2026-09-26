@@ -141,6 +141,18 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .pulse{animation:pulse 1s ease-out infinite}
 @media (prefers-reduced-motion:reduce){ .pulse{animation:none} }
 .cmp{display:grid;gap:14px}
+.tmtbl td,.tmtbl th{text-align:left;vertical-align:middle} .tmtbl input,.tmtbl select{padding:5px 6px;font-size:13px}
+.tmtbl .sw2{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:6px}
+.tmtbl tr.off td{opacity:.45} .tmtbl .x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:15px}
+.tmgrid{display:grid;gap:14px} @media (min-width:1100px){ .tmgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)} }
+.tmcards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.tmc{border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px;background:var(--surface);display:grid;gap:4px}
+.tmc h3{margin:0;font:600 16px "Jost",sans-serif;display:flex;justify-content:space-between;gap:8px} .tmc h3 small{font-weight:500;color:var(--muted);font-size:12px}
+.tmc .rl{font-weight:600;color:var(--c)} .tmc ul{margin:2px 0 0;padding-left:18px;font-size:13px;color:var(--ink)} .tmc li{margin:1px 0}
+.tmc .mt{font-size:12.5px;color:var(--muted)}
+.tmk{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.tmload{height:8px;border-radius:4px;background:var(--soft);overflow:hidden;min-width:60px} .tmload div{height:100%}
+@media print{ body *{visibility:hidden} #tmCards,#tmCards *{visibility:visible} #tmCards{position:absolute;left:0;top:0;width:100%} .tmc{break-inside:avoid;border-color:#999} }
 .gwin{max-width:520px;flex:1} .gwin button{padding:6px 8px;font-size:12.5px;white-space:nowrap}
 .gantt{overflow:hidden}
 .lvdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);margin-right:6px;vertical-align:1px}
@@ -327,6 +339,7 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
     <button role="tab" id="t-sim" aria-selected="false" data-tab="sim">One order</button>
     <button role="tab" id="t-day" aria-selected="false" data-tab="day">Day report</button>
     <button role="tab" id="t-sug" aria-selected="false" data-tab="sug">Ideas</button>
+    <button role="tab" id="t-team" aria-selected="false" data-tab="team">Team plan</button>
     <button role="tab" id="t-mix" aria-selected="false" data-tab="mix">Settings</button>
   </nav>
 
@@ -416,6 +429,23 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
      </div>
    </details></aside>
    </div>
+  </section>
+
+  <section id="p-team" hidden>
+    <div class="card">
+      <div class="row"><h2>Team plan · one team all day · kitchen packs parcels</h2>
+        <div class="recbar"><button class="btn primary" id="tmAuto">✨ Auto-plan</button><button class="btn" id="tmPrint">🖨 Print shift sheet</button></div></div>
+      <div class="note">Set who is on today and how experienced they are. Auto-plan puts each person where they help most, pairs new people with a buddy, and tests it on a real day.</div>
+      <div class="scroll"><table class="tmtbl" id="tmTbl"></table></div>
+      <div class="row" style="justify-content:flex-start;gap:12px"><button class="btn" id="tmAdd">+ Add person</button>
+        <label class="f" style="min-width:210px">Test on<select id="tmDay"></select></label>
+        <label class="f" style="min-width:230px">Layout<select id="tmLay"></select></label></div>
+    </div>
+    <div class="tmgrid">
+      <div class="card"><h2>How this team would do</h2><div id="tmRes"></div></div>
+      <div class="card"><h2>Where everyone stands</h2><div class="planwrap" id="tmMap"></div><div class="lgbox" id="tmLeg"></div></div>
+    </div>
+    <div class="card"><h2>Each person's job</h2><div class="tmcards" id="tmCards"></div></div>
   </section>
 
   <section id="p-sim" hidden>
@@ -688,6 +718,8 @@ const PREP=Object.assign({},PREP_DEF);
 function daySim(D, sc, bills, day, mix, staff){
   if(typeof staff==='number') staff={waiters:staff};
   staff=Object.assign({waiters:5,captains:0,runners:0,bussers:0},staff);
+  /* a named team: each person has a role, an optional zone (halls) and a skill speed */
+  if(staff.team&&staff.team.length){ const c=r=>staff.team.filter(p=>p.role===r).length; staff=Object.assign({},staff,{waiters:c('waiter'),captains:c('captain'),runners:c('runner'),bussers:c('busser')}); }
   const sim=makeSim(D,sc), rand=rng(day*7919+13), hw={}; mix.halls.forEach(h=>hw[h.k]=h.share);
   const todays=bills.filter(b=>b.d===day), busyUntil={}; D.T.forEach(t=>busyUntil[t.id]=-1);
   /* ---- the kitchen: each station has a few slots; dine-in KOTs and parcels queue for them ---- */
@@ -730,15 +762,19 @@ function daySim(D, sc, bills, day, mix, staff){
     tasks.push({type:'clear',bi,ready:b.mi+1,dur:secs(o.clear.len,1,90)/60,m:toM(o.clear.len,D),t:t.id,path:o.clear.path});
   }
   const W=[]; const add=(n,role,lab)=>{ for(let i=0;i<n;i++) W.push({i:W.length,role,lab:lab+' '+(i+1),free:-1e9,m:0,busy:0,idle:0,blocks:[]}); };
-  add(staff.waiters,'waiter','Waiter'); add(staff.captains,'captain','Captain'); add(staff.runners,'runner','Runner'); add(staff.bussers,'busser','Clearer');
+  if(staff.team&&staff.team.length) staff.team.forEach(p=>W.push({i:W.length,role:p.role,lab:p.lab,halls:p.halls||null,slow:p.slow||1,free:-1e9,m:0,busy:0,idle:0,blocks:[]}));
+  else { add(staff.waiters,'waiter','Waiter'); add(staff.captains,'captain','Captain'); add(staff.runners,'runner','Runner'); add(staff.bussers,'busser','Clearer'); }
   const roleFor=k=> (k.type==='order'||k.type==='bill')&&staff.captains?'captain': k.type==='food'&&staff.runners?'runner': k.type==='clear'&&staff.bussers?'busser':'waiter';
-  const pick=pool=>{ let w=pool[0]; for(const x of pool) if(x.free<w.free||(x.free===w.free&&x.m<w.m)) w=x; return w; };
+  const pick=pool=>{ if(!pool.length) return null; let w=pool[0]; for(const x of pool) if(x.free<w.free||(x.free===w.free&&x.m<w.m)) w=x; return w; };
   const pending=tasks.slice(), done=[];
   while(pending.length){ let bi=0; for(let i=1;i<pending.length;i++) if(pending[i].ready<pending[bi].ready) bi=i;
     const k=pending.splice(bi,1)[0], role=roleFor(k);
-    let w=pick(W.filter(x=>x.role===role));
-    if(!w || (role!=='waiter' && w.free>k.ready+2)){ const alt=pick(W.filter(x=>x.role==='waiter')); if(!w||alt.free<w.free) w=alt; }
-    k.start=Math.max(k.ready,w.free); k.wait=k.start-k.ready;
+    const hall=k.bi!=null?seated[k.bi].hall:null, inZ=x=>!x.halls||!hall||x.halls.includes(hall);
+    let w=pick(W.filter(x=>x.role===role&&inZ(x)));
+    if(w&&w.free>k.ready+3){ const any=pick(W.filter(x=>x.role===role)); if(any&&any.free+1<w.free) w=any; }     /* a free colleague helps a busy zone */
+    if(!w) w=pick(W.filter(x=>x.role===role));
+    if(!w || (role!=='waiter' && w.free>k.ready+2)){ const alt=pick(W.filter(x=>x.role==='waiter'&&inZ(x)))||pick(W.filter(x=>x.role==='waiter')); if(alt&&(!w||alt.free<w.free)) w=alt; }
+    k.start=Math.max(k.ready,w.free); k.wait=k.start-k.ready; if(w.slow&&w.slow!==1) k.dur*=w.slow;
     if(k.type==='food'){ const atKitchen=k.start+k.walkMin*0.45; k.idle=Math.max(0,k.readyActual-atKitchen); k.dur+=k.idle; w.idle+=k.idle;
       k.fwait=Math.max(0,atKitchen-k.readyActual); seated[k.bi].food=k.start+k.dur; }
     w.free=k.start+k.dur; w.m+=k.m; w.busy+=k.dur; w.blocks.push(k); k.w=w.i; done.push(k);
@@ -799,7 +835,7 @@ const hm=m=>{ m=Math.round(m); const h=Math.floor(m/60)%24, mm=((m%60)+60)%60; r
 const svg=$('plan');
 function mk(tag,a,p){ const e=document.createElementNS(NS,tag); for(const k in a) e.setAttribute(k,a[k]); p.appendChild(e); return e; }
 function paneSvg(id,host){ const c=svg.cloneNode(true); c.id=id; $(host).appendChild(c); return {svg:c,tr:mk('g',{},c),tb:mk('g',{},c),dot:mk('g',{},c)}; }
-const RP={A:paneSvg('rplanA','rmA'),B:paneSvg('rplanB','rmB')};
+const RP={A:paneSvg('rplanA','rmA'),B:paneSvg('rplanB','rmB')}, TMAPP=paneSvg('rplanT','tmMap');   /* cloned before any route is drawn */
 const ov=mk('g',{},svg), tg=mk('g',{},svg);
 
 // ---- improvement chips
@@ -850,8 +886,8 @@ $('zoom').onclick=()=>{ $('pw').classList.toggle('zoom'); $('zoom').textContent=
 
 // ---- tabs + presets
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; save(); showTab(); lazy(); });
-function showTab(){ $('topk').hidden=S.tab!=='sim'; ['live','rush','sim','day','sug','mix'].forEach(t=>{ $('p-'+t).hidden=S.tab!==t; $('t-'+t).setAttribute('aria-selected',S.tab===t?'true':'false'); }); }
-function lazy(){ if(S.tab==='live') lvOpen(); if(S.tab==='rush') renderRush(); if(S.tab==='day') renderDay(); if(S.tab==='sug') renderSug(); }
+function showTab(){ $('topk').hidden=S.tab!=='sim'; ['live','rush','sim','day','sug','team','mix'].forEach(t=>{ $('p-'+t).hidden=S.tab!==t; $('t-'+t).setAttribute('aria-selected',S.tab===t?'true':'false'); }); }
+function lazy(){ if(S.tab==='team') renderTeam(); if(S.tab==='live') lvOpen(); if(S.tab==='rush') renderRush(); if(S.tab==='day') renderDay(); if(S.tab==='sug') renderSug(); }
 $('pr-today').onclick=()=>{ S.sc={}; save(); render(); };
 $('pr-low').onclick=()=>{ S.sc=Object.assign({},tiers()[0].sc); save(); render(); };
 $('pr-all').onclick=()=>{ S.sc=Object.fromEntries(IMPROVE.map(i=>[i.k,true])); save(); render(); };
@@ -1447,6 +1483,122 @@ function rFull(on){ const m=$('rBar').closest('.rmain'); if(!!on===m.classList.c
   setTimeout(()=>rDraw(true),60); }
 document.addEventListener('fullscreenchange',()=>{ const m=$('rBar')&&$('rBar').closest('.rmain'); if(m&&!document.fullscreenElement&&m.classList.contains('fs')){ m.classList.remove('fs'); rDraw(true); } });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const m=$('rBar')&&$('rBar').closest('.rmain'); if(m&&m.classList.contains('fs')) rFull(false); } });
+/* ======================= TEAM PLAN ======================= */
+const SKILL={lead:['Lead',1.0],exp:['Experienced',1.05],learn:['Learning',1.2],new:['New',1.35]};
+const TROLE={captain:'Captain',waiter:'Waiter',runner:'Food runner',busser:'Table clearer',off:'Off today'};
+const TZONE={all:['Whole floor',null],ac:['AC hall',['ac']],nonac:['Non-AC hall',['nonac']],jh:['Juice Hut & Huts',['juice','huts']],acn:['AC + Non-AC',['ac','nonac']]};
+const TCOL=['#2F5A74','#C2562C','#2E7D5B','#8A5BA6','#A8812F','#2C8C7A','#B04A6B','#5B5A8C','#6E7F2E','#3A7BA6'];
+const TEAM_DEF=[{n:'Viva',sk:'lead'},{n:'Guis',sk:'exp'},{n:"Guis's wife",sk:'exp'},{n:'Ring',sk:'learn'},{n:'Tan',sk:'learn'},{n:'New 1',sk:'new'},{n:'New 2',sk:'new'},{n:'New 3',sk:'new'}];
+function teamList(){ if(!Array.isArray(S.team)||!S.team.length){ S.team=TEAM_DEF.map(p=>Object.assign({on:true,role:'waiter',zone:'all',buddy:''},p)); teamAuto(false); } return S.team; }
+/* where each role stands between jobs */
+function homeOf(p){ const z=p.zone;
+  if(p.role==='captain') return ['cash','Cash counter, facing both halls'];
+  if(p.role==='runner') return ['kh','Kitchen pass: carry plates the moment the bell rings'];
+  if(p.role==='busser') return ['svc','Service station by door 9, between clearing runs'];
+  if(z==='ac') return ['a6_3','AC hall, near door 10 (to the kitchen walkway)'];
+  if(z==='nonac') return ['svc','Service station by door 9'];
+  if(z==='jh') return ['j3','Juice Hut walkway, watching the huts too'];
+  if(z==='acn') return ['a2_2','AC hall 2-seater side, covering both halls'];
+  /* whole-floor waiters still start from different spots, spread by where the tables are */
+  const L=teamList().filter(x=>x.on&&x.role==='waiter'&&x.zone==='all'), SP=[['a6_3','AC hall near door 10'],['svc','Service station by door 9 (non-AC)'],['a2_2','AC hall, 2-seater side'],['n6_2','Non-AC hall, middle'],['j3','Juice Hut walkway'],['n4_2','Non-AC hall, 4-seater side']];
+  const sp=SP[Math.max(0,L.indexOf(p))%SP.length]; return [sp[0],'Start at: '+sp[1]+'. Cover any table that needs you.']; }
+function dutiesOf(p){ const z=TZONE[p.zone][0];
+  return {captain:['Greet and seat guests, take every order and punch the KOT','Print and bring bills, take payment','Watch the order board: move people to where tables wait','Buddy for new staff: check their first tables'],
+    waiter:['Own your tables in '+z+': water, plates, glasses first','Carry food when your table’s bell rings','Top up drinks, offer juice and dessert','Help the next zone if yours is quiet'],
+    runner:['Stay at the kitchen pass during rush','Take plates to the table the moment they are ready','Bring mayo/chutney with mandi, alfaham, shawaya','Refill water bottles and glasses between runs'],
+    busser:['Clear every table within 5 minutes of guests leaving','Take plates to dish wash, wipe and reset the table','Restock the service station: plates, glasses, water','Tell the captain when a table is ready for new guests'],
+    off:['Not on today']}[p.role]; }
+/* Auto-plan tries many team set-ups on the chosen day and keeps the one with the fastest
+   service (seat to food, worst waits, time to order), then pairs learners with a buddy. */
+function teamAssign(T,o){ const on=T.filter(p=>p.on), rank=k=>['lead','exp','learn','new'].indexOf(k), q=on.slice().sort((a,b)=>rank(a.sk)-rank(b.sk));
+  const A={}; T.forEach(p=>A[p.n]={role:p.on?'waiter':'off',zone:'all'}); const take=f=>{ const i=q.findIndex(f); return i<0?null:q.splice(i,1)[0]; };
+  if(o.cap){ const c=take(p=>p.sk==='lead')||take(p=>p.sk==='exp'); if(c) A[c.n]={role:'captain',zone:'all'}; }
+  if(o.bus){ const b=take(p=>p.sk==='new')||take(p=>p.sk==='learn'); if(b) A[b.n]={role:'busser',zone:'all'}; }
+  if(o.run){ const r=take(p=>p.sk==='learn')||take(p=>p.sk==='new')||take(p=>p.sk==='exp'); if(r) A[r.n]={role:'runner',zone:'all'}; }
+  if(!q.length){ const back=on.find(p=>A[p.n].role!=='captain'); if(back) A[back.n]={role:'waiter',zone:'all'}; return A; }
+  if(o.zone&&q.length>=3){ const Z=['ac','nonac','ac','jh','nonac','ac','nonac','jh'];   /* best people to the busiest halls; the far Juice Hut goes to someone who knows the job, new staff stay near a buddy */
+    q.forEach((p,i)=>A[p.n]={role:'waiter',zone:Z[i%Z.length]}); if(!q.some(p=>A[p.n].zone==='jh')) A[q[q.length-1].n].zone='acn'; }
+  else q.forEach(p=>A[p.n]={role:'waiter',zone:'all'});
+  return A; }
+function teamAuto(render=true){ const T=teamList(), day=+S.tmday||20, sc=(PLANS()[+S.tmlay||0]||{sc:{}}).sc; let best=null, tried=0;
+  if(!T.some(p=>p.on)) return; const all=[];
+  for(const cap of [0,1]) for(const run of [0,1]) for(const bus of [0,1]) for(const zone of [0,1]){
+    const A=teamAssign(T,{cap,run,bus,zone}), st={team:T.filter(p=>A[p.n].role!=='off').map(p=>({lab:p.n,role:A[p.n].role,halls:TZONE[A[p.n].zone][1],slow:SKILL[p.sk][1]}))};
+    if(!st.team.some(x=>x.role==='waiter')) continue;
+    let r; try{ r=dayStats(dsim(sc,day,st)); }catch(e){ continue; } tried++;
+    const score=r.s2f+0.4*r.max+0.3*r.ow+0.2*r.clearMax+0.004*r.idle;
+    all.push({score,A,o:{cap,run,bus,zone},r,org:zone*2+bus+cap+run}); }
+  if(!all.length) return;
+  /* fastest plan, then the most organised plan that is almost as fast (every table has an owner, less walking) */
+  const fast=all.reduce((x,y)=>y.score<x.score?y:x);
+  const near=all.filter(c=>c.r.s2f<=fast.r.s2f+1&&c.r.max<=fast.r.max+2&&c.r.ow<=Math.max(4,fast.r.ow+2));
+  best=near.reduce((x,y)=>(y.org>x.org||(y.org===x.org&&y.r.wkm<x.r.wkm))?y:x);
+  /* smallest team that gives the same service: drop the least experienced first */
+  const onP=T.filter(p=>p.on).sort((a,b)=>['lead','exp','learn','new'].indexOf(a.sk)-['lead','exp','learn','new'].indexOf(b.sk)); let minN=onP.length;
+  for(let k=Math.min(4,onP.length);k<onP.length;k++){ const r=dayStats(dsim(sc,day,{team:onP.slice(0,k).map(p=>({lab:p.n,role:'waiter',halls:null,slow:SKILL[p.sk][1]}))}));
+    if(r.s2f<=fast.r.s2f+0.7&&r.max<=fast.r.max+2&&r.ow<=Math.max(3,fast.r.ow+2)){ minN=k; break; } }
+  S.tmmin=minN<onP.length?'Enough people: the best '+minN+' of your '+onP.length+' give about the same service on this day. The rest can do parcels, prep, cleaning, or take a day off.':'';
+  T.forEach(p=>{ Object.assign(p,best.A[p.n]); p.buddy=''; });
+  const pros=T.filter(p=>p.on&&(p.sk==='lead'||p.sk==='exp'));
+  T.filter(p=>p.on&&(p.sk==='learn'||p.sk==='new')).forEach(p=>{ const b=pros.find(x=>x.role==='waiter'&&(x.zone===p.zone||x.zone==='all'))||pros.find(x=>x.role==='captain')||pros[0]; p.buddy=b?b.n:''; });
+  const walkCut=all.filter(c=>!c.o.cap&&!c.o.run&&!c.o.bus&&!c.o.zone)[0];
+  S.tmwhy='Tried '+tried+' ways on '+dname(day)+'. Picked the most organised plan that is as fast as the best'+(best.r.s2f>fast.r.s2f+0.05?' (+'+fm(best.r.s2f-fast.r.s2f,1)+'′ seat → food)':'')+(walkCut&&walkCut.r.wkm-best.r.wkm>0.5?', with '+fm(walkCut.r.wkm-best.r.wkm,1)+' km less walking than everyone doing everything':'')+': '+(best.o.cap?'a captain takes orders & bills':'no captain')+', '+(best.o.run?'a food runner':'no runner')+', '+(best.o.bus?'a table clearer':'no clearer')+', '+(best.o.zone?'waiters by zone':'waiters cover the whole floor')+'.';
+  save(); if(render) renderTeam(); }
+function teamStaff(){ return {team:teamList().filter(p=>p.on&&p.role!=='off').map(p=>({lab:p.n,role:p.role,halls:TZONE[p.zone][1],slow:SKILL[p.sk][1]}))}; }
+function teamBreaks(){ const on=teamList().filter(p=>p.on&&p.role!=='off'), slots=[]; let t=15*60, used={};
+  // 30 min each between 3 and 6:30 pm, two at a time, never two from the same zone together
+  const out={}; const pend=on.slice();
+  while(pend.length&&t<18*60+30){ const zs=new Set(); let n=0; for(let i=0;i<pend.length&&n<2;){ const p=pend[i], z=p.role==='waiter'?p.zone:p.role; if(!zs.has(z)){ zs.add(z); out[p.n]=t; pend.splice(i,1); n++; } else i++; } t+=30; }
+  return out; }
+function tInit(n){ const w=String(n).replace(/'s\b/g,'').split(/\s+/).filter(Boolean), d=(n.match(/\d+/)||[])[0];
+  if(d) return (w[0][0]||'?').toUpperCase()+d; if(w.length>1) return (w[0][0]+w[1][0]).toUpperCase(); return w[0].slice(0,2); }
+function renderTeam(){ const T=teamList(), P=PLANS();
+  const tb=$('tmTbl'), names=T.map(p=>p.n);
+  tb.innerHTML='<tr><th>Name</th><th>On</th><th>Experience</th><th>Role</th><th>Zone</th><th>Buddy</th><th></th></tr>'+T.map((p,i)=>'<tr class="'+(p.on?'':'off')+'"><td><span class="sw2" style="background:'+TCOL[i%TCOL.length]+'"></span><input data-i="'+i+'" data-f="n" value="'+esc2(p.n)+'" style="width:130px"></td>'
+    +'<td><input type="checkbox" data-i="'+i+'" data-f="on" '+(p.on?'checked':'')+'></td>'
+    +'<td><select data-i="'+i+'" data-f="sk">'+Object.keys(SKILL).map(k=>'<option value="'+k+'"'+(p.sk===k?' selected':'')+'>'+SKILL[k][0]+'</option>').join('')+'</select></td>'
+    +'<td><select data-i="'+i+'" data-f="role">'+Object.keys(TROLE).map(k=>'<option value="'+k+'"'+(p.role===k?' selected':'')+'>'+TROLE[k]+'</option>').join('')+'</select></td>'
+    +'<td><select data-i="'+i+'" data-f="zone" '+(p.role!=='waiter'?'disabled':'')+'>'+Object.keys(TZONE).map(k=>'<option value="'+k+'"'+(p.zone===k?' selected':'')+'>'+TZONE[k][0]+'</option>').join('')+'</select></td>'
+    +'<td><select data-i="'+i+'" data-f="buddy"><option value="">—</option>'+names.filter(n=>n!==p.n).map(n=>'<option'+(p.buddy===n?' selected':'')+'>'+esc2(n)+'</option>').join('')+'</select></td>'
+    +'<td><button class="x" data-del="'+i+'" title="Remove">✕</button></td></tr>').join('');
+  tb.querySelectorAll('[data-f]').forEach(el=>el.onchange=()=>{ const p=T[+el.dataset.i], f=el.dataset.f; p[f]=f==='on'?el.checked:el.value; if(f==='on'&&!p.on) p.role='off'; if(f==='on'&&p.on&&p.role==='off') p.role='waiter'; if(f==='role'&&p.role!=='waiter') p.zone='all'; if(f!=='n'){ S.tmwhy=''; S.tmmin=''; } save(); renderTeam(); });
+  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ T.splice(+b.dataset.del,1); save(); renderTeam(); });
+  $('tmAdd').onclick=()=>{ T.push({n:'New '+(T.filter(p=>/^New \d/.test(p.n)).length+1),sk:'new',on:true,role:'waiter',zone:'all',buddy:''}); save(); renderTeam(); };
+  $('tmAuto').onclick=()=>teamAuto(true); $('tmPrint').onclick=()=>window.print();
+  const ds=$('tmDay'); if(!ds.options.length||ds.options.length!==DAYS.length){ ds.innerHTML=DAYS.map(d=>'<option value="'+d+'">'+dname(d)+' · '+BILLS.filter(b=>b.d===d).length+' tables'+(ESTDAYS.includes(d)?'':'')+'</option>').join(''); }
+  if(!DAYS.includes(+S.tmday)) S.tmday=DAYS.includes(20)?20:DAYS[DAYS.length-1]; ds.value=S.tmday; ds.onchange=()=>{ S.tmday=+ds.value; save(); renderTeam(); };
+  const ly=$('tmLay'); if(!ly.options.length) ly.innerHTML=P.map((p,i)=>'<option value="'+i+'">'+(i?'Step '+i+': '+p.lab.replace(/^\+ /,''):'Today (KOT printer down)')+'</option>').join(''); ly.value=S.tmlay||0; ly.onchange=()=>{ S.tmlay=+ly.value; save(); renderTeam(); };
+  // ---- test the plan
+  const day=+S.tmday, sc=P[+S.tmlay||0].sc, on=T.filter(p=>p.on&&p.role!=='off');
+  if(!on.some(p=>p.role==='waiter')){ $('tmRes').innerHTML='<div class="lvempty">Give at least one person the Waiter role.</div>'; }
+  else { const same={team:on.map(p=>({lab:p.n,role:'waiter',halls:null,slow:SKILL[p.sk][1]}))};
+    const a0=dayStats(dsim({},day,BASEST)), a=dayStats(dsim(sc,day,same)), B=dsim(sc,day,teamStaff()), b=dayStats(B);
+    const M=[['Seat → food, avg','s2f',1,'′'],['Longest wait for food pickup','max',0,'′'],['Longest wait to order','ow',0,'′'],['Longest wait to clear a table','clearMax',0,'′'],['Staff standing at the kitchen','idle',0,' min'],['Kitchen queue, avg','kavg',1,'′'],['Waiters walked','wkm',1,' km']];
+    let h=(S.tmwhy?'<div class="note">✨ '+esc2(S.tmwhy)+'</div>':'')+(S.tmmin?'<div class="lvbar warn" style="margin:6px 0">👥 '+esc2(S.tmmin)+'</div>':'')+'<div class="note">'+dname(day)+'. <b>Same people, no roles</b> = these '+on.length+' people all doing everything, like today. Layout: '+$('tmLay').options[$('tmLay').selectedIndex].text+'.</div>'
+      +'<div class="scroll"><table><tr><th></th><th>Today · 5 waiters</th><th>Same people, no roles</th><th>This plan</th></tr>'+M.map(([l,k,d,u])=>{ const x=a[k],y=b[k]; return '<tr><td>'+l+'</td><td style="color:var(--muted)">'+fm(a0[k],d)+u+'</td><td>'+fm(x,d)+u+'</td><td class="'+(y<x-0.05?'good':y>x+0.05?'bad':'')+'">'+fm(y,d)+u+'</td></tr>'; }).join('')+'</table></div>';
+    const span=Math.max(1,B.t1-B.t0), rows=B.W.map(w=>({w,busy:w.busy/span*100,km:w.m/1000,n:w.blocks.length}));
+    const hot=rows.filter(r=>r.busy>75).map(r=>r.w.lab), low=rows.filter(r=>r.busy<25).map(r=>r.w.lab);
+    h+='<h2 style="margin-top:12px">Load per person</h2><div class="scroll"><table><tr><th>Person</th><th>Role</th><th>Busy</th><th></th><th>Walked</th><th>Jobs</th></tr>'+rows.map(r=>{ const i=T.findIndex(p=>p.n===r.w.lab), c=r.busy>75?'#C2362C':r.busy>55?'#D39B2A':'#2E7D5B';
+      return '<tr><td><span class="sw2" style="background:'+TCOL[i%TCOL.length]+'"></span>'+esc2(r.w.lab)+'</td><td>'+TROLE[r.w.role]+(r.w.halls?' · '+TZONE[T[i].zone][0]:'')+'</td><td>'+fm(r.busy,0)+'%</td><td><div class="tmload"><div style="width:'+Math.min(100,r.busy)+'%;background:'+c+'"></div></div></td><td>'+fm(r.km,1)+' km</td><td>'+r.n+'</td></tr>'; }).join('')+'</table></div>';
+    h+='<div class="note" style="margin-top:6px">'+(hot.length?'⚠ Overloaded: <b>'+hot.map(esc2).join(', ')+'</b>, give them a helper or a smaller zone. ':'')+(low.length?'Lightly used: <b>'+low.map(esc2).join(', ')+'</b>, can cover another zone or do prep. ':'')+(!hot.length&&!low.length?'✓ Load is balanced.':'')+' Busy % is over the whole day; rush hours are much higher.</div>';
+    $('tmRes').innerHTML=h; }
+  // ---- map: tables tinted by who owns the zone, a pin for where each person stands
+  const TMAP=TMAPP; TMAP.tb.innerHTML=''; TMAP.dot.innerHTML=''; TMAP.tr.innerHTML='';
+  const owner={}; on.filter(p=>p.role==='waiter').forEach(p=>{ const hs=TZONE[p.zone][1]||['ac','nonac','juice','huts']; hs.forEach(h=>{ (owner[h]=owner[h]||[]).push(p); }); });
+  D.T.forEach(tbl=>{ const [x,y]=D.N[tbl.id], ow=owner[tbl.hall]||[]; const c=ow.length?TCOL[T.indexOf(ow[0])%TCOL.length]:'#999';
+    mk('circle',{cx:x,cy:y,r:30,fill:c,opacity:.28,stroke:c,'stroke-width':4},TMAP.tb); });
+  const spots={}; on.forEach(p=>{ const [nid]=homeOf(p); (spots[nid]=spots[nid]||[]).push(p); });
+  Object.keys(spots).forEach(nid=>{ const N=D.N[nid]; if(!N) return; spots[nid].forEach((p,j)=>{ const i=T.indexOf(p), x=N[0]+(j-(spots[nid].length-1)/2)*52, y=N[1]-44;
+    const g=mk('g',{},TMAP.dot); mk('title',{},g).textContent=p.n+' · '+TROLE[p.role]+' · '+homeOf(p)[1];
+    mk('circle',{cx:x,cy:y,r:24,fill:TCOL[i%TCOL.length],stroke:'#fff','stroke-width':5},g); const t=mk('text',{x,y:y+9,'font-size':24,'font-weight':700,fill:'#fff','text-anchor':'middle'},g); t.textContent=tInit(p.n); }); });
+  $('tmLeg').innerHTML=on.map(p=>{ const i=T.indexOf(p); return '<span class="lg"><i style="background:'+TCOL[i%TCOL.length]+'"></i>'+esc2(p.n)+' · '+TROLE[p.role]+(p.role==='waiter'?' ('+TZONE[p.zone][0]+')':'')+'</span>'; }).join('');
+  // ---- job cards (printable)
+  const br=teamBreaks();
+  $('tmCards').innerHTML=on.map(p=>{ const i=T.indexOf(p), [,where]=homeOf(p);
+    return '<div class="tmc" style="--c:'+TCOL[i%TCOL.length]+'"><h3>'+esc2(p.n)+'<small>'+SKILL[p.sk][0]+'</small></h3><div class="rl">'+TROLE[p.role]+(p.role==='waiter'?' · '+TZONE[p.zone][0]:'')+'</div>'
+      +'<div class="mt">📍 '+where+'</div>'+(p.buddy?'<div class="mt">🤝 Buddy: <b>'+esc2(p.buddy)+'</b>, ask them first</div>':'')+(br[p.n]!=null?'<div class="mt">☕ Break '+hm(br[p.n])+'–'+hm(br[p.n]+30)+'</div>':'')
+      +'<ul>'+dutiesOf(p).map(d=>'<li>'+d+'</li>').join('')+'</ul></div>'; }).join('')+'<div class="note" style="grid-column:1/-1">Rush hours: 12:30–2:30 pm and 7:30–10 pm. No breaks then. Quiet time 3–6:30 pm: breaks, restock, clean.</div>';
+}
 function rWindow(a,b){ rStop(); RS.t=Math.max(RS.t0,a); RS.stopAt=Math.min(RS.t1,b); rDraw(true); rPlay(); }
 function rStop(){ RS.playing=false; cancelAnimationFrame(RS.raf); $('rPlay').textContent='▶'; $('rPlay').classList.remove('on'); $('rPlay').setAttribute('aria-label','Play'); RS.stopAt=null; }
 function rPlay(){ const w=rWin()||{a:RS.t0,b:RS.t1}; if(RS.t<w.a||RS.t>=w.b-0.5) RS.t=w.a; RS.stopAt=w.b; RS.playing=true; $('rPlay').textContent='❚❚'; $('rPlay').classList.add('on'); $('rPlay').setAttribute('aria-label','Pause'); RS.last=performance.now();
