@@ -91,10 +91,11 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 @media (max-width:759px){ .rview.compare{grid-template-columns:1fr 1fr;gap:8px} }
 .parc{margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
 .parc .ph{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600} .parc .ph small{font-weight:400;color:var(--muted)}
-.parc .pr{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.parc .pr{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;height:72px;overflow:hidden;align-content:flex-start}
+.parc .ph{min-height:34px}
 .kq{display:grid;gap:3px;margin-top:6px}
 .kr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;font-size:12px}
-.kr.hot b{color:#C2362C} .kr b{font-variant-numeric:tabular-nums;font-size:12px;min-width:78px;text-align:right}
+.kr{height:18px} .kr.idle{opacity:.45} .kr.hot b{color:#C2362C} .kr b{font-variant-numeric:tabular-nums;font-size:12px;min-width:78px;text-align:right}
 .kbar{display:flex;gap:2px} .kbar i{width:10px;height:10px;border-radius:3px;background:var(--soft);border:1px solid var(--line)} .kbar i.on{background:#D39B2A;border-color:#D39B2A}
 .pt{min-width:40px;height:34px;border-radius:8px;display:grid;place-items:center;align-content:center;color:#fff;font:700 11px/1 "Jost",sans-serif;padding:0 4px}
 .pt i{font-style:normal;font-size:13px}
@@ -141,6 +142,14 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .pulse{animation:pulse 1s ease-out infinite}
 @media (prefers-reduced-motion:reduce){ .pulse{animation:none} }
 .cmp{display:grid;gap:14px}
+.rpgrid{display:grid;gap:14px} @media (min-width:1100px){ .rpgrid{grid-template-columns:1fr 1fr} }
+.rpt td,.rpt th{white-space:nowrap} .rpt td:first-child{white-space:normal}
+.rpbar{display:flex;align-items:center;gap:0;height:10px;min-width:120px;background:var(--soft);border-radius:3px;overflow:hidden;position:relative}
+.rpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);opacity:.35} .rpbar b{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+.rpbar.late b{background:#C2362C} .rpbar .tg{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.rph{font:600 15px "Jost",sans-serif;margin:4px 0 0} .rpsub{font-size:12.5px;color:var(--muted)}
+.pill2{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600}
+.pill2.bad{background:color-mix(in srgb,#C2362C 14%,transparent);color:#C2362C} .pill2.ok{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good)}
 .tmtbl td,.tmtbl th{text-align:left;vertical-align:middle} .tmtbl input,.tmtbl select{padding:5px 6px;font-size:13px}
 .tmtbl .sw2{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:6px}
 .tmtbl tr.off td{opacity:.45} .tmtbl .x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:15px}
@@ -339,6 +348,7 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
     <button role="tab" id="t-sim" aria-selected="false" data-tab="sim">One order</button>
     <button role="tab" id="t-day" aria-selected="false" data-tab="day">Day report</button>
     <button role="tab" id="t-sug" aria-selected="false" data-tab="sug">Ideas</button>
+    <button role="tab" id="t-rpt" aria-selected="false" data-tab="rpt">Reports</button>
     <button role="tab" id="t-team" aria-selected="false" data-tab="team">Team plan</button>
     <button role="tab" id="t-mix" aria-selected="false" data-tab="mix">Settings</button>
   </nav>
@@ -429,6 +439,18 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
      </div>
    </details></aside>
    </div>
+  </section>
+
+  <section id="p-rpt" hidden>
+    <div class="card">
+      <div class="row"><h2>Reports · ticket times &amp; parcels</h2><span class="note" id="rpNote"></span></div>
+      <div class="ctrls3" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <label class="f">Data<select id="rpSrc"><option value="sample">Your exports · Jul–Sep</option><option value="live">Live · from the shop</option></select></label>
+        <label class="f">Days<select id="rpRange"></select></label>
+        <label class="f">Parcel target (min)<input type="number" id="rpTarget" min="5" max="90" step="1"></label>
+      </div>
+    </div>
+    <div id="rpBody"></div>
   </section>
 
   <section id="p-team" hidden>
@@ -886,8 +908,8 @@ $('zoom').onclick=()=>{ $('pw').classList.toggle('zoom'); $('zoom').textContent=
 
 // ---- tabs + presets
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; save(); showTab(); lazy(); });
-function showTab(){ $('topk').hidden=S.tab!=='sim'; ['live','rush','sim','day','sug','team','mix'].forEach(t=>{ $('p-'+t).hidden=S.tab!==t; $('t-'+t).setAttribute('aria-selected',S.tab===t?'true':'false'); }); }
-function lazy(){ if(S.tab==='team') renderTeam(); if(S.tab==='live') lvOpen(); if(S.tab==='rush') renderRush(); if(S.tab==='day') renderDay(); if(S.tab==='sug') renderSug(); }
+function showTab(){ $('topk').hidden=S.tab!=='sim'; ['live','rush','sim','day','sug','rpt','team','mix'].forEach(t=>{ $('p-'+t).hidden=S.tab!==t; $('t-'+t).setAttribute('aria-selected',S.tab===t?'true':'false'); }); }
+function lazy(){ if(S.tab==='rpt') renderRpt(); if(S.tab==='team') renderTeam(); if(S.tab==='live') lvOpen(); if(S.tab==='rush') renderRush(); if(S.tab==='day') renderDay(); if(S.tab==='sug') renderSug(); }
 $('pr-today').onclick=()=>{ S.sc={}; save(); render(); };
 $('pr-low').onclick=()=>{ S.sc=Object.assign({},tiers()[0].sc); save(); render(); };
 $('pr-all').onclick=()=>{ S.sc=Object.fromEntries(IMPROVE.map(i=>[i.k,true])); save(); render(); };
@@ -1346,8 +1368,12 @@ function vm2bill(b){ if(b.type==='Parcel') return null; const w=wall(b.orderAt)|
   let lv=e?fix(e):ar+32; if(lv-ar>240) lv=ar+45; if(lv<ar+5) lv=ar+5;
   const party=b.pax>0?Math.min(16,b.pax):Math.max(1,Math.min(16,Math.round(sh.ppl)));
   return [vmDayNum(b.day),lv,sh.st,sh.mayo?1:0,party,ar]; }
-function slim(b){ return {type:b.type,orderAt:b.orderAt,settledAt:b.settledAt,dueAt:b.dueAt,day:b.day,pax:b.pax,section:b.section,table:b.table,
-  items:(b.items||[]).map(i=>({n:i.n,q:i.q})),orderToSettle:b.orderToSettle,dueToSettle:b.dueToSettle,total:b.total,kotCount:b.kotCount,taker:b.taker,outlier:b.outlier}; }
+/* Firebase keeps times as timestamps; everything here reads shop-time text ("2026-09-26T13:05:00+05:30") */
+function isoShop(v){ if(v==null||typeof v==='string') return v; const ms=tms(v); return ms==null?null:new Date(ms+5.5*3600e3).toISOString().slice(0,19)+'+05:30'; }
+function normVm(b){ const o=Object.assign({},b); ['orderAt','addonAt','dueAt','settledAt'].forEach(k=>{ if(k in o) o[k]=isoShop(o[k]); });
+  if(Array.isArray(o.kots)) o.kots=o.kots.map(isoShop); if(Array.isArray(o.items)) o.items=o.items.map(i=>i&&i.t!=null?Object.assign({},i,{t:isoShop(i.t)}):i); return o; }
+function slim(b){ b=normVm(b); return {type:b.type,orderAt:b.orderAt,settledAt:b.settledAt,dueAt:b.dueAt,day:b.day,pax:b.pax,section:b.section,table:b.table,
+  items:(b.items||[]).map(i=>({n:i.n,q:i.q,t:i.t||null})),kots:b.kots||null,orderToSettle:b.orderToSettle,dueToSettle:b.dueToSettle,total:b.total,kotCount:b.kotCount,taker:b.taker,outlier:b.outlier}; }
 function vm2parcel(b){ if(b.type!=='Parcel') return null; const o=wall(b.orderAt)||wall(b.settledAt), e=wall(b.settledAt); if(!o) return null;
   const fix=w=>w.min+(b.day&&w.date>b.day?1440:0), oo=fix(o), ee=e?fix(e):oo+15, sh=vmShape(b);
   return {d:vmDayNum(b.day),o:oo,s:Math.max(oo,ee-(ee-oo>240?ee-oo-20:0)),st:sh.st.length?sh.st:['meals']}; }
@@ -1398,16 +1424,16 @@ async function lvWatch(){ const {db,fs}=LV.fb, fail=e=>{ LV.state=(e&&e.code==='
   const m=await fs.getDoc(fs.doc(db,'vm_meta','sync')).catch(e=>{ fail(e); throw e; });
   LV.meta=m.exists()?m.data():null; LV.state='live';
   fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ LV.meta=d.exists()?d.data():null; lvRender(); },fail);
-  fs.onSnapshot(fs.collection(db,'vm_open'),q=>{ LV.open=q.docs.map(d=>d.data()); lvRender(); },fail);
+  fs.onSnapshot(fs.collection(db,'vm_open'),q=>{ LV.open=q.docs.map(d=>normVm(d.data())); lvRender(); },fail);
   const today=bizToday();
   fs.onSnapshot(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',today)),q=>{ LV.today=q.docs.map(d=>slim(d.data())); LV.todayN=vmSetDay(today,LV.today); lvRender(); rDayOptions(); },fail);
   fs.getDocs(fs.query(fs.collection(db,'vm_days'),fs.orderBy(fs.documentId(),'desc'),fs.limit(45))).then(q=>{ LV.days=q.docs.map(d=>d.id); rDayOptions(); }).catch(()=>{});
   clearInterval(LV.t); LV.t=setInterval(()=>{ if(S.tab==='live') lvRender(); },30000); }
 function lvOpen(){ lvRender(); lvConnect().then(()=>lvRender()); }
 
-const LVS={open:['🍽️','Ordered, eating','#2E7D5B'],more:['➕','Ordered more','#2C8C7A'],due:['🧾','Bill printed, not paid','#D39B2A'],late:['⏰','Seated over an hour','#C2362C'],pay:['💸','Waiting 10+ min to pay','#C2362C'],parcel:['🛍️','Parcel','#5B5A8C']};
+const LVS={plate:['⏰','Parcel late','#C2362C'],open:['🍽️','Ordered, eating','#2E7D5B'],more:['➕','Ordered more','#2C8C7A'],due:['🧾','Bill printed, not paid','#D39B2A'],late:['⏰','Seated over an hour','#C2362C'],pay:['💸','Waiting 10+ min to pay','#C2362C'],parcel:['🛍️','Parcel','#5B5A8C']};
 function lvState(o,now){ const a=tms(o.orderAt), d=tms(o.dueAt), m=a?(now-a)/60000:0;
-  if(o.type==='Parcel') return 'parcel'; if(o.status==='due'||d) return d&&(now-d)/60000>10?'pay':'due'; if(m>60) return 'late'; return (o.kotCount||0)>1?'more':'open'; }
+  if(o.type==='Parcel') return m>(S.ptarget||20)?'plate':'parcel'; if(o.status==='due'||d) return d&&(now-d)/60000>10?'pay':'due'; if(m>60) return 'late'; return (o.kotCount||0)>1?'more':'open'; }
 function lvRender(){
   if(!$('lvStatus')) return; const now=Date.now(), st=$('lvStatus'), dot=$('lvTabDot');
   const msg={idle:'Connecting…',connecting:'Connecting to the restaurant…',
@@ -1426,21 +1452,22 @@ function lvRender(){
   dot.className='lvdot '+(LV.meta&&!stale&&!err?'ok':'bad');
   // --- tables now
   const open=LV.open.map(o=>Object.assign({},o,{_s:lvState(o,now),_m:tms(o.orderAt)?Math.max(0,Math.round((now-tms(o.orderAt))/60000)):null}));
-  const dine=open.filter(o=>o._s!=='parcel'), guests=dine.reduce((a,o)=>a+(o.pax||0),0), due=open.filter(o=>o._s==='due'||o._s==='pay');
+  const plate=open.filter(o=>o._s==='plate'), dine=open.filter(o=>o._s!=='parcel'&&o._s!=='plate'), guests=dine.reduce((a,o)=>a+(o.pax||0),0), due=open.filter(o=>o._s==='due'||o._s==='pay');
   const longest=dine.reduce((a,o)=>Math.max(a,o._m||0),0);
   const T=LV.today, dineT=T.filter(b=>b.type!=='Parcel'), o2s=dineT.map(b=>b.orderToSettle).filter(x=>x!=null&&!0).filter((x,i)=>!dineT[i]||true);
   const good=dineT.filter(b=>b.orderToSettle!=null&&!b.outlier), avg=good.length?good.reduce((a,b)=>a+b.orderToSettle,0)/good.length:null;
   const sales=T.reduce((a,b)=>a+(+b.total||0),0);
   const K=[['Tables now',dine.length,guests?guests+' guests':'guests not entered'],['Bill printed, not paid',due.length,due.filter(o=>o._s==='pay').length?due.filter(o=>o._s==='pay').length+' waiting 10+ min':'',due.some(o=>o._s==='pay')],
     ['Longest table',longest?longest+'′':'–','since first order',longest>60],['Bills today',T.length,dineT.length+' dine-in · '+(T.length-dineT.length)+' parcel'],
-    ['Order → paid',avg!=null?fm(avg,0)+'′':'–','average today, dine-in'],['Sales today','₹'+fm(sales,0),'settled bills']];
+    ['Parcels late now',plate.length,'over '+(S.ptarget||20)+' min · '+open.filter(o=>o._s==='parcel').length+' on time',plate.length>0],['Order → paid',avg!=null?fm(avg,0)+'′':'–','average today, dine-in'],['Sales today','₹'+fm(sales,0),'settled bills']];
   $('lvKpis').innerHTML=K.map(([l,v,s,al])=>'<div class="lvk'+(al?' alert':'')+'"><span>'+l+'</span><b>'+v+'</b><small>'+(s||'&nbsp;')+'</small></div>').join('');
-  $('lvKey').innerHTML=['open','more','due','pay','late','parcel'].map(k=>'<span class="kc'+(/pay|late/.test(k)?' hot':'')+'" style="--c:'+LVS[k][2]+'"><i>'+LVS[k][0]+'</i><span class="kl">'+LVS[k][1]+'</span></span>').join('')+'<span class="knote">· number = table · minutes since first order</span>';
-  const secs={}; open.forEach(o=>{ const k=o._s==='parcel'?'PARCEL':(o.section||'?'); (secs[k]=secs[k]||[]).push(o); });
+  try{ document.title=(plate.length?'('+plate.length+' parcel'+(plate.length>1?'s':'')+' late) ':'')+'Hayat Service Sim'; }catch(e){}
+  $('lvKey').innerHTML=['open','more','due','pay','late','parcel','plate'].map(k=>'<span class="kc'+(/pay|late|plate/.test(k)?' hot':'')+'" style="--c:'+LVS[k][2]+'"><i>'+LVS[k][0]+'</i><span class="kl">'+LVS[k][1]+'</span></span>').join('')+'<span class="knote">· number = table · minutes since first order</span>';
+  const secs={}; open.forEach(o=>{ const k=(o._s==='parcel'||o._s==='plate')?'PARCEL':(o.section||'?'); (secs[k]=secs[k]||[]).push(o); });
   const ORD=['AC','NON AC','HUT','JUICY HUT','PARCEL'], names={'AC':'AC hall','NON AC':'Non-AC hall','HUT':'Huts','JUICY HUT':'Juice Hut','PARCEL':'Parcels'};
   const keys=Object.keys(secs).sort((a,b)=>(ORD.indexOf(a)+99)%99-(ORD.indexOf(b)+99)%99);
   $('lvTiles').innerHTML=keys.length?keys.map(k=>'<div class="lvsec"><b>'+(names[k]||k)+' · '+secs[k].length+'</b><div class="lvrow">'+secs[k].sort((a,b)=>(a.table||0)-(b.table||0)).map(o=>{ const c=LVS[o._s];
-      return '<div class="lvt'+(/pay|late/.test(o._s)?' alert':'')+'" style="background:'+c[2]+'" title="'+esc2((names[k]||k)+' '+(o.table||'')+' · '+c[1]+' · '+(o.taker||'')+' · '+(o.items||[]).map(i=>i.q+'× '+i.n).join(', '))+'"><span class="n">'+(o._s==='parcel'?'#'+(o.token||o.kot||''):(o.table||'?'))+'<i>'+c[0]+'</i></span><small>'+(o._m!=null?o._m+'′':'')+(o.pax?' · '+o.pax+' ppl':'')+'</small></div>'; }).join('')+'</div></div>').join('')
+      return '<div class="lvt'+(/pay|late|plate/.test(o._s)?' alert':'')+'" style="background:'+c[2]+'" title="'+esc2((names[k]||k)+' '+(o.table||'')+' · '+c[1]+' · '+(o.taker||'')+' · '+(o.items||[]).map(i=>i.q+'× '+i.n).join(', '))+'"><span class="n">'+(o._s==='parcel'?'#'+(o.token||o.kot||''):(o.table||'?'))+'<i>'+c[0]+'</i></span><small>'+(o._m!=null?o._m+'′':'')+(o.pax?' · '+o.pax+' ppl':'')+'</small></div>'; }).join('')+'</div></div>').join('')
     :'<div class="lvempty">No open tables right now.</div>';
   $('lvAsOf').textContent=open.length?open.length+' open':'';
   $('lvBoard').innerHTML=open.filter(o=>o._s!=='parcel').sort((a,b)=>(b._m||0)-(a._m||0)).slice(0,12).map(o=>{ const c=LVS[o._s], d=tms(o.dueAt);
@@ -1599,6 +1626,127 @@ function renderTeam(){ const T=teamList(), P=PLANS();
       +'<div class="mt">📍 '+where+'</div>'+(p.buddy?'<div class="mt">🤝 Buddy: <b>'+esc2(p.buddy)+'</b>, ask them first</div>':'')+(br[p.n]!=null?'<div class="mt">☕ Break '+hm(br[p.n])+'–'+hm(br[p.n]+30)+'</div>':'')
       +'<ul>'+dutiesOf(p).map(d=>'<li>'+d+'</li>').join('')+'</ul></div>'; }).join('')+'<div class="note" style="grid-column:1/-1">Rush hours: 12:30–2:30 pm and 7:30–10 pm. No breaks then. Quiet time 3–6:30 pm: breaks, restock, clean.</div>';
 }
+/* ======================= REPORTS =======================
+   1. Ticket times (dine-in): first KOT → bill printed → paid, by hour, zone, waiter, kitchen, item.
+   2. Parcel prep: first KOT → handed over (paid), against a target, by hour and kitchen.
+   VMENU has no "food ready" time, so these are the times it does record. */
+const RPD={sample:null,live:{},loading:false};
+const med=a=>{ if(!a.length) return null; const b=a.slice().sort((x,y)=>x-y), m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; };
+const pct=(a,p)=>{ if(!a.length) return null; const b=a.slice().sort((x,y)=>x-y); return b[Math.min(b.length-1,Math.floor(b.length*p))]; };
+const ZN={'AC':'AC hall','NON AC':'Non-AC hall','HUT':'Huts','JUICY HUT':'Juice Hut','PARCEL':'Parcel'};
+function tkFromSample(J){ return J.b.map(r=>({day:J.d[r[0]],sec:J.s[r[1]],parcel:J.s[r[1]]==='PARCEL',o:r[2],d:r[3]<0?null:r[3],s:r[4],taker:J.w[r[5]],kots:r[6],total:r[7],items:r[8]?r[8].map(([i,q])=>({n:J.i[i],q})):null})); }
+function tkFromVm(b){ const fix=w=>w?w.min+(b.day&&w.date>b.day?1440:0):null, o=fix(wall(b.orderAt)), sd=fix(wall(b.settledAt)); if(o==null||sd==null) return null;
+  return {day:b.day,sec:b.section||'?',parcel:b.type==='Parcel',o,d:fix(wall(b.dueAt)),s:sd,taker:b.taker||'?',kots:b.kotCount||1,total:+b.total||0,items:b.items||null}; }
+async function rpData(){ const src=$('rpSrc').value, rg=$('rpRange').value;
+  if(src==='sample'){ if(!RPD.sample){ const r=await fetch('sim-tickets.json'); if(!r.ok) throw new Error('sim-tickets.json not found next to this page'); RPD.sample=tkFromSample(await r.json()); }
+    const days=[...new Set(RPD.sample.map(t=>t.day))].sort(), n=rg==='all'?days.length:+rg, keep=new Set(days.slice(-n)); return {T:RPD.sample.filter(t=>keep.has(t.day)),days:days.slice(-n)}; }
+  if(!(await lvConnect())) throw new Error('sign in at the office first (Live data is office-only)');
+  const all=[...new Set([bizToday(),...LV.days])].sort().reverse(), n=rg==='all'?all.length:+rg, want=all.slice(0,n), T=[];
+  for(let i=0;i<want.length;i++){ const ds=want[i]; $('rpNote').textContent='Loading '+ds+' ('+(i+1)+'/'+want.length+')…';
+    if(ds===bizToday()) (LV.today||[]).forEach(b=>T.push(b)); else { const nn=VMKEY[ds]&&VMDOCS[VMKEY[ds]]?VMKEY[ds]:await vmLoadDay(ds); (VMDOCS[nn]||[]).forEach(b=>T.push(b)); } }
+  return {T:T.map(tkFromVm).filter(Boolean),days:want.slice().reverse()}; }
+function rpRanges(){ const src=$('rpSrc').value, r=$('rpRange'), cur=r.value;
+  const L=src==='sample'?[['7','Last 7 days (to 16 Sep)'],['14','Last 14 days'],['30','Last 30 days'],['all','All: 14 Jul – 16 Sep']]:[['1','Today'],['7','Last 7 days'],['14','Last 14 days'],['30','Last 30 days']];
+  r.innerHTML=L.map(([v,l])=>'<option value="'+v+'">'+l+'</option>').join(''); r.value=L.some(x=>x[0]===cur)?cur:(S.rprange&&L.some(x=>x[0]===S.rprange)?S.rprange:L[0][0]); }
+function hLab(m){ const h=Math.floor(m/60)%24; return ((h%12)||12)+(h<12?' am':' pm'); }
+function rpTable(head,rows){ return '<div class="scroll"><table class="rpt"><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+rows.join('')+'</table></div>'; }
+function rpBar(p50,p90,max,late,target){ return '<div class="rpbar'+(late?' late':'')+'"><i style="width:'+Math.min(100,(p90||0)/max*100)+'%"></i><b style="width:'+Math.min(100,(p50||0)/max*100)+'%"></b>'+(target?'<span class="tg" style="left:'+Math.min(100,target/max*100)+'%"></span>':'')+'</div>'; }
+async function renderRpt(){
+  if(!$('rpSrc').dataset.init){ $('rpSrc').dataset.init=1; $('rpSrc').value=S.rpsrc||'sample'; rpRanges(); $('rpTarget').value=S.ptarget||20;
+    $('rpSrc').onchange=()=>{ S.rpsrc=$('rpSrc').value; save(); rpRanges(); renderRpt(); }; $('rpRange').onchange=()=>{ S.rprange=$('rpRange').value; save(); renderRpt(); };
+    $('rpTarget').onchange=()=>{ S.ptarget=Math.max(5,+$('rpTarget').value||20); save(); renderRpt(); if(LV.state==='live') lvRender(); }; }
+  const body=$('rpBody'); body.innerHTML='<div class="card"><div class="note">Working it out…</div></div>'; $('rpNote').textContent='';
+  let D; try{ D=await rpData(); }catch(e){ body.innerHTML='<div class="lvbar bad">'+esc2(e.message||e)+'</div>'; $('rpNote').textContent=''; return; }
+  const src=$('rpSrc').value, T=D.T, tgt=S.ptarget||20, dine=T.filter(t=>!t.parcel), par=T.filter(t=>t.parcel);
+  const ok=t=>t.s-t.o>=0&&t.s-t.o<=240, dd=dine.filter(ok), pp=par.filter(ok), out=dine.length-dd.length+par.length-pp.length;
+  $('rpNote').textContent=D.days.length+' day'+(D.days.length>1?'s':'')+': '+(D.days[0]||'')+(D.days.length>1?' → '+D.days[D.days.length-1]:'')+' · '+T.length+' bills'+(out?' · '+out+' forgotten bills (over 4 h) left out':'');
+  const o2s=t=>t.s-t.o, o2d=t=>t.d!=null?t.d-t.o:null, d2s=t=>t.d!=null?t.s-t.d:null, f0=v=>v==null?'–':fm(v,0)+'′', f1=v=>v==null?'–':fm(v,1)+'′';
+  const kp=(l,v,sub,al)=>'<div class="lvk'+(al?' alert':'')+'"><span>'+l+'</span><b>'+v+'</b><small>'+(sub||'&nbsp;')+'</small></div>';
+  const grp=(arr,key)=>{ const g={}; arr.forEach(t=>{ const k=key(t); if(k==null) return; (g[k]=g[k]||[]).push(t); }); return g; };
+  const stOf=t=>t.items?[...new Set(t.items.flatMap(i=>vmStation(String(i.n).toUpperCase()).s||[]))].filter(x=>x!=='fridge'):null;
+  // ---------------- 1. ticket times ----------------
+  let h='<div class="card"><h2>1 · Ticket times · dine-in</h2><div class="rpsub">First KOT → bill printed (eating) → paid (waiting to pay). Median, and the slowest 1 in 10 (P90).</div>';
+  if(!dd.length) h+='<div class="lvempty">No dine-in bills in this range.</div>';
+  else { const all=dd.map(o2s), eat=dd.map(o2d).filter(x=>x!=null), pay=dd.map(d2s).filter(x=>x!=null&&x>=0), add=dd.filter(t=>t.kots>1).length/dd.length*100;
+    h+='<div class="lvkpis" style="margin:8px 0">'+kp('Tables',fm(dd.length),fm(dd.length/D.days.length,0)+' a day')+kp('First order → paid',f0(med(all)),'slowest 1 in 10: '+f0(pct(all,0.9)))+kp('Eating (KOT → bill)',f0(med(eat)),'P90 '+f0(pct(eat,0.9)))+kp('Waiting to pay',f0(med(pay)),pct(pay,0.9)>10?'P90 '+f0(pct(pay,0.9))+': too long':'P90 '+f0(pct(pay,0.9)),pct(pay,0.9)>10)+kp('Ordered more (add-on KOT)',fm(add,0)+'%','of tables')+'</div>';
+    const mx=Math.max(...dd.map(o2s).filter(x=>x<=240))*0.8||60;
+    const byH=grp(dd,t=>Math.floor(t.o/60)), hk=Object.keys(byH).map(Number).sort((a,b)=>a-b);
+    const rowsH=hk.map(k=>{ const a=byH[k].map(o2s), p=byH[k].map(d2s).filter(x=>x!=null&&x>=0); return '<tr><td>'+hLab(k*60)+'</td><td>'+byH[k].length+'</td><td>'+f0(med(a))+'</td><td>'+f0(pct(a,0.9))+'</td><td>'+f0(med(p))+'</td><td>'+rpBar(med(a),pct(a,0.9),90)+'</td></tr>'; });
+    const byZ=grp(dd,t=>t.sec), rowsZ=Object.keys(byZ).sort((a,b)=>byZ[b].length-byZ[a].length).map(k=>{ const a=byZ[k].map(o2s), p=byZ[k].map(d2s).filter(x=>x!=null&&x>=0), bill=byZ[k].reduce((x,t)=>x+t.total,0)/byZ[k].length;
+      return '<tr><td>'+(ZN[k]||k)+'</td><td>'+byZ[k].length+'</td><td>'+f0(med(a))+'</td><td>'+f0(pct(a,0.9))+'</td><td>'+f0(med(p))+'</td><td>₹'+fm(bill,0)+'</td></tr>'; });
+    const byW=grp(dd,t=>t.taker), rowsW=Object.keys(byW).filter(k=>byW[k].length>=5).sort((a,b)=>byW[b].length-byW[a].length).map(k=>{ const a=byW[k].map(o2s), p=byW[k].map(d2s).filter(x=>x!=null&&x>=0), bill=byW[k].reduce((x,t)=>x+t.total,0)/byW[k].length, ad=byW[k].filter(t=>t.kots>1).length/byW[k].length*100;
+      return '<tr><td>'+esc2(k)+'</td><td>'+byW[k].length+'</td><td>'+f0(med(a))+'</td><td>'+f0(med(p))+'</td><td>₹'+fm(bill,0)+'</td><td>'+fm(ad,0)+'%</td></tr>'; });
+    h+='<div class="rpgrid"><div><div class="rph">By hour of first order</div>'+rpTable(['Hour','Tables','Median','P90','To pay',''],rowsH)+'</div>'
+      +'<div><div class="rph">By zone</div>'+rpTable(['Zone','Tables','Median','P90','To pay','Avg bill'],rowsZ)+'<div class="rph" style="margin-top:10px">By waiter (who punched the KOT)</div>'+rpTable(['Waiter','Tables','Median','To pay','Avg bill','Add-on'],rowsW)+'</div></div>';
+    const withI=dd.filter(t=>t.items);
+    if(withI.length>=20){ const base=med(withI.map(o2d).filter(x=>x!=null));
+      const byS={}; withI.forEach(t=>(stOf(t)||[]).forEach(k=>(byS[k]=byS[k]||[]).push(t)));
+      const rowsS=Object.keys(byS).sort((a,b)=>med(byS[b].map(o2d).filter(x=>x!=null))-med(byS[a].map(o2d).filter(x=>x!=null))).map(k=>{ const e=byS[k].map(o2d).filter(x=>x!=null), m=med(e), dlt=m-base;
+        return '<tr><td>'+(KNAME[k]||k)+'</td><td>'+byS[k].length+'</td><td>'+f0(m)+'</td><td><span class="pill2 '+(dlt>2?'bad':dlt<-2?'ok':'')+'">'+(dlt>=0?'+':'')+fm(dlt,0)+'′</span></td></tr>'; });
+      const byI={}; withI.forEach(t=>[...new Set(t.items.map(i=>i.n))].forEach(n=>(byI[n]=byI[n]||[]).push(t)));
+      const rowsI=Object.keys(byI).filter(n=>byI[n].length>=8).map(n=>({n,c:byI[n].length,m:med(byI[n].map(o2d).filter(x=>x!=null))})).sort((a,b)=>b.m-a.m).slice(0,15)
+        .map(x=>'<tr><td>'+esc2(x.n)+'</td><td>'+x.c+'</td><td>'+f0(x.m)+'</td><td><span class="pill2 '+(x.m-base>3?'bad':'')+'">'+(x.m-base>=0?'+':'')+fm(x.m-base,0)+'′</span></td></tr>');
+      h+='<div class="rpgrid" style="margin-top:12px"><div><div class="rph">By kitchen</div><div class="rpsub">Tables that ordered from it: first KOT → bill. Baseline for all tables: '+f0(base)+'.</div>'+rpTable(['Kitchen','Tables','KOT → bill','vs all'],rowsS)+'</div>'
+        +'<div><div class="rph">Slowest items</div><div class="rpsub">Tables that ordered the item (at least 8). Slow items keep tables longer.</div>'+rpTable(['Item','Tables','KOT → bill','vs all'],rowsI)+'</div></div>'; }
+    else h+='<div class="rpsub" style="margin-top:8px">Item lines are only in the data for 1–16 Sep (sample) or real days from the shop. Pick a range that includes them for kitchen and item speed.</div>';
+    const slow=dd.slice().sort((a,b)=>o2s(b)-o2s(a)).slice(0,10);
+    h+='<div class="rph" style="margin-top:12px">Slowest 10 tables</div>'+rpTable(['Day','Zone','Waiter','First order','→ Paid','To pay','Items'],slow.map(t=>'<tr><td>'+t.day+'</td><td>'+(ZN[t.sec]||t.sec)+'</td><td>'+esc2(t.taker)+'</td><td>'+hm(t.o)+'</td><td><b>'+f0(o2s(t))+'</b></td><td>'+f0(d2s(t))+'</td><td>'+esc2(t.items?t.items.slice(0,4).map(i=>(i.q>1?i.q+'× ':'')+i.n).join(', '):'–')+'</td></tr>')); }
+  h+='</div>';
+  // ---------------- 2. parcels ----------------
+  h+='<div class="card"><h2>2 · Parcel &amp; delivery prep</h2><div class="rpsub">First KOT → handed over (paid). Target '+tgt+' min. Zomato and Swiggy rank restaurants on prep time, so late parcels cost orders.</div>';
+  if(!pp.length) h+='<div class="lvempty">No parcels in this range.</div>';
+  else { const a=pp.map(o2s), late=pp.filter(t=>o2s(t)>tgt), lp=late.length/pp.length*100;
+    const byH=grp(pp,t=>Math.floor(t.o/60)), hk=Object.keys(byH).map(Number).sort((x,y)=>x-y), worstH=hk.slice().sort((x,y)=>byH[y].filter(t=>o2s(t)>tgt).length-byH[x].filter(t=>o2s(t)>tgt).length)[0];
+    h+='<div class="lvkpis" style="margin:8px 0">'+kp('Parcels',fm(pp.length),fm(pp.length/D.days.length,0)+' a day · '+fm(pp.length/(pp.length+dd.length)*100,0)+'% of bills')+kp('Order → handed over',f0(med(a)),'slowest 1 in 10: '+f0(pct(a,0.9)))+kp('Late (over '+tgt+' min)',fm(lp,0)+'%',late.length+' parcels',lp>20)+kp('Worst hour',worstH!=null?hLab(worstH*60):'–',worstH!=null?byH[worstH].filter(t=>o2s(t)>tgt).length+' late':'')+'</div>';
+    const rowsH=hk.map(k=>{ const x=byH[k].map(o2s), l=byH[k].filter(t=>o2s(t)>tgt).length, lpc=l/byH[k].length*100; return '<tr><td>'+hLab(k*60)+'</td><td>'+byH[k].length+'</td><td>'+f0(med(x))+'</td><td>'+f0(pct(x,0.9))+'</td><td><span class="pill2 '+(lpc>25?'bad':lpc<10?'ok':'')+'">'+fm(lpc,0)+'%</span></td><td>'+rpBar(med(x),pct(x,0.9),60,lpc>25,tgt)+'</td></tr>'; });
+    const withI=pp.filter(t=>t.items), byS={}; withI.forEach(t=>(stOf(t)||[]).forEach(k=>(byS[k]=byS[k]||[]).push(t)));
+    const rowsS=Object.keys(byS).filter(k=>byS[k].length>=5).sort((x,y)=>med(byS[y].map(o2s))-med(byS[x].map(o2s))).map(k=>{ const x=byS[k].map(o2s), l=byS[k].filter(t=>o2s(t)>tgt).length/byS[k].length*100; return '<tr><td>'+(KNAME[k]||k)+'</td><td>'+byS[k].length+'</td><td>'+f0(med(x))+'</td><td><span class="pill2 '+(l>25?'bad':'')+'">'+fm(l,0)+'%</span></td></tr>'; });
+    const byD=grp(pp,t=>t.day), dk=Object.keys(byD).sort(), rowsD=dk.slice(-14).map(k=>{ const x=byD[k].map(o2s), l=byD[k].filter(t=>o2s(t)>tgt).length/byD[k].length*100; return '<tr><td>'+k+'</td><td>'+byD[k].length+'</td><td>'+f0(med(x))+'</td><td><span class="pill2 '+(l>25?'bad':l<10?'ok':'')+'">'+fm(l,0)+'%</span></td></tr>'; });
+    h+='<div class="rpgrid"><div><div class="rph">By hour of order</div><div class="rpsub">Bar: median, faint: P90, line: target.</div>'+rpTable(['Hour','Parcels','Median','P90','Late',''],rowsH)+'</div><div>'
+      +(rowsS.length?'<div class="rph">By kitchen</div>'+rpTable(['Kitchen','Parcels','Median','Late'],rowsS):'<div class="rpsub">Kitchen split needs item lines (1–16 Sep or live days).</div>')
+      +(dk.length>1?'<div class="rph" style="margin-top:10px">By day</div>'+rpTable(['Day','Parcels','Median','Late'],rowsD):'')+'</div></div>';
+    const slow=pp.slice().sort((x,y)=>o2s(y)-o2s(x)).slice(0,10);
+    h+='<div class="rph" style="margin-top:12px">Slowest 10 parcels</div>'+rpTable(['Day','Ordered','→ Handed over','Taken by','Items'],slow.map(t=>'<tr><td>'+t.day+'</td><td>'+hm(t.o)+'</td><td><b>'+f0(o2s(t))+'</b></td><td>'+esc2(t.taker)+'</td><td>'+esc2(t.items?t.items.slice(0,4).map(i=>(i.q>1?i.q+'× ':'')+i.n).join(', '):'–')+'</td></tr>'));
+    h+='<div class="note" style="margin-top:8px">Live alerts: open parcels older than '+tgt+' min turn red on <b>Live now</b>, and the browser tab shows how many are late.</div>'; }
+  h+='</div>';
+  // ---------------- 3. waiter scorecard ----------------
+  h+='<div class="card"><h2>3 · Waiter scorecard · dine-in</h2><div class="rpsub">Per person who punched the KOT (at least 10 tables). Best in each column in green. For coaching, not blame: a busy zone or a big party changes these numbers.</div>';
+  const DR=/JUICE|MOJITO|LIME|SHAKE|AVIL|LASSI/, DS=/SCOOP|ICE CREAM|SCOTCH SINGLE|BURFI|PEANUT|CANDY|FALOODA|PUDDING|KUNAFA|CAKE|DESSERT|SUNDAE|BROWNIE|CUSTARD/;
+  const byW=grp(dd,t=>t.taker), W=Object.keys(byW).filter(k=>byW[k].length>=10).map(k=>{ const a=byW[k], it=a.filter(t=>t.items);
+    const att=re=>it.length>=10?it.filter(t=>t.items.some(i=>re.test(String(i.n).toUpperCase()))).length/it.length*100:null;
+    return {k,n:a.length,day:a.length/D.days.length,bill:a.reduce((x,t)=>x+t.total,0)/a.length,tt:med(a.map(o2s)),pay:med(a.map(d2s).filter(x=>x!=null&&x>=0)),add:a.filter(t=>t.kots>1).length/a.length*100,dr:att(DR),ds:att(DS)}; }).sort((a,b)=>b.n-a.n);
+  if(!W.length) h+='<div class="lvempty">Not enough dine-in tables per person in this range.</div>';
+  else { const best=(key,hi)=>{ const v=W.map(x=>x[key]).filter(x=>x!=null); return v.length?(hi?Math.max(...v):Math.min(...v)):null; }, B={bill:best('bill',1),tt:best('tt',0),pay:best('pay',0),add:best('add',1),dr:best('dr',1),ds:best('ds',1)};
+    const c=(k,v,txt)=>'<td'+(v!=null&&W.length>1&&v===B[k]?' class="good"':'')+'>'+txt+'</td>';
+    h+=rpTable(['Waiter','Tables','A day','Avg bill','Table time','Wait to pay','Ordered more','Juice & mojito','Dessert'],W.map(x=>'<tr><td><b>'+esc2(x.k)+'</b>'+(x.k==='CASHIER'?' <span class="rpsub">(cashier punched it)</span>':'')+'</td><td>'+x.n+'</td><td>'+fm(x.day,1)+'</td>'+c('bill',x.bill,'₹'+fm(x.bill,0))+c('tt',x.tt,f0(x.tt))+c('pay',x.pay,f0(x.pay))+c('add',x.add,fm(x.add,0)+'%')+c('dr',x.dr,x.dr==null?'–':fm(x.dr,0)+'%')+c('ds',x.ds,x.ds==null?'–':fm(x.ds,1)+'%')+'</tr>'));
+    h+='<div class="rpsub" style="margin-top:6px">Juice &amp; mojito (fresh juice, lime, shake) / Dessert (scoops, burfi, peanut candy) = share of their tables that had one (needs item lines: 1–16 Sep or live days). Ordered more = tables with an add-on KOT. Research: servers upsell less when overloaded, so low add-ons in a rush can mean the zone is too big.</div>'; }
+  h+='</div>';
+  // ---------------- 4. forecast ----------------
+  h+='<div class="card"><h2>4 · Demand forecast · every 15 minutes</h2>';
+  const hist=src==='sample'?RPD.sample:T, hd=[...new Set(hist.map(t=>t.day))].sort();
+  if(hd.length<7) h+='<div class="lvempty">Needs at least a week of days. Pick "Last 30 days".</div>';
+  else { const last=hd[hd.length-1], nx=new Date(last+'T12:00:00'); nx.setDate(nx.getDate()+1);
+    const WDN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], fwd=S.fcwd!=null?+S.fcwd:nx.getDay();
+    const same=hd.filter(d=>new Date(d+'T12:00:00').getDay()===fwd).slice(-6), wts=same.map((d,i)=>i+1), wsum=wts.reduce((a,b)=>a+b,0)||1;
+    const slot=m=>Math.floor(m/15), sl={}; same.forEach((d,i)=>hist.filter(t=>t.day===d).forEach(t=>{ const k=slot(t.o), x=sl[k]||(sl[k]={di:0,pa:0}); if(t.parcel) x.pa+=wts[i]/wsum; else x.di+=wts[i]/wsum; }));
+    const ks=Object.keys(sl).map(Number), k0=Math.min(...ks.filter(k=>sl[k].di+sl[k].pa>=0.3),44), k1=Math.max(...ks.filter(k=>sl[k].di+sl[k].pa>=0.3),92), K=[]; for(let k=k0;k<=k1;k++) K.push(k);
+    const mx=Math.max(1,...K.map(k=>(sl[k]?sl[k].di+sl[k].pa:0))), dwell=31, tpw=+S.tpw||5;
+    /* tables seated at once ≈ arrivals in the last ~31 min; staff = tables ÷ tables per waiter, + a clearer when busy */
+    const occ=k=>{ let n=0; for(let j=k-Math.ceil(dwell/15)+1;j<=k;j++) n+=(sl[j]?sl[j].di:0); return n; };
+    const hrs={}; K.forEach(k=>{ const hh=Math.floor(k/4), o=occ(k); hrs[hh]=Math.max(hrs[hh]||0,o); });
+    const need=o=>o<0.5?1:Math.ceil(o/tpw)+(o>=8?1:0);
+    const dayTot=K.reduce((a,k)=>a+(sl[k]?sl[k].di+sl[k].pa:0),0), peakH=Object.keys(hrs).sort((a,b)=>hrs[b]-hrs[a])[0];
+    h+='<div class="row" style="justify-content:flex-start;gap:12px"><label class="f" style="min-width:170px">Forecast for<select id="fcWd">'+WDN.map((n,i)=>'<option value="'+i+'"'+(i===fwd?' selected':'')+'>'+n+(i===nx.getDay()?' (next day)':'')+'</option>').join('')+'</select></label><label class="f" style="min-width:150px">Tables per waiter<input type="number" id="fcTpw" min="2" max="10" value="'+tpw+'"></label>'
+      +'<div class="rpsub">Average of the last '+same.length+' '+WDN[fwd]+'s in the data, recent weeks count more. About <b>'+fm(dayTot,0)+' bills</b>; busiest '+(peakH!=null?hLab(peakH*60)+'–'+hLab(peakH*60+60):'')+' with ~<b>'+fm(hrs[peakH]||0,0)+' tables</b> seated at once.</div></div>';
+    h+='<div style="display:grid;grid-template-columns:repeat('+K.length+',minmax(0,1fr));gap:1px;align-items:end;height:130px;margin-top:10px">'+K.map(k=>{ const x=sl[k]||{di:0,pa:0}; return '<div title="'+hm(k*15)+' · '+fm(x.di,1)+' dine-in · '+fm(x.pa,1)+' parcels" style="display:flex;flex-direction:column-reverse;height:100%"><div style="height:'+(x.di/mx*100)+'%;background:var(--accent)"></div><div style="height:'+(x.pa/mx*100)+'%;background:#5B5A8C;opacity:.8"></div></div>'; }).join('')+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat('+K.length+',minmax(0,1fr));font-size:10.5px;color:var(--muted)">'+K.map(k=>'<span>'+(k%4===0?hLab(k*15).replace(' ',''):'')+'</span>').join('')+'</div>'
+      +'<div class="lgbox" style="margin-top:4px"><span class="lg"><i style="background:var(--accent)"></i>Dine-in tables arriving</span><span class="lg"><i style="background:#5B5A8C"></i>Parcels ordered</span></div>';
+    const H=Object.keys(hrs).map(Number).sort((a,b)=>a-b);
+    h+='<div class="rph" style="margin-top:12px">Staff needed on the floor</div>'+rpTable(['Hour','Tables at once','Parcels','Floor staff'],H.map(hh=>{ const pa=[0,1,2,3].reduce((a,q)=>a+(sl[hh*4+q]?sl[hh*4+q].pa:0),0), n=need(hrs[hh]); return '<tr><td>'+hLab(hh*60)+'</td><td>'+fm(hrs[hh],0)+'</td><td>'+fm(pa,0)+'</td><td><b>'+n+'</b> '+'👤'.repeat(Math.min(n,8))+'</td></tr>'; }));
+    h+='<div class="rpsub" style="margin-top:6px">Rule of thumb: one waiter per '+tpw+' seated tables, plus a table clearer when 8 or more tables are seated. Parcels are packed by the kitchen. Test the exact team in <b>Team plan</b>.</div>'; }
+  h+='</div>'; body.innerHTML=h;
+  const fw=$('fcWd'); if(fw) fw.onchange=()=>{ S.fcwd=+fw.value; save(); renderRpt(); };
+  const ft=$('fcTpw'); if(ft) ft.onchange=()=>{ S.tpw=Math.max(2,+ft.value||5); save(); renderRpt(); }; }
 function rWindow(a,b){ rStop(); RS.t=Math.max(RS.t0,a); RS.stopAt=Math.min(RS.t1,b); rDraw(true); rPlay(); }
 function rStop(){ RS.playing=false; cancelAnimationFrame(RS.raf); $('rPlay').textContent='▶'; $('rPlay').classList.remove('on'); $('rPlay').setAttribute('aria-label','Play'); RS.stopAt=null; }
 function rPlay(){ const w=rWin()||{a:RS.t0,b:RS.t1}; if(RS.t<w.a||RS.t>=w.b-0.5) RS.t=w.a; RS.stopAt=w.b; RS.playing=true; $('rPlay').textContent='❚❚'; $('rPlay').classList.add('on'); $('rPlay').setAttribute('aria-label','Pause'); RS.last=performance.now();
@@ -1659,16 +1807,17 @@ function rDraw(force){ if(!RS.A) return; const t=RS.t, a=rStats(RS.A,t), b=rStat
 }
 /* parcels at time t: made in the kitchens, handed over at the counter; never seated */
 function rKitchen(t,r){ const q={}; for(const j of r.kjobs||[]){ if(j.arr>t||j.end<=t) continue; const x=q[j.st]||(q[j.st]={busy:0,wait:0,late:0,par:0}); if(j.start<=t){ x.busy++; if(j.kind==='parcel') x.par++; } else { x.wait++; x.late=Math.max(x.late,j.start-t); } }
-  const ks=Object.keys(q).sort((a,b)=>(q[b].wait-q[a].wait)||(q[b].busy-q[a].busy)); let wait=0; ks.forEach(k=>wait+=q[k].wait);
-  const html='<div class="ph">👨‍🍳 Kitchen now<small>'+(wait?wait+' order'+(wait>1?'s':'')+' queued':'no queue')+'</small></div>'+(ks.length?'<div class="kq">'+ks.map(k=>{ const x=q[k], c=r.cap[k]||1;
-      return '<div class="kr'+(x.wait?' hot':'')+'"><span>'+KNAME[k]+'</span><span class="kbar">'+Array.from({length:c},(_,i)=>'<i class="'+(i<x.busy?'on':'')+'"></i>').join('')+'</span><b>'+(x.wait?'+'+x.wait+' waiting · '+Math.ceil(x.late)+'′':x.busy+'/'+c)+'</b></div>'; }).join('')+'</div>':'');
+  /* every station on its own fixed row, always in the same order: the panel never changes height */
+  const ks=Object.keys(KNAME); let wait=0; ks.forEach(k=>wait+=(q[k]?q[k].wait:0));
+  const html='<div class="ph">👨‍🍳 Kitchen now<small>'+(wait?wait+' order'+(wait>1?'s':'')+' queued':'no queue')+'</small></div><div class="kq">'+ks.map(k=>{ const x=q[k]||{busy:0,wait:0,late:0}, c=(r.cap&&r.cap[k])||1;
+      return '<div class="kr'+(x.wait?' hot':'')+(x.busy||x.wait?'':' idle')+'"><span>'+KNAME[k]+'</span><span class="kbar">'+Array.from({length:Math.min(c,8)},(_,i)=>'<i class="'+(i<x.busy?'on':'')+'"></i>').join('')+'</span><b>'+(x.wait?'+'+x.wait+' · '+Math.ceil(x.late)+'′':x.busy+'/'+c)+'</b></div>'; }).join('')+'</div>';
   return {html,wait}; }
 function rParcels(t,r){ const P=(r&&r.parc)||RS.P||[], cook=[], wait=[]; let done=0;
   for(const p of P){ if(p.s<=t){ done++; continue; } if(p.o>t) continue; const ready=p.ready!=null?p.ready:p.o+Math.max(...p.st.map(k=>PREP[k]||6));
     (t<ready?cook:wait).push(p); }
   const tile=(p,c,ic)=>'<span class="pt" style="background:'+c+'" title="Parcel · '+p.st.map(x=>SHORTIT[x]||x).join(' + ')+' · ordered '+hm(p.o)+'"><i>'+ic+'</i>'+Math.max(0,Math.round(t-p.o))+'′</span>';
   const html='<div class="ph">🛍️ Parcels &amp; delivery<small>'+cook.length+' cooking · '+wait.length+' at counter · '+done+' gone</small></div>'
-    +((cook.length||wait.length)?'<div class="pr">'+cook.map(p=>tile(p,'#5B5A8C','🔥')).join('')+wait.map(p=>tile(p,t-p.o>25?'#C2362C':'#8A6D4A','🛍️')).join('')+'</div>':'');
+    +'<div class="pr">'+wait.slice().sort((a,b)=>a.o-b.o).map(p=>tile(p,t-p.o>25?'#C2362C':'#8A6D4A','🛍️')).concat(cook.map(p=>tile(p,'#5B5A8C','🔥'))).slice(0,14).join('')+(cook.length+wait.length>14?'<span class="pt" style="background:var(--muted)">+'+(cook.length+wait.length-14)+'</span>':'')+'</div>';
   return {html,live:cook.length+wait.length,cook:cook.length,wait:wait.length,done}; }
 function _unused_(){
 }
