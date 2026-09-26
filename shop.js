@@ -5211,6 +5211,181 @@ function crowdBlock(){
   '</div>';
 }
 
+/* ============================================================
+   GOOGLE BUSINESS PROFILE, FROM THE DESK
+   Sign in with the owner's Google account (Google Identity
+   Services, in the browser, no secret), then reviews, posts and
+   performance through Google's own APIs. Every call fails politely
+   until Google has approved API access for the project; the page
+   says so and links the form.
+   ============================================================ */
+var GBP = { tok:null, exp:0, acct:null, loc:null, locs:[], tab:"reviews", reviews:null, perf:null, busy:false, err:"" };
+function gbpClientId(){ return ((C().google) || {}).clientId || ""; }
+function gbpToken(){
+  if(GBP.tok && Date.now() < GBP.exp) return GBP.tok;
+  try{ var j = JSON.parse(sessionStorage.getItem("hayat_gbp") || "null"); if(j && Date.now() < j.exp){ GBP.tok = j.tok; GBP.exp = j.exp; return j.tok; } }catch(e){}
+  return null;
+}
+function gbpLoadGis(){
+  if(window.google && window.google.accounts) return Promise.resolve();
+  return new Promise(function(ok, no){
+    var sc = document.createElement("script"); sc.src = "https://accounts.google.com/gsi/client"; sc.async = true;
+    sc.onload = ok; sc.onerror = function(){ no(new Error("Google sign-in did not load")); }; document.head.appendChild(sc);
+  });
+}
+function gbpSignIn(after){
+  gbpLoadGis().then(function(){
+    var tc = window.google.accounts.oauth2.initTokenClient({
+      client_id: gbpClientId(),
+      scope: "https://www.googleapis.com/auth/business.manage",
+      callback: function(r){
+        if(!r || !r.access_token){ GBP.err = "Sign-in was cancelled."; after(); return; }
+        GBP.tok = r.access_token; GBP.exp = Date.now() + ((r.expires_in || 3600) - 60) * 1000; GBP.err = "";
+        try{ sessionStorage.setItem("hayat_gbp", JSON.stringify({ tok:GBP.tok, exp:GBP.exp })); }catch(e){}
+        gbpLocations().then(after, after);
+      }
+    });
+    tc.requestAccessToken({ prompt: GBP.tok ? "" : "consent" });
+  }).catch(function(e){ GBP.err = String(e.message || e); after(); });
+}
+function gbpSignOut(){ GBP.tok = null; GBP.exp = 0; GBP.loc = null; GBP.locs = []; GBP.reviews = null; GBP.perf = null; try{ sessionStorage.removeItem("hayat_gbp"); }catch(e){} }
+function gbpFetch(url, opt){
+  var tok = gbpToken(); if(!tok) return Promise.reject(new Error("Not signed in."));
+  opt = opt || {}; opt.headers = Object.assign({ Authorization: "Bearer " + tok }, opt.headers || {});
+  if(opt.body && typeof opt.body !== "string"){ opt.body = JSON.stringify(opt.body); opt.headers["Content-Type"] = "application/json"; }
+  return fetch(url, opt).then(function(r){
+    if(r.status === 401){ gbpSignOut(); throw new Error("Signed out - sign in again."); }
+    if(r.status === 403 || r.status === 429) throw new Error("Google has not approved API access for this project yet (" + r.status + "). The request form is in GOOGLE-BUSINESS.txt.");
+    if(!r.ok) return r.text().then(function(t){ throw new Error("Google said " + r.status + ": " + t.slice(0, 160)); });
+    return r.status === 204 ? {} : r.json();
+  });
+}
+function gbpLocations(){
+  return gbpFetch("https://mybusinessaccountmanagement.googleapis.com/v1/accounts").then(function(j){
+    var a = (j.accounts || [])[0]; if(!a) throw new Error("No Business Profile on this Google account.");
+    GBP.acct = a.name;
+    return gbpFetch("https://mybusinessbusinessinformation.googleapis.com/v1/" + a.name + "/locations?readMask=name,title,storefrontAddress,regularHours,phoneNumbers,websiteUri&pageSize=20");
+  }).then(function(j){
+    GBP.locs = j.locations || [];
+    GBP.loc = GBP.locs[0] || null;
+    if(!GBP.loc) throw new Error("No location under this account.");
+    return GBP.loc;
+  }).catch(function(e){ GBP.err = String(e.message || e); throw e; });
+}
+function gbpReviews(){
+  if(!GBP.loc) return Promise.reject(new Error("No location."));
+  return gbpFetch("https://mybusiness.googleapis.com/v4/" + GBP.acct + "/" + GBP.loc.name + "/reviews?pageSize=20&orderBy=updateTime%20desc")
+    .then(function(j){ GBP.reviews = j.reviews || []; GBP.avg = j.averageRating; GBP.total = j.totalReviewCount; return GBP.reviews; });
+}
+function gbpReply(reviewName, text){
+  return gbpFetch("https://mybusiness.googleapis.com/v4/" + reviewName + "/reply", { method:"PUT", body:{ comment: text } });
+}
+function gbpPerf(){
+  if(!GBP.loc) return Promise.reject(new Error("No location."));
+  var end = new Date(), start = new Date(Date.now() - 27 * 86400000);
+  var q = "dailyMetrics=CALL_CLICKS&dailyMetrics=BUSINESS_DIRECTION_REQUESTS&dailyMetrics=WEBSITE_CLICKS&dailyMetrics=BUSINESS_IMPRESSIONS_MOBILE_MAPS&dailyMetrics=BUSINESS_IMPRESSIONS_MOBILE_SEARCH" +
+    "&dailyRange.start_date.year=" + start.getFullYear() + "&dailyRange.start_date.month=" + (start.getMonth()+1) + "&dailyRange.start_date.day=" + start.getDate() +
+    "&dailyRange.end_date.year=" + end.getFullYear() + "&dailyRange.end_date.month=" + (end.getMonth()+1) + "&dailyRange.end_date.day=" + end.getDate();
+  return gbpFetch("https://businessprofileperformance.googleapis.com/v1/" + GBP.loc.name + ":fetchMultiDailyMetricsTimeSeries?" + q)
+    .then(function(j){
+      var out = {};
+      (j.multiDailyMetricTimeSeries || []).forEach(function(g){ (g.dailyMetricTimeSeries || []).forEach(function(m){
+        var vals = ((m.timeSeries || {}).datedValues || []);
+        var last7 = vals.slice(-7).reduce(function(n,v){ return n + (+v.value || 0); }, 0);
+        var prev7 = vals.slice(-14, -7).reduce(function(n,v){ return n + (+v.value || 0); }, 0);
+        out[m.dailyMetric] = { last7:last7, prev7:prev7 };
+      }); });
+      GBP.perf = out; return out;
+    });
+}
+function gbpPost(summary, kind){
+  var body = { languageCode:"en", summary: summary, topicType: kind === "offer" ? "OFFER" : "STANDARD",
+               callToAction: { actionType:"ORDER", url: base() } };
+  if(kind === "offer"){ var e = new Date(Date.now() + 7 * 86400000);
+    body.event = { title: summary.slice(0, 58), schedule: { startDate: { year:new Date().getFullYear(), month:new Date().getMonth()+1, day:new Date().getDate() },
+                   endDate: { year:e.getFullYear(), month:e.getMonth()+1, day:e.getDate() } } }; }
+  return gbpFetch("https://mybusiness.googleapis.com/v4/" + GBP.acct + "/" + GBP.loc.name + "/localPosts", { method:"POST", body: body });
+}
+function gbpStars(n){ n = Math.round({ ONE:1, TWO:2, THREE:3, FOUR:4, FIVE:5 }[n] || +n || 0); return "\u2605".repeat(n) + "\u2606".repeat(5 - n); }
+function gbpBlock(main){
+  var cid = gbpClientId();
+  if(!cid)
+    return '<div class="gbp"><div class="noteshead">Manage on Google</div>' +
+      '<p class="cqhint">Reviews, posts and performance from here need two things, both free: Google\u2019s API approval for the project, ' +
+      'and a client id in config.js (google.clientId). GOOGLE-BUSINESS.txt walks through both. The sign-in button appears here once the id is in.</p></div>';
+  var tok = gbpToken();
+  if(!tok)
+    return '<div class="gbp"><div class="noteshead">Manage on Google</div>' +
+      '<button class="shopbtn" id="gbpIn"><span class="gicon">G</span> Sign in with Google to manage</button>' +
+      (GBP.err ? '<p class="shopnote bad">' + esc(GBP.err) + '</p>' : '<p class="shopnote">The Google account that owns the listing. Nothing is stored beyond this browser session.</p>') +
+    '</div>';
+  var tabs = [["reviews","Reviews"],["posts","Post"],["perf","Performance"],["info","Listing"]];
+  var body = "";
+  if(GBP.tab === "reviews"){
+    body = GBP.reviews === null
+      ? '<p class="shopsub">Loading reviews\u2026</p>'
+      : (GBP.total != null ? '<p class="cqhint"><b>' + (GBP.avg || 0).toFixed(1) + ' \u2605</b> \u00b7 ' + GBP.total + ' reviews</p>' : '') +
+        (GBP.reviews.length ? '<div class="lines">' + GBP.reviews.map(function(r){
+          var rid = r.name;
+          return '<div class="line grev"><div class="ln"><b>' + esc(gbpStars(r.starRating)) + ' ' + esc((r.reviewer || {}).displayName || "Someone") + '</b>' +
+            '<small>' + esc(r.comment || "(no words, just stars)") + '</small>' +
+            (r.reviewReply ? '<small class="greply">\u21B3 ' + esc(r.reviewReply.comment) + '</small>'
+              : '<div class="grow"><input class="fld" placeholder="Reply\u2026" data-gr="' + esc(rid) + '"><button class="mini" data-grsend="' + esc(rid) + '">Send</button></div>') +
+          '</div></div>';
+        }).join("") + '</div>' : '<p class="shopsub">No reviews yet.</p>');
+  } else if(GBP.tab === "posts"){
+    body = '<p class="cqhint">One post: what is on today. It goes on Google with an \u201cOrder online\u201d button to the app.</p>' +
+      '<textarea class="fld" id="gbpTxt" rows="3" placeholder="e.g. Friday special: Beef Mandi full \u20B9899 till Sunday."></textarea>' +
+      '<div class="rowbtns"><button class="shopbtn" id="gbpOffer">Post as an offer (7 days)</button><button class="shopbtn ghost" id="gbpUpdate">Post as an update</button></div>';
+  } else if(GBP.tab === "perf"){
+    var P = GBP.perf, names = { CALL_CLICKS:"Calls", BUSINESS_DIRECTION_REQUESTS:"Directions", WEBSITE_CLICKS:"Website taps", BUSINESS_IMPRESSIONS_MOBILE_MAPS:"Seen on Maps", BUSINESS_IMPRESSIONS_MOBILE_SEARCH:"Seen in Search" };
+    body = P === null || P === undefined
+      ? '<p class="shopsub">Loading the last 4 weeks\u2026</p>'
+      : '<div class="dtiles">' + Object.keys(names).map(function(k){
+          var v = P[k] || { last7:0, prev7:0 }, d = v.last7 - v.prev7;
+          return '<div class="dtile"><b>' + v.last7 + '</b><small>' + names[k] + ' \u00b7 7 days ' + (d ? '<span class="' + (d > 0 ? "up" : "down") + '">' + (d > 0 ? "\u25B2" : "\u25BC") + Math.abs(d) + '</span>' : '') + '</small></div>';
+        }).join("") + '</div>';
+  } else {
+    var L = GBP.loc || {};
+    var hrs = ((L.regularHours || {}).periods || []).map(function(p){ return p.openDay.slice(0,3) + " " + p.openTime.hours + ":" + String(p.openTime.minutes || 0).padStart(2,"0") + "\u2013" + p.closeTime.hours + ":" + String(p.closeTime.minutes || 0).padStart(2,"0"); }).join(" \u00b7 ");
+    body = '<div class="lines"><div class="line"><div class="ln"><b>' + esc(L.title || "") + '</b><small>' + esc(((L.storefrontAddress || {}).addressLines || []).join(", ")) + '</small>' +
+      '<small>' + esc(((L.phoneNumbers || {}).primaryPhone) || "") + ' \u00b7 ' + esc(L.websiteUri || "") + '</small>' +
+      '<small>' + esc(hrs || "hours not set") + '</small></div></div></div>' +
+      '<p class="shopnote">Changing hours and details from here comes next; for now open <a href="https://business.google.com/" target="_blank" rel="noopener">Business Profile</a>.</p>';
+  }
+  return '<div class="gbp"><div class="noteshead">Manage on Google <small>' + esc((GBP.loc || {}).title || "") + '</small>' +
+      '<button class="linky" id="gbpOut">Sign out</button></div>' +
+    '<div class="tabs gtabs2">' + tabs.map(function(t){ return '<button class="tab' + (GBP.tab === t[0] ? " on" : "") + '" data-gtab="' + t[0] + '">' + t[1] + '</button>'; }).join("") + '</div>' +
+    (GBP.err ? '<p class="shopnote bad">' + esc(GBP.err) + '</p>' : '') +
+    body + '</div>';
+}
+function wireGbp(main){
+  var again = function(){ paintGoogleAdmin(main); };
+  var b = el("gbpIn"); if(b) b.onclick = function(){ b.textContent = "Opening Google\u2026"; gbpSignIn(again); };
+  var o = el("gbpOut"); if(o) o.onclick = function(){ gbpSignOut(); again(); };
+  main.querySelectorAll("[data-gtab]").forEach(function(t){ t.onclick = function(){ GBP.tab = t.dataset.gtab; GBP.err = ""; again(); }; });
+  if(gbpToken() && !GBP.loc && !GBP.busy){ GBP.busy = true; gbpLocations().then(function(){ GBP.busy = false; again(); }, function(){ GBP.busy = false; again(); }); return; }
+  if(gbpToken() && GBP.loc){
+    if(GBP.tab === "reviews" && GBP.reviews === null && !GBP.busy){ GBP.busy = true; gbpReviews().then(function(){ GBP.busy = false; again(); }, function(e){ GBP.busy = false; GBP.err = String(e.message || e); GBP.reviews = []; again(); }); }
+    if(GBP.tab === "perf" && GBP.perf == null && !GBP.busy){ GBP.busy = true; gbpPerf().then(function(){ GBP.busy = false; again(); }, function(e){ GBP.busy = false; GBP.err = String(e.message || e); GBP.perf = {}; again(); }); }
+  }
+  main.querySelectorAll("[data-grsend]").forEach(function(bt){
+    bt.onclick = function(){
+      var inp = main.querySelector('[data-gr="' + bt.dataset.grsend + '"]'); var t = (inp && inp.value || "").trim(); if(!t) return;
+      bt.textContent = "\u2026";
+      gbpReply(bt.dataset.grsend, t).then(function(){ GBP.reviews = null; shopToast("Reply is on Google."); again(); })
+        .catch(function(e){ GBP.err = String(e.message || e); again(); });
+    };
+  });
+  var post = function(kind){
+    var t = (el("gbpTxt").value || "").trim(); if(!t){ shopToast("Write the post first."); return; }
+    gbpPost(t, kind).then(function(){ shopToast("Posted on Google."); el("gbpTxt").value = ""; })
+      .catch(function(e){ GBP.err = String(e.message || e); again(); });
+  };
+  var po = el("gbpOffer"); if(po) po.onclick = function(){ post("offer"); };
+  var pu = el("gbpUpdate"); if(pu) pu.onclick = function(){ post("update"); };
+}
+
 function paintGoogleAdmin(main){
   var w = reviewUrl(), l = listingUrl();
   var since = Date.now() - 7 * 86400000;
@@ -5234,6 +5409,7 @@ function paintGoogleAdmin(main){
         row("https://business.google.com/posts", "Posts", "Put today\u2019s offer on Google too") +
         row("crowd-ext/phone.html", "Crowd reader on a phone", "One tap on a Maps page tells us how busy a place is") +
       '</div>' +
+      gbpBlock(main) +
       crowdBlock() +
       (qr ? '<div class="gqr"><img src="' + qr + '" alt="QR to review" width="220" height="220">' +
               '<small>Print for the counter \u00b7 scans to the five stars</small></div>' : '') +
@@ -5242,6 +5418,7 @@ function paintGoogleAdmin(main){
       '<div class="dockroom"></div>' +
       officeDock("google") +
     '</div>';
+  wireGbp(main);
 }
 
 function viewMenuAdmin(main){

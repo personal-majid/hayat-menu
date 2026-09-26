@@ -2542,3 +2542,13 @@ html[data-theme="paper"] .leaflet-pane.leaflet-traffic-pane,html[data-theme="pap
 .archbar b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .archm{display:inline-flex;align-items:center;gap:8px;margin:0 14px 6px 0}
 .archbar small{display:block;color:var(--muted);margin-top:4px}
+/* ---- manage on Google ---- */
+.gbp{margin:18px 0}
+.gbp .noteshead{display:flex;align-items:center;gap:10px}.gbp .noteshead .linky{margin-left:auto}
+.gbp .gicon{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#fff;color:#1B1A17;font-weight:800;margin-right:6px}
+.gtabs2{margin:10px 0 12px}
+.grev small{white-space:normal;display:block;margin-top:3px}
+.greply{color:var(--gold2)}
+.grow{display:flex;gap:8px;margin-top:8px}.grow .fld{margin:0;flex:1}.grow .mini{flex:0 0 auto}
+.shopnote.bad{color:var(--hot);text-align:left}
+.dtile .up{color:var(--green)}.dtile .down{color:var(--hot)}

@@ -204,6 +204,26 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    /* ---- the busy bars the crowd robot reads -----------------
+       Written by a phone that stays at the shop, one document per
+       place. It carries no login - it is a phone in a drawer - so
+       instead it carries a word, and the word has to match the
+       one written here. Change ROBOT_WORD to something of your
+       own and type the same thing into the app. Anybody may read
+       the bars; they are public on Google anyway. */
+    match /crowd/{place} {
+      allow read:  if true;
+      allow write: if request.resource.data.robot == "ROBOT_WORD"
+                   && request.resource.data.robot != "";
+    }
+
+    /* the phone's last-seen pings: a customer writes their own,
+       the office reads them and moves them into the book */
+    match /pings/{phone} {
+      allow read:  if isOffice();
+      allow write: if true;
+    }
+
     /* ---- the VMENU copy -------------------------------------
        Written only by the sync service on the shop PC, which uses
        a Firebase admin key and so is not bound by these rules.

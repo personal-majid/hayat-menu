@@ -136,6 +136,15 @@ window.CONFIG = {
           and "Maps API"
        3. copy the key here.
      It is a public key restricted to this website; nothing secret. */
+  /* ---- 0d. GOOGLE BUSINESS PROFILE (optional, free) --------
+     Once Google approves API access (GOOGLE-BUSINESS.txt, step 2),
+     make an OAuth client id (step 3) and paste it here. The admin's
+     Google page then shows "Sign in with Google to manage": reviews,
+     posts, performance. A client id is public; there is no secret. */
+  google: {
+    clientId: ""
+  },
+
   traffic: {
     tomtomKey: "HYkJEbqymD918pvRduuffu7Q9a3ifHCl"
   },

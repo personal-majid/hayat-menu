@@ -52,11 +52,16 @@ to businesses it has approved. Free; takes Google 1-2 weeks.
         google: { clientId: "PASTE-THE-CLIENT-ID" },
      and run SHIP.bat.
 
-  5. Tell Claude "Google API is approved". Then the admin gets:
-        - reviews on the board, reply from the card
-        - Offer blast -> WhatsApp AND a Google Post in one tap
-        - "Closed today" / new hours -> Google updates with the app
-        - a tile: calls, direction taps, profile views this week
+  5. Admin -> Google -> "Sign in with Google to manage" (the button
+     appears once the client id is in). Then, from the desk:
+        - Reviews: the latest 20, stars and words, reply in place
+        - Post: today's offer or an update, with an "Order online"
+          button that opens the app
+        - Performance: calls, directions, website taps, seen on
+          Maps / Search - last 7 days vs the 7 before
+        - Listing: what Google shows (hours, phone, address)
+     Until Google approves the project, every tab says so plainly
+     and nothing else happens. Sign-in itself works before that.
 
 Nothing in this stops working if Google says no. Today's part
 needs no approval at all.
