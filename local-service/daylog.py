@@ -415,11 +415,15 @@ def read_payments(src, m: Masters, day: str, start_hour: int) -> dict:
 
 def load_local(day: str) -> dict:
     p = OUT / f"{day}.json"
-    if p.exists():
-        try:
-            return json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
-            LOG.warning("day file unreadable, starting fresh: %s", p)
+    for cand in (p, p.with_suffix(".bak")):
+        if cand.exists():
+            try:
+                d = json.loads(cand.read_text(encoding="utf-8"))
+                if cand is not p:
+                    LOG.warning("day file unreadable, using the .bak: %s", cand)
+                return d
+            except Exception:
+                LOG.warning("unreadable: %s", cand)
     return {"day": day, "records": {}, "updatedAt": None}
 
 
@@ -427,7 +431,14 @@ def save_local(doc: dict):
     OUT.mkdir(exist_ok=True)
     p = OUT / f"{doc['day']}.json"
     tmp = p.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":"), default=str), encoding="utf-8")
+    body = json.dumps(doc, ensure_ascii=False, separators=(",", ":"), default=str)
+    tmp.write_text(body, encoding="utf-8")
+    json.loads(tmp.read_text(encoding="utf-8"))            # what landed on disk must parse before it replaces anything
+    if p.exists():
+        try:
+            p.replace(p.with_suffix(".bak"))                # yesterday's copy of this file survives one bad write
+        except OSError:
+            pass
     tmp.replace(p)
 
 

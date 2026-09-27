@@ -24,7 +24,7 @@ a{color:inherit}
 .top h1{font:700 18px "Cormorant Garamond",Georgia,serif;margin:0;letter-spacing:.02em}
 .top .sp{flex:1}
 .nav{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:8px;height:32px;min-width:32px;padding:0 8px;font-size:16px;cursor:pointer} .nav:hover{background:var(--soft2)} .nav.cal{font-size:14px}
-#calPop{position:absolute;top:52px;left:16px;z-index:9;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;gap:18px;flex-wrap:wrap;max-width:calc(100vw - 32px)}
+#calPop[hidden]{display:none} #calPop{position:absolute;top:52px;left:16px;z-index:9;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;gap:18px;flex-wrap:wrap;max-width:calc(100vw - 32px)}
 .cm{min-width:196px} .cm h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)} .cm .g{display:grid;grid-template-columns:repeat(7,26px);gap:3px} .cm .g span{font-size:9px;color:var(--muted);text-align:center}
 .cm .d{height:26px;border-radius:6px;background:var(--soft);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);position:relative} .cm .d.has{background:color-mix(in srgb,var(--s1) calc(var(--w) * 1%),var(--soft))} .cm .d.has.hot{color:#fff} .cm .d.cur{outline:2px solid var(--ink);outline-offset:-2px} .cm .d.none{opacity:.35;cursor:default} .cm .d:hover::after{content:attr(data-t);position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--pri);color:var(--onpri);font-size:11px;padding:2px 6px;border-radius:6px;white-space:nowrap;z-index:2}
 .cm .lg{font-size:10px;color:var(--muted);margin-top:6px}
@@ -109,6 +109,7 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
   <button class="nav cal" id="calBtn" title="calendar">▦</button>
   <div id="calPop" hidden></div>
   <span class="sp"></span>
+  <span class="live" id="pc" hidden><i></i><span></span></span>
   <span class="live" id="live"><i></i><span>connecting…</span></span>
   <a class="tb" href="./#/admin" style="text-decoration:none">Office</a>
 </div>
@@ -391,7 +392,16 @@ function csv(kind){
 
 /* ---- compare two days, and the week around today ---- */
 const CACHE={}; let CMP=null, WEEK=null;
-async function loadDay(d){ if(CACHE[d]!==undefined) return CACHE[d]; try{ const s=await FB.fs.getDoc(FB.fs.doc(FB.db,'vm_daylog',d)); CACHE[d]=prep(s.exists()?s.data():null); }catch(e){ CACHE[d]=null; } return CACHE[d]; }
+/* history comes from plain files the shop PC publishes (no Firebase reads); Firebase is the live feed and always the fallback */
+const DATA=(window.HAYAT_DATA_URL||'https://raw.githubusercontent.com/personal-majid/hayat-data/main/');
+let SRC={};   /* day -> 'file' | 'firebase' */
+async function fetchJson(name){ const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),8000);
+  try{ const r=await fetch(DATA+name+'?v='+Math.floor(Date.now()/300000),{signal:ctl.signal,cache:'no-cache'}); if(!r.ok) return null; const j=await r.json(); return j&&typeof j==='object'?j:null; }catch(e){ return null; } finally{ clearTimeout(t); } }
+async function loadDay(d){ if(CACHE[d]!==undefined) return CACHE[d];
+  let doc=null;
+  if(d!==bizToday()){ doc=await fetchJson(d+'.json'); if(doc&&doc.day===d&&doc.records) SRC[d]='file'; else doc=null; }
+  if(!doc){ try{ const s=await FB.fs.getDoc(FB.fs.doc(FB.db,'vm_daylog',d)); doc=s.exists()?s.data():null; SRC[d]='firebase'; }catch(e){ doc=null; } }
+  CACHE[d]=prep(doc); return CACHE[d]; }
 function stats(doc){
   const R=Object.values((doc&&doc.records)||{}), S=R.filter(r=>r.status==='settled');
   const rev=S.reduce((n,r)=>n+(r.total||0),0), dine=S.filter(r=>r.kind==='dine'), ctr=S.filter(r=>r.kind==='counter'), del=S.filter(r=>r.kind==='delivery');
@@ -487,13 +497,25 @@ function render(){
 
 let unsub=null;
 async function watchDay(){
-  if(unsub) unsub(); DOC=null; YDOC=null; render();
-  const {fs,db}=FB;
+  if(unsub){ unsub(); unsub=null; } DOC=null; YDOC=null; render();
+  const {fs,db}=FB, want=DAY;
   const y=new Date(DAY+'T12:00:00'); y.setDate(y.getDate()-1); const yday=ymd(y);
-  fs.getDoc(fs.doc(db,'vm_daylog',yday)).then(d=>{ YDOC=prep(d.exists()?d.data():null); render(); }).catch(()=>{});
-  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); CACHE[DAY]=DOC; stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
+  loadDay(yday).then(d=>{ if(want!==DAY) return; YDOC=d; render(); });
+  if(DAY!==bizToday()){
+    /* a finished day: the published file, else Firebase once */
+    const d=await loadDay(DAY); if(want!==DAY) return; DOC=d; stamp(); render(); return;
+  }
+  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); CACHE[DAY]=DOC; SRC[DAY]='firebase'; stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
 }
-function stamp(){ const l=$('live'); if(!DOC){ l.className='live bad'; l.lastElementChild.textContent='no data'; return; } const age=Math.max(0,Math.round((Date.now()-T(DOC.updatedAt))/60000)); l.className='live'+(age>6?' bad':''); l.lastElementChild.textContent=(age>6?'stale · ':'live · ')+age+' min ago'; }
+function stamp(){ const l=$('live'); if(!DOC){ l.className='live bad'; l.lastElementChild.textContent='no data'; return; }
+  if(DAY!==bizToday()){ l.className='live'; l.lastElementChild.textContent=(SRC[DAY]==='file'?'from file':'from Firebase')+' · '+DAY; return; }
+  const age=Math.max(0,Math.round((Date.now()-T(DOC.updatedAt))/60000)); l.className='live'+(age>6?' bad':''); l.lastElementChild.textContent=(age>6?'stale · ':'live · ')+age+' min ago'; }
+/* the shop PC's own health note (watchdog.py, every 5 min) */
+let HEALTH=null;
+function healthPill(){ const el=$('pc'); if(!el) return; if(!HEALTH){ el.hidden=true; return; } el.hidden=false;
+  const age=Math.round((NOW-T(HEALTH.at))/60000), bad=age>12||!HEALTH.ok; el.className='live'+(bad?' bad':'');
+  const bads=Object.entries(HEALTH.tasks||{}).filter(([k,t])=>!t.ok).map(([k])=>k.replace('Hayat ','')).join(', ');
+  el.lastElementChild.textContent='shop PC '+(age>12?'silent '+age+' min':bad?'fixing: '+bads:'ok'); el.title=(HEALTH.host||'')+' · '+HEALTH.at+(HEALTH.disk?' · disk free '+HEALTH.disk+' GB':'')+((HEALTH.actions||[]).length?'\n'+HEALTH.actions.join('\n'):''); }
 
 /* the calendar: three months of squares, darker = bigger day */
 function setDay(d){ if(!d||d===DAY) return; DAY=d; CMP=null; WEEK=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===d)) sel.value=d; watchDay(); }
@@ -517,7 +539,8 @@ document.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target
 async function days(){
   const {fs,db}=FB; const sel=$('day'); const out=[];
   let err='';
-  try{ const ix=await fs.getDoc(fs.doc(db,'vm_meta','days')); if(ix.exists()) INDEX=ix.data().days||{}; }catch(e){ err=e.code||String(e); }
+  const ixf=await fetchJson('index.json'); if(ixf&&ixf.days&&Object.keys(ixf.days).length) INDEX=ixf.days;
+  try{ const ix=await fs.getDoc(fs.doc(db,'vm_meta','days')); if(ix.exists()){ const d=ix.data().days||{}; Object.keys(d).forEach(k=>{ if(!INDEX[k]||(d[k].updatedAt||'')>(INDEX[k].updatedAt||'')) INDEX[k]=d[k]; }); } }catch(e){ if(!Object.keys(INDEX).length) err=e.code||String(e); }
   Object.keys(INDEX).forEach(d=>{ const x=INDEX[d]||{}; if(x.bills||x.rev||x.paidOut) out.push(d); });   /* a day with nothing in it is not a day */
   /* a thin index (sync not run yet) - list the day docs themselves as well */
   if(out.length<8){ try{ const q=await fs.getDocs(fs.query(fs.collection(db,'vm_daylog'),fs.orderBy(fs.documentId(),'desc'),fs.limit(60))); q.docs.forEach(d=>{ if(!out.includes(d.id)) out.push(d.id); const x=d.data(); if(!INDEX[d.id]&&x) INDEX[d.id]={rev:x.revenue||0,bills:x.settled||0,paidOut:x.paidOut||0}; }); }catch(e){ err=e.code||String(e); } }
@@ -535,8 +558,9 @@ async function go(){
   FB=ctx;
   if(ctx.role!=='office'){ $('main').innerHTML=''; await HayatAuth.form($('main'),ctx,['office'],go,'The owner board is for the office sign-in.'); return; }
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','floor'),d=>{ FLOOR=d.exists()?d.data():null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','health'),d=>{ HEALTH=d.exists()?d.data():null; healthPill(); },()=>{});
   await days(); watchDay();
-  setInterval(()=>{ if(DOC){ stamp(); render(); } },60000);
+  setInterval(()=>{ if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
 go();
 })();
