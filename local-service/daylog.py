@@ -25,6 +25,7 @@ document. Nothing is ever rewritten wholesale, nothing is deleted.
     python daylog.py day 2026-09-25             one past day
     python daylog.py backfill --since 2026-09-06   several past days
     python daylog.py check                      local files vs Firebase
+    python daylog.py sync                       redo only days missing/different online
 """
 from __future__ import annotations
 
@@ -665,7 +666,7 @@ def wipe(cfg) -> int:
 
 def main(argv):
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["tick", "day", "backfill", "check", "wipe"])
+    ap.add_argument("cmd", choices=["tick", "day", "backfill", "check", "wipe", "sync"])
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--since")
     ap.add_argument("--config", default=str(HERE / "config.ini"))
@@ -705,6 +706,29 @@ def main(argv):
         elif a.cmd == "day":
             day = a.arg or today_business(start_hour)
             print(run_day(cfg, src, m, day, db, day == today_business(start_hour)))
+        elif a.cmd == "sync":
+            # only the days that are missing or differ online - plus today
+            since = dt.datetime.strptime(a.since or a.arg or "2026-07-01", "%Y-%m-%d").date()
+            today = dt.datetime.strptime(today_business(start_hour), "%Y-%m-%d").date()
+            online = {d.id: d.to_dict() for d in db.collection("vm_daylog").stream(timeout=60)} if db is not None else {}
+            idx = db.collection("vm_meta").document("days").get(timeout=30) if db is not None else None
+            idx = (idx.to_dict() or {}).get("days", {}) if idx is not None and idx.exists else {}
+            d, todo, fine = since, [], 0
+            while d <= today:
+                day = d.strftime("%Y-%m-%d")
+                l, o = load_local(day), online.get(day)
+                ok = (day != today.strftime("%Y-%m-%d") and l.get("updatedAt") and o and day in idx
+                      and l.get("settled") == o.get("settled") and (l.get("revenue") or 0) == (o.get("revenue") or 0)
+                      and l.get("paymentCount") == o.get("paymentCount"))
+                if ok:
+                    fine += 1
+                else:
+                    todo.append(day)
+                d += dt.timedelta(days=1)
+            print(f"{fine} days already in step, {len(todo)} to do: {', '.join(todo) if len(todo) < 12 else todo[0] + ' .. ' + todo[-1]}")
+            for day in todo:
+                print(run_day(cfg, src, m, day, db, day == today.strftime("%Y-%m-%d")))
+                time.sleep(0.2)
         else:
             since = dt.datetime.strptime(a.since or a.arg, "%Y-%m-%d").date()
             today = dt.datetime.strptime(today_business(start_hour), "%Y-%m-%d").date()
