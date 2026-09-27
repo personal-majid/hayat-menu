@@ -442,6 +442,34 @@ def firestore(cfg):
     return fs.client()
 
 
+CARRY = ("rider", "dispatchAt", "dispatch", "foodReady", "dueCount", "billPrinted", "token")
+STAFF_MAX = 200          # a CASHIER bill this small is staff food - not a customer
+
+
+def is_staff(r) -> bool:
+    return "CASHIER" in str(r.get("waiter") or "").upper() and (r.get("total") or 0) <= STAFF_MAX
+
+
+def closure(have: dict) -> dict:
+    """Average minutes from order to paid, per section, plus delivery and
+    counter - the day's number for the trend line. Staff bills and anything
+    over 10 h (a credit bill cleared days later) are left out."""
+    def mins(a, b):
+        try:
+            return (dt.datetime.strptime(b, "%Y-%m-%d %H:%M:%S") - dt.datetime.strptime(a, "%Y-%m-%d %H:%M:%S")).total_seconds() / 60
+        except Exception:
+            return None
+    buckets = {}
+    for r in have.values():
+        if r.get("status") != "settled" or is_staff(r):
+            continue
+        k = r.get("section") if r.get("kind") == "dine" else ("Delivery" if r.get("kind") == "delivery" else "Counter" if r.get("kind") == "counter" else None)
+        t = mins(r.get("createdAt"), r.get("settledAt"))
+        if k and t is not None and 0 <= t <= 600:
+            buckets.setdefault(k, []).append(t)
+    return {k: round(sum(v) / len(v)) for k, v in buckets.items() if v}
+
+
 MASTERS_SENT = None
 def push_masters(db, m: Masters):
     """The floor: every table with its chairs, section and position, plus the
@@ -496,6 +524,18 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         old = have.get(key)
         if old and old.get("ver") == r["ver"]:
             continue
+        if old and old.get("status") in ("open", "due") and r.get("status") == "settled":
+            # the settled bill comes from a table that no longer knows the
+            # rider, dispatch time or how many times the bill was printed
+            for f in CARRY:
+                if r.get(f) is None and old.get(f) is not None:
+                    r[f] = old[f]
+            oc, nc = old.get("customer") or {}, r.get("customer") or {}
+            for f in ("name", "phone", "address"):
+                if not nc.get(f) and oc.get(f):
+                    nc[f] = oc[f]
+            if nc:
+                r["customer"] = nc
         r["seen"] = (old or {}).get("seen") or now
         r["updated"] = now
         have[key] = r
@@ -530,10 +570,12 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         for i in range(0, len(paths), 400):                      # a write holds at most ~500 field paths
             chunk = dict(list(paths.items())[i:i + 400])
             ref.update(chunk, timeout=30)
-        # the index the owner board lists days from: one small doc, one read
+    if db is not None:
+        # the index the owner board lists days and trends from: one small doc,
+        # one read. Written every run (a backfilled day may have nothing new).
         db.collection("vm_meta").document("days").set({"days": {day: {
             "rev": top["revenue"], "bills": top["settled"], "open": top["open"], "paidOut": top["paidOut"],
-            "purchases": top["purchaseTotal"], "updatedAt": now}}}, merge=True, timeout=30)
+            "purchases": top["purchaseTotal"], "close": closure(have), "updatedAt": now}}}, merge=True, timeout=30)
     if with_open and db is not None:
         push_masters(db, m)
     LOG.info("day %s: %d records, %d changed, %d settled, %d open, %d purchases, %d payments out %s", day, len(have), len(changed),

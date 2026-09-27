@@ -90,7 +90,9 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
 .d.up{color:var(--good)} .d.dn{color:var(--bad)}
 .trend{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:80px} .trend div{background:var(--s1);border-radius:3px 3px 0 0;position:relative;min-height:2px} .trend div.cur{background:var(--s2)} .trend div::after{content:attr(data-t);position:absolute;top:100%;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);white-space:nowrap}
 .exp{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px} .exp button{font:inherit;font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:inherit;cursor:pointer}
-.bar.b2{background:var(--line2)}
+.bar.b2{background:var(--line2)} .bar.cur{background:var(--s2)} .bar.click{cursor:pointer}
+.pill.staff{background:var(--soft2);color:var(--muted)}
+.close td.r b{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -122,6 +124,10 @@ let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TA
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
 function recs(){ return Object.values((DOC&&DOC.records)||{}); }
+/* a CASHIER bill this small is staff food, not a customer: shown, counted, never alerted or averaged */
+const STAFF_MAX=200;
+const isStaff=r=>/cashier/i.test(r.waiter||'')&&sum(r)<=STAFF_MAX;
+function prep(doc){ if(doc&&doc.records) Object.values(doc.records).forEach(r=>{ if(!r.kindRaw){ r.kindRaw=r.kind; if(isStaff(r)) r.kind='staff'; } }); return doc; }
 
 function kpis(){
   const R=recs(), settled=R.filter(r=>r.status==='settled'), open=R.filter(r=>r.status==='open'||r.status==='due');
@@ -147,9 +153,10 @@ function avg(xs){ return xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length)
 
 function alerts(){
   const R=recs(), out=[];
-  R.filter(r=>r.status==='open'||r.status==='due').forEach(r=>{
+  R.filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff').forEach(r=>{
     const age=mins(r.createdAt, tsNow()), sinceDue=r.dueAt?mins(r.dueAt,tsNow()):null;
-    if(r.status==='due'&&sinceDue>10) out.push({bad:sinceDue>25,b:`${r.table||'Token '+(r.token||'')} · bill printed, not paid`,s:`${r.waiter||''} · ${rs(sum(r))}`,ago:sinceDue+' min'});
+    /* a delivery bill is settled when the rider is back - or at the end of the day; never an alert */
+    if(r.status==='due'&&sinceDue>10&&r.kind!=='delivery') out.push({bad:sinceDue>25,b:`${r.table||'Token '+(r.token||'')} · bill printed, not paid`,s:`${r.waiter||''} · ${rs(sum(r))}`,ago:sinceDue+' min'});
     else if(r.kind==='dine'&&age>75) out.push({bad:age>110,b:`${r.table} · seated a long time`,s:`${r.waiter||''} · ${r.kotCount} KOT · ${rs(sum(r))}`,ago:age+' min'});
     else if(r.kind==='counter'&&age>15) out.push({bad:age>30,b:`Token ${r.token||r.kot} · waiting at counter`,s:(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,60),ago:age+' min'});
     /* a delivery takes longer by nature: cooking + the road + the rider coming back before it can be settled */
@@ -163,6 +170,23 @@ function alerts(){
     (out.length?`<div class="alerts">${out.sort((a,b)=>parseInt(b.ago)-parseInt(a.ago)).map(a=>`<div class="al${a.bad?' bad':''}"><b>${esc(a.b)}</b><small>${esc(a.s)}</small><span class="ago">${esc(a.ago)}</span></div>`).join('')}</div>`:'<div class="note">Nothing waiting too long.</div>')+'</div>';
 }
 function sum(r){ return r.total!=null?r.total:(r.items||[]).reduce((n,i)=>n+(i.a||0),0); }
+/* how long a bill lives: order -> bill printed -> paid; delivery also order -> out the door */
+function closeStats(R){
+  const g={}, keep=(x,lim)=>x!=null&&x>=0&&x<=lim;
+  R.filter(r=>r.status==='settled'&&r.kind!=='staff').forEach(r=>{
+    const k=r.kind==='dine'?(r.section||'Dine'):r.kind==='delivery'?'Delivery':r.kind==='counter'?'Counter':null; if(!k) return;
+    const x=g[k]=g[k]||{n:0,toBill:[],toPay:[],total:[],toGo:[]}; x.n++;
+    const a=mins(r.createdAt,r.dueAt), b=mins(r.dueAt,r.settledAt), t=mins(r.createdAt,r.settledAt), d=mins(r.createdAt,r.dispatchAt);
+    if(keep(a,300)) x.toBill.push(a); if(keep(b,600)) x.toPay.push(b); if(keep(t,600)) x.total.push(t); if(keep(d,300)) x.toGo.push(d);
+  });
+  return g;
+}
+function closures(){
+  const g=closeStats(recs()), order=['AC','NON AC','JUICY HUT','Counter','Delivery'];
+  const keys=Object.keys(g).sort((a,b)=>(order.indexOf(a)+1||99)-(order.indexOf(b)+1||99));
+  const m=x=>x==null?'—':x+'m';
+  return `<div class="card"><h2>How long a bill takes <span class="n">avg minutes · staff bills left out</span></h2><table class="close"><tr><th>Where</th><th class="r">Bills</th><th class="r">Order→bill</th><th class="r">Bill→paid</th><th class="r">Order→paid</th><th class="r">Out the door</th></tr>${keys.map(k=>{ const x=g[k]; return `<tr><td>${esc(k)}</td><td class="r">${x.n}</td><td class="r">${m(avg(x.toBill))}</td><td class="r">${m(avg(x.toPay))}</td><td class="r"><b>${m(avg(x.total))}</b></td><td class="r">${k==='Delivery'?m(avg(x.toGo)):''}</td></tr>`; }).join('')||'<tr><td colspan=6 class="note">No settled bills yet.</td></tr>'}</table></div>`;
+}
 function tsNow(){ const d=new Date(NOW); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
 
 function floor(){
@@ -307,14 +331,15 @@ function csv(kind){
 
 /* ---- compare two days, and the week around today ---- */
 const CACHE={}; let CMP=null, WEEK=null;
-async function loadDay(d){ if(CACHE[d]!==undefined) return CACHE[d]; try{ const s=await FB.fs.getDoc(FB.fs.doc(FB.db,'vm_daylog',d)); CACHE[d]=s.exists()?s.data():null; }catch(e){ CACHE[d]=null; } return CACHE[d]; }
+async function loadDay(d){ if(CACHE[d]!==undefined) return CACHE[d]; try{ const s=await FB.fs.getDoc(FB.fs.doc(FB.db,'vm_daylog',d)); CACHE[d]=prep(s.exists()?s.data():null); }catch(e){ CACHE[d]=null; } return CACHE[d]; }
 function stats(doc){
   const R=Object.values((doc&&doc.records)||{}), S=R.filter(r=>r.status==='settled');
   const rev=S.reduce((n,r)=>n+(r.total||0),0), dine=S.filter(r=>r.kind==='dine'), ctr=S.filter(r=>r.kind==='counter'), del=S.filter(r=>r.kind==='delivery');
   const g=f=>{ const o={}; S.forEach(r=>{ const k=f(r)||'—'; o[k]=(o[k]||0)+(r.total||0); }); return o; };
   const items={}; S.forEach(r=>(r.items||[]).forEach(i=>{ items[i.n]=items[i.n]||{q:0,v:0}; items[i.n].q+=i.q||0; items[i.n].v+=i.a||0; }));
   const H=hbucket(S);
-  return {rev,bills:S.length,avg:S.length?rev/S.length:0,dine:dine.reduce((n,r)=>n+(r.total||0),0),counter:ctr.reduce((n,r)=>n+(r.total||0),0),delivery:del.reduce((n,r)=>n+(r.total||0),0),
+  const cs=closeStats(R), close={}; Object.keys(cs).forEach(k=>{ close[k]=avg(cs[k].total); });
+  return {rev,close,bills:S.length,avg:S.length?rev/S.length:0,dine:dine.reduce((n,r)=>n+(r.total||0),0),counter:ctr.reduce((n,r)=>n+(r.total||0),0),delivery:del.reduce((n,r)=>n+(r.total||0),0),
     covers:dine.reduce((n,r)=>n+(r.pax||0),0),stay:avg(dine.map(r=>mins(r.createdAt,r.settledAt)).filter(x=>x!=null&&x<300)),
     edits:R.reduce((n,r)=>n+(r.edits||[]).length,0),purchases:(doc&&doc.purchaseTotal)||0,paidOut:(doc&&doc.paidOut)||0,section:g(r=>r.section),waiter:g(r=>r.waiter),pay:g(r=>r.payMode),items,H,
     cash:S.reduce((n,r)=>n+(r.cash||0),0),card:S.reduce((n,r)=>n+(r.card||0),0)};
@@ -330,16 +355,29 @@ function compare(){
   const week=WEEK?`<div class="card wide"><h2>Last 7 days · sales <span class="n">${rs(WEEK.reduce((n,w)=>n+w.rev,0))} · avg ${rs(WEEK.reduce((n,w)=>n+w.rev,0)/Math.max(1,WEEK.filter(w=>w.rev).length))}/day</span></h2><div class="trend">${(()=>{ const m=Math.max(1,...WEEK.map(w=>w.rev)); return WEEK.map(w=>`<div class="${w.day===DAY?'cur':''}" style="height:${Math.max(2,100*w.rev/m)}%" data-t="${w.day.slice(5)} ${rs(w.rev)}" title="${w.day}: ${rs(w.rev)} · ${w.bills} bills"></div>`).join(''); })()}</div><div style="height:16px"></div></div>`:'';
   return `<div class="card wide"><h2>Compare <span class="n"><select id="cmpDay"><option value="">choose a day…</option>${opts}</select></span></h2>
       <div class="cmp"><div class="a"><b>${esc(DAY)}</b></div><div class="k"></div><div class="b"><b>${esc(bd||'—')}</b></div>
-      ${row('Sales',A.rev,B&&B.rev)}${row('Bills',A.bills,B&&B.bills,x=>x)}${row('Avg bill',A.avg,B&&B.avg)}${row('Dine‑in',A.dine,B&&B.dine)}${row('Counter',A.counter,B&&B.counter)}${row('Delivery',A.delivery,B&&B.delivery)}${row('Covers',A.covers,B&&B.covers,x=>x)}${row('Avg table min',A.stay,B&&B.stay,x=>x+'m')}${row('Cash',A.cash,B&&B.cash)}${row('Card',A.card,B&&B.card)}${row('Edits/voids',A.edits,B&&B.edits,x=>x)}${row('Paid out',A.paidOut,B&&B.paidOut)}${row('Supplier bills',A.purchases,B&&B.purchases)}</div></div>`+
+      ${row('Sales',A.rev,B&&B.rev)}${row('Bills',A.bills,B&&B.bills,x=>x)}${row('Avg bill',A.avg,B&&B.avg)}${row('Dine‑in',A.dine,B&&B.dine)}${row('Counter',A.counter,B&&B.counter)}${row('Delivery',A.delivery,B&&B.delivery)}${row('Covers',A.covers,B&&B.covers,x=>x)}${row('Avg table min',A.stay,B&&B.stay,x=>x+'m')}${row('Cash',A.cash,B&&B.cash)}${row('Card',A.card,B&&B.card)}${row('Edits/voids',A.edits,B&&B.edits,x=>x)}${['AC','NON AC','JUICY HUT','Counter','Delivery'].filter(k=>A.close[k]!=null||(B&&B.close[k]!=null)).map(k=>row('Order→paid · '+k,A.close[k],B&&B.close[k],x=>x+'m')).join('')}${row('Paid out',A.paidOut,B&&B.paidOut)}${row('Supplier bills',A.purchases,B&&B.purchases)}</div></div>`+
     week+
     (()=>{ const [lo,hi]=hspan(A.H,B?B.H:[]); return `<div class="card wide"><h2>Sales by hour <span class="n">blue ${esc(DAY)} · grey ${esc(bd||'')}</span></h2>${hbars(A.H,lo,hi,max,B?B.H:null,'')}${B?hbars(B.H,lo,hi,max,null,'','b2',50):''}${hx(lo,hi)}</div>`; })()+
     mini('By section',A.section,B&&B.section)+mini('By waiter',A.waiter,B&&B.waiter)+mini('By payment',A.pay,B&&B.pay)+
     `<div class="card wide"><h2>Top items <span class="n">${esc(DAY)} vs ${esc(bd||'—')}</span></h2><table><tr><th>Item</th><th class="r">Qty</th><th class="r">Sales</th><th class="r">Qty ${esc(bd||'')}</th><th class="r">Sales ${esc(bd||'')}</th><th class="r">Δ</th></tr>${topA.map(([n,x])=>{ const y=B&&B.items[n]; const d=y&&y.v?Math.round(100*(x.v-y.v)/y.v):null; return `<tr><td>${esc(n)}</td><td class="r">${x.q}</td><td class="r">${rs(x.v)}</td><td class="r">${y?y.q:'—'}</td><td class="r">${y?rs(y.v):'—'}</td><td class="r">${d==null?'':`<span class="d ${d>=0?'up':'dn'}">${d>=0?'+':''}${d}%</span>`}</td></tr>`; }).join('')}</table></div>`;
 }
+function trends(){
+  const days=Object.keys(INDEX).sort().slice(-30);
+  if(days.length<2) return '<div class="card wide"><div class="note">Trends need the day index. On the shop PC run <b>daylog-backfill-all.bat</b> once.</div></div>';
+  const step=days.length>16?2:1, cols=`grid-template-columns:repeat(${days.length},1fr)`;
+  const axis=`<div class="hx" style="${cols}">${days.map((d,i)=>i%step?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div>`;
+  const series=(title,f,fmt,unit)=>{ const vals=days.map(d=>+f(INDEX[d]||{})||0), have=vals.filter(Boolean); const max=Math.max(1,...vals);
+    if(!have.length) return '';
+    return `<div class="card wide"><h2>${title} <span class="n">avg ${fmt(have.reduce((a,b)=>a+b,0)/have.length)} · best ${fmt(Math.max(...have))}</span></h2><div class="bars" style="${cols}">${vals.map((v,i)=>`<div class="bar click${days[i]===DAY?' cur':''}" data-day="${days[i]}" style="height:${Math.max(2,100*v/max)}%" data-t="${days[i].slice(5)} ${fmt(v)}"></div>`).join('')}</div>${axis}</div>`; };
+  const closeKeys=[...new Set(days.flatMap(d=>Object.keys((INDEX[d]||{}).close||{})))];
+  return series('Sales by day',x=>x.rev,rs)+series('Bills by day',x=>x.bills,x=>Math.round(x))+series('Average bill',x=>x.bills?x.rev/x.bills:0,rs)+series('Paid out at the counter',x=>x.paidOut,rs)+
+    closeKeys.map(k=>series('Order→paid · '+k+' (minutes)',x=>(x.close||{})[k],x=>Math.round(x)+'m')).join('')+
+    '<div class="note">Click a bar to open that day.</div>';
+}
 async function pickCompare(d){ CMP=d?{day:d,doc:await loadDay(d)}:null; render(); }
-async function loadWeek(){
+function loadWeek(){
   const out=[]; const base=new Date(DAY+'T12:00:00');
-  for(let i=6;i>=0;i--){ const x=new Date(base); x.setDate(x.getDate()-i); const d=ymd(x); const doc=d===DAY?DOC:await loadDay(d); const st=stats(doc); out.push({day:d,rev:st.rev,bills:st.bills}); }
+  for(let i=6;i>=0;i--){ const x=new Date(base); x.setDate(x.getDate()-i); const d=ymd(x); const ix=INDEX[d]; const st=d===DAY?stats(DOC):null; out.push({day:d,rev:st?st.rev:(ix?ix.rev||0:0),bills:st?st.bills:(ix?ix.bills||0:0)}); }
   WEEK=out; render();
 }
 
@@ -356,8 +394,9 @@ function render(){
   const m=$('main'); if(!DOC){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; return; }
   const live=DAY===bizToday();
   m.innerHTML=kpis()+
-    `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
-    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${breakdown()}${waiters()}</div>`:
+    `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['trend','Trends'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
+    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${closures()}${breakdown()}${waiters()}</div>`:
+     TAB==='trend'?`<div class="grid">${trends()}</div>`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${payments()}${purchases()}</div>`:
@@ -365,6 +404,7 @@ function render(){
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute.</div>`;
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
+  $$('[data-day]').forEach(b=>b.onclick=()=>{ DAY=b.dataset.day; CMP=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===DAY)) sel.value=DAY; TAB='sales'; watchDay(); });
   $$('[data-csv]').forEach(b=>b.onclick=()=>csv(b.dataset.csv));
   const cd=$('cmpDay'); if(cd) cd.onchange=()=>pickCompare(cd.value);
   const q=$('q'); if(q){ q.oninput=()=>{ Q=q.value.trim().toLowerCase(); const pos=q.selectionStart; render(); const q2=$('q'); q2.focus(); q2.setSelectionRange(pos,pos); }; }
@@ -375,8 +415,8 @@ async function watchDay(){
   if(unsub) unsub(); DOC=null; YDOC=null; render();
   const {fs,db}=FB;
   const y=new Date(DAY+'T12:00:00'); y.setDate(y.getDate()-1); const yday=ymd(y);
-  fs.getDoc(fs.doc(db,'vm_daylog',yday)).then(d=>{ YDOC=d.exists()?d.data():null; render(); }).catch(()=>{});
-  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=d.exists()?d.data():null; CACHE[DAY]=DOC; stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
+  fs.getDoc(fs.doc(db,'vm_daylog',yday)).then(d=>{ YDOC=prep(d.exists()?d.data():null); render(); }).catch(()=>{});
+  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); CACHE[DAY]=DOC; stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
 }
 function stamp(){ const l=$('live'); if(!DOC){ l.className='live bad'; l.lastElementChild.textContent='no data'; return; } const age=Math.max(0,Math.round((Date.now()-T(DOC.updatedAt))/60000)); l.className='live'+(age>6?' bad':''); l.lastElementChild.textContent=(age>6?'stale · ':'live · ')+age+' min ago'; }
 
