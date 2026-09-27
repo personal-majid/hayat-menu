@@ -411,6 +411,45 @@ def read_payments(src, m: Masters, day: str, start_hour: int) -> dict:
     return out
 
 
+def read_drafts(src, m: Masters) -> dict:
+    """A purchase still on the entry screen - typed, not yet saved with a
+    supplier and due date. VMENU parks it in temp tables; we show it at once."""
+    q = src.q
+    out = {}
+    heads = {}
+    if src.has("temp_inv_purchase_item_parent"):
+        for h in q("SELECT * FROM temp_inv_purchase_item_parent"):
+            heads[str(h.get("id"))] = h
+    if src.has("temp_purchase_data_parent"):
+        for h in q("SELECT * FROM temp_purchase_data_parent"):
+            heads.setdefault(str(h.get("pur_id") or h.get("id")), {"id": h.get("id"), "supacid": h.get("supplier_id"), "doneby": h.get("emp_id"),
+                                                                     "donetime": h.get("LastUpdated") or h.get("date"), "bill_no": h.get("bill_no"),
+                                                                     "Bill_total": h.get("bill_amount") or h.get("net_amount"), "remarks": h.get("description"), "duedate": h.get("duedate")})
+    lines = {}
+    if src.has("temp_purchase"):
+        for l in q("SELECT * FROM temp_purchase"):
+            k = str(l.get("purchaseid") or l.get("doneid") or l.get("userid") or 0)
+            lines.setdefault(k, []).append({"id": l.get("itemid"), "n": (l.get("itemname") or m.pitem(l.get("itemid"))["n"]),
+                                            "unit": m.units.get(str(l.get("baseunitid"))), "q": n(l.get("qty")), "cost": n(l.get("unitprice")),
+                                            "total": round(n(l.get("qty")) * n(l.get("unitprice")), 2), "foc": n(l.get("foc")), "by": m.who(l.get("userid"))})
+    if src.has("temp_inv_purchase_item_details"):
+        for l in q("SELECT * FROM temp_inv_purchase_item_details"):
+            it = m.pitem(l.get("itemid"), l.get("type"))
+            lines.setdefault(str(l.get("purid") or 0), []).append({"id": l.get("itemid"), "n": it["n"], "unit": m.units.get(str(l.get("baseunitid"))) or it["unit"],
+                                                                   "q": n(l.get("quantity")), "cost": n(l.get("unitcoast")), "total": n(l.get("ptotal")), "foc": n(l.get("foc"))})
+    for k in set(heads) | set(lines):
+        h, items = heads.get(k, {}), lines.get(k, [])
+        if not h and not items:
+            continue
+        rec = {"key": f"d{k}", "id": k, "at": iso(h.get("donetime") or h.get("LastUpdated")) or dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+               "supplier": m.supplier_by_ac.get(str(h.get("supacid"))) or m.suppliers.get(str(h.get("supacid"))) if h.get("supacid") else None,
+               "by": m.who(h.get("doneby")) or next((i.get("by") for i in items if i.get("by")), None), "billNo": (str(h.get("bill_no") or "").strip() or None),
+               "total": n(h.get("Bill_total")) or round(sum(i["total"] or 0 for i in items), 2), "due": iso(h.get("duedate")),
+               "remarks": (str(h.get("remarks") or "").strip() or None), "lines": len(items), "items": items}
+        out[rec["key"]] = rec
+    return out
+
+
 # ---------------------------------------------------------------- the day file + Firebase
 
 def load_local(day: str) -> dict:
@@ -519,13 +558,23 @@ def push_masters(db, m: Masters):
 def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     fresh = read_day(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5), with_open)
-    purchases = read_purchases(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5))
-    payments = read_payments(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5))
     doc = load_local(day)
     have = doc["records"]
     havep = doc.setdefault("purchases", {})
     havet = doc.setdefault("payments", {})
     changedp, changedt = {}, {}
+    # spends move slowly: read them every 5 minutes on the live tick, always on a rebuild
+    last_spend = doc.get("spendAt")
+    spend_due = (not with_open) or not last_spend or (dt.datetime.now() - dt.datetime.strptime(last_spend, "%Y-%m-%d %H:%M:%S")).total_seconds() >= 270
+    purchases = read_purchases(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5)) if spend_due else dict(havep)
+    payments = read_payments(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5)) if spend_due else {k: v for k, v in havet.items() if not v.get("deleted")}
+    drafts = read_drafts(src, m) if (spend_due and with_open) else None
+    if spend_due:
+        doc["spendAt"] = now
+    if drafts is not None and drafts != doc.get("drafts", {}):
+        doc["drafts"] = drafts
+        doc["draftTotal"] = round(sum((d.get("total") or 0) for d in drafts.values()), 2)
+        changedp["_drafts"] = True                                  # flag: the drafts map goes up with this tick
     for key, r in purchases.items():
         old = havep.get(key)
         if old and old.get("ver") == r["ver"]:
@@ -542,7 +591,7 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         changedt[key] = r
     # an entry that vanished from the book without a delete record: say so
     for key, r in havet.items():
-        if key not in payments and not r.get("deleted"):
+        if spend_due and key not in payments and not r.get("deleted"):
             r["deleted"] = now
             r["updated"] = now
             changedt[key] = r
@@ -591,6 +640,9 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         # that went open -> settled does not keep stale open-only fields online
         ref.set(top, merge=True, timeout=30)
         paths = {}
+        if changedp.pop("_drafts", None):
+            paths["drafts"] = doc.get("drafts", {})
+            paths["draftTotal"] = doc.get("draftTotal", 0)
         for coll, items in (("records", changed), ("purchases", changedp), ("payments", changedt)):
             for key, r in items.items():
                 paths[f"{coll}.{key}"] = r

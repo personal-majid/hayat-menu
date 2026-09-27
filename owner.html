@@ -157,7 +157,7 @@ function kpis(){
     <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
-    <div class="kpi"><small>Paid out</small><b>${rs(DOC.paidOut||0)}</b><em>${DOC.paymentCount||0} counter entries${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
+    <div class="kpi"><small>Paid out</small><b>${rs(DOC.paidOut||0)}</b><em>${DOC.paymentCount||0} entries${DOC.draftTotal?' · <b>'+rs(DOC.draftTotal)+' being entered</b>':''}${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
   </div>`;
 }
 function avg(xs){ return xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null; }
@@ -358,6 +358,10 @@ function payments(){
   return `<div class="card"><h2>Paid out · by party <span class="n">${rs(tot)}</span></h2><div class="mini">${parties.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n}</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')||'<div class="note">Nothing entered at the counter yet.</div>'}</div>${Object.keys(byMode).length?`<p class="note">${Object.entries(byMode).map(([k,v])=>esc(k)+' '+rs(v)).join(' · ')}${inn.length?' · received '+rs(inn.reduce((n,p)=>n+(p.amount||0),0)):''}</p>`:''}</div>`+
     `<div class="card wide"><h2>Counter entries · live <span class="n">${live.length}${P.length-live.length?' · '+(P.length-live.length)+' deleted':''}</span></h2><input class="search" id="q" placeholder="Search party, remark, amount…" value="${esc(Q)}"><div class="scroll"><table><tr><th>Time</th><th>Kind</th><th>Party</th><th>Remarks</th><th>Mode</th><th>By</th><th class="r">Out</th><th class="r">In</th></tr>${P.map(p=>`<tr${p.deleted?' style="opacity:.5;text-decoration:line-through"':''} title="${esc((p.type||'')+(p.deleted?' · deleted '+p.deleted:''))}"><td>${hm(p.at)}</td><td>${esc(p.kind||'')}</td><td>${esc(p.party||'')}</td><td>${esc(p.remarks||'')}</td><td>${esc(p.mode||'')}</td><td>${esc(p.by||'')}</td><td class="r">${p.flow==='out'?rs(p.amount):''}</td><td class="r">${p.flow==='in'?rs(p.amount):''}</td></tr>`).join('')}</table></div></div>`;
 }
+function drafts(){
+  const D=Object.values((DOC&&DOC.drafts)||{}); if(!D.length) return '';
+  return `<div class="card wide" style="border-color:var(--s3)"><h2>Being entered now <span class="n">on the VMENU purchase screen · not saved yet · ${rs(DOC.draftTotal||0)}</span></h2><table><tr><th>Since</th><th>Supplier</th><th>By</th><th class="r">Lines</th><th class="r">Total</th><th>Items</th></tr>${D.map(d=>`<tr><td>${hm(d.at)}</td><td>${esc(d.supplier||'—')}</td><td>${esc(d.by||'')}</td><td class="r">${d.lines}</td><td class="r">${rs(d.total)}</td><td>${(d.items||[]).map(i=>esc(i.n)+' '+(i.q||'')+(i.unit?' '+esc(i.unit):'')+(i.cost?' @'+rs(i.cost):'')).join(', ')}</td></tr>`).join('')}</table></div>`;
+}
 function purchases(){
   let P=Object.values((DOC&&DOC.purchases)||{}).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
   if(Q) P=P.filter(p=>JSON.stringify(p).toLowerCase().includes(Q));
@@ -514,7 +518,7 @@ function render(){
      TAB==='trend'?`<div class="grid">${trends()}</div>`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
-     TAB==='buy'?`<div class="grid">${payments()}${purchases()}</div>`:
+     TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute.</div>`;
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
