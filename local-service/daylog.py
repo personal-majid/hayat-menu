@@ -586,9 +586,10 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         for i in range(0, len(paths), 400):                      # a write holds at most ~500 field paths
             chunk = dict(list(paths.items())[i:i + 400])
             ref.update(chunk, timeout=30)
-    if db is not None:
+    if db is not None and (have or havep or havet or with_open):
         # the index the owner board lists days and trends from: one small doc,
-        # one read. Written every run (a backfilled day may have nothing new).
+        # one read. Written every run (a backfilled day may have nothing new);
+        # an empty day (before VMENU started) is not a day.
         db.collection("vm_meta").document("days").set({"days": {day: {
             "rev": top["revenue"], "bills": top["settled"], "open": top["open"], "paidOut": top["paidOut"],
             "purchases": top["purchaseTotal"], "close": closure(have),
@@ -729,6 +730,13 @@ def main(argv):
             for day in todo:
                 print(run_day(cfg, src, m, day, db, day == today.strftime("%Y-%m-%d")))
                 time.sleep(0.2)
+            # empty days that an earlier run put in the index: out
+            if db is not None:
+                from google.cloud import firestore as gcf
+                empty = [k for k, v in idx.items() if not (v.get("bills") or v.get("rev") or v.get("paidOut")) and k != today.strftime("%Y-%m-%d")]
+                if empty:
+                    db.collection("vm_meta").document("days").update({f"days.{k}": gcf.DELETE_FIELD for k in empty}, timeout=30)
+                    print(f"dropped {len(empty)} empty days from the index")
         else:
             since = dt.datetime.strptime(a.since or a.arg, "%Y-%m-%d").date()
             today = dt.datetime.strptime(today_business(start_hour), "%Y-%m-%d").date()

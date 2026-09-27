@@ -23,6 +23,11 @@ a{color:inherit}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .top h1{font:700 18px "Cormorant Garamond",Georgia,serif;margin:0;letter-spacing:.02em}
 .top .sp{flex:1}
+.nav{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:8px;height:32px;min-width:32px;padding:0 8px;font-size:16px;cursor:pointer} .nav:hover{background:var(--soft2)} .nav.cal{font-size:14px}
+#calPop{position:absolute;top:52px;left:16px;z-index:9;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;gap:18px;flex-wrap:wrap;max-width:calc(100vw - 32px)}
+.cm{min-width:196px} .cm h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)} .cm .g{display:grid;grid-template-columns:repeat(7,26px);gap:3px} .cm .g span{font-size:9px;color:var(--muted);text-align:center}
+.cm .d{height:26px;border-radius:6px;background:var(--soft);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);position:relative} .cm .d.has{background:color-mix(in srgb,var(--s1) calc(var(--w) * 1%),var(--soft))} .cm .d.has.hot{color:#fff} .cm .d.cur{outline:2px solid var(--ink);outline-offset:-2px} .cm .d.none{opacity:.35;cursor:default} .cm .d:hover::after{content:attr(data-t);position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--pri);color:var(--onpri);font-size:11px;padding:2px 6px;border-radius:6px;white-space:nowrap;z-index:2}
+.cm .lg{font-size:10px;color:var(--muted);margin-top:6px}
 .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)} .live i{width:8px;height:8px;border-radius:50%;background:var(--good)} .live.bad i{background:var(--bad)}
 select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:inherit;cursor:pointer}
 .wrap{max-width:1500px;margin:0 auto;padding:14px 16px 60px}
@@ -98,7 +103,11 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
 <body>
 <div class="top">
   <h1>HAYAT · Owner</h1>
+  <button class="nav" id="prevDay" title="previous day (←)">‹</button>
   <select id="day"></select>
+  <button class="nav" id="nextDay" title="next day (→)">›</button>
+  <button class="nav cal" id="calBtn" title="calendar">▦</button>
+  <div id="calPop" hidden></div>
   <span class="sp"></span>
   <span class="live" id="live"><i></i><span>connecting…</span></span>
   <a class="tb" href="./#/admin" style="text-decoration:none">Office</a>
@@ -404,7 +413,11 @@ function compare(){
     return `<div class="card"><h2>${title}</h2><div class="mini">${keys.map(k=>`<div class="mrow"><span>${esc(k)}</span><div><div class="b" style="width:${100*(ga[k]||0)/m}%"></div>${gb?`<div class="b" style="width:${100*(gb[k]||0)/m}%;background:var(--line2);margin-top:2px"></div>`:''}</div><span class="v">${rs(ga[k]||0)}${gb?'<br><small style="color:var(--muted)">'+rs(gb[k]||0)+'</small>':''}</span></div>`).join('')}</div></div>`; };
   const topA=Object.entries(A.items).sort((x,y)=>y[1].v-x[1].v).slice(0,15);
   const week=WEEK?`<div class="card wide"><h2>Last 7 days · sales <span class="n">${rs(WEEK.reduce((n,w)=>n+w.rev,0))} · avg ${rs(WEEK.reduce((n,w)=>n+w.rev,0)/Math.max(1,WEEK.filter(w=>w.rev).length))}/day</span></h2><div class="trend">${(()=>{ const m=Math.max(1,...WEEK.map(w=>w.rev)); return WEEK.map(w=>`<div class="${w.day===DAY?'cur':''}" style="height:${Math.max(2,100*w.rev/m)}%" data-t="${w.day.slice(5)} ${rs(w.rev)}" title="${w.day}: ${rs(w.rev)} · ${w.bills} bills"></div>`).join(''); })()}</div><div style="height:16px"></div></div>`:'';
-  return `<div class="card wide"><h2>Compare <span class="n"><select id="cmpDay"><option value="">choose a day…</option>${opts}</select></span></h2>
+  const shift=(days,months)=>{ const x=new Date(DAY+'T12:00:00'); if(months) x.setMonth(x.getMonth()+months); if(days) x.setDate(x.getDate()+days); return ymd(x); };
+  const best=(DAYS||[]).filter(d=>d!==DAY&&INDEX[d]).sort((a,b)=>(INDEX[b].rev||0)-(INDEX[a].rev||0))[0];
+  const picks=[['Yesterday',shift(-1)],['Same day last week',shift(-7)],['Two weeks back',shift(-14)],['Same date last month',shift(0,-1)],['Best day',best]].filter(p=>p[1]&&(DAYS||[]).includes(p[1]));
+  const pickBtns=picks.map(p=>`<button class="tab${bd===p[1]?' on':''}" data-cmp="${p[1]}" title="${p[1]}">${p[0]}</button>`).join('');
+  return `<div class="card wide"><h2>Compare <span class="n"><select id="cmpDay"><option value="">choose a day…</option>${opts}</select></span></h2><div class="tabs" style="margin:6px 0 10px">${pickBtns}</div>
       <div class="cmp"><div class="a"><b>${esc(DAY)}</b></div><div class="k"></div><div class="b"><b>${esc(bd||'—')}</b></div>
       ${row('Sales',A.rev,B&&B.rev)}${row('Bills',A.bills,B&&B.bills,x=>x)}${row('Avg bill',A.avg,B&&B.avg)}${row('Dine‑in',A.dine,B&&B.dine)}${row('Counter',A.counter,B&&B.counter)}${row('Delivery',A.delivery,B&&B.delivery)}${row('Covers',A.covers,B&&B.covers,x=>x)}${row('Avg table min',A.stay,B&&B.stay,x=>x+'m')}${row('Cash',A.cash,B&&B.cash)}${row('Card',A.card,B&&B.card)}${row('Edits/voids',A.edits,B&&B.edits,x=>x)}${['AC','NON AC','JUICY HUT','Counter','Delivery'].filter(k=>A.close[k]!=null||(B&&B.close[k]!=null)).map(k=>row('Order→paid · '+k,A.close[k],B&&B.close[k],x=>x+'m')).join('')}${row('Paid out',A.paidOut,B&&B.paidOut)}${row('Supplier bills',A.purchases,B&&B.purchases)}</div></div>`+
     week+
@@ -426,7 +439,11 @@ function trends(){
     return `<div class="card"><h2>${title} <span class="n">avg sales/day · ${all.length} days</span></h2><div class="bars" style="grid-template-columns:repeat(${labels.length},1fr);height:70px">${vals.map((v,i)=>`<div class="bar" style="height:${Math.max(2,100*v/max)}%" data-t="${labels[i]} ${rs(v)} · ${(g[labels[i]]||[]).length} days"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${labels.length},1fr)">${labels.map(l=>'<span>'+l+'</span>').join('')}</div>${note?'<p class="note">'+note+'</p>':''}</div>`; };
   const dom=d=>{ const n=+d.slice(8); return n<=10?'1–10':n<=20?'11–20':'21–end'; };
   const dow=d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
-  const pattern=all.length>=14?bucketCard('Start vs end of month',dom,['1–10','11–20','21–end'],'Salary days first, thin days last.')+bucketCard('Day of the week',dow,['Mon','Tue','Wed','Thu','Fri','Sat','Sun']):'';
+  const weeks=(()=>{ const g={}; all.forEach(d=>{ const m=d.slice(0,7), w=Math.min(5,Math.ceil(+d.slice(8)/7)); const x=g[m]=g[m]||{}; const y=x[w]=x[w]||{v:0,n:0}; y.v+=INDEX[d].rev; y.n++; }); const months=Object.keys(g).sort();
+    if(!months.length) return '';
+    const cell=y=>y?`<b>${rs(y.v)}</b><br><small style="color:var(--muted)">${rs(y.v/y.n)}/day · ${y.n}d</small>`:'—';
+    return `<div class="card wide"><h2>Weeks of the month <span class="n">sales · avg per day · days counted</span></h2><table><tr><th>Month</th><th class="r">1–7</th><th class="r">8–14</th><th class="r">15–21</th><th class="r">22–28</th><th class="r">29–end</th><th class="r">Month</th></tr>${months.map(m=>{ const x=g[m], tot=Object.values(x).reduce((a,y)=>a+y.v,0), n=Object.values(x).reduce((a,y)=>a+y.n,0); return `<tr><td>${new Date(m+'-15T12:00:00').toLocaleString('en',{month:'short',year:'numeric'})}</td>${[1,2,3,4,5].map(w=>`<td class="r">${cell(x[w])}</td>`).join('')}<td class="r"><b>${rs(tot)}</b><br><small style="color:var(--muted)">${rs(tot/n)}/day · ${n}d</small></td></tr>`; }).join('')}</table></div>`; })();
+  const pattern=weeks+(all.length>=14?bucketCard('Start vs end of month',dom,['1–10','11–20','21–end'],'Salary days first, thin days last.')+bucketCard('Day of the week',dow,['Mon','Tue','Wed','Thu','Fri','Sat','Sun']):'');
   return pattern+series('Sales by day',x=>x.rev,rs)+series('Bills by day',x=>x.bills,x=>Math.round(x))+series('Average bill',x=>x.bills?x.rev/x.bills:0,rs)+series('Paid out at the counter',x=>x.paidOut,rs)+
     closeKeys.map(k=>series('Order→paid · '+k+' (minutes)',x=>(x.close||{})[k],x=>Math.round(x)+'m')).join('')+
     '<div class="note">Click a bar to open that day.</div>';
@@ -461,9 +478,10 @@ function render(){
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute.</div>`;
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
-  $$('[data-day]').forEach(b=>b.onclick=()=>{ DAY=b.dataset.day; CMP=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===DAY)) sel.value=DAY; TAB='sales'; watchDay(); });
+  $$('[data-day]').forEach(b=>b.onclick=()=>{ TAB='sales'; setDay(b.dataset.day); });
   $$('[data-csv]').forEach(b=>b.onclick=()=>csv(b.dataset.csv));
   const cd=$('cmpDay'); if(cd) cd.onchange=()=>pickCompare(cd.value);
+  $$('[data-cmp]').forEach(b=>b.onclick=()=>pickCompare(b.dataset.cmp));
   const q=$('q'); if(q){ q.oninput=()=>{ Q=q.value.trim().toLowerCase(); const pos=q.selectionStart; render(); const q2=$('q'); q2.focus(); q2.setSelectionRange(pos,pos); }; }
 }
 
@@ -477,11 +495,30 @@ async function watchDay(){
 }
 function stamp(){ const l=$('live'); if(!DOC){ l.className='live bad'; l.lastElementChild.textContent='no data'; return; } const age=Math.max(0,Math.round((Date.now()-T(DOC.updatedAt))/60000)); l.className='live'+(age>6?' bad':''); l.lastElementChild.textContent=(age>6?'stale · ':'live · ')+age+' min ago'; }
 
+/* the calendar: three months of squares, darker = bigger day */
+function setDay(d){ if(!d||d===DAY) return; DAY=d; CMP=null; WEEK=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===d)) sel.value=d; watchDay(); }
+function stepDay(n){ const list=(DAYS||[]).slice().sort(); const i=list.indexOf(DAY); const d=list[i+n]; if(d) setDay(d); }
+function calendar(){
+  const pop=$('calPop'); if(!pop.hidden){ pop.hidden=true; return; }
+  const max=Math.max(1,...Object.values(INDEX).map(x=>x.rev||0));
+  const months=[]; const b=new Date(bizToday()+'T12:00:00'); for(let i=2;i>=0;i--){ const x=new Date(b.getFullYear(),b.getMonth()-i,1,12); months.push(x); }
+  pop.innerHTML=months.map(m=>{ const y=m.getFullYear(), mo=m.getMonth(), first=(new Date(y,mo,1).getDay()+6)%7, n=new Date(y,mo+1,0).getDate(); let cells='';
+    for(let i=0;i<first;i++) cells+='<i></i>';
+    for(let d=1;d<=n;d++){ const k=ymd(new Date(y,mo,d,12)); const x=INDEX[k]; const v=x?x.rev||0:0; const w=Math.round(100*v/max);
+      cells+=`<div class="d${v?' has':' none'}${w>55?' hot':''}${k===DAY?' cur':''}" style="--w:${Math.max(12,w)}" data-t="${k} ${v?rs(v)+' · '+(x.bills||0)+' bills':'no data'}" ${v?`data-pick="${k}"`:''}>${d}</div>`; }
+    const tot=Object.keys(INDEX).filter(k=>k.startsWith(ymd(m).slice(0,7))).reduce((a,k)=>a+(INDEX[k].rev||0),0);
+    return `<div class="cm"><h4>${m.toLocaleString('en',{month:'long',year:'numeric'})} <span style="float:right;margin-left:10px">${rs(tot)}</span></h4><div class="g">${['M','T','W','T','F','S','S'].map(x=>'<span>'+x+'</span>').join('')}${cells}</div><div class="lg">darker = bigger day · click to open</div></div>`; }).join('');
+  pop.hidden=false;
+  $$('[data-pick]',pop).forEach(c=>c.onclick=()=>{ pop.hidden=true; setDay(c.dataset.pick); });
+}
+document.addEventListener('click',e=>{ const pop=$('calPop'); if(pop&&!pop.hidden&&!pop.contains(e.target)&&e.target.id!=='calBtn') pop.hidden=true; });
+document.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if(e.key==='ArrowLeft') stepDay(-1); if(e.key==='ArrowRight') stepDay(1); });
+
 async function days(){
   const {fs,db}=FB; const sel=$('day'); const out=[];
   let err='';
   try{ const ix=await fs.getDoc(fs.doc(db,'vm_meta','days')); if(ix.exists()) INDEX=ix.data().days||{}; }catch(e){ err=e.code||String(e); }
-  Object.keys(INDEX).forEach(d=>out.push(d));
+  Object.keys(INDEX).forEach(d=>{ const x=INDEX[d]||{}; if(x.bills||x.rev||x.paidOut) out.push(d); });   /* a day with nothing in it is not a day */
   /* a thin index (sync not run yet) - list the day docs themselves as well */
   if(out.length<8){ try{ const q=await fs.getDocs(fs.query(fs.collection(db,'vm_daylog'),fs.orderBy(fs.documentId(),'desc'),fs.limit(60))); q.docs.forEach(d=>{ if(!out.includes(d.id)) out.push(d.id); const x=d.data(); if(!INDEX[d.id]&&x) INDEX[d.id]={rev:x.revenue||0,bills:x.settled||0,paidOut:x.paidOut||0}; }); }catch(e){ err=e.code||String(e); } }
   out.sort().reverse();
@@ -489,7 +526,8 @@ async function days(){
   DAYS=out;
   sel.innerHTML=out.map(d=>{ const x=INDEX[d]; return `<option value="${d}"${d===DAY?' selected':''}>${d===bizToday()?'Today · ':''}${d}${x&&x.rev?' · '+rs(x.rev):''}</option>`; }).join('');
   if(err){ $('live').className='live bad'; $('live').lastElementChild.textContent='days: '+err; }
-  sel.onchange=()=>{ DAY=sel.value; CMP=null; WEEK=null; watchDay(); };
+  sel.onchange=()=>setDay(sel.value);
+  $('prevDay').onclick=()=>stepDay(-1); $('nextDay').onclick=()=>stepDay(1); $('calBtn').onclick=calendar;
 }
 
 async function go(){
