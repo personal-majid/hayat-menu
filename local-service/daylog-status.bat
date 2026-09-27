@@ -6,6 +6,6 @@ echo.
 echo --- last 12 log lines ---
 powershell -NoProfile -Command "Get-Content logs\daylog.log -Tail 12"
 echo.
-echo --- today's file ---
-dir daylog\*.json | findstr json
+echo --- local vs Firebase ---
+.venv\Scripts\python daylog.py check
 pause

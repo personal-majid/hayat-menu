@@ -13,7 +13,9 @@ was paid. Open tables are in the log while they eat; when the bill is
 settled the same record simply gains its settled fields.
 
 Purchases of the day (supplier, bill, every line with cost and quantity)
-sit beside the bills in the same file under "purchases".
+sit beside the bills in the same file under "purchases". Counter entries
+(the quick daily purchase, a supplier payment, an expense) land under
+"payments" the minute they are typed - no waiting for a supplier bill.
 
 Every run (1 min) reads the day again and appends only what changed -
 locally into the day file, and in Firebase with a merge into the same
@@ -22,6 +24,7 @@ document. Nothing is ever rewritten wholesale, nothing is deleted.
     python daylog.py tick                       today (what the task runs)
     python daylog.py day 2026-09-25             one past day
     python daylog.py backfill --since 2026-09-06   several past days
+    python daylog.py check                      local files vs Firebase
 """
 from __future__ import annotations
 
@@ -126,6 +129,12 @@ class Masters:
         self.units = {str(r["id"]): r["baseunitname"] for r in q("SELECT id, baseunitname FROM svr_inv_baseuniparent")} if src.has("svr_inv_baseuniparent") else {}
         self.suppliers = {str(r["supplerid"]): r["supplername"] for r in q("SELECT supplerid, supplername FROM svr_supplerparent")} if src.has("svr_supplerparent") else {}
         self.supplier_by_ac = {str(r["acid"]): r["supplername"] for r in q("SELECT acid, supplername FROM svr_supplerparent") if r.get("acid")} if src.has("svr_supplerparent") else {}
+        # the accounts book: every party (supplier, staff, expense head, cash, bank)
+        self.groups = {str(r["groupid"]): r["groupname"] for r in q("SELECT groupid, groupname FROM act_groupparent")} if src.has("act_groupparent") else {}
+        self.ledgers = {}
+        if src.has("act_ledger_parent"):
+            for r in q("SELECT accountid AS i, ledgername AS n, groupid AS g FROM act_ledger_parent"):
+                self.ledgers[str(r["i"])] = r
         self.tables = {}
         if src.has("svr_tableparent"):
             for r in q("SELECT tableid, tableno, sectionid, chair_count, locationx, locationy, sts FROM svr_tableparent"):
@@ -150,6 +159,12 @@ class Masters:
         if m:
             return {"n": m["n"], "cat": self.cats.get(str(m["c"])), "unit": None}
         return {"n": f"item {i}", "cat": None, "unit": None}
+
+    def ledger(self, i):
+        r = self.ledgers.get(str(i))
+        if not r:
+            return (f"account {i}" if i not in (None, 0, "0", "") else None), None
+        return r["n"], self.groups.get(str(r["g"]))
 
     def table(self, tid, section_id=None):
         """VMENU stores the table NUMBER within a section on orders; the master has ids.
@@ -350,6 +365,51 @@ def read_purchases(src, m: Masters, day: str, start_hour: int) -> dict:
     return out
 
 
+def read_payments(src, m: Masters, day: str, start_hour: int) -> dict:
+    """Money entered at the counter the moment it is typed: the daily
+    purchase entries (ONION, DAILY KITCHEN VEGITABLE...), supplier payments,
+    expenses, credit receipts. Everything in the accounts book that is not a
+    POS sale (the bills already carry those). Deleted entries stay, marked."""
+    lo, hi = day_bounds(day, start_hour)
+    q = src.q
+    out = {}
+    if not src.has("act_paymentorrecipt"):
+        return out
+
+    def build(r, deleted=None):
+        act = str(r.get("acttype") or "").upper()
+        typ = str(r.get("transaction_type") or "").upper()
+        flow = "out" if (act.endswith("OUT") or "PURCHASE" in act or "EXPENSE" in typ or "SALARY" in typ) else ("in" if act.endswith("IN") or "RECEIPT" in typ or "SALE" in act else "other")
+        kind = ("purchase" if "PURCHASE" in typ or "PURCHASE" in act else "salary" if "SALARY" in typ else "expense" if "EXPENSE" in typ
+                else "receipt" if flow == "in" else "payment")
+        mode = "credit" if "CREDIT" in act else "bank" if "BANK" in act else "cash" if "CASH" in act else None
+        cn, cg = m.ledger(r.get("creditaccountid"))
+        dn, dg = m.ledger(r.get("dabitaccountid"))
+        key = f"t{r['transactionid']}"
+        rec = {
+            "key": key, "id": r["transactionid"], "at": iso(r.get("transactiondate")), "kind": kind, "flow": flow, "mode": mode,
+            "act": act or None, "type": typ or None, "amount": n(r.get("amount")), "discount": n(r.get("bill_discount")),
+            "party": cn if flow == "out" else dn, "credit": cn, "creditGroup": cg, "debit": dn, "debitGroup": dg,
+            "remarks": (str(r.get("remarks") or "").strip() or None), "ref": (str(r.get("referenceno") or "").strip() or None),
+            "invoiceId": r.get("invoiceid") or None, "by": m.who(r.get("donebyid")),
+        }
+        if deleted:
+            rec["deleted"] = deleted
+        rec["ver"] = rec_hash(rec)
+        return rec
+
+    for r in q("SELECT * FROM act_paymentorrecipt WHERE transactiondate >= %s AND transactiondate < %s "
+               "AND (transaction_type IS NULL OR transaction_type NOT LIKE 'POS%%')", (lo, hi)):
+        rec = build(r)
+        out[rec["key"]] = rec
+    if src.has("paymentorrecipt_delentries"):
+        for r in q("SELECT * FROM paymentorrecipt_delentries WHERE transactiondate >= %s AND transactiondate < %s "
+                   "AND (transaction_type IS NULL OR transaction_type NOT LIKE 'POS%%')", (lo, hi)):
+            rec = build(r, iso(r.get("deldatetime")))
+            out[rec["key"]] = rec
+    return out
+
+
 # ---------------------------------------------------------------- the day file + Firebase
 
 def load_local(day: str) -> dict:
@@ -405,10 +465,12 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     fresh = read_day(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5), with_open)
     purchases = read_purchases(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5))
+    payments = read_payments(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5))
     doc = load_local(day)
     have = doc["records"]
     havep = doc.setdefault("purchases", {})
-    changedp = {}
+    havet = doc.setdefault("payments", {})
+    changedp, changedt = {}, {}
     for key, r in purchases.items():
         old = havep.get(key)
         if old and old.get("ver") == r["ver"]:
@@ -416,6 +478,19 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         r["updated"] = now
         havep[key] = r
         changedp[key] = r
+    for key, r in payments.items():
+        old = havet.get(key)
+        if old and old.get("ver") == r["ver"]:
+            continue
+        r["updated"] = now
+        havet[key] = r
+        changedt[key] = r
+    # an entry that vanished from the book without a delete record: say so
+    for key, r in havet.items():
+        if key not in payments and not r.get("deleted"):
+            r["deleted"] = now
+            r["updated"] = now
+            changedt[key] = r
     changed = {}
     for key, r in fresh.items():
         old = have.get(key)
@@ -436,25 +511,85 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
     doc.update({"updatedAt": now, "count": len(have), "settled": settled,
                 "open": sum(1 for r in have.values() if r.get("status") in ("open", "due")),
                 "revenue": round(sum((r.get("total") or 0) for r in have.values() if r.get("status") == "settled"), 2),
-                "purchaseCount": len(havep), "purchaseTotal": round(sum((p.get("total") or 0) for p in havep.values()), 2)})
+                "purchaseCount": len(havep), "purchaseTotal": round(sum((p.get("total") or 0) for p in havep.values()), 2),
+                "paymentCount": sum(1 for t in havet.values() if not t.get("deleted")),
+                "paidOut": round(sum((t.get("amount") or 0) for t in havet.values() if t.get("flow") == "out" and not t.get("deleted")), 2),
+                "paidIn": round(sum((t.get("amount") or 0) for t in havet.values() if t.get("flow") == "in" and not t.get("deleted")), 2)})
     save_local(doc)
-    if (changed or changedp) and db is not None:
-        payload = {"day": day, "updatedAt": now, "count": doc["count"], "settled": doc["settled"], "open": doc["open"],
-                   "revenue": doc["revenue"], "purchaseCount": doc["purchaseCount"], "purchaseTotal": doc["purchaseTotal"]}
-        if changed:
-            payload["records"] = changed
-        if changedp:
-            payload["purchases"] = changedp
-        db.collection("vm_daylog").document(day).set(payload, merge=True, timeout=30)
+    top = {k: doc[k] for k in ("day", "updatedAt", "count", "settled", "open", "revenue", "purchaseCount", "purchaseTotal",
+                               "paymentCount", "paidOut", "paidIn")}
+    if (changed or changedp or changedt) and db is not None:
+        ref = db.collection("vm_daylog").document(day)
+        # the summary merges; each changed record REPLACES its map, so a bill
+        # that went open -> settled does not keep stale open-only fields online
+        ref.set(top, merge=True, timeout=30)
+        paths = {}
+        for coll, items in (("records", changed), ("purchases", changedp), ("payments", changedt)):
+            for key, r in items.items():
+                paths[f"{coll}.{key}"] = r
+        for i in range(0, len(paths), 400):                      # a write holds at most ~500 field paths
+            chunk = dict(list(paths.items())[i:i + 400])
+            ref.update(chunk, timeout=30)
+        # the index the owner board lists days from: one small doc, one read
+        db.collection("vm_meta").document("days").set({"days": {day: {
+            "rev": top["revenue"], "bills": top["settled"], "open": top["open"], "paidOut": top["paidOut"],
+            "purchases": top["purchaseTotal"], "updatedAt": now}}}, merge=True, timeout=30)
     if with_open and db is not None:
         push_masters(db, m)
-    LOG.info("day %s: %d records, %d changed, %d settled, %d open, %d purchases", day, len(have), len(changed), settled, doc["open"], len(havep))
-    return {"day": day, "records": len(have), "changed": len(changed), "settled": settled, "open": doc["open"], "purchases": len(havep), "purchaseTotal": doc["purchaseTotal"]}
+    LOG.info("day %s: %d records, %d changed, %d settled, %d open, %d purchases, %d payments out %s", day, len(have), len(changed),
+             settled, doc["open"], len(havep), doc["paymentCount"], doc["paidOut"])
+    return {"day": day, "records": len(have), "changed": len(changed), "settled": settled, "open": doc["open"], "purchases": len(havep),
+            "purchaseTotal": doc["purchaseTotal"], "payments": doc["paymentCount"], "paidOut": doc["paidOut"]}
+
+
+def check(cfg) -> int:
+    """Local day files against what Firebase holds - the thing to run when the
+    owner board looks wrong. No database needed."""
+    local = {}
+    for p in sorted(OUT.glob("????-??-??.json")):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+            local[p.stem] = d
+        except Exception:
+            local[p.stem] = None
+    print(f"local day files: {len(local)}   ({OUT})")
+    try:
+        db = firestore(cfg)
+        online = {d.id: d.to_dict() for d in db.collection("vm_daylog").stream(timeout=60)}
+        idx = db.collection("vm_meta").document("days").get(timeout=30)
+        idx = (idx.to_dict() or {}).get("days", {}) if idx.exists else {}
+    except Exception as e:
+        print(f"FIREBASE: cannot read - {e}")
+        return 1
+    print(f"firebase vm_daylog docs: {len(online)}   index vm_meta/days: {len(idx)} days")
+    print()
+    print(f"{'day':12}{'local bills':>12}{'online bills':>13}{'revenue':>11}{'online rev':>11}{'payments':>9}{'index':>6}  state")
+    bad = 0
+    for day in sorted(set(local) | set(online), reverse=True):
+        l, o = local.get(day), online.get(day)
+        lb = l.get("settled") if l else None
+        ob = o.get("settled") if o else None
+        lr = l.get("revenue") if l else None
+        orv = o.get("revenue") if o else None
+        pay = (o or l or {}).get("paymentCount")
+        state = "ok"
+        if l and not o:
+            state = "NOT ONLINE"
+        elif o and not l:
+            state = "online only"
+        elif lb != ob or (lr or 0) != (orv or 0):
+            state = "DIFFERS"
+        if state != "ok":
+            bad += 1
+        print(f"{day:12}{'' if lb is None else lb:>12}{'' if ob is None else ob:>13}{'' if lr is None else lr:>11}{'' if orv is None else orv:>11}{'' if pay is None else pay:>9}{'y' if day in idx else '-':>6}  {state}")
+    print()
+    print("all in step" if not bad else f"{bad} day(s) need attention - run daylog-backfill.bat from the oldest one")
+    return 0 if not bad else 2
 
 
 def main(argv):
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["tick", "day", "backfill"])
+    ap.add_argument("cmd", choices=["tick", "day", "backfill", "check"])
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--since")
     ap.add_argument("--config", default=str(HERE / "config.ini"))
@@ -479,6 +614,9 @@ def main(argv):
             LOG.error("tick took too long - killed; next minute retries")
             os._exit(3)
         threading.Timer(55, die).start()
+
+    if a.cmd == "check":
+        return check(cfg)
 
     src = VS.Source(cfg)
     m = Masters(src)
