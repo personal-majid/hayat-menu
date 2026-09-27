@@ -35,6 +35,7 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .kpi small{display:block;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
 .kpi.click{cursor:pointer} .kpi.click:hover{border-color:var(--line2)}
+.kpi em.rows{display:grid;gap:1px} .kpi em.rows span{display:flex;justify-content:space-between} .kpi em.rows b{font-size:12px;font-weight:600;display:inline;margin:0}
 .kpi b{display:block;font-size:24px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
 .kpi em{font-style:normal;font-size:12px;color:var(--muted)}
 .kpi em.up{color:var(--good)} .kpi em.dn{color:var(--bad)}
@@ -151,10 +152,12 @@ function kpis(){
   const tables=FLOOR?FLOOR.tables.filter(t=>t.active):[]; const busy=new Set(open.filter(r=>r.kind==='dine').map(r=>r.table));
   const seats=tables.reduce((n,t)=>n+(t.chairs||0),0), seatsBusy=tables.filter(t=>busy.has(t.name)).reduce((n,t)=>n+(t.chairs||0),0);
   const d=yrev!=null?(rev-yrev):null;
+  /* ordered, not yet paid: on tables, at the counter, out with riders */
+  const un=k=>open.filter(r=>r.kind===k).reduce((n,r)=>n+sum(r),0), unreal=open.filter(r=>r.kind!=='staff').reduce((n,r)=>n+sum(r),0);
   return `<div class="kpis">
     <div class="kpi"><small>Sales today</small><b>${rs(rev)}</b><em class="${d==null?'':d>=0?'up':'dn'}">${d==null?settled.length+' bills':(d>=0?'▲':'▼')+' '+rs(Math.abs(d))+' vs yesterday'}</em></div>
-    <div class="kpi"><small>Bills</small><b>${settled.length}</b><em>avg ${rs(settled.length?rev/settled.length:0)}</em></div>
-    <div class="kpi"><small>Open now</small><b>${open.length}</b><em>${open.filter(r=>r.status==='due').length} bill printed · ${rs(open.reduce((n,r)=>n+(r.items||[]).reduce((m,i)=>m+(i.a||0),0),0))} on tables</em></div>
+    <div class="kpi click" data-tab="bills"><small>Unrealized · expected ${rs(rev+unreal)}</small><b>${rs(unreal)}</b><em class="rows"><span>Delivery <b>${rs(un('delivery'))}</b></span><span>CO <b>${rs(un('counter'))}</b></span><span>Dining <b>${rs(un('dine'))}</b></span></em></div>
+    <div class="kpi"><small>Bills</small><b>${settled.length}</b><em>avg ${rs(settled.length?rev/settled.length:0)} · ${open.filter(r=>r.status==='due').length} bill printed, unpaid</em></div>
     <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
@@ -243,6 +246,14 @@ function upsell(){
   const rows=Object.entries(g).sort((a,b)=>(b[1].with/b[1].bills)-(a[1].with/a[1].bills)); if(!rows.length) return '';
   const cols=EXTRAS.map(e=>e[0]).filter(k=>rows.some(r=>r[1].k[k]));
   return `<div class="card wide"><h2>Upselling · by waiter <span class="n">extras sold with the main course</span></h2><table><tr><th>Waiter</th><th class="r">Bills</th><th class="r">Bills with extras</th>${cols.map(c=>`<th class="r">${c}</th>`).join('')}<th class="r">Extras ₹</th><th class="r">₹ / bill</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r">${w.bills}</td><td class="r"><b>${Math.round(100*w.with/w.bills)}%</b></td>${cols.map(c=>`<td class="r">${w.k[c]||''}</td>`).join('')}<td class="r">${rs(w.v)}</td><td class="r">${rs(w.v/w.bills)}</td></tr>`).join('')}</table></div>`;
+}
+/* ordered, not paid: the money still on the floor and on the road */
+function unrealized(){
+  const O=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff').sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+  const g={dine:{n:0,v:0},counter:{n:0,v:0},delivery:{n:0,v:0}}; O.forEach(r=>{ const x=g[r.kind]||(g[r.kind]={n:0,v:0}); x.n++; x.v+=sum(r); });
+  const tot=O.reduce((n,r)=>n+sum(r),0), max=Math.max(1,...Object.values(g).map(x=>x.v));
+  const state=r=>r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt)+(r.rider?' · '+r.rider:''):r.status==='due'?'billed · with rider':'cooking'):r.status==='due'?'bill printed, unpaid':(r.foodReady||0)+'/'+(r.items||[]).length+' ready';
+  return `<div class="card"><h2>Unrealized sales <span class="n">${rs(tot)} · ${O.length} open</span></h2><div class="mini">${[['dine','On tables'],['counter','At the counter'],['delivery','Out for delivery']].map(([k,l])=>`<div class="mrow"><span>${l} <small style="color:var(--muted)">${g[k].n}</small></span><div class="b" style="width:${100*g[k].v/max}%"></div><span class="v">${rs(g[k].v)}</span></div>`).join('')}</div>${O.length?`<table style="margin-top:8px"><tr><th>Since</th><th>Where</th><th>Waiter</th><th>State</th><th class="r">Amount</th></tr>${O.map(r=>`<tr class="rowlink" data-drill="${esc(r.key)}"><td>${hm(r.createdAt)} <small style="color:var(--muted)">${mins(r.createdAt,tsNow())}m</small></td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span> ${esc(r.table||(r.token?'T'+r.token:'KOT '+r.kot))}</td><td>${esc(r.waiter||'')}</td><td>${state(r)}</td><td class="r">${rs(sum(r))}</td></tr>`).join('')}</table>`:'<div class="note">Everything is paid.</div>'}</div>`;
 }
 function closures(){
   const g=closeStats(recs()), order=['AC','NON AC','JUICY HUT','Counter','Delivery'];
@@ -559,7 +570,7 @@ function render(){
   const live=DAY===bizToday();
   m.innerHTML=kpis()+
     `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['trend','Trends'],['range','From → to'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
-    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}</div>`:
+    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${unrealized()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}</div>`:
      TAB==='trend'?`<div class="grid">${trends()}</div>`:
      TAB==='range'||TAB==='rbuy'?range():
      TAB==='floor'?`<div class="grid">${live?alerts():''}${floor()}${kitchens()}</div>`:
