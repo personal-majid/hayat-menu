@@ -116,6 +116,19 @@ def main(argv):
             say("      " + " | ".join(f"{k}={cut(v, 22)}" for k, v in r.items() if v not in (None, "", 0, 0.0, "0")))
     say("")
 
+    say("PURCHASE LINES WITHOUT A SAVED HEAD (typed on the screen, voucher not saved yet)")
+    rows = q("SELECT d.purid, d.itemid, d.quantity, d.unitcoast, d.ptotal, d.LastUpdated FROM svr_inv_purchase_item_details d "
+             "LEFT JOIN svr_inv_purchase_item_parent p ON p.id = d.purid WHERE p.id IS NULL ORDER BY d.purid, d.id")
+    say(f"   {len(rows)} line(s)")
+    for r in rows[-40:]:
+        say("   " + " | ".join(f"{k}={cut(v, 22)}" for k, v in r.items()))
+    say("")
+    say("PURCHASE DETAILS TOUCHED IN THE WINDOW - by voucher (qty_lft changes on every sale, so old lines show too)")
+    for r in q("SELECT d.purid, COUNT(*) AS n, MIN(d.LastUpdated) AS lo, MAX(d.LastUpdated) AS hi, p.donetime AS head_saved FROM svr_inv_purchase_item_details d "
+               "LEFT JOIN svr_inv_purchase_item_parent p ON p.id = d.purid WHERE d.LastUpdated >= %s AND d.LastUpdated < %s GROUP BY d.purid, p.donetime ORDER BY d.purid DESC LIMIT 20", (lo, hi)):
+        say(f"   voucher {cut(r['purid'],6):6} lines {r['n']:4}  {cut(r['lo'],19)} .. {cut(r['hi'],19)}   head saved: {cut(r['head_saved'],19)}")
+    say("")
+
     # 3. purchase heads and other likely spend tables
     for t, col in (("svr_inv_purchase_item_parent", "donetime"), ("svr_inv_purchase_item_parent", "LastUpdated"),
                    ("mess_expense", "LastUpdated"), ("svr_payroll_salary_payment", "LastUpdated"),

@@ -34,6 +34,7 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .kpi small{display:block;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.kpi.click{cursor:pointer} .kpi.click:hover{border-color:var(--line2)}
 .kpi b{display:block;font-size:24px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
 .kpi em{font-style:normal;font-size:12px;color:var(--muted)}
 .kpi em.up{color:var(--good)} .kpi em.dn{color:var(--bad)}
@@ -157,7 +158,7 @@ function kpis(){
     <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
-    <div class="kpi"><small>Paid out</small><b>${rs(DOC.paidOut||0)}</b><em>${DOC.paymentCount||0} entries${DOC.draftTotal?' · <b>'+rs(DOC.draftTotal)+' being entered</b>':''}${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
+    <div class="kpi click" data-tab="buy" title="open purchases & payments"><small>Paid out</small><b>${rs(DOC.paidOut||0)}</b><em>${DOC.paymentCount||0} entries${DOC.draftTotal?' · <b>'+rs(DOC.draftTotal)+' being entered</b>':''}${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
   </div>`;
 }
 function avg(xs){ return xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null; }
@@ -323,7 +324,7 @@ function hourly(){
   const H=hbucket(recs().filter(r=>r.status==='settled'));
   const HY=hbucket(YDOC?Object.values(YDOC.records||{}).filter(r=>r.status==='settled'):[]);
   const [lo,hi]=hspan(H,HY), max=Math.max(1,...H,...HY);
-  return `<div class="card"><h2>Sales by hour <span class="n">grey = yesterday</span></h2>${hbars(H,lo,hi,max,YDOC?HY:null,'y ')}${hx(lo,hi)}</div>`;
+  return `<div class="card"><h2>Sales by hour <span class="n">${YDOC?'grey = yesterday':''}</span></h2>${hbars(H,lo,hi,max,YDOC?HY:null,'y ')}${hx(lo,hi)}</div>`;
 }
 
 function breakdown(){
@@ -358,9 +359,20 @@ function payments(){
   return `<div class="card"><h2>Paid out · by party <span class="n">${rs(tot)}</span></h2><div class="mini">${parties.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n}</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')||'<div class="note">Nothing entered at the counter yet.</div>'}</div>${Object.keys(byMode).length?`<p class="note">${Object.entries(byMode).map(([k,v])=>esc(k)+' '+rs(v)).join(' · ')}${inn.length?' · received '+rs(inn.reduce((n,p)=>n+(p.amount||0),0)):''}</p>`:''}</div>`+
     `<div class="card wide"><h2>Counter entries · live <span class="n">${live.length}${P.length-live.length?' · '+(P.length-live.length)+' deleted':''}</span></h2><input class="search" id="q" placeholder="Search party, remark, amount…" value="${esc(Q)}"><div class="scroll"><table><tr><th>Time</th><th>Kind</th><th>Party</th><th>Remarks</th><th>Mode</th><th>By</th><th class="r">Out</th><th class="r">In</th></tr>${P.map(p=>`<tr${p.deleted?' style="opacity:.5;text-decoration:line-through"':''} title="${esc((p.type||'')+(p.deleted?' · deleted '+p.deleted:''))}"><td>${hm(p.at)}</td><td>${esc(p.kind||'')}</td><td>${esc(p.party||'')}</td><td>${esc(p.remarks||'')}</td><td>${esc(p.mode||'')}</td><td>${esc(p.by||'')}</td><td class="r">${p.flow==='out'?rs(p.amount):''}</td><td class="r">${p.flow==='in'?rs(p.amount):''}</td></tr>`).join('')}</table></div></div>`;
 }
+function purchaseSheet(key){
+  const p=((DOC&&DOC.purchases)||{})[key]||((DOC&&DOC.drafts)||{})[key]||(RANGE.doc&&(RANGE.doc.purchases[key])); if(!p) return;
+  const old=document.getElementById('drill'); if(old) old.remove();
+  const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const items=p.items||[], tot=items.reduce((n,i)=>n+(i.total||0),0);
+  box.innerHTML=`<div class="sheet"><h2>${key[0]==='d'?'Being entered':'Purchase'} ${esc(p.billNo?'· bill '+p.billNo:'#'+p.id)}<button class="x" id="drillX">✕</button></h2>
+    <p class="sub">${hm(p.at)}${p.supplier?' · '+esc(p.supplier):''}${p.by?' · by '+esc(p.by):''}${p.due?' · due '+esc(p.due):''}${p.remarks?'<br>“'+esc(p.remarks)+'”':''}</p>
+    <table><tr><th>Item</th><th>Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">FOC</th><th class="r">Tax %</th><th class="r">Amount</th></tr>${items.map(i=>`<tr><td>${esc(i.n)}</td><td>${esc(i.cat||'')}</td><td class="r">${i.q??''}</td><td>${esc(i.unit||'')}</td><td class="r">${rs(i.cost||0)}</td><td class="r">${i.foc||''}</td><td class="r">${i.tax||''}</td><td class="r">${rs(i.total||0)}</td></tr>`).join('')}<tr><td colspan=7 class="r"><b>Lines ${rs(tot)}${p.discount?' · discount '+rs(p.discount):''}${p.gst?' · GST '+rs(p.gst):''}${p.delivery?' · delivery '+rs(p.delivery):''}</b></td><td class="r"><b>${rs(p.total||tot)}</b></td></tr></table></div>`;
+  document.body.appendChild(box);
+  box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+}
 function drafts(){
   const D=Object.values((DOC&&DOC.drafts)||{}); if(!D.length) return '';
-  return `<div class="card wide" style="border-color:var(--s3)"><h2>Being entered now <span class="n">on the VMENU purchase screen · not saved yet · ${rs(DOC.draftTotal||0)}</span></h2><table><tr><th>Since</th><th>Supplier</th><th>By</th><th class="r">Lines</th><th class="r">Total</th><th>Items</th></tr>${D.map(d=>`<tr><td>${hm(d.at)}</td><td>${esc(d.supplier||'—')}</td><td>${esc(d.by||'')}</td><td class="r">${d.lines}</td><td class="r">${rs(d.total)}</td><td>${(d.items||[]).map(i=>esc(i.n)+' '+(i.q||'')+(i.unit?' '+esc(i.unit):'')+(i.cost?' @'+rs(i.cost):'')).join(', ')}</td></tr>`).join('')}</table></div>`;
+  return `<div class="card wide" style="border-color:var(--s3)"><h2>Being entered now <span class="n">on the VMENU purchase screen · not saved yet · ${rs(DOC.draftTotal||0)}</span></h2><table><tr><th>Since</th><th>Supplier</th><th>By</th><th class="r">Lines</th><th class="r">Total</th><th>Items</th></tr>${D.map(d=>`<tr class="rowlink" data-pur="${esc(d.key)}"><td>${hm(d.at)}</td><td>${esc(d.supplier||'—')}</td><td>${esc(d.by||'')}</td><td class="r">${d.lines}</td><td class="r">${rs(d.total)}</td><td>${(d.items||[]).map(i=>esc(i.n)+' '+(i.q||'')+(i.unit?' '+esc(i.unit):'')+(i.cost?' @'+rs(i.cost):'')).join(', ')}</td></tr>`).join('')}</table></div>`;
 }
 function purchases(){
   let P=Object.values((DOC&&DOC.purchases)||{}).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
@@ -371,12 +383,12 @@ function purchases(){
   const byItem={}; P.forEach(p=>(p.items||[]).forEach(i=>{ const k=i.n; byItem[k]=byItem[k]||{n:i.n,cat:i.cat,unit:i.unit,q:0,v:0,c:[]}; byItem[k].q+=i.q||0; byItem[k].v+=i.total||0; if(i.cost) byItem[k].c.push(i.cost); }));
   const items=Object.values(byItem).sort((a,b)=>b.v-a.v);
   return `<div class="card"><h2>Supplier bills · by supplier <span class="n">${rs(tot)}</span></h2><div class="mini">${sups.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n}</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')||'<div class="note">No supplier bill entered today.</div>'}</div></div>`+
-    `<div class="card wide"><h2>Supplier bills <span class="n">${P.length}</span></h2><div class="scroll"><table><tr><th>Time</th><th>Supplier</th><th>Bill no</th><th>By</th><th class="r">Lines</th><th class="r">GST</th><th class="r">Total</th><th>Items</th></tr>${P.map(p=>`<tr><td>${hm(p.at)}</td><td>${esc(p.supplier||'')}</td><td>${esc(p.billNo||'')}</td><td>${esc(p.by||'')}</td><td class="r">${p.lines}</td><td class="r">${rs(p.gst||0)}</td><td class="r">${rs(p.total)}</td><td>${(p.items||[]).map(i=>esc(i.n)+' '+(i.q||'')+(i.unit?' '+esc(i.unit):'')+' @'+rs(i.cost)).join(', ')}</td></tr>`).join('')}</table></div></div>`+
+    `<div class="card wide"><h2>Supplier bills <span class="n">${P.length}</span></h2><div class="scroll"><table><tr><th>Time</th><th>Supplier</th><th>Bill no</th><th>By</th><th class="r">Lines</th><th class="r">GST</th><th class="r">Total</th><th>Items</th></tr>${P.map(p=>`<tr class="rowlink" data-pur="${esc(p.key)}"><td>${hm(p.at)}</td><td>${esc(p.supplier||'')}</td><td>${esc(p.billNo||'')}</td><td>${esc(p.by||'')}</td><td class="r">${p.lines}</td><td class="r">${rs(p.gst||0)}</td><td class="r">${rs(p.total)}</td><td>${(p.items||[]).map(i=>esc(i.n)+' '+(i.q||'')+(i.unit?' '+esc(i.unit):'')+' @'+rs(i.cost)).join(', ')}</td></tr>`).join('')}</table></div></div>`+
     `<div class="card wide"><h2>Item‑wise purchases</h2><div class="scroll"><table><tr><th>Item</th><th>Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Avg cost</th><th class="r">Total</th></tr>${items.map(i=>`<tr><td>${esc(i.n)}</td><td>${esc(i.cat||'')}</td><td class="r">${i.q}</td><td>${esc(i.unit||'')}</td><td class="r">${i.c.length?rs(i.c.reduce((a,b)=>a+b,0)/i.c.length):''}</td><td class="r">${rs(i.v)}</td></tr>`).join('')}</table></div></div>`;
 }
 
 function drill(key){
-  const r=(DOC.records||{})[key]; if(!r) return;
+  const r=(DOC.records||{})[key]||(RANGE.doc&&RANGE.doc.records[key]); if(!r) return;
   const ev=[]; const push=(cls,at,title,body)=>ev.push({cls,at,title,body});
   const byKot={}; (r.items||[]).forEach(i=>{ (byKot[i.kotAt||r.createdAt||'?']=byKot[i.kotAt||r.createdAt||'?']||[]).push(i); });
   Object.keys(byKot).sort().forEach((t,i)=>push('kot',t,`KOT ${i+1}${i===0?' · order created':' · add‑on'}`,`<ul>${byKot[t].map(x=>`<li>${x.q}× ${esc(x.n)} <small>${esc(x.kit||'')}${x.ready?' · '+esc(x.ready):''}${x.servedAt?' · served '+hm(x.servedAt):''}</small> <span style="float:right">${rs(x.a)}</span></li>`).join('')}</ul>`));
@@ -470,6 +482,39 @@ function compare(){
     mini('By section',A.section,B&&B.section)+mini('By waiter',A.waiter,B&&B.waiter)+mini('By payment',A.pay,B&&B.pay)+
     `<div class="card wide"><h2>Top items <span class="n">${esc(DAY)} vs ${esc(bd||'—')}</span></h2><table><tr><th>Item</th><th class="r">Qty</th><th class="r">Sales</th><th class="r">Qty ${esc(bd||'')}</th><th class="r">Sales ${esc(bd||'')}</th><th class="r">Δ</th></tr>${topA.map(([n,x])=>{ const y=B&&B.items[n]; const d=y&&y.v?Math.round(100*(x.v-y.v)/y.v):null; return `<tr><td>${esc(n)}</td><td class="r">${x.q}</td><td class="r">${rs(x.v)}</td><td class="r">${y?y.q:'—'}</td><td class="r">${y?rs(y.v):'—'}</td><td class="r">${d==null?'':`<span class="d ${d>=0?'up':'dn'}">${d>=0?'+':''}${d}%</span>`}</td></tr>`; }).join('')}</table></div>`;
 }
+/* ---- any two dates: every card, over the whole span ---- */
+let RANGE={from:'',to:'',doc:null,days:0,busy:false};
+function withDoc(doc,fn){ const d=DOC,y=YDOC; DOC=doc; YDOC=null; try{ return fn(); } finally{ DOC=d; YDOC=y; } }
+async function loadRange(){
+  const days=Object.keys(INDEX).filter(d=>d>=RANGE.from&&d<=RANGE.to&&(INDEX[d].bills||INDEX[d].rev)).sort(); if(!days.length){ RANGE.doc=null; RANGE.days=0; render(); return; }
+  RANGE.busy=true; render();
+  const V={day:RANGE.from+' → '+RANGE.to,records:{},purchases:{},payments:{},paidOut:0,paidIn:0,purchaseTotal:0,updatedAt:''};
+  for(const d of days){ const doc=d===bizToday()?DOC:await loadDay(d); if(!doc) continue;
+    Object.entries(doc.records||{}).forEach(([k,r])=>{ V.records[d+'/'+k]=Object.assign({},r,{key:d+'/'+k,day:d}); });
+    Object.entries(doc.purchases||{}).forEach(([k,r])=>{ V.purchases[d+'/'+k]=Object.assign({},r,{key:d+'/'+k}); });
+    Object.entries(doc.payments||{}).forEach(([k,r])=>{ V.payments[d+'/'+k]=Object.assign({},r,{key:d+'/'+k}); });
+    V.paidOut+=doc.paidOut||0; V.paidIn+=doc.paidIn||0; V.purchaseTotal+=doc.purchaseTotal||0; }
+  V.purchaseCount=Object.keys(V.purchases).length; V.paymentCount=Object.values(V.payments).filter(p=>!p.deleted).length;
+  RANGE.doc=V; RANGE.days=days.length; RANGE.busy=false; render();
+}
+function range(){
+  const first=Object.keys(INDEX).sort()[0]||bizToday();
+  if(!RANGE.from){ RANGE.from=bizToday().slice(0,8)+'01'; RANGE.to=bizToday(); }
+  const head=`<div class="card wide"><h2>From → to <span class="n">every card below covers the whole span · loads each day once, then it is on this device</span></h2>
+    <div class="tabs" style="margin:6px 0 0"><input type="date" id="rFrom" value="${RANGE.from}" min="${first}" max="${bizToday()}" class="fld"> <input type="date" id="rTo" value="${RANGE.to}" min="${first}" max="${bizToday()}" class="fld"> <button class="tab on" id="rGo">${RANGE.busy?'Loading…':'Show'}</button>
+    ${[['This month',bizToday().slice(0,8)+'01',bizToday()],['Last 7 days',ymd(new Date(Date.now()-6*864e5)),bizToday()],['Last 30 days',ymd(new Date(Date.now()-29*864e5)),bizToday()],['Last month',(()=>{ const d=new Date(bizToday()+'T12:00:00'); d.setDate(0); return ymd(d).slice(0,8)+'01'; })(),(()=>{ const d=new Date(bizToday()+'T12:00:00'); d.setDate(0); return ymd(d); })()]].map(q=>`<button class="tab" data-range="${q[1]}|${q[2]}">${q[0]}</button>`).join('')}</div></div>`;
+  if(!RANGE.doc) return head+(RANGE.busy?'':'<div class="card wide"><div class="note">Pick two dates and press Show.</div></div>');
+  const V=RANGE.doc, S=Object.values(V.records).filter(r=>r.status==='settled'&&r.kind!=='staff'), rev=S.reduce((n,r)=>n+(r.total||0),0);
+  const k=`<div class="kpis">
+    <div class="kpi"><small>Sales</small><b>${rs(rev)}</b><em>${RANGE.days} days · ${rs(rev/Math.max(1,RANGE.days))}/day</em></div>
+    <div class="kpi"><small>Bills</small><b>${S.length}</b><em>avg ${rs(S.length?rev/S.length:0)} · ${Math.round(S.length/Math.max(1,RANGE.days))}/day</em></div>
+    <div class="kpi"><small>Dine · Counter · Delivery</small><b>${rs(S.filter(r=>r.kind==='dine').reduce((n,r)=>n+(r.total||0),0))}</b><em>${rs(S.filter(r=>r.kind==='counter').reduce((n,r)=>n+(r.total||0),0))} · ${rs(S.filter(r=>r.kind==='delivery').reduce((n,r)=>n+(r.total||0),0))}</em></div>
+    <div class="kpi"><small>Cash · Card</small><b>${rs(S.reduce((n,r)=>n+(r.cash||0),0))}</b><em>card ${rs(S.reduce((n,r)=>n+(r.card||0),0))}</em></div>
+    <div class="kpi click" data-tab="rbuy"><small>Paid out</small><b>${rs(V.paidOut)}</b><em>${V.paymentCount} entries · ${rev?Math.round(100*V.paidOut/rev)+'% of sales':''}</em></div>
+    <div class="kpi"><small>Edits / voids</small><b>${Object.values(V.records).reduce((n,r)=>n+(r.edits||[]).length,0)}</b><em>${rs(withDoc(V,()=>voidList().reduce((n,v)=>n+v.value,0)))}</em></div></div>`;
+  const cards=withDoc(V,()=>hourly()+closures()+breakdown()+waiters()+upsell()+tables()+items()+voids()+payments()+purchases());
+  return head+k+`<div class="grid">${cards}</div>`;
+}
 function trends(){
   const days=Object.keys(INDEX).sort().slice(-30);
   if(days.length<2) return '<div class="card wide"><div class="note">Trends need the day index. On the shop PC run <b>daylog-backfill-all.bat</b> once.</div></div>';
@@ -513,17 +558,20 @@ function render(){
   const m=$('main'); if(!DOC){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; return; }
   const live=DAY===bizToday();
   m.innerHTML=kpis()+
-    `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['trend','Trends'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
+    `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['trend','Trends'],['range','From → to'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
     (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}</div>`:
      TAB==='trend'?`<div class="grid">${trends()}</div>`:
+     TAB==='range'||TAB==='rbuy'?range():
      TAB==='floor'?`<div class="grid">${live?alerts():''}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute.</div>`;
-  $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
+  $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab==='rbuy'?'range':b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
+  $$('[data-pur]').forEach(t=>t.onclick=()=>purchaseSheet(t.dataset.pur));
+  const rg=$('rGo'); if(rg){ rg.onclick=()=>{ RANGE.from=$('rFrom').value; RANGE.to=$('rTo').value; if(RANGE.from>RANGE.to){ const t=RANGE.from; RANGE.from=RANGE.to; RANGE.to=t; } loadRange(); }; $$('[data-range]').forEach(b=>b.onclick=()=>{ const p=b.dataset.range.split('|'); RANGE.from=p[0]; RANGE.to=p[1]; loadRange(); }); }
   $$('[data-day]').forEach(b=>b.onclick=()=>{ TAB='sales'; setDay(b.dataset.day); });
   $$('[data-csv]').forEach(b=>b.onclick=()=>csv(b.dataset.csv));
   const cd=$('cmpDay'); if(cd) cd.onchange=()=>pickCompare(cd.value);

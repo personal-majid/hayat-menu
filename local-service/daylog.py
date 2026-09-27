@@ -332,12 +332,13 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
 
 def read_purchases(src, m: Masters, day: str, start_hour: int) -> dict:
     """What came in today: every purchase bill with its lines."""
-    lo, hi = day_bounds(day, start_hour)
+    # VMENU stores the date the cashier picked (00:00) plus the clock time, so
+    # a night entry reads "25th 00:33" - the calendar date is the day it belongs to
     q = src.q
     out = {}
     if not src.has("svr_inv_purchase_item_parent"):
         return out
-    heads = q("SELECT * FROM svr_inv_purchase_item_parent WHERE donetime >= %s AND donetime < %s", (lo, hi))
+    heads = q("SELECT * FROM svr_inv_purchase_item_parent WHERE DATE(donetime) = %s", (day,))
     ids = [h["id"] for h in heads]
     lines = {}
     if ids and src.has("svr_inv_purchase_item_details"):
@@ -371,7 +372,7 @@ def read_payments(src, m: Masters, day: str, start_hour: int) -> dict:
     purchase entries (ONION, DAILY KITCHEN VEGITABLE...), supplier payments,
     expenses, credit receipts. Everything in the accounts book that is not a
     POS sale (the bills already carry those). Deleted entries stay, marked."""
-    lo, hi = day_bounds(day, start_hour)
+    lo, hi = dt.datetime.strptime(day, "%Y-%m-%d"), dt.datetime.strptime(day, "%Y-%m-%d") + dt.timedelta(days=1)   # calendar day, like VMENU's own screens
     q = src.q
     out = {}
     if not src.has("act_paymentorrecipt"):
@@ -437,6 +438,18 @@ def read_drafts(src, m: Masters) -> dict:
             it = m.pitem(l.get("itemid"), l.get("type"))
             lines.setdefault(str(l.get("purid") or 0), []).append({"id": l.get("itemid"), "n": it["n"], "unit": m.units.get(str(l.get("baseunitid"))) or it["unit"],
                                                                    "q": n(l.get("quantity")), "cost": n(l.get("unitcoast")), "total": n(l.get("ptotal")), "foc": n(l.get("foc"))})
+    # the real one: lines are written to svr_inv_purchase_item_details as they are
+    # typed; the head row in svr_inv_purchase_item_parent only appears on Save
+    if src.has("svr_inv_purchase_item_details") and src.has("svr_inv_purchase_item_parent"):
+        for l in q("SELECT d.* FROM svr_inv_purchase_item_details d LEFT JOIN svr_inv_purchase_item_parent p ON p.id = d.purid "
+                   "WHERE p.id IS NULL AND d.purid IS NOT NULL AND d.purid > 0"):
+            it = m.pitem(l.get("itemid"), l.get("type"))
+            k = str(l.get("purid"))
+            lines.setdefault(k, []).append({"id": l.get("itemid"), "n": it["n"], "cat": it["cat"], "unit": m.units.get(str(l.get("baseunitid"))) or it["unit"],
+                                            "q": n(l.get("quantity")), "cost": n(l.get("unitcoast")), "total": n(l.get("ptotal")) or round(n(l.get("quantity")) * n(l.get("unitcoast")), 2),
+                                            "foc": n(l.get("foc")), "tax": n(l.get("pur_taxper")), "kitchen": m.kitchens.get(str(l.get("kitchid"))),
+                                            "at": iso(l.get("LastUpdated"))})
+            heads.setdefault(k, {"id": k, "donetime": l.get("LastUpdated")})
     for k in set(heads) | set(lines):
         h, items = heads.get(k, {}), lines.get(k, [])
         if not h and not items:
@@ -493,6 +506,7 @@ def firestore(cfg):
     return fs.client()
 
 
+SCHEMA = 3               # bump when the shape of a day changes: sync then rebuilds every day once
 CARRY = ("rider", "dispatchAt", "dispatch", "foodReady", "dueCount", "billPrinted", "token")
 STAFF_MAX = 200          # a CASHIER bill this small is staff food - not a customer
 
@@ -589,12 +603,13 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         r["updated"] = now
         havet[key] = r
         changedt[key] = r
-    # an entry that vanished from the book without a delete record: say so
-    for key, r in havet.items():
-        if spend_due and key not in payments and not r.get("deleted"):
-            r["deleted"] = now
-            r["updated"] = now
-            changedt[key] = r
+    # an entry no longer on this day (moved, or deleted without a delete record): drop it
+    gone = []
+    if spend_due:
+        gone += [("purchases", k) for k in list(havep) if k not in purchases]
+        gone += [("payments", k) for k in list(havet) if k not in payments]
+        for coll, k in gone:
+            (havep if coll == "purchases" else havet).pop(k, None)
     changed = {}
     for key, r in fresh.items():
         old = have.get(key)
@@ -631,15 +646,20 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
                 "paymentCount": sum(1 for t in havet.values() if not t.get("deleted")),
                 "paidOut": round(sum((t.get("amount") or 0) for t in havet.values() if t.get("flow") == "out" and not t.get("deleted")), 2),
                 "paidIn": round(sum((t.get("amount") or 0) for t in havet.values() if t.get("flow") == "in" and not t.get("deleted")), 2)})
+    doc["schema"] = SCHEMA
     save_local(doc)
     top = {k: doc[k] for k in ("day", "updatedAt", "count", "settled", "open", "revenue", "purchaseCount", "purchaseTotal",
                                "paymentCount", "paidOut", "paidIn")}
-    if (changed or changedp or changedt) and db is not None:
+    if (changed or changedp or changedt or gone) and db is not None:
         ref = db.collection("vm_daylog").document(day)
         # the summary merges; each changed record REPLACES its map, so a bill
         # that went open -> settled does not keep stale open-only fields online
         ref.set(top, merge=True, timeout=30)
         paths = {}
+        if gone:
+            from google.cloud import firestore as gcf
+            for coll, k in gone:
+                paths[f"{coll}.{k}"] = gcf.DELETE_FIELD
         if changedp.pop("_drafts", None):
             paths["drafts"] = doc.get("drafts", {})
             paths["draftTotal"] = doc.get("draftTotal", 0)
@@ -781,7 +801,7 @@ def main(argv):
             while d <= today:
                 day = d.strftime("%Y-%m-%d")
                 l, o = load_local(day), online.get(day)
-                ok = (day != today.strftime("%Y-%m-%d") and l.get("updatedAt") and o and day in idx
+                ok = (day != today.strftime("%Y-%m-%d") and l.get("updatedAt") and o and day in idx and l.get("schema") == SCHEMA
                       and l.get("settled") == o.get("settled") and (l.get("revenue") or 0) == (o.get("revenue") or 0)
                       and l.get("paymentCount") == o.get("paymentCount"))
                 if ok:
