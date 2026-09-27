@@ -470,6 +470,21 @@ def closure(have: dict) -> dict:
     return {k: round(sum(v) / len(v)) for k, v in buckets.items() if v}
 
 
+def hourly(have: dict, start_hour: int = 5) -> list:
+    """Sales per business hour (index 0 = start_hour) - the owner board's
+    'by this hour yesterday' comes from this without reading old days."""
+    H = [0.0] * 24
+    for r in have.values():
+        if r.get("status") != "settled":
+            continue
+        try:
+            h = int(str(r.get("settledAt"))[11:13])
+        except Exception:
+            continue
+        H[(h - start_hour) % 24] += r.get("total") or 0
+    return [round(x, 2) for x in H]
+
+
 MASTERS_SENT = None
 def push_masters(db, m: Masters):
     """The floor: every table with its chairs, section and position, plus the
@@ -575,7 +590,8 @@ def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
         # one read. Written every run (a backfilled day may have nothing new).
         db.collection("vm_meta").document("days").set({"days": {day: {
             "rev": top["revenue"], "bills": top["settled"], "open": top["open"], "paidOut": top["paidOut"],
-            "purchases": top["purchaseTotal"], "close": closure(have), "updatedAt": now}}}, merge=True, timeout=30)
+            "purchases": top["purchaseTotal"], "close": closure(have),
+            "hours": hourly(have, cfg.getint("vmenu", "day_start_hour", fallback=5)), "updatedAt": now}}}, merge=True, timeout=30)
     if with_open and db is not None:
         push_masters(db, m)
     LOG.info("day %s: %d records, %d changed, %d settled, %d open, %d purchases, %d payments out %s", day, len(have), len(changed),
@@ -629,9 +645,27 @@ def check(cfg) -> int:
     return 0 if not bad else 2
 
 
+def wipe(cfg) -> int:
+    """Clean slate: every vm_daylog day, the day index and the local files.
+    Nothing in VMENU is touched; a backfill rebuilds all of it."""
+    db = firestore(cfg)
+    n = 0
+    for d in db.collection("vm_daylog").stream(timeout=60):
+        d.reference.delete(timeout=30)
+        n += 1
+    db.collection("vm_meta").document("days").delete(timeout=30)
+    k = 0
+    for p in OUT.glob("????-??-??.json"):
+        p.unlink()
+        k += 1
+    print(f"wiped {n} days online, {k} local files. Now run daylog-backfill-all.bat")
+    LOG.warning("wipe: %d online days, %d local files removed", n, k)
+    return 0
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["tick", "day", "backfill", "check"])
+    ap.add_argument("cmd", choices=["tick", "day", "backfill", "check", "wipe"])
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--since")
     ap.add_argument("--config", default=str(HERE / "config.ini"))
@@ -659,6 +693,8 @@ def main(argv):
 
     if a.cmd == "check":
         return check(cfg)
+    if a.cmd == "wipe":
+        return wipe(cfg)
 
     src = VS.Source(cfg)
     m = Masters(src)

@@ -181,11 +181,62 @@ function closeStats(R){
   });
   return g;
 }
+/* where today stands against the same clock on other days */
+function pace(){
+  const live=DAY===bizToday();
+  const nowH=(()=>{ const d=new Date(NOW); return (d.getHours()-BH0+24)%24 + d.getMinutes()/60; })();
+  const upto=live?nowH:24;
+  const till=(H)=>{ if(!H) return null; let t=0; for(let i=0;i<24;i++){ if(i+1<=upto) t+=H[i]||0; else if(i<upto) t+=(H[i]||0)*(upto-i); } return t; };
+  const H=hbucket(recs().filter(r=>r.status==='settled')), today=till(H);
+  const y=new Date(DAY+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y);
+  const yH=YDOC?hbucket(Object.values(YDOC.records||{}).filter(r=>r.status==='settled')):(INDEX[yd]&&INDEX[yd].hours);
+  const w=new Date(DAY+'T12:00:00'); w.setDate(w.getDate()-7); const wd=ymd(w), wH=INDEX[wd]&&INDEX[wd].hours;
+  const last7=[]; for(let i=1;i<=7;i++){ const x=new Date(DAY+'T12:00:00'); x.setDate(x.getDate()-i); const k=ymd(x); if(INDEX[k]&&INDEX[k].hours) last7.push(till(INDEX[k].hours)); }
+  const avg7=last7.length?last7.reduce((a,b)=>a+b,0)/last7.length:null;
+  const full7=[]; for(let i=1;i<=7;i++){ const x=new Date(DAY+'T12:00:00'); x.setDate(x.getDate()-i); const k=ymd(x); if(INDEX[k]&&INDEX[k].rev) full7.push(INDEX[k].rev); }
+  const proj=(live&&avg7&&full7.length)?today/avg7*(full7.reduce((a,b)=>a+b,0)/full7.length):null;
+  const dow=d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
+  const row=(k,v,sub)=>{ const d=v!=null&&v?Math.round(100*(today-v)/v):null; return `<div class="mrow"><span>${k}${sub?' <small style="color:var(--muted)">'+sub+'</small>':''}</span><div class="b" style="width:${v!=null?Math.min(100,100*v/Math.max(1,today,v)):0}%"></div><span class="v">${v==null?'—':rs(v)}${d!=null?` <span class="d ${d>=0?'up':'dn'}">${d>=0?'+':''}${d}%</span>`:''}</span></div>`; };
+  const at=live?hm(tsNow()):'full day';
+  return `<div class="card"><h2>Pace <span class="n">by ${at}${live?' · today so far '+rs(today):''}</span></h2><div class="mini">
+    ${row('Today',today)}${row('Yesterday by now',till(yH),dow(yd))}${row('Last week same day',till(wH),dow(wd))}${row('Last 7 days avg by now',avg7,last7.length+' days')}</div>
+    ${proj?`<p class="note">On this pace today closes around <b>${rs(proj)}</b> (last 7 days average close ${rs(full7.reduce((a,b)=>a+b,0)/full7.length)}).</p>`:(Object.keys(INDEX).length<3?'<p class="note">Fills in once the day index has a week of days (daylog-backfill-all.bat).</p>':'')}</div>`;
+}
+function tables(){
+  const g={}; recs().filter(r=>r.status==='settled'&&r.kind==='dine'&&r.table).forEach(r=>{ const x=g[r.table]=g[r.table]||{sec:r.section,n:0,v:0,stay:[],pax:0}; x.n++; x.v+=sum(r); x.pax+=r.pax||0; const t=mins(r.createdAt,r.settledAt); if(t!=null&&t>=0&&t<=600) x.stay.push(t); });
+  const rows=Object.entries(g).sort((a,b)=>b[1].v-a[1].v); if(!rows.length) return '';
+  const turns=rows.reduce((n,r)=>n+r[1].n,0);
+  return `<div class="card"><h2>Tables <span class="n">${rows.length} used · ${turns} turns</span></h2><table><tr><th>Table</th><th>Section</th><th class="r">Turns</th><th class="r">Sales</th><th class="r">Avg bill</th><th class="r">Avg stay</th><th class="r">₹/min</th></tr>${rows.map(([t,x])=>{ const st=avg(x.stay); return `<tr><td>${esc(t)}</td><td>${esc(x.sec||'')}</td><td class="r">${x.n}</td><td class="r">${rs(x.v)}</td><td class="r">${rs(x.v/x.n)}</td><td class="r">${st!=null?st+'m':'—'}</td><td class="r">${st?Math.round(x.v/x.n/st):'—'}</td></tr>`; }).join('')}</table></div>`;
+}
+/* every quantity cut or line removed, who did it and what it was worth */
+function voidList(){
+  const out=[], book={}; recs().forEach(r=>(r.items||[]).forEach(i=>{ if(i.p&&!book[i.n]) book[i.n]=i.p; }));   /* a removed line is no longer on its bill; price it from any bill of the day */
+  recs().forEach(r=>(r.edits||[]).forEach(e=>{ const it=(r.items||[]).find(i=>i.n===e.item); const price=e.price||(it&&it.p)||book[e.item]||0; const gone=e.void||e.from===e.to; const cut=gone?(e.from||e.to||0):Math.max(0,(e.from||0)-(e.to||0));   /* VMENU logs a removed line as old = new */
+    out.push({key:r.key,kot:r.kot,table:r.table||(r.token?'T'+r.token:''),waiter:r.waiter,at:e.at,item:e.item,from:e.from,to:e.to,cut,value:cut*price,reason:e.reason,by:e.by||r.waiter||'—',void:gone,remarks:e.remarks&&e.remarks!==e.reason?e.remarks:null}); }));
+  return out.sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+}
+function voids(){
+  const V=voidList(); if(!V.length) return '';
+  const g={}; V.forEach(v=>{ const x=g[v.by]=g[v.by]||{n:0,cut:0,v:0}; x.n++; x.cut+=v.cut; x.v+=v.value; });
+  const rows=Object.entries(g).sort((a,b)=>b[1].v-a[1].v), max=Math.max(1,...rows.map(r=>r[1].v)), tot=V.reduce((n,v)=>n+v.value,0);
+  return `<div class="card"><h2>Voids · by person <span class="n">${V.length} · ${rs(tot)}</span></h2><div class="mini">${rows.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n} · ${x.cut} qty</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')}</div></div>`+
+    `<div class="card wide"><h2>Voids &amp; edits <span class="n">click a row for the bill</span></h2><div class="scroll"><table><tr><th>Time</th><th>KOT</th><th>Table</th><th>By</th><th>Item</th><th class="r">Qty</th><th>Reason</th><th class="r">Value</th></tr>${V.map(v=>`<tr class="rowlink" data-drill="${esc(v.key)}"><td>${hm(v.at)}</td><td>${esc(v.kot)}</td><td>${esc(v.table)}</td><td>${esc(v.by)}</td><td>${esc(v.item)}${v.void?' <small style="color:var(--muted)">removed</small>':''}</td><td class="r">${v.void?'−'+v.cut:v.from+'→'+v.to}</td><td>${esc(v.reason||'')}${v.remarks?' · '+esc(v.remarks):''}</td><td class="r">${rs(v.value)}</td></tr>`).join('')}</table></div></div>`;
+}
+/* the extras a waiter adds around the main course - or does not */
+const EXTRAS=[['Desserts',/dessert|ice ?cream|pudding|halwa|kunafa|cake|brownie|faluda|sweet/i],['Salads',/salad|hummus|tabbouleh|raita|mezze/i],['Juices',/juice|lime|shake|lassi|smoothie/i],['Mojitos',/mojito|mocktail|soda|cooler|fresh drink/i],['Soups & starters',/soup|starter|snack|fries|nugget/i]];
+const extraKind=i=>{ const t=(i.cat||'')+' '+(i.n||''); for(const [k,re] of EXTRAS) if(re.test(t)) return k; return null; };
+function upsell(){
+  const g={}; recs().filter(r=>r.status==='settled'&&r.kind!=='staff'&&r.waiter).forEach(r=>{ const w=g[r.waiter]=g[r.waiter]||{bills:0,with:0,v:0,k:{}}; w.bills++; let any=false;
+    (r.items||[]).forEach(i=>{ const k=extraKind(i); if(!k) return; any=true; w.k[k]=(w.k[k]||0)+(i.q||0); w.v+=i.a||0; }); if(any) w.with++; });
+  const rows=Object.entries(g).sort((a,b)=>(b[1].with/b[1].bills)-(a[1].with/a[1].bills)); if(!rows.length) return '';
+  const cols=EXTRAS.map(e=>e[0]).filter(k=>rows.some(r=>r[1].k[k]));
+  return `<div class="card wide"><h2>Upselling · by waiter <span class="n">extras sold with the main course</span></h2><table><tr><th>Waiter</th><th class="r">Bills</th><th class="r">Bills with extras</th>${cols.map(c=>`<th class="r">${c}</th>`).join('')}<th class="r">Extras ₹</th><th class="r">₹ / bill</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r">${w.bills}</td><td class="r"><b>${Math.round(100*w.with/w.bills)}%</b></td>${cols.map(c=>`<td class="r">${w.k[c]||''}</td>`).join('')}<td class="r">${rs(w.v)}</td><td class="r">${rs(w.v/w.bills)}</td></tr>`).join('')}</table></div>`;
+}
 function closures(){
   const g=closeStats(recs()), order=['AC','NON AC','JUICY HUT','Counter','Delivery'];
   const keys=Object.keys(g).sort((a,b)=>(order.indexOf(a)+1||99)-(order.indexOf(b)+1||99));
   const m=x=>x==null?'—':x+'m';
-  return `<div class="card"><h2>How long a bill takes <span class="n">avg minutes · staff bills left out</span></h2><table class="close"><tr><th>Where</th><th class="r">Bills</th><th class="r">Order→bill</th><th class="r">Bill→paid</th><th class="r">Order→paid</th><th class="r">Out the door</th></tr>${keys.map(k=>{ const x=g[k]; return `<tr><td>${esc(k)}</td><td class="r">${x.n}</td><td class="r">${m(avg(x.toBill))}</td><td class="r">${m(avg(x.toPay))}</td><td class="r"><b>${m(avg(x.total))}</b></td><td class="r">${k==='Delivery'?m(avg(x.toGo)):''}</td></tr>`; }).join('')||'<tr><td colspan=6 class="note">No settled bills yet.</td></tr>'}</table></div>`;
+  return `<div class="card wide"><h2>How long a bill takes <span class="n">avg minutes · staff bills left out</span></h2><table class="close"><tr><th>Where</th><th class="r">Bills</th><th class="r">Order→bill</th><th class="r">Bill→paid</th><th class="r">Order→paid</th><th class="r">Out the door</th></tr>${keys.map(k=>{ const x=g[k]; return `<tr><td>${esc(k)}</td><td class="r">${x.n}</td><td class="r">${m(avg(x.toBill))}</td><td class="r">${m(avg(x.toPay))}</td><td class="r"><b>${m(avg(x.total))}</b></td><td class="r">${k==='Delivery'?m(avg(x.toGo)):''}</td></tr>`; }).join('')||'<tr><td colspan=6 class="note">No settled bills yet.</td></tr>'}</table></div>`;
 }
 function tsNow(){ const d=new Date(NOW); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
 
@@ -370,7 +421,13 @@ function trends(){
     if(!have.length) return '';
     return `<div class="card wide"><h2>${title} <span class="n">avg ${fmt(have.reduce((a,b)=>a+b,0)/have.length)} · best ${fmt(Math.max(...have))}</span></h2><div class="bars" style="${cols}">${vals.map((v,i)=>`<div class="bar click${days[i]===DAY?' cur':''}" data-day="${days[i]}" style="height:${Math.max(2,100*v/max)}%" data-t="${days[i].slice(5)} ${fmt(v)}"></div>`).join('')}</div>${axis}</div>`; };
   const closeKeys=[...new Set(days.flatMap(d=>Object.keys((INDEX[d]||{}).close||{})))];
-  return series('Sales by day',x=>x.rev,rs)+series('Bills by day',x=>x.bills,x=>Math.round(x))+series('Average bill',x=>x.bills?x.rev/x.bills:0,rs)+series('Paid out at the counter',x=>x.paidOut,rs)+
+  const all=Object.keys(INDEX).filter(d=>INDEX[d]&&INDEX[d].rev&&d!==bizToday());
+  const bucketCard=(title,keyOf,labels,note)=>{ const g={}; all.forEach(d=>{ const k=keyOf(d); (g[k]=g[k]||[]).push(INDEX[d].rev); }); const vals=labels.map(l=>g[l]?g[l].reduce((a,b)=>a+b,0)/g[l].length:0); const max=Math.max(1,...vals);
+    return `<div class="card"><h2>${title} <span class="n">avg sales/day · ${all.length} days</span></h2><div class="bars" style="grid-template-columns:repeat(${labels.length},1fr);height:70px">${vals.map((v,i)=>`<div class="bar" style="height:${Math.max(2,100*v/max)}%" data-t="${labels[i]} ${rs(v)} · ${(g[labels[i]]||[]).length} days"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${labels.length},1fr)">${labels.map(l=>'<span>'+l+'</span>').join('')}</div>${note?'<p class="note">'+note+'</p>':''}</div>`; };
+  const dom=d=>{ const n=+d.slice(8); return n<=10?'1–10':n<=20?'11–20':'21–end'; };
+  const dow=d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
+  const pattern=all.length>=14?bucketCard('Start vs end of month',dom,['1–10','11–20','21–end'],'Salary days first, thin days last.')+bucketCard('Day of the week',dow,['Mon','Tue','Wed','Thu','Fri','Sat','Sun']):'';
+  return pattern+series('Sales by day',x=>x.rev,rs)+series('Bills by day',x=>x.bills,x=>Math.round(x))+series('Average bill',x=>x.bills?x.rev/x.bills:0,rs)+series('Paid out at the counter',x=>x.paidOut,rs)+
     closeKeys.map(k=>series('Order→paid · '+k+' (minutes)',x=>(x.close||{})[k],x=>Math.round(x)+'m')).join('')+
     '<div class="note">Click a bar to open that day.</div>';
 }
@@ -385,7 +442,7 @@ function waiters(){
   const R=recs(), g={};
   R.forEach(r=>{ if(!r.waiter) return; const w=g[r.waiter]=g[r.waiter]||{bills:0,v:0,open:0,edits:0,d:[],k:[]}; if(r.status==='settled'){ w.bills++; w.v+=r.total||0; const a=mins(r.createdAt,r.dueAt); if(a!=null) w.d.push(a); } else w.open++; w.edits+=(r.edits||[]).length; w.k.push(r.kotCount||0); });
   const rows=Object.entries(g).sort((a,b)=>b[1].v-a[1].v);
-  return `<div class="card"><h2>Waiters</h2><table><tr><th>Name</th><th class="r">Bills</th><th class="r">Open</th><th class="r">Sales</th><th class="r">Order→bill</th><th class="r">Add‑on KOT %</th><th class="r">Edits</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r">${w.bills}</td><td class="r">${w.open}</td><td class="r">${rs(w.v)}</td><td class="r">${avg(w.d)??'—'}m</td><td class="r">${w.k.length?Math.round(100*w.k.filter(x=>x>1).length/w.k.length):0}%</td><td class="r">${w.edits}</td></tr>`).join('')}</table></div>`;
+  return `<div class="card"><h2>Waiters</h2><table><tr><th>Name</th><th class="r">Bills</th><th class="r">Open</th><th class="r">Sales</th><th class="r">Avg bill</th><th class="r">Order→bill</th><th class="r">Add‑on KOT %</th><th class="r">Edits</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r">${w.bills}</td><td class="r">${w.open}</td><td class="r">${rs(w.v)}</td><td class="r">${w.bills?rs(w.v/w.bills):'—'}</td><td class="r">${avg(w.d)??'—'}m</td><td class="r">${w.k.length?Math.round(100*w.k.filter(x=>x>1).length/w.k.length):0}%</td><td class="r">${w.edits}</td></tr>`).join('')}</table></div>`;
 }
 
 function render(){
@@ -395,7 +452,7 @@ function render(){
   const live=DAY===bizToday();
   m.innerHTML=kpis()+
     `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['trend','Trends'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
-    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${closures()}${breakdown()}${waiters()}</div>`:
+    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}</div>`:
      TAB==='trend'?`<div class="grid">${trends()}</div>`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
