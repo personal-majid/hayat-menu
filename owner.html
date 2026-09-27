@@ -482,7 +482,8 @@ async function days(){
   let err='';
   try{ const ix=await fs.getDoc(fs.doc(db,'vm_meta','days')); if(ix.exists()) INDEX=ix.data().days||{}; }catch(e){ err=e.code||String(e); }
   Object.keys(INDEX).forEach(d=>out.push(d));
-  if(!out.length){ try{ const q=await fs.getDocs(fs.query(fs.collection(db,'vm_daylog'),fs.orderBy(fs.documentId(),'desc'),fs.limit(60))); q.docs.forEach(d=>out.push(d.id)); }catch(e){ err=e.code||String(e); } }
+  /* a thin index (sync not run yet) - list the day docs themselves as well */
+  if(out.length<8){ try{ const q=await fs.getDocs(fs.query(fs.collection(db,'vm_daylog'),fs.orderBy(fs.documentId(),'desc'),fs.limit(60))); q.docs.forEach(d=>{ if(!out.includes(d.id)) out.push(d.id); const x=d.data(); if(!INDEX[d.id]&&x) INDEX[d.id]={rev:x.revenue||0,bills:x.settled||0,paidOut:x.paidOut||0}; }); }catch(e){ err=e.code||String(e); } }
   out.sort().reverse();
   if(!out.includes(bizToday())) out.unshift(bizToday());
   DAYS=out;
