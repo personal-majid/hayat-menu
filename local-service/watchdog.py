@@ -68,15 +68,19 @@ def create_task(name, script, args, schedule, every):
 
 
 def log_age_min(rel):
+    if not rel:
+        return None
     p = HERE / rel
-    if not rel or not p.exists():
+    if not p.exists():
         return None
     return (dt.datetime.now() - dt.datetime.fromtimestamp(p.stat().st_mtime)).total_seconds() / 60
 
 
 def last_line(rel):
+    if not rel:
+        return ""
     p = HERE / rel
-    if not rel or not p.exists():
+    if not p.exists():
         return ""
     try:
         with p.open("rb") as f:
@@ -105,6 +109,9 @@ def round_once(fix=True):
     for name, (script, args, schedule, every, logf, quiet) in TASKS.items():
         if name == "Hayat Publish" and not publish_on:
             tasks[name] = {"ok": True, "note": "no token - off"}
+            continue
+        if name == "Hayat Print Agent" and not (HERE / "print_agent.log").exists():
+            tasks[name] = {"ok": True, "note": "not installed - off (print-install.bat)"}
             continue
         if not (HERE / script).exists():
             tasks[name] = {"ok": False, "note": f"{script} missing"}

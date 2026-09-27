@@ -47,6 +47,7 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .al{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;border-left:3px solid var(--warn);background:var(--soft)}
 .al.bad{border-left-color:var(--bad)} .al b{font-size:13px} .al small{color:var(--muted)} .al .ago{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700}
 .floor{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.tbl.click{cursor:pointer} .tbl.click:hover{border-color:var(--line2)}
 .tbl{border:1px solid var(--line);border-radius:10px;padding:8px;min-height:74px;background:var(--soft);position:relative}
 .tbl b{display:block;font-size:14px} .tbl small{display:block;font-size:11px;color:var(--muted);line-height:1.35}
 .tbl.on{background:color-mix(in srgb,var(--s1) 14%,var(--card));border-color:color-mix(in srgb,var(--s1) 50%,transparent)}
@@ -250,6 +251,19 @@ function closures(){
 }
 function tsNow(){ const d=new Date(NOW); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
 
+const kotLines=r=>{ const g={}; (r.items||[]).forEach(i=>{ (g[i.kotAt||r.createdAt||'?']=g[i.kotAt||r.createdAt||'?']||[]).push(i.q+'× '+i.n); }); return Object.keys(g).sort().map((t,i)=>hm(t)+' KOT '+(i+1)+': '+g[t].join(', ')).join('\n'); };
+const tableHistory=name=>recs().filter(r=>r.kind!=='staff'&&String(r.table)===String(name)).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+function tableSheet(name){
+  const H=tableHistory(name); const old=document.getElementById('drill'); if(old) old.remove();
+  const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const tot=H.filter(r=>r.status==='settled').reduce((n,r)=>n+sum(r),0);
+  box.innerHTML=`<div class="sheet"><h2>Table ${esc(name)} <span class="n">${H.length} orders today · ${rs(tot)}</span><button class="x" id="drillX">✕</button></h2>
+    ${H.length?`<table><tr><th>Seated</th><th>Left</th><th class="r">Stay</th><th>Waiter</th><th class="r">Pax</th><th class="r">KOTs</th><th>Ordered</th><th class="r">Total</th></tr>${H.map(r=>`<tr class="rowlink" data-drill2="${esc(r.key)}"><td>${hm(r.createdAt)}</td><td>${r.status==='settled'?hm(r.settledAt):'<b>'+esc(r.status)+'</b>'}</td><td class="r">${mins(r.createdAt,r.settledAt||tsNow())??''}m</td><td>${esc(r.waiter||'')}</td><td class="r">${r.pax||''}</td><td class="r">${r.kotCount||''}</td><td title="${esc(kotLines(r))}">${(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,80)}</td><td class="r">${rs(sum(r))}</td></tr>`).join('')}</table>`:'<p class="note">Nobody sat here yet today.</p>'}
+    <p class="note">Click an order for its full timeline.</p></div>`;
+  document.body.appendChild(box);
+  box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  $$('[data-drill2]',box).forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill2));
+}
 function floor(){
   const open=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind==='dine');
   const byT={}; open.forEach(r=>{ byT[String(r.table)]=r; });
@@ -261,11 +275,12 @@ function floor(){
   const counter=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='dine');
   return `<div class="card wide"><h2>Tables <span class="n">${open.length} busy · ${counter.length} counter / delivery</span></h2><div class="floor">`+
     Object.keys(secs).sort().map(sec=>`<div class="sechead">${esc(sec)}</div>`+secs[sec].sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true})).map(t=>{
-      const r=byT[String(t.name)]; if(!r) return `<div class="tbl"><b>${esc(t.name)}</b><small>${t.chairs?t.chairs+' chairs':''}</small></div>`;
+      const r=byT[String(t.name)]; if(!r){ const H=tableHistory(t.name), done=H.filter(x=>x.status==='settled'); const tt=done.length?done.map(x=>hm(x.createdAt)+'–'+hm(x.settledAt)+' '+rs(sum(x))+(x.waiter?' · '+x.waiter:'')).join('\n'):'free all day';
+        return `<div class="tbl click" data-table="${esc(t.name)}" title="${esc(tt)}"><b>${esc(t.name)}</b><small>${t.chairs?t.chairs+' chairs':''}</small>${done.length?`<small>${done.length} turn${done.length>1?'s':''} · ${rs(done.reduce((n,x)=>n+sum(x),0))}</small>`:''}</div>`; }
       const age=mins(r.createdAt,tsNow()); const cls=r.status==='due'?'due':age>75?'late':'on';
-      return `<div class="tbl ${cls}" title="${esc((r.items||[]).map(i=>i.q+'× '+i.n).join('\n'))}"><span class="age">${age}m</span><b>${esc(t.name)}</b><small>${esc(r.waiter||'')}${r.pax?' · '+r.pax+' pax':''}</small><small>${r.kotCount} KOT · ${rs(sum(r))}</small><small>${r.status==='due'?'BILL PRINTED':(r.foodReady||0)+'/'+(r.items||[]).length+' ready'}</small></div>`;
+      return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><b>${esc(t.name)}</b><small>${esc(r.waiter||'')}${r.pax?' · '+r.pax+' pax':''}</small><small>${r.kotCount} KOT · ${rs(sum(r))}</small><small>${r.status==='due'?'BILL PRINTED':(r.foodReady||0)+'/'+(r.items||[]).length+' ready'}</small></div>`;
     }).join('')).join('')+
-    (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}"><span class="age">${age}m</span><b>${r.kind==='delivery'?'🛵':'🎟'}${esc(r.token||r.kot)}</b><small>${r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt):r.status==='due'?'billed · with rider':'cooking'):esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items · ${rs(sum(r))}</small></div>`; }).join(''):'')+
+    (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl click ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><b>${r.kind==='delivery'?'🛵':'🎟'}${esc(r.token||r.kot)}</b><small>${r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt):r.status==='due'?'billed · with rider':'cooking'):esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items · ${rs(sum(r))}</small></div>`; }).join(''):'')+
   '</div></div>';
 }
 
@@ -329,7 +344,7 @@ function items(){
 function bills(){
   const R=recs().slice().sort((a,b)=>String(b.settledAt||b.createdAt||'').localeCompare(String(a.settledAt||a.createdAt||'')));
   let rows=R; if(Q) rows=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(Q));
-  return `<div class="card wide"><div class="exp"><button data-csv="bills">⬇ Bills CSV</button><button data-csv="items">⬇ Items CSV</button><button data-csv="payments">⬇ Payments CSV</button><button data-csv="purchases">⬇ Purchases CSV</button></div><h2>Bills · live <span class="n">${R.filter(r=>r.status!=='settled').length} open · ${R.filter(r=>r.status==='settled').length} settled</span></h2><input class="search" id="q" placeholder="Search KOT, table, waiter, item…" value="${esc(Q)}"><div class="scroll"><table><tr><th>KOT</th><th>Type</th><th>Table</th><th>Waiter</th><th>Created</th><th>KOTs</th><th>Bill</th><th>Settled</th><th class="r">Stay</th><th>Pay</th><th class="r">Total</th><th>Items</th><th>Edits</th></tr>${rows.map(r=>`<tr class="${r.status} rowlink" data-drill="${esc(r.key)}"><td>${esc(r.kot)}</td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span></td><td>${esc(r.table||(r.token?'T'+r.token:''))}</td><td>${esc(r.waiter||'')}</td><td>${hm(r.createdAt)}</td><td>${(r.kots||[]).map(hm).join(' · ')}</td><td>${hm(r.dueAt)}</td><td>${r.status==='settled'?hm(r.settledAt):'<b>'+esc(r.status)+'</b>'}</td><td class="r">${mins(r.createdAt,r.settledAt||tsNow())??''}m</td><td>${esc(r.payMode||'')}</td><td class="r">${rs(sum(r))}</td><td title="${esc((r.items||[]).map(i=>i.q+'× '+i.n+' '+hm(i.kotAt)).join('\n'))}">${(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,70)}${(r.items||[]).map(i=>i.n).join('').length>70?'…':''}</td><td>${(r.edits||[]).map(e=>esc(e.item)+' '+e.from+'→'+e.to+(e.reason?' ('+esc(e.reason)+')':'')).join('; ')}${(r.moves||[]).map(m=>' ⇄ '+esc(m.from)+'→'+esc(m.to)).join('')}</td></tr>`).join('')}</table></div></div>`;
+  return `<div class="card wide"><div class="exp"><button data-csv="day">⬇ Day JSON</button><button data-csv="bills">⬇ Bills CSV</button><button data-csv="items">⬇ Items CSV</button><button data-csv="payments">⬇ Payments CSV</button><button data-csv="purchases">⬇ Purchases CSV</button><button data-csv="month">⬇ Month bills CSV</button><button data-csv="days">⬇ Days CSV</button></div><h2>Bills · live <span class="n">${R.filter(r=>r.status!=='settled').length} open · ${R.filter(r=>r.status==='settled').length} settled</span></h2><input class="search" id="q" placeholder="Search KOT, table, waiter, item…" value="${esc(Q)}"><div class="scroll"><table><tr><th>KOT</th><th>Type</th><th>Table</th><th>Waiter</th><th>Created</th><th>KOTs</th><th>Bill</th><th>Settled</th><th class="r">Stay</th><th>Pay</th><th class="r">Total</th><th>Items</th><th>Edits</th></tr>${rows.map(r=>`<tr class="${r.status} rowlink" data-drill="${esc(r.key)}"><td>${esc(r.kot)}</td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span></td><td>${esc(r.table||(r.token?'T'+r.token:''))}</td><td>${esc(r.waiter||'')}</td><td>${hm(r.createdAt)}</td><td>${(r.kots||[]).map(hm).join(' · ')}</td><td>${hm(r.dueAt)}</td><td>${r.status==='settled'?hm(r.settledAt):'<b>'+esc(r.status)+'</b>'}</td><td class="r">${mins(r.createdAt,r.settledAt||tsNow())??''}m</td><td>${esc(r.payMode||'')}</td><td class="r">${rs(sum(r))}</td><td title="${esc((r.items||[]).map(i=>i.q+'× '+i.n+' '+hm(i.kotAt)).join('\n'))}">${(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,70)}${(r.items||[]).map(i=>i.n).join('').length>70?'…':''}</td><td>${(r.edits||[]).map(e=>esc(e.item)+' '+e.from+'→'+e.to+(e.reason?' ('+esc(e.reason)+')':'')).join('; ')}${(r.moves||[]).map(m=>' ⇄ '+esc(m.from)+'→'+esc(m.to)).join('')}</td></tr>`).join('')}</table></div></div>`;
 }
 
 function payments(){
@@ -379,28 +394,44 @@ function drill(key){
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const d=$('drill'); if(d) d.remove(); } });
 
-function csv(kind){
+function download(name,txt,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:type||'text/csv'})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
+const billRow=(d,r)=>[d,r.kot,r.invoiceId,r.status,r.kind,r.section,r.table,r.token,r.waiter,r.cashier,r.pax,r.createdAt,(r.kots||[]).join(' | '),r.dueAt,r.settledAt,mins(r.createdAt,r.settledAt),r.payMode,r.cash,r.card,r.credit,sum(r),(r.items||[]).map(i=>i.q+'x '+i.n).join(' | '),(r.edits||[]).map(e=>e.item+' '+e.from+'>'+e.to).join(' | '),(r.moves||[]).map(m=>m.from+'>'+m.to).join(' | ')];
+const BILL_HEAD=['day','kot','invoice','status','kind','section','table','token','waiter','cashier','pax','created','kots','billPrinted','settled','stayMin','payMode','cash','card','credit','total','items','edits','moves'];
+async function csv(kind){
   let rows=[], name=DAY+'-'+kind+'.csv';
   const R=recs();
-  if(kind==='bills') rows=[['kot','invoice','status','kind','section','table','token','waiter','cashier','pax','created','kots','billPrinted','settled','stayMin','payMode','cash','card','credit','total','items','edits','moves']].concat(R.map(r=>[r.kot,r.invoiceId,r.status,r.kind,r.section,r.table,r.token,r.waiter,r.cashier,r.pax,r.createdAt,(r.kots||[]).join(' | '),r.dueAt,r.settledAt,mins(r.createdAt,r.settledAt),r.payMode,r.cash,r.card,r.credit,sum(r),(r.items||[]).map(i=>i.q+'x '+i.n).join(' | '),(r.edits||[]).map(e=>e.item+' '+e.from+'>'+e.to).join(' | '),(r.moves||[]).map(m=>m.from+'>'+m.to).join(' | ')]));
+  if(kind==='day'){ download(DAY+'.json',JSON.stringify(DOC,null,1),'application/json'); return; }
+  if(kind==='days'){ rows=[['day','weekday','sales','bills','avgBill','paidOut','supplierBills','closeAC','closeNonAC','closeCounter','closeDelivery']].concat(Object.keys(INDEX).sort().map(d=>{ const x=INDEX[d]||{}, c=x.close||{}; return [d,['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()],x.rev,x.bills,x.bills?Math.round(x.rev/x.bills):'',x.paidOut,x.purchases,c['AC'],c['NON AC'],c['Counter'],c['Delivery']]; })); name='days.csv'; }
+  else if(kind==='month'){ const m=DAY.slice(0,7), days=Object.keys(INDEX).filter(d=>d.startsWith(m)).sort(); rows=[BILL_HEAD];
+    for(const d of days){ const doc=d===DAY?DOC:await loadDay(d); Object.values((doc&&doc.records)||{}).forEach(r=>rows.push(billRow(d,r))); }
+    name=m+'-bills.csv'; }
+  else if(kind==='bills') rows=[BILL_HEAD].concat(R.map(r=>billRow(DAY,r)));
   else if(kind==='items') rows=[['kot','status','kind','table','waiter','item','category','kitchen','qty','price','amount','kotAt','ready']].concat(R.flatMap(r=>(r.items||[]).map(i=>[r.kot,r.status,r.kind,r.table,r.waiter,i.n,i.cat,i.kit,i.q,i.p,i.a,i.kotAt,i.ready])));
   else if(kind==='payments') rows=[['id','at','kind','flow','mode','party','remarks','by','amount','deleted','type']].concat(Object.values(DOC.payments||{}).map(p=>[p.id,p.at,p.kind,p.flow,p.mode,p.party,p.remarks,p.by,p.amount,p.deleted,p.type]));
   else rows=[['id','at','supplier','billNo','by','total','gst','item','category','unit','qty','cost','lineTotal']].concat(Object.values(DOC.purchases||{}).flatMap(p=>(p.items||[]).length?(p.items||[]).map(i=>[p.id,p.at,p.supplier,p.billNo,p.by,p.total,p.gst,i.n,i.cat,i.unit,i.q,i.cost,i.total]):[[p.id,p.at,p.supplier,p.billNo,p.by,p.total,p.gst]]));
   const txt=rows.map(r=>r.map(v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(',')).join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+txt],{type:'text/csv'})); a.download=name; a.click();
+  download(name,'\ufeff'+txt);
 }
 
 /* ---- compare two days, and the week around today ---- */
 const CACHE={}; let CMP=null, WEEK=null;
 /* history comes from plain files the shop PC publishes (no Firebase reads); Firebase is the live feed and always the fallback */
-const DATA=(window.HAYAT_DATA_URL||'https://raw.githubusercontent.com/personal-majid/hayat-data/main/');
-let SRC={};   /* day -> 'file' | 'firebase' */
-async function fetchJson(name){ const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),8000);
+const DATA=window.HAYAT_DATA_URL||'';      /* optional static copy of the day files; off unless set */
+let SRC={};   /* day -> 'file' | 'cache' | 'firebase' */
+async function fetchJson(name){ if(!DATA) return null; const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),8000);
   try{ const r=await fetch(DATA+name+'?v='+Math.floor(Date.now()/300000),{signal:ctl.signal,cache:'no-cache'}); if(!r.ok) return null; const j=await r.json(); return j&&typeof j==='object'?j:null; }catch(e){ return null; } finally{ clearTimeout(t); } }
+/* a finished day never changes: keep it on this phone (IndexedDB), so Firebase is asked once per day per device */
+const IDB={db:null,
+  open(){ if(this.db) return Promise.resolve(this.db); return new Promise(res=>{ try{ const q=indexedDB.open('hayat-owner',1); q.onupgradeneeded=()=>q.result.createObjectStore('days'); q.onsuccess=()=>{ this.db=q.result; res(this.db); }; q.onerror=()=>res(null); }catch(e){ res(null); } }); },
+  async get(k){ const db=await this.open(); if(!db) return null; return new Promise(res=>{ try{ const r=db.transaction('days').objectStore('days').get(k); r.onsuccess=()=>res(r.result||null); r.onerror=()=>res(null); }catch(e){ res(null); } }); },
+  async set(k,v){ const db=await this.open(); if(!db) return; try{ db.transaction('days','readwrite').objectStore('days').put(v,k); }catch(e){} } };
+const finished=(d,doc)=>d<bizToday()&&doc&&!(doc.open>0);      /* a past day with nothing open is final */
 async function loadDay(d){ if(CACHE[d]!==undefined) return CACHE[d];
   let doc=null;
-  if(d!==bizToday()){ doc=await fetchJson(d+'.json'); if(doc&&doc.day===d&&doc.records) SRC[d]='file'; else doc=null; }
+  if(d!==bizToday()){ const c=await IDB.get('day:'+d); if(c&&c.day===d&&c.records){ doc=c; SRC[d]='cache'; } }
+  if(!doc&&d!==bizToday()){ doc=await fetchJson(d+'.json'); if(doc&&doc.day===d&&doc.records) SRC[d]='file'; else doc=null; }
   if(!doc){ try{ const s=await FB.fs.getDoc(FB.fs.doc(FB.db,'vm_daylog',d)); doc=s.exists()?s.data():null; SRC[d]='firebase'; }catch(e){ doc=null; } }
+  if(doc&&SRC[d]!=='cache'&&finished(d,doc)) IDB.set('day:'+d,doc);
   CACHE[d]=prep(doc); return CACHE[d]; }
 function stats(doc){
   const R=Object.values((doc&&doc.records)||{}), S=R.filter(r=>r.status==='settled');
@@ -488,6 +519,7 @@ function render(){
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute.</div>`;
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
+  $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
   $$('[data-day]').forEach(b=>b.onclick=()=>{ TAB='sales'; setDay(b.dataset.day); });
   $$('[data-csv]').forEach(b=>b.onclick=()=>csv(b.dataset.csv));
   const cd=$('cmpDay'); if(cd) cd.onchange=()=>pickCompare(cd.value);
@@ -508,7 +540,7 @@ async function watchDay(){
   unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); CACHE[DAY]=DOC; SRC[DAY]='firebase'; stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
 }
 function stamp(){ const l=$('live'); if(!DOC){ l.className='live bad'; l.lastElementChild.textContent='no data'; return; }
-  if(DAY!==bizToday()){ l.className='live'; l.lastElementChild.textContent=(SRC[DAY]==='file'?'from file':'from Firebase')+' · '+DAY; return; }
+  if(DAY!==bizToday()){ l.className='live'; l.lastElementChild.textContent=({file:'from file',cache:'from this device',firebase:'from Firebase'}[SRC[DAY]]||'')+' · '+DAY; return; }
   const age=Math.max(0,Math.round((Date.now()-T(DOC.updatedAt))/60000)); l.className='live'+(age>6?' bad':''); l.lastElementChild.textContent=(age>6?'stale · ':'live · ')+age+' min ago'; }
 /* the shop PC's own health note (watchdog.py, every 5 min) */
 let HEALTH=null;
@@ -540,7 +572,9 @@ async function days(){
   const {fs,db}=FB; const sel=$('day'); const out=[];
   let err='';
   const ixf=await fetchJson('index.json'); if(ixf&&ixf.days&&Object.keys(ixf.days).length) INDEX=ixf.days;
-  try{ const ix=await fs.getDoc(fs.doc(db,'vm_meta','days')); if(ix.exists()){ const d=ix.data().days||{}; Object.keys(d).forEach(k=>{ if(!INDEX[k]||(d[k].updatedAt||'')>(INDEX[k].updatedAt||'')) INDEX[k]=d[k]; }); } }catch(e){ if(!Object.keys(INDEX).length) err=e.code||String(e); }
+  const cached=await IDB.get('index'); const fresh=cached&&cached.at&&(Date.now()-cached.at)<3600000&&cached.days&&cached.days[bizToday()];
+  if(cached&&cached.days) INDEX=Object.assign({},cached.days,INDEX);
+  if(!fresh){ try{ const ix=await fs.getDoc(fs.doc(db,'vm_meta','days')); if(ix.exists()){ const d=ix.data().days||{}; Object.keys(d).forEach(k=>{ if(!INDEX[k]||(d[k].updatedAt||'')>(INDEX[k].updatedAt||'')) INDEX[k]=d[k]; }); IDB.set('index',{at:Date.now(),days:INDEX}); } }catch(e){ if(!Object.keys(INDEX).length) err=e.code||String(e); } }
   Object.keys(INDEX).forEach(d=>{ const x=INDEX[d]||{}; if(x.bills||x.rev||x.paidOut) out.push(d); });   /* a day with nothing in it is not a day */
   /* a thin index (sync not run yet) - list the day docs themselves as well */
   if(out.length<8){ try{ const q=await fs.getDocs(fs.query(fs.collection(db,'vm_daylog'),fs.orderBy(fs.documentId(),'desc'),fs.limit(60))); q.docs.forEach(d=>{ if(!out.includes(d.id)) out.push(d.id); const x=d.data(); if(!INDEX[d.id]&&x) INDEX[d.id]={rev:x.revenue||0,bills:x.settled||0,paidOut:x.paidOut||0}; }); }catch(e){ err=e.code||String(e); } }
