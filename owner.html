@@ -167,7 +167,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v173';
+const BOARD='v174';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -756,6 +756,36 @@ function spendExplorer(sp){
   const ctl=`<div class="tabs" style="margin:0 0 8px"><select class="tb sm" data-sp="group">${[['cat','By category'],['item','By item'],['day','By day'],['week','By week']].map(o=>`<option value="${o[0]}"${SP.group===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="sort">${[['amount','Biggest first'],['name','A → Z'],['qty','Most qty'],['newest','Newest first']].map(o=>`<option value="${o[0]}"${SP.sort===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="cat"><option value="">All categories</option>${cats.map(c=>`<option${SP.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select><input class="search" style="width:auto;flex:1;min-width:120px;margin:0" id="spq" placeholder="Search item…" value="${esc(SP.q)}"></div>`;
   return `<div class="card wide"><h2>Spend <span class="n">${groups.length} ${SP.group==='cat'?'categories':SP.group==='item'?'items':SP.group==='day'?'days':'weeks'} · ${L.length} lines · ${rs(tot)}</span></h2>${ctl}${groups.map(G=>`<details class="dd"${SP.open[G.k]?' open':''} data-spk="${esc(G.k)}"><summary><span>${esc(G.k)}</span><small>${G.n} lines${SP.group==='item'&&G.unit?' · '+Math.round(G.q*100)/100+' '+esc(G.unit):''} · ${tot?Math.round(100*G.v/tot):0}%</small><b>${rs(G.v)}</b></summary>${sub(G)}</details>`).join('')||'<div class="note">No spend lines in this span.</div>'}</div>`;
 }
+/* ---- chicken: how many birds left the kitchen, from the dishes sold ---- */
+let RCP=null;   /* settings/recipes: {perBird:1.1, items:{NAME:birds}} */
+const CHK=/alfaham|alfam|broast|chicken|shawarma|shawaya|tikka|kebab|\b65\b|wings|nugget|lollipop|kanthari|peri|kuzhi|mandi/i, NOTCHK=/fish|mutton|beef|prawn|crab|squid|pomfret|\begg|veg\b|paneer|mushroom|juice|soda|lime|rice\b(?!.*chicken)/i;
+function chickenGuess(n){ const u=(n||'').toUpperCase(); if(!CHK.test(u)) return 0; if(NOTCHK.test(u)&&!/CHICKEN/.test(u)) return 0; if(/FISH|MUTTON|BEEF|PRAWN|EGG|PANEER/.test(u)) return 0;
+  if(/\bFULL\b/.test(u)||/8 ?PCS|8PC/.test(u)) return 1; if(/\bHALF\b/.test(u)||/4 ?PCS|4PC/.test(u)) return .5; if(/\bQTR\b|QUARTER/.test(u)||/2 ?PCS|2PC/.test(u)) return .25;
+  if(/MANDI|KABSA|MAJBOOS/.test(u)) return .25; if(/ALFAHAM|ALFAM|BROAST|SHAWAYA/.test(u)) return .5; return .2; }
+function chickenOf(n){ const u=(n||'').trim().toUpperCase(); if(RCP&&RCP.items&&RCP.items[u]!=null) return +RCP.items[u]; return chickenGuess(u); }
+function chickenCard(S,V){
+  const perBird=RCP&&RCP.perBird?+RCP.perBird:1.1;
+  const dishes={}; Object.values((V&&V.records)||{}).forEach(r=>{ if(r.status!=='settled') return; (r.items||[]).forEach(i=>{ const b=chickenOf(i.n); if(!b) return; const x=dishes[i.n]=dishes[i.n]||{n:i.n,q:0,b:0,each:b}; x.q+=i.q||0; x.b+=(i.q||0)*b; }); });
+  const rows=Object.values(dishes).sort((a,b)=>b.b-a.b); const birds=rows.reduce((n,x)=>n+x.b,0), kg=birds*perBird;
+  const bought=Object.values((S.spend||{}).byItem||{}).filter(x=>/chicken|kozhi|broiler/i.test(x.n)&&!/egg/i.test(x.n)); const boughtKg=bought.reduce((n,x)=>n+(/kg/i.test(x.unit||'')?x.q:(/bird|nos|pcs|no\b/i.test(x.unit||'')?x.q*perBird:x.q)),0);
+  const diff=boughtKg?Math.round(100*(kg-boughtKg)/boughtKg):null;
+  return `<div class="card wide"><h2>Chicken · estimate <span class="n">${rows.length} dishes · <a href="#" id="rcpEdit">portion factors</a></span></h2>
+    <div class="kpis" style="margin-bottom:8px"><div class="kpi"><small>Sold (from dishes)</small><b>${Math.round(birds*10)/10} birds</b><em>≈ ${Math.round(kg)} kg at ${perBird} kg/bird</em></div><div class="kpi"><small>Bought</small><b>${Math.round(boughtKg)} kg</b><em>${bought.map(x=>esc(x.n)+' '+Math.round(x.q)+' '+esc(x.unit||'')).join(', ')||'no chicken purchase lines in this span'}</em></div><div class="kpi"><small>Used vs bought</small><b class="${diff==null?'':Math.abs(diff)<=15?'up':'dn'}">${diff==null?'—':(diff>=0?'+':'')+diff+'%'}</b><em>${diff==null?'':diff>0?'sold more than bought: stock down or factors high':'bought more than sold: waste, stock up, or factors low'}</em></div></div>
+    <table><tr><th>Dish</th><th class="r">Qty</th><th class="r">Bird / portion</th><th class="r">Birds</th><th class="r">Share</th></tr>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td class="r">${x.q}</td><td class="r">${x.each}</td><td class="r"><b>${Math.round(x.b*10)/10}</b></td><td class="r">${birds?Math.round(100*x.b/birds):0}%</td></tr>`).join('')}</table>
+    <p class="note">Estimate: dish name → birds per portion (Full 1 · Half ½ · Qtr ¼ · 8 pc 1 · 4 pc ½ · mandi ¼ · boneless ≈ 0.2). Fix any factor and it is remembered.</p></div>`;
+}
+function recipeSheet(V){
+  const old=document.getElementById('drill'); if(old) old.remove();
+  const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const seen={}; Object.values((V&&V.records)||{}).forEach(r=>(r.items||[]).forEach(i=>{ const n=(i.n||'').trim().toUpperCase(); if(!n) return; const x=seen[n]=seen[n]||{n,q:0}; x.q+=i.q||0; }));
+  const items=Object.values(seen).filter(x=>CHK.test(x.n)||chickenOf(x.n)>0).sort((a,b)=>b.q-a.q);
+  box.innerHTML=`<div class="sheet"><h2>Chicken portions <button class="x" id="drillX">✕</button></h2><p class="sub">Birds used per portion of each dish. 0 = no chicken.</p>
+    <p>Weight per bird (kg): <input type="number" step="0.05" class="fld" style="width:80px" id="rcpBird" value="${RCP&&RCP.perBird?RCP.perBird:1.1}"></p>
+    <table><tr><th>Dish</th><th class="r">Sold</th><th class="r">Birds / portion</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="r">${x.q}</td><td class="r"><input type="number" step="0.05" class="fld" style="width:74px;text-align:right" data-rcp="${esc(x.n)}" value="${chickenOf(x.n)}"></td></tr>`).join('')}</table>
+    <div class="tabs" style="margin-top:10px"><button class="tab on" id="rcpSave">Save</button></div></div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  $('rcpSave').onclick=async()=>{ const items={}; $$('[data-rcp]',box).forEach(inp=>{ const n=inp.dataset.rcp, v=+inp.value; if(v!==chickenGuess(n)) items[n]=v; }); RCP={perBird:+$('rcpBird').value||1.1,items}; try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','recipes'),RCP); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); };
+}
 function period(){
   const presets=periodPresets();
   if(!PER.from){ const p=presets[2]; loadPeriod(p[1],p[2],p[0]); return '<div class="card wide"><div class="note">Loading…</div></div>'; }
@@ -795,7 +825,7 @@ function period(){
   let body='';
   if(PTAB==='overview') body=byDay+sve+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+trends();
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard;
-  else if(PTAB==='items') body=W(()=>items());
+  else if(PTAB==='items') body=W(()=>items())+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
     const items=Object.values(sp.byItem).filter(x=>!PER.person||x.n===PER.person).sort((a,b)=>b.v-a.v), spTot=items.reduce((n,x)=>n+x.v,0);
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
@@ -871,6 +901,7 @@ function render(){
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
   const kt=$('ktime'); if(kt) kt.onclick=e=>{ e.preventDefault(); kitchenSheet(); };
+  const re=$('rcpEdit'); if(re) re.onclick=e=>{ e.preventDefault(); recipeSheet(PER.V); };
   $$('[data-pur]').forEach(t=>t.onclick=()=>purchaseSheet(t.dataset.pur));
   const mp=$('monPick'); if(mp) mp.onchange=()=>loadMonth(mp.value); const mr=$('monRefresh'); if(mr) mr.onclick=()=>loadMonth(MON.key,true); const mper=$('monPerson'); if(mper) mper.onchange=()=>{ MON.person=mper.value; render(); };
   $$('[data-mdrill]').forEach(tr=>tr.onclick=async()=>{ const [d,key]=tr.dataset.mdrill.split('|'); const rk=key.split('/')[1]; const doc=d===bizToday()?DOC:await loadDay(d); const r=doc&&doc.records[rk]; if(!r) return; const keep=RANGE.doc; RANGE.doc={records:{[key]:Object.assign({},r,{key})},purchases:{}}; drill(key); RANGE.doc=keep; });
@@ -978,6 +1009,7 @@ async function go(){
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','health'),d=>{ HEALTH=d.exists()?d.data():null; healthPill(); },()=>{});
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','kitchen'),d=>{ KSET=d.exists()?d.data():null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','recipes'),d=>{ RCP=d.exists()?d.data():null; render(); },()=>{});
   await days(); watchDay();
   setInterval(()=>{ if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
