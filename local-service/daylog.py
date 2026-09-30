@@ -235,7 +235,7 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
             "dueAt": iso(b.get("duebill_time")), "settledAt": iso(b.get("billingtime")),
             "payMode": PAY.get(n(b.get("payment_mode"))), "cash": n(b.get("cash_amount")), "card": n(b.get("card_amount")),
             "credit": n(b.get("credit_amount")), "total": n(b.get("totalprice")), "paid": n(b.get("settlingprice")),
-            "discount": n(b.get("discount_cash")) or n(b.get("gstdiscount")),
+            "discount": n(b.get("discount_cash")) or n(b.get("gstdiscount")) or round(n(b.get("totalprice")) * n(b.get("discount_percentage")) / 100, 2),
             "token": n(b.get("token_no")) or n(b.get("tabletokenno")),
             "customer": {"name": (b.get("cus_name") or "").strip() or None, "address": (b.get("cus_address") or "").strip() or None},
             "remarks": (b.get("remarks") or "").strip() or None,

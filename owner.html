@@ -155,6 +155,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
+const BOARD='v162';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -283,6 +284,16 @@ function unrealized(){
   const state=r=>r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt)+(r.rider?' · '+r.rider:''):r.status==='due'?'billed · with rider':'cooking'):r.status==='due'?'bill printed, unpaid':(r.foodReady||0)+'/'+(r.items||[]).length+' ready';
   return `<div class="card"><h2>Unrealized sales <span class="n">${rs(tot)} · ${O.length} open</span></h2><div class="mini">${[['dine','On tables'],['counter','At the counter'],['delivery','Out for delivery']].map(([k,l])=>`<div class="mrow"><span>${l} <small style="color:var(--muted)">${g[k].n}</small></span><div class="b" style="width:${100*g[k].v/max}%"></div><span class="v">${rs(g[k].v)}</span></div>`).join('')}</div>${O.length?`<table style="margin-top:8px"><tr><th>Since</th><th>Where</th><th class="m">Waiter</th><th>State</th><th class="r">Amount</th></tr>${O.map(r=>`<tr class="rowlink" data-drill="${esc(r.key)}"><td>${hm(r.createdAt)} <small style="color:var(--muted)">${mins(r.createdAt,tsNow())}m</small></td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span> ${esc(r.table||(r.token?'T'+r.token:'KOT '+r.kot))}${r.remarks?' <small style="color:var(--muted)">“'+esc(r.remarks)+'”</small>':''}</td><td class="m">${esc(r.waiter||'')}</td><td>${state(r)}</td><td class="r">${rs(sum(r))}</td></tr>`).join('')}</table>`:'<div class="note">Everything is paid.</div>'}</div>`;
 }
+/* every rupee knocked off a bill, and who did it */
+function discounts(){
+  const D=recs().filter(r=>r.status==='settled'&&(r.discount||0)>0).sort((a,b)=>(b.discount||0)-(a.discount||0));
+  const tot=D.reduce((n,r)=>n+(r.discount||0),0), gross=recs().filter(r=>r.status==='settled').reduce((n,r)=>n+(r.total||0),0)+tot;
+  if(!D.length) return '';
+  const g={}; D.forEach(r=>{ const k=r.cashier||r.waiter||'—'; g[k]=g[k]||{n:0,v:0}; g[k].n++; g[k].v+=r.discount||0; });
+  const rows=Object.entries(g).sort((a,b)=>b[1].v-a[1].v), max=Math.max(1,...rows.map(x=>x[1].v));
+  return `<div class="card"><h2>Discounts <span class="n">${D.length} bills · ${rs(tot)} · ${gross?(100*tot/gross).toFixed(1):0}% of gross</span></h2><div class="mini">${rows.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n}</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')}</div>
+    <table style="margin-top:8px"><tr><th>KOT</th><th>Where</th><th class="m">Waiter</th><th>Note</th><th class="r">Bill</th><th class="r">Off</th><th class="r">%</th></tr>${D.map(r=>`<tr class="rowlink" data-drill="${esc(r.key)}"><td>${esc(r.kot)}</td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span> ${esc(r.table||(r.token?'T'+r.token:''))}</td><td class="m">${esc(r.waiter||'')}</td><td>${esc(r.remarks||'')}</td><td class="r">${rs(r.total)}</td><td class="r"><b>${rs(r.discount)}</b></td><td class="r">${Math.round(100*r.discount/((r.total||0)+r.discount))}%</td></tr>`).join('')}</table></div>`;
+}
 function closures(){
   const g=closeStats(recs()), order=['AC','NON AC','JUICY HUT','Counter','Delivery'];
   const keys=Object.keys(g).sort((a,b)=>(order.indexOf(a)+1||99)-(order.indexOf(b)+1||99));
@@ -398,7 +409,7 @@ function bills(){
   const opt=(id,label,vals,cur)=>`<select class="tb sm" data-bf="${id}"><option value="">${label}</option>${vals.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(v)}</option>`).join('')}</select>`;
   const uniq=f=>[...new Set(all.map(f).filter(Boolean))].sort();
   const filters=`<div class="tabs" style="margin:0 0 8px">${opt('kind','All types',['dine','counter','delivery','staff'],BF.kind)}${opt('status','Any status',['open','due','settled'],BF.status)}${opt('waiter','All waiters',uniq(r=>r.waiter),BF.waiter)}${opt('section','All sections',uniq(r=>r.section),BF.section)}<select class="tb sm" data-bf="sort">${[['time','Newest first'],['created','By order time'],['amount','Biggest first'],['stay','Longest stay'],['kot','KOT no.'],['edits','Most edits']].map(o=>`<option value="${o[0]}"${BF.sort===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select>${(BF.kind||BF.status||BF.waiter||BF.section)?`<button class="tab" data-bfclear>✕ clear</button>`:''}<span class="n" style="align-self:center;margin-left:auto">${rows.length} bills · ${rs(rows.reduce((n,r)=>n+sum(r),0))}</span></div>`;
-  return `<div class="card wide"><div class="exp"><button data-csv="day">⬇ Day JSON</button><button data-csv="bills">⬇ Bills CSV</button><button data-csv="items">⬇ Items CSV</button><button data-csv="payments">⬇ Payments CSV</button><button data-csv="purchases">⬇ Purchases CSV</button><button data-csv="month">⬇ Month bills CSV</button><button data-csv="days">⬇ Days CSV</button></div><h2>Bills · live <span class="n">${R.filter(r=>r.status!=='settled').length} open · ${R.filter(r=>r.status==='settled').length} settled</span></h2><input class="search" id="q" placeholder="Search KOT, table, waiter, item, remark…" value="${esc(Q)}">${filters}<div class="scroll"><table><tr><th>KOT</th><th>Type</th><th>Table</th><th>Note</th><th>Waiter</th><th>Created</th><th class="m">KOTs</th><th class="m">Bill</th><th>Settled</th><th class="r m">Stay</th><th class="m">Pay</th><th class="r">Total</th><th>Items</th><th class="m">Edits</th></tr>${rows.map(r=>`<tr class="${r.status} rowlink" data-drill="${esc(r.key)}"><td>${esc(r.kot)}</td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span></td><td>${esc(r.table||(r.token?'T'+r.token:''))}</td><td><b>${esc(r.remarks||'')}</b></td><td>${esc(r.waiter||'')}</td><td>${hm(r.createdAt)}</td><td class="m">${(r.kots||[]).map(hm).join(' · ')}</td><td class="m">${hm(r.dueAt)}</td><td>${r.status==='settled'?hm(r.settledAt):'<b>'+esc(r.status)+'</b>'}</td><td class="r m">${mins(r.createdAt,r.settledAt||tsNow())??''}m</td><td class="m">${esc(r.payMode||'')}</td><td class="r">${rs(sum(r))}</td><td title="${esc((r.items||[]).map(i=>i.q+'× '+i.n+' '+hm(i.kotAt)).join('\n'))}">${(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,70)}${(r.items||[]).map(i=>i.n).join('').length>70?'…':''}</td><td class="m">${(r.edits||[]).map(e=>esc(e.item)+' '+e.from+'→'+e.to+(e.reason?' ('+esc(e.reason)+')':'')).join('; ')}${(r.moves||[]).map(m=>' ⇄ '+esc(m.from)+'→'+esc(m.to)).join('')}</td></tr>`).join('')}</table></div></div>`;
+  return `<div class="card wide"><div class="exp"><button data-csv="day">⬇ Day JSON</button><button data-csv="bills">⬇ Bills CSV</button><button data-csv="items">⬇ Items CSV</button><button data-csv="payments">⬇ Payments CSV</button><button data-csv="purchases">⬇ Purchases CSV</button><button data-csv="month">⬇ Month bills CSV</button><button data-csv="days">⬇ Days CSV</button></div><h2>Bills · live <span class="n">${R.filter(r=>r.status!=='settled').length} open · ${R.filter(r=>r.status==='settled').length} settled</span></h2><input class="search" id="q" placeholder="Search KOT, table, waiter, item, remark…" value="${esc(Q)}">${filters}<div class="scroll"><table><tr><th>KOT</th><th>Type</th><th>Table</th><th>Note</th><th>Waiter</th><th>Created</th><th class="m">KOTs</th><th class="m">Bill</th><th>Settled</th><th class="r m">Stay</th><th class="m">Pay</th><th class="r">Total</th><th class="r m">Disc</th><th>Items</th><th class="m">Edits</th></tr>${rows.map(r=>`<tr class="${r.status} rowlink" data-drill="${esc(r.key)}"><td>${esc(r.kot)}</td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span></td><td>${esc(r.table||(r.token?'T'+r.token:''))}</td><td><b>${esc(r.remarks||'')}</b></td><td>${esc(r.waiter||'')}</td><td>${hm(r.createdAt)}</td><td class="m">${(r.kots||[]).map(hm).join(' · ')}</td><td class="m">${hm(r.dueAt)}</td><td>${r.status==='settled'?hm(r.settledAt):'<b>'+esc(r.status)+'</b>'}</td><td class="r m">${mins(r.createdAt,r.settledAt||tsNow())??''}m</td><td class="m">${esc(r.payMode||'')}</td><td class="r">${rs(sum(r))}</td><td class="r m">${r.discount?rs(r.discount):''}</td><td title="${esc((r.items||[]).map(i=>i.q+'× '+i.n+' '+hm(i.kotAt)).join('\n'))}">${(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,70)}${(r.items||[]).map(i=>i.n).join('').length>70?'…':''}</td><td class="m">${(r.edits||[]).map(e=>esc(e.item)+' '+e.from+'→'+e.to+(e.reason?' ('+esc(e.reason)+')':'')).join('; ')}${(r.moves||[]).map(m=>' ⇄ '+esc(m.from)+'→'+esc(m.to)).join('')}</td></tr>`).join('')}</table></div></div>`;
 }
 
 function payments(){
@@ -464,8 +475,8 @@ function drill(key){
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const d=$('drill'); if(d) d.remove(); } });
 
 function download(name,txt,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:type||'text/csv'})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
-const billRow=(d,r)=>[d,r.kot,r.invoiceId,r.status,r.kind,r.remarks,r.section,r.table,r.token,r.waiter,r.cashier,r.pax,r.createdAt,(r.kots||[]).join(' | '),r.dueAt,r.settledAt,mins(r.createdAt,r.settledAt),r.payMode,r.cash,r.card,r.credit,sum(r),(r.items||[]).map(i=>i.q+'x '+i.n).join(' | '),(r.edits||[]).map(e=>e.item+' '+e.from+'>'+e.to).join(' | '),(r.moves||[]).map(m=>m.from+'>'+m.to).join(' | ')];
-const BILL_HEAD=['day','kot','invoice','status','kind','note','section','table','token','waiter','cashier','pax','created','kots','billPrinted','settled','stayMin','payMode','cash','card','credit','total','items','edits','moves'];
+const billRow=(d,r)=>[d,r.kot,r.invoiceId,r.status,r.kind,r.remarks,r.section,r.table,r.token,r.waiter,r.cashier,r.pax,r.createdAt,(r.kots||[]).join(' | '),r.dueAt,r.settledAt,mins(r.createdAt,r.settledAt),r.payMode,r.cash,r.card,r.credit,sum(r),r.discount||0,(r.items||[]).map(i=>i.q+'x '+i.n).join(' | '),(r.edits||[]).map(e=>e.item+' '+e.from+'>'+e.to).join(' | '),(r.moves||[]).map(m=>m.from+'>'+m.to).join(' | ')];
+const BILL_HEAD=['day','kot','invoice','status','kind','note','section','table','token','waiter','cashier','pax','created','kots','billPrinted','settled','stayMin','payMode','cash','card','credit','total','discount','items','edits','moves'];
 async function csv(kind){
   let rows=[], name=DAY+'-'+kind+'.csv';
   const R=recs();
@@ -511,7 +522,7 @@ function stats(doc){
   const cs=closeStats(R), close={}; Object.keys(cs).forEach(k=>{ close[k]=avg(cs[k].total); });
   return {rev,close,bills:S.length,avg:S.length?rev/S.length:0,dine:dine.reduce((n,r)=>n+(r.total||0),0),counter:ctr.reduce((n,r)=>n+(r.total||0),0),delivery:del.reduce((n,r)=>n+(r.total||0),0),
     covers:dine.reduce((n,r)=>n+(r.pax||0),0),stay:avg(dine.map(r=>mins(r.createdAt,r.settledAt)).filter(x=>x!=null&&x<300)),
-    edits:R.reduce((n,r)=>n+(r.edits||[]).length,0),purchases:(doc&&doc.purchaseTotal)||0,paidOut:(doc&&doc.paidOut)||0,section:g(r=>r.section),waiter:g(r=>r.waiter),pay:g(r=>r.payMode),items,H,
+    edits:R.reduce((n,r)=>n+(r.edits||[]).length,0),discounts:S.reduce((n,r)=>n+(r.discount||0),0),purchases:(doc&&doc.purchaseTotal)||0,paidOut:(doc&&doc.paidOut)||0,section:g(r=>r.section),waiter:g(r=>r.waiter),pay:g(r=>r.payMode),items,H,
     cash:S.reduce((n,r)=>n+(r.cash||0),0),card:S.reduce((n,r)=>n+(r.card||0),0)};
 }
 function compare(){
@@ -529,7 +540,7 @@ function compare(){
   const pickBtns=picks.map(p=>`<button class="tab${bd===p[1]?' on':''}" data-cmp="${p[1]}" title="${p[1]}">${p[0]}</button>`).join('');
   return `<div class="card wide"><h2>Compare <span class="n"><select id="cmpDay"><option value="">choose a day…</option>${opts}</select></span></h2><div class="tabs" style="margin:6px 0 10px">${pickBtns}</div>
       <div class="cmp"><div class="a"><b>${esc(DAY)}</b></div><div class="k"></div><div class="b"><b>${esc(bd||'—')}</b></div>
-      ${row('Sales',A.rev,B&&B.rev)}${row('Bills',A.bills,B&&B.bills,x=>x)}${row('Avg bill',A.avg,B&&B.avg)}${row('Dine‑in',A.dine,B&&B.dine)}${row('Counter',A.counter,B&&B.counter)}${row('Delivery',A.delivery,B&&B.delivery)}${row('Covers',A.covers,B&&B.covers,x=>x)}${row('Avg table min',A.stay,B&&B.stay,x=>x+'m')}${row('Cash',A.cash,B&&B.cash)}${row('Card',A.card,B&&B.card)}${row('Edits/voids',A.edits,B&&B.edits,x=>x)}${['AC','NON AC','JUICY HUT','Counter','Delivery'].filter(k=>A.close[k]!=null||(B&&B.close[k]!=null)).map(k=>row('Order→paid · '+k,A.close[k],B&&B.close[k],x=>x+'m')).join('')}${row('Paid out',A.paidOut,B&&B.paidOut)}${row('Supplier bills',A.purchases,B&&B.purchases)}</div></div>`+
+      ${row('Sales',A.rev,B&&B.rev)}${row('Bills',A.bills,B&&B.bills,x=>x)}${row('Avg bill',A.avg,B&&B.avg)}${row('Dine‑in',A.dine,B&&B.dine)}${row('Counter',A.counter,B&&B.counter)}${row('Delivery',A.delivery,B&&B.delivery)}${row('Covers',A.covers,B&&B.covers,x=>x)}${row('Avg table min',A.stay,B&&B.stay,x=>x+'m')}${row('Cash',A.cash,B&&B.cash)}${row('Card',A.card,B&&B.card)}${row('Edits/voids',A.edits,B&&B.edits,x=>x)}${row('Discounts',A.discounts,B&&B.discounts)}${['AC','NON AC','JUICY HUT','Counter','Delivery'].filter(k=>A.close[k]!=null||(B&&B.close[k]!=null)).map(k=>row('Order→paid · '+k,A.close[k],B&&B.close[k],x=>x+'m')).join('')}${row('Paid out',A.paidOut,B&&B.paidOut)}${row('Supplier bills',A.purchases,B&&B.purchases)}</div></div>`+
     week+
     (()=>{ const [lo,hi]=hspan(A.H,B?B.H:[]); return `<div class="card wide"><h2>Sales by hour <span class="n">blue ${esc(DAY)} · grey ${esc(bd||'')}</span></h2>${hbars(A.H,lo,hi,max,B?B.H:null,'')}${B?hbars(B.H,lo,hi,max,null,'','b2',50):''}${hx(lo,hi)}</div>`; })()+
     mini('By section',A.section,B&&B.section)+mini('By waiter',A.waiter,B&&B.waiter)+mini('By payment',A.pay,B&&B.pay)+
@@ -565,7 +576,7 @@ function range(){
     <div class="kpi"><small>Cash · Card</small><b>${rs(S.reduce((n,r)=>n+(r.cash||0),0))}</b><em>card ${rs(S.reduce((n,r)=>n+(r.card||0),0))}</em></div>
     <div class="kpi click" data-tab="rbuy"><small>Paid out</small><b>${rs(V.paidOut)}</b><em>${V.paymentCount} entries · ${rev?Math.round(100*V.paidOut/rev)+'% of sales':''}</em></div>
     <div class="kpi"><small>Edits / voids</small><b>${Object.values(V.records).reduce((n,r)=>n+(r.edits||[]).length,0)}</b><em>${rs(withDoc(V,()=>voidList().reduce((n,v)=>n+v.value,0)))}</em></div></div>`;
-  const cards=withDoc(V,()=>hourly()+closures()+breakdown()+waiters()+upsell()+tables()+items()+voids()+payments()+purchases());
+  const cards=withDoc(V,()=>hourly()+closures()+breakdown()+waiters()+upsell()+tables()+items()+voids()+discounts()+payments()+purchases());
   return head+k+`<div class="grid">${cards}</div>`;
 }
 function trends(){
@@ -612,14 +623,14 @@ function render(){
   const live=DAY===bizToday();
   m.innerHTML=kpis()+
     `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['trend','Trends'],['range','From → to'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
-    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${unrealized()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}</div>`:
+    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${unrealized()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
      TAB==='trend'?`<div class="grid">${trends()}</div>`:
      TAB==='range'||TAB==='rbuy'?range():
      TAB==='floor'?`<div class="grid">${live?alerts():''}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
-    `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute.</div>`;
+    `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab==='rbuy'?'range':b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
