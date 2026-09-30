@@ -64,7 +64,7 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .kcol{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .kcol h3{margin:0 0 6px;font-size:13px;display:flex;justify-content:space-between}
 .kcol h3 span{color:var(--muted);font-weight:600}
-.ki{display:flex;gap:8px;padding:4px 0;border-top:1px dashed var(--line);font-size:13px}
+.ki{display:flex;gap:8px;padding:4px 0;border-top:1px dashed var(--line);font-size:13px} .ki.late{background:color-mix(in srgb,var(--s8) 10%,transparent)} .dn{color:var(--bad)}
 .ki .q{min-width:26px;font-weight:800} .ki .w{flex:1} .ki .t{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
 .ki.rdy .w{text-decoration:line-through;color:var(--muted)}
 .ki.del{border-left:3px solid var(--s3);padding-left:6px}
@@ -76,6 +76,9 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .bar{background:var(--s1);border-radius:3px 3px 0 0;min-height:2px;position:relative} .bar:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--pri);color:var(--onpri);font-size:11px;padding:2px 6px;border-radius:6px;white-space:nowrap;margin-bottom:3px}
 .bar.y{background:var(--line2)}
 .dd{border-top:1px solid var(--line);padding:6px 0} .dd summary{display:flex;gap:10px;align-items:center;cursor:pointer;list-style:none;font-size:13px} .dd summary::-webkit-details-marker{display:none} .dd summary::before{content:'▸';color:var(--muted);width:12px} .dd[open] summary::before{content:'▾'} .dd summary small{color:var(--muted)} .dd summary b{margin-left:auto} .dd table{margin:6px 0 4px}
+.blist{display:grid;gap:8px} .bcard{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--soft);cursor:pointer} .bcard.open,.bcard.due{border-left:3px solid var(--warn)} .bcard.settled{background:var(--card)}
+.bcard .l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap} .bcard .l1 b{font-size:15px} .bcard .l1 small{color:var(--muted)} .bcard .l1 em{font-style:normal;font-weight:600;color:var(--s2)} .bcard .amt{margin-left:auto;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums} .bcard .amt small{font-weight:600;color:var(--bad)}
+.bcard .l2{font-size:12px;color:var(--muted);margin-top:2px} .bcard .l3{font-size:13px;margin-top:4px;line-height:1.35} .bcard .l4{font-size:12px;color:var(--bad);margin-top:3px}
 .bc{position:relative;display:flex;align-items:flex-end;height:100%} .bc .bar{width:100%} .avgm{position:absolute;left:-1px;right:-1px;border-top:2px dotted var(--line2);pointer-events:none}
 .hx{display:grid;grid-template-columns:repeat(24,1fr);font-size:9px;color:var(--muted);text-align:center}
 .mini{display:grid;gap:4px} .mrow{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:13px}
@@ -161,7 +164,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v169';
+const BOARD='v171';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -212,8 +215,7 @@ function alerts(){
     /* a delivery takes longer by nature: cooking + the road + the rider coming back before it can be settled */
     else if(r.kind==='delivery'&&age>90) out.push({bad:age>150,b:`Delivery ${r.customer&&r.customer.name||('KOT '+r.kot)} · still open`,s:(r.rider?'rider '+r.rider:'no rider')+(r.dispatchAt?' · left '+hm(r.dispatchAt):' · not dispatched')+' · '+rs(sum(r)),ago:age+' min'});
     else if(r.kind==='delivery'&&!r.dispatchAt&&age>35) out.push({bad:age>60,b:`Delivery ${r.customer&&r.customer.name||('KOT '+r.kot)} · not dispatched`,s:(r.rider?'rider '+r.rider:'no rider')+' · '+rs(sum(r)),ago:age+' min'});
-    const lastKot=r.kots&&r.kots[r.kots.length-1]; const wait=lastKot?mins(lastKot,tsNow()):null;
-    if(r.status==='open'&&r.kind!=='delivery'&&wait>25&&(r.items||[]).some(i=>i.ready!=='ready')) out.push({bad:wait>40,b:`${r.table||'Token '+(r.token||'')} · food not marked ready`,s:`last KOT ${hm(lastKot)}`,ago:wait+' min'});
+    const lateLines=(r.items||[]).filter(i=>lineState(i,r)==='late'); if(lateLines.length){ const worst=Math.max(...lateLines.map(i=>(i.kotAt?mins(i.kotAt,tsNow()):0)-prepMin(i))); out.push({bad:worst>10,b:`${r.table||'Token '+(r.token||r.kot)} · kitchen running late`,s:lateLines.map(i=>i.q+'× '+i.n).join(', ').slice(0,60),ago:worst+' min over'}); }
   });
   const voids=R.reduce((n,r)=>n+(r.edits||[]).length,0);
   return `<div class="card wide"><h2>Needs attention <span class="n">${out.length?out.length:'all calm'}${voids?' · '+voids+' edits/voids today':''}</span></h2>`+
@@ -339,7 +341,7 @@ function floor(){
       const r=byT[String(t.name)]; if(!r){ const H=tableHistory(t.name), done=H.filter(x=>x.status==='settled'); const tt=done.length?done.map(x=>hm(x.createdAt)+'–'+hm(x.settledAt)+' '+rs(sum(x))+(x.waiter?' · '+x.waiter:'')).join('\n'):'free all day';
         return `<div class="tbl click" data-table="${esc(t.name)}" title="${esc(tt)}"><b>${esc(t.name)}</b><small>${t.chairs?t.chairs+' chairs':''}</small>${done.length?`<small>${done.length} turn${done.length>1?'s':''} · ${rs(done.reduce((n,x)=>n+sum(x),0))}</small>`:''}</div>`; }
       const age=mins(r.createdAt,tsNow()); const cls=r.status==='due'?'due':age>75?'late':'on';
-      return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><b>${esc(t.name)}</b><small>${esc(r.waiter||'')}${r.pax?' · '+r.pax+' pax':''}</small><small>${r.kotCount} KOT · ${rs(sum(r))}</small><small>${r.status==='due'?'BILL PRINTED':(r.foodReady||0)+'/'+(r.items||[]).length+' ready'}</small></div>`;
+      return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><b>${esc(t.name)}</b><small>${esc(r.waiter||'')}${r.pax?' · '+r.pax+' pax':''}</small><small>${r.kotCount} KOT · ${rs(sum(r))}</small><small>${r.status==='due'?'BILL PRINTED':(()=>{ const L=(r.items||[]).map(i=>lineState(i,r)); const c=L.filter(x=>x==='cooking').length, l=L.filter(x=>x==='late').length; return l?'<b>'+l+' late</b>'+(c?' · '+c+' cooking':''):c?c+' cooking':'served'; })()}</small></div>`;
     }).join('')).join('')+
     (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl click ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><b>${r.kind==='delivery'?'🛵':r.kind==='staff'?'👤':'🎟'}${esc(r.token||r.kot)}</b>${r.remarks?`<small>“${esc(r.remarks)}”</small>`:''}<small>${r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt):r.status==='due'?'billed · with rider':'cooking'):esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items · ${rs(sum(r))}</small></div>`; }).join(''):'')+
   '</div></div>';
@@ -349,22 +351,50 @@ function floor(){
    road and the bill closes when he is back. The kitchen must not keep seeing
    it. A line belongs on the pass while it is unfinished AND, for a delivery,
    only until it was dispatched / billed or 35 min after its KOT. */
-const COOK_WINDOW=35;
-function onPass(i,r){
-  if(i.ready==='ready') return false;
-  if(r.kind!=='delivery') return true;
-  if(r.dispatchAt||r.status==='due') return false;
-  const age=i.kotAt?mins(i.kotAt,tsNow()):0;
-  return age<=COOK_WINDOW;
+/* Nobody taps "done" in the kitchen, so the pass is a MODEL: every item has a
+   preparation time (groups below, tunable in Kitchen timing), a line is
+   cooking until then, late after it, and gone at twice that - or the moment
+   the bill is printed / the delivery leaves. Packaged goods (NO KOT) never
+   reach the pass. */
+const PREP_GROUPS=[['mandi',20,/mandi|biryani|kabsa|majboos|kizhi|dum\b/i],['fry',10,/fry\b|fried|broast|shawarma|shawaya|grill|tikka|kebab|\b65\b|dry\b|pepper|chilli|alfaham|alfam|omelette|egg|nugget|fries|roll\b|wings|lollipop/i],['gravy',15,/gravy|curry|masala|roast|manchurian|noodle|noodel|soup|pasta|korma|stew|kadai|butter|chicken|mutton|beef|fish|prawn|crab|pomfret|squid/i],['quick',5,/.*/]];
+const PREP_LABEL={mandi:'Mandi · biryani',fry:'Alfaham · fry · grill',gravy:'Gravies · curries',quick:'Quick: juice, bread, salad, meals'};
+let KSET=null;   /* settings/kitchen: {groups:{mandi:20,...}, items:{'ITEM NAME':min}, skip:['ITEM NAME']} */
+const NOKOT=/\b(7up|pepsi|coke|cola|coca|sprite|mirinda|fanta|thums|limca|slice|maaza|frooti|water|mineral|can\b|1ltr|2ltr|2l\b|750ml|500ml|250ml|bottle|pack\b|burfi|chips|biscuit)/i;
+function prepGroup(i){ const n=(i.n||''); for(const [g,m,rx] of PREP_GROUPS) if(rx.test(n)) return g; return 'quick'; }
+function prepMin(i){ const n=(i.n||'').trim().toUpperCase(); if(KSET&&KSET.items&&KSET.items[n]!=null) return +KSET.items[n]; const g=prepGroup(i); const d=PREP_GROUPS.find(x=>x[0]===g)[1]; return KSET&&KSET.groups&&KSET.groups[g]!=null?+KSET.groups[g]:d; }
+function noKitchen(i){ const n=(i.n||'').trim().toUpperCase(); if(KSET&&KSET.skip&&KSET.skip.includes(n)) return true; return i.kit==='NO KOT'||NOKOT.test(n); }
+function lineState(i,r){
+  if(noKitchen(i)) return 'skip'; if(i.ready==='ready'||i.servedAt) return 'done';
+  if(r.kind==='delivery'&&(r.dispatchAt||r.status==='due')) return 'done';
+  if(r.kind==='dine'&&r.status==='due') return 'done';                 /* bill printed: they ate */
+  const age=i.kotAt?mins(i.kotAt,tsNow()):0, p=prepMin(i);
+  return age>=2*p?'done':age>=p?'late':'cooking';
 }
+function onPass(i,r){ const st=lineState(i,r); return st==='cooking'||st==='late'; }
 function kitchens(){
   const open=recs().filter(r=>r.status==='open'||r.status==='due');
-  const cols={main:[],front:[]}; let outDel=0;
-  open.forEach(r=>(r.items||[]).forEach(i=>{ if(r.kind==='delivery'&&!onPass(i,r)&&i.ready!=='ready'){ outDel++; return; } cols[station(i)].push({i,r}); }));
-  const who=r=>r.kind==='dine'?esc(r.table):(r.kind==='delivery'?'🛵 ':'🎟 ')+esc(r.token||r.kot);
-  const col=(k,label)=>{ const L=cols[k].filter(x=>onPass(x.i,x.r)).sort((a,b)=>String(a.i.kotAt||'').localeCompare(String(b.i.kotAt||'')));
-    return `<div class="kcol"><h3>${label} <span>${L.reduce((n,x)=>n+(x.i.q||0),0)} to cook</span></h3>`+(L.length?L.map(x=>`<div class="ki${x.r.kind==='delivery'?' del':''}"><span class="q">${x.i.q}×</span><span class="w">${esc(x.i.n)} <small style="color:var(--muted)">· ${who(x.r)}</small></span><span class="t">${hm(x.i.kotAt)}${x.i.kotAt?' · '+mins(x.i.kotAt,tsNow())+'m':''}</span></div>`).join(''):'<div class="note">Nothing on the pass.</div>')+'</div>'; };
-  return `<div class="card wide"><h2>Kitchens · live <span class="n">${cols.main.length+cols.front.length} lines to cook${outDel?' · '+outDel+' delivery lines already out':''}</span></h2><div class="kit">${col('main','Main kitchen')}${col('front','Front kitchen')}</div></div>`;
+  const cols={main:[],front:[]}; let gone=0;
+  open.forEach(r=>(r.items||[]).forEach(i=>{ const st=lineState(i,r); if(st==='skip') return; if(st==='done'){ gone++; return; } cols[station(i)].push({i,r,st,p:prepMin(i),age:i.kotAt?mins(i.kotAt,tsNow()):0}); }));
+  const who=r=>r.kind==='dine'?esc(r.table):(r.kind==='delivery'?'🛵 ':r.kind==='staff'?'👤 ':'🎟 ')+esc(r.token||r.kot);
+  const col=(k,label)=>{ const L=cols[k].sort((a,b)=>(a.age-a.p)-(b.age-b.p)).reverse(); const late=L.filter(x=>x.st==='late'), backlog=L.filter(x=>x.st==='cooking').reduce((n,x)=>n+Math.max(0,x.p-x.age),0);
+    return `<div class="kcol"><h3>${label} <span>${L.reduce((n,x)=>n+(x.i.q||0),0)} cooking${late.length?' · <b class="dn">'+late.length+' late</b>':''}${backlog?' · ~'+backlog+' min':''}</span></h3>`+(L.length?L.map(x=>`<div class="ki${x.r.kind==='delivery'?' del':''}${x.st==='late'?' late':''}"><span class="q">${x.i.q}×</span><span class="w">${esc(x.i.n)} <small style="color:var(--muted)">· ${who(x.r)}</small></span><span class="t">${x.st==='late'?'<b>'+(x.age-x.p)+'m over</b>':'due in '+(x.p-x.age)+'m'}</span></div>`).join(''):'<div class="note">Nothing on the pass.</div>')+'</div>'; };
+  return `<div class="card wide"><h2>Kitchens · live <span class="n">${cols.main.length+cols.front.length} lines${gone?' · '+gone+' assumed served':''} · <a href="#" id="ktime">kitchen timing</a></span></h2><div class="kit">${col('main','Main kitchen')}${col('front','Front kitchen')}</div><p class="note">Estimated: nobody marks "done", so a line is cooking for its prep time, late after it, and assumed served at twice that or when the bill prints.</p></div>`;
+}
+function kitchenSheet(){
+  const old=document.getElementById('drill'); if(old) old.remove();
+  const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const seen={}; recs().forEach(r=>(r.items||[]).forEach(i=>{ const n=(i.n||'').trim().toUpperCase(); if(!n) return; const x=seen[n]=seen[n]||{n,q:0,i}; x.q+=i.q||0; }));
+  const items=Object.values(seen).sort((a,b)=>b.q-a.q);
+  const g=KSET&&KSET.groups||{};
+  box.innerHTML=`<div class="sheet"><h2>Kitchen timing <button class="x" id="drillX">✕</button></h2><p class="sub">Minutes each kind of dish needs when nothing is queued. Items are grouped by name; set a minute value on an item to override, 0 = never on the pass.</p>
+    <table><tr><th>Group</th><th class="r">Minutes</th></tr>${PREP_GROUPS.map(([k,d])=>`<tr><td>${PREP_LABEL[k]}</td><td class="r"><input type="number" class="fld" style="width:70px;text-align:right" data-kg="${k}" value="${g[k]!=null?g[k]:d}"></td></tr>`).join('')}</table>
+    <h3 class="mini" style="margin-top:12px">Items on today's bills</h3><table><tr><th>Item</th><th>Group</th><th class="r">Min</th></tr>${items.map(x=>{ const skip=noKitchen(x.i); return `<tr><td>${esc(x.n)} <small style="color:var(--muted)">${x.q}×</small></td><td>${skip?'<span class="pill staff">no kitchen</span>':esc(prepGroup(x.i))}</td><td class="r"><input type="number" class="fld" style="width:64px;text-align:right" data-ki="${esc(x.n)}" value="${skip?0:prepMin(x.i)}"></td></tr>`; }).join('')}</table>
+    <div class="tabs" style="margin-top:10px"><button class="tab on" id="kSave">Save</button></div></div>`;
+  document.body.appendChild(box);
+  box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  $('kSave').onclick=async()=>{ const groups={}; $$('[data-kg]',box).forEach(inp=>{ groups[inp.dataset.kg]=+inp.value||0; }); const items={}, skip=[];
+    $$('[data-ki]',box).forEach(inp=>{ const n=inp.dataset.ki, v=+inp.value; const fake={n}; const def=(groups[prepGroup(fake)]!=null?groups[prepGroup(fake)]:PREP_GROUPS.find(x=>x[0]===prepGroup(fake))[1]); const isNo=(fake.n&&NOKOT.test(n)); if(v===0&&!isNo) skip.push(n); else if(v!==0&&isNo) items[n]=v; else if(v!==def&&!isNo) items[n]=v; });
+    KSET={groups,items,skip}; try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','kitchen'),KSET); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); };
 }
 
 /* business day runs 05:00 → 04:59; a bill settled at 01:00 belongs to the
@@ -419,6 +449,12 @@ function bills(){
   const opt=(id,label,vals,cur)=>`<select class="tb sm" data-bf="${id}"><option value="">${label}</option>${vals.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(v)}</option>`).join('')}</select>`;
   const uniq=f=>[...new Set(all.map(f).filter(Boolean))].sort();
   const filters=`<div class="tabs" style="margin:0 0 8px">${opt('kind','All types',['dine','counter','delivery','staff'],BF.kind)}${opt('status','Any status',['open','due','settled'],BF.status)}${opt('waiter','All waiters',uniq(r=>r.waiter),BF.waiter)}${opt('section','All sections',uniq(r=>r.section),BF.section)}<select class="tb sm" data-bf="sort">${[['time','Newest first'],['created','By order time'],['amount','Biggest first'],['stay','Longest stay'],['kot','KOT no.'],['edits','Most edits']].map(o=>`<option value="${o[0]}"${BF.sort===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select>${(BF.kind||BF.status||BF.waiter||BF.section)?`<button class="tab" data-bfclear>✕ clear</button>`:''}<span class="n" style="align-self:center;margin-left:auto">${rows.length} bills · ${rs(rows.reduce((n,r)=>n+sum(r),0))}</span></div>`;
+  const narrow=window.innerWidth<900;
+  const card=r=>{ const st=r.status==='settled'?'settled '+hm(r.settledAt):'<b>'+esc(r.status)+'</b>'+(r.dueAt?' · bill '+hm(r.dueAt):''); const stay=mins(r.createdAt,r.settledAt||tsNow());
+    return `<div class="bcard ${r.status} rowlink" data-drill="${esc(r.key)}"><div class="l1"><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span><b>${esc(r.table||(r.token?'T'+r.token:''))}</b><small>KOT ${esc(r.kot)}</small>${r.remarks?'<em>“'+esc(r.remarks)+'”</em>':''}<span class="amt">${rs(sum(r))}${discOf(r)?'<small> −'+rs(discOf(r))+'</small>':''}</span></div>
+      <div class="l2">${esc(r.waiter||'')} · ${hm(r.createdAt)} → ${st} · ${stay!=null?stay+'m':''}${r.payMode?' · '+esc(r.payMode):''}${(r.kots||[]).length>1?' · '+(r.kots||[]).length+' KOTs':''}</div>
+      <div class="l3">${(r.items||[]).map(i=>i.q+'× '+esc(i.n)).join(', ')}</div>${(r.edits||[]).length?`<div class="l4">${(r.edits||[]).map(e=>'✂ '+esc(e.item)+' '+e.from+'→'+e.to+(e.reason?' ('+esc(e.reason)+')':'')).join(' · ')}</div>`:''}</div>`; };
+  if(narrow) return `<div class="card wide"><div class="exp"><button data-csv="day">⬇ Day JSON</button><button data-csv="bills">⬇ Bills CSV</button><button data-csv="items">⬇ Items CSV</button></div><h2>Bills · live <span class="n">${R.filter(r=>r.status!=='settled').length} open · ${R.filter(r=>r.status==='settled').length} settled</span></h2><input class="search" id="q" placeholder="Search KOT, table, waiter, item, remark…" value="${esc(Q)}">${filters}<div class="blist">${rows.map(card).join('')||'<div class="note">No bills match.</div>'}</div></div>`;
   return `<div class="card wide"><div class="exp"><button data-csv="day">⬇ Day JSON</button><button data-csv="bills">⬇ Bills CSV</button><button data-csv="items">⬇ Items CSV</button><button data-csv="payments">⬇ Payments CSV</button><button data-csv="purchases">⬇ Purchases CSV</button><button data-csv="month">⬇ Month bills CSV</button><button data-csv="days">⬇ Days CSV</button></div><h2>Bills · live <span class="n">${R.filter(r=>r.status!=='settled').length} open · ${R.filter(r=>r.status==='settled').length} settled</span></h2><input class="search" id="q" placeholder="Search KOT, table, waiter, item, remark…" value="${esc(Q)}">${filters}<div class="scroll"><table><tr><th>KOT</th><th>Type</th><th>Table</th><th>Note</th><th>Waiter</th><th>Created</th><th class="m">KOTs</th><th class="m">Bill</th><th>Settled</th><th class="r m">Stay</th><th class="m">Pay</th><th class="r">Total</th><th class="r m">Disc</th><th>Items</th><th class="m">Edits</th></tr>${rows.map(r=>`<tr class="${r.status} rowlink" data-drill="${esc(r.key)}"><td>${esc(r.kot)}</td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span></td><td>${esc(r.table||(r.token?'T'+r.token:''))}</td><td><b>${esc(r.remarks||'')}</b></td><td>${esc(r.waiter||'')}</td><td>${hm(r.createdAt)}</td><td class="m">${(r.kots||[]).map(hm).join(' · ')}</td><td class="m">${hm(r.dueAt)}</td><td>${r.status==='settled'?hm(r.settledAt):'<b>'+esc(r.status)+'</b>'}</td><td class="r m">${mins(r.createdAt,r.settledAt||tsNow())??''}m</td><td class="m">${esc(r.payMode||'')}</td><td class="r">${rs(sum(r))}</td><td class="r m">${discOf(r)?rs(discOf(r)):''}</td><td title="${esc((r.items||[]).map(i=>i.q+'× '+i.n+' '+hm(i.kotAt)).join('\n'))}">${(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,70)}${(r.items||[]).map(i=>i.n).join('').length>70?'…':''}</td><td class="m">${(r.edits||[]).map(e=>esc(e.item)+' '+e.from+'→'+e.to+(e.reason?' ('+esc(e.reason)+')':'')).join('; ')}${(r.moves||[]).map(m=>' ⇄ '+esc(m.from)+'→'+esc(m.to)).join('')}</td></tr>`).join('')}</table></div></div>`;
 }
 
@@ -804,6 +840,7 @@ function render(){
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
+  const kt=$('ktime'); if(kt) kt.onclick=e=>{ e.preventDefault(); kitchenSheet(); };
   $$('[data-pur]').forEach(t=>t.onclick=()=>purchaseSheet(t.dataset.pur));
   const mp=$('monPick'); if(mp) mp.onchange=()=>loadMonth(mp.value); const mr=$('monRefresh'); if(mr) mr.onclick=()=>loadMonth(MON.key,true); const mper=$('monPerson'); if(mper) mper.onchange=()=>{ MON.person=mper.value; render(); };
   $$('[data-mdrill]').forEach(tr=>tr.onclick=async()=>{ const [d,key]=tr.dataset.mdrill.split('|'); const rk=key.split('/')[1]; const doc=d===bizToday()?DOC:await loadDay(d); const r=doc&&doc.records[rk]; if(!r) return; const keep=RANGE.doc; RANGE.doc={records:{[key]:Object.assign({},r,{key})},purchases:{}}; drill(key); RANGE.doc=keep; });
@@ -857,6 +894,7 @@ function calendar(){
   pop.hidden=false;
   $$('[data-pick]',pop).forEach(c=>c.onclick=()=>{ pop.hidden=true; setDay(c.dataset.pick); });
 }
+let rzT=null; window.addEventListener('resize',()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{ if(DOC) render(); },250); });
 document.addEventListener('click',e=>{ const pop=$('calPop'); if(pop&&!pop.hidden&&!pop.contains(e.target)&&e.target.id!=='calBtn') pop.hidden=true; });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const pop=$('calPop'); if(pop) pop.hidden=true; } if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if(e.key==='ArrowLeft') stepDay(-1); if(e.key==='ArrowRight') stepDay(1); });
 
@@ -886,6 +924,7 @@ async function go(){
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','floor'),d=>{ FLOOR=d.exists()?d.data():null; prep(DOC); prep(YDOC); render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','health'),d=>{ HEALTH=d.exists()?d.data():null; healthPill(); },()=>{});
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','kitchen'),d=>{ KSET=d.exists()?d.data():null; render(); },()=>{});
   await days(); watchDay();
   setInterval(()=>{ if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
