@@ -26,3 +26,11 @@ local-service/cache.db
 local-service/logs/
 local-service/.venv/
 local-service/discover_report.txt
+
+# day logs and probes hold customer names, phones, addresses: never in git
+local-service/daylog/
+local-service/*.bak
+local-service/publish_state.json
+local-service/probe_report.txt
+local-service/probe_today.txt
+local-service/print_agent.log*

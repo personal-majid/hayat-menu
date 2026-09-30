@@ -53,7 +53,7 @@ import re
 # What the counter writes on an order tells us what it really is:
 #   DM, HD, "delivery", "home delivery", "deliver to ..."   -> home delivery
 #   CO, C/O, "parcel", "take away", "takeaway", "pack"        -> packed, collected at the counter
-DELIVERY_WORDS = re.compile(r"(^|[^A-Z0-9])(DM|HD|H\.D|DELIVER\w*|HOME ?DEL\w*)([^A-Z0-9]|$)", re.I)
+DELIVERY_WORDS = re.compile(r"(^|[^A-Z0-9])(DMU?|HD|H\.D|DELIVER\w*|HOME ?DEL\w*)([^A-Z0-9]|$)", re.I)
 COUNTER_WORDS = re.compile(r"(^|[^A-Z0-9])(CO|C/O|C\.O|PARCEL|TAKE ?AWAY|TA|PACK\w*|PARCE\w*)([^A-Z0-9]|$)", re.I)
 
 
@@ -120,6 +120,8 @@ class Masters:
         self.kitchens = {str(r["kitchenid"]): r["kitchenname"] for r in q("SELECT kitchenid, kitchenname FROM svr_kitchenparent")} if src.has("svr_kitchenparent") else {}
         self.cats = {str(r["categoryid"]): r["categoryname"] for r in q("SELECT categoryid, categoryname FROM svr_categoryparent")} if src.has("svr_categoryparent") else {}
         self.staff = {str(r["employeeid"]): r["employeename"] for r in q("SELECT employeeid, employeename FROM svr_employeeparent")} if src.has("svr_employeeparent") else {}
+        STAFF_NAMES.clear()
+        STAFF_NAMES.update(str(v).strip().upper() for v in self.staff.values() if v)
         self.sections = {str(r["sectionid"]): r["sectionname"] for r in q("SELECT sectionid, sectionname FROM svr_sectionparent")} if src.has("svr_sectionparent") else {}
         self.reasons = {str(r["reasonid"]): r["reasoncode"] for r in q("SELECT reasonid, reasoncode FROM svr_reasonparent")} if src.has("svr_reasonparent") else {}
         self.store = {}
@@ -506,13 +508,28 @@ def firestore(cfg):
     return fs.client()
 
 
-SCHEMA = 3               # bump when the shape of a day changes: sync then rebuilds every day once
+SCHEMA = 4               # bump when the shape of a day changes: sync then rebuilds every day once
 CARRY = ("rider", "dispatchAt", "dispatch", "foodReady", "dueCount", "billPrinted", "token")
 STAFF_MAX = 200          # a CASHIER bill this small is staff food - not a customer
 
 
+ORDER_WORDS = re.compile(r"^(co|c/o|c\.o|dmu?|hd|h\.d|cntr?|counter|parcel|take ?away|ta|pack\w*|deliver\w*|home ?del\w*|zomato|swiggy|online)\b", re.I)
+STAFF_NAMES: set = set()      # filled from the employee master by Masters()
+
+
 def is_staff(r) -> bool:
-    return "CASHIER" in str(r.get("waiter") or "").upper() and (r.get("total") or 0) <= STAFF_MAX
+    """The ticket remark says who ate: 'tan', 'viva', 'SOHAIL ALF' - staff food,
+    whatever the section. A remark that names the order kind (co, dm...) is a
+    customer. A blank remark on a small CASHIER bill is the old rule."""
+    rem = str(r.get("remarks") or "").strip()
+    total = r.get("total") or 0
+    if rem and not ORDER_WORDS.match(rem):
+        first = rem.split()[0].upper()
+        if first in STAFF_NAMES or re.search(r"\bstaff\b", rem, re.I):
+            return True
+        if re.fullmatch(r"[A-Za-z]{2,14}", rem) and total <= 300:
+            return True
+    return not rem and "CASHIER" in str(r.get("waiter") or "").upper() and total <= 200
 
 
 def closure(have: dict) -> dict:
