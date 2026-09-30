@@ -79,6 +79,9 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .blist{display:grid;gap:8px} .bcard{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--soft);cursor:pointer} .bcard.open,.bcard.due{border-left:3px solid var(--warn)} .bcard.settled{background:var(--card)}
 .bcard .l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap} .bcard .l1 b{font-size:15px} .bcard .l1 small{color:var(--muted)} .bcard .l1 em{font-style:normal;font-weight:600;color:var(--s2)} .bcard .amt{margin-left:auto;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums} .bcard .amt small{font-weight:600;color:var(--bad)}
 .bcard .l2{font-size:12px;color:var(--muted);margin-top:2px} .bcard .l3{font-size:13px;margin-top:4px;line-height:1.35} .bcard .l4{font-size:12px;color:var(--bad);margin-top:3px}
+.sh{border:0;background:transparent;cursor:pointer;font-size:14px;padding:0 4px;margin-left:6px;opacity:.55;vertical-align:middle} .sh:hover{opacity:1} .kpis{position:relative} .kpish{position:absolute;right:0;top:-24px}
+table.stack{display:block} table.stack thead,table.stack tr:first-child:has(th){display:none} table.stack tbody{display:block} table.stack tr{display:grid;grid-template-columns:1fr 1fr;gap:1px 10px;padding:8px 2px;border-top:1px solid var(--line)} table.stack tr.rowlink{cursor:pointer}
+table.stack td{display:block;border:0;padding:1px 0;font-size:13px} table.stack td:empty{display:none} table.stack td.m{display:block} table.stack td::before{content:attr(data-h);display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em} table.stack td:first-child{grid-column:1/-1;font-weight:700;font-size:14px} table.stack td:first-child::before{display:none} table.stack td.r{text-align:left}
 .bc{position:relative;display:flex;align-items:flex-end;height:100%} .bc .bar{width:100%} .avgm{position:absolute;left:-1px;right:-1px;border-top:2px dotted var(--line2);pointer-events:none}
 .hx{display:grid;grid-template-columns:repeat(24,1fr);font-size:9px;color:var(--muted);text-align:center}
 .mini{display:grid;gap:4px} .mrow{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:13px}
@@ -104,7 +107,7 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
 .cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:6px 12px;align-items:center;font-size:13px}
 .cmp .k{color:var(--muted);text-align:center;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase} .cmp .a,.cmp .b{font-variant-numeric:tabular-nums;font-weight:800;font-size:15px} .cmp .a{text-align:right} .cmp .d{font-size:11px;font-weight:600;margin-left:6px}
 .d.up{color:var(--good)} .d.dn{color:var(--bad)}
-.trend{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:80px} .trend div{background:var(--s1);border-radius:3px 3px 0 0;position:relative;min-height:2px} .trend div.cur{background:var(--s2)} .trend div::after{content:attr(data-t);position:absolute;top:100%;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);white-space:nowrap}
+.trend{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;height:80px;min-width:0} .trend div{background:var(--s1);border-radius:3px 3px 0 0;position:relative;min-height:2px} .trend div.cur{background:var(--s2)} .trend div::after{content:attr(data-t);position:absolute;top:100%;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .exp{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px} .exp button{font:inherit;font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:inherit;cursor:pointer}
 .bar.b2{background:var(--line2)} .bar.cur{background:var(--s2)} .bar.click{cursor:pointer}
 .pill.staff{background:var(--soft2);color:var(--muted)}
@@ -123,13 +126,13 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
   .kpis{display:flex;overflow-x:auto;gap:8px;scroll-snap-type:x mandatory;padding-bottom:4px;margin-bottom:8px} .kpi{flex:0 0 46%;min-width:150px;scroll-snap-align:start} .kpi b{font-size:20px}
   .tabs.main{overflow-x:auto;flex-wrap:nowrap;padding:6px 0;align-items:center} .tabs.main .tab{white-space:nowrap} .tabs.main .n{display:none}
   .sheet{width:100%;padding:12px}
-  .cmp{grid-template-columns:1fr auto 1fr;gap:4px 8px;font-size:12px}
+  .cmp{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:4px 6px;font-size:12px} .cmp>div{min-width:0;overflow-wrap:anywhere} .cmp .d{display:block}
   .floor{grid-template-columns:repeat(auto-fill,minmax(76px,1fr))}
   .tab{padding:5px 9px;font-size:11px}
   .bars{height:70px}
   th.m,td.m{display:none} table.wk small{display:none}
   table{font-size:12px} th,td{padding:5px 6px}
-  .card table{min-width:0}
+  .card table{min-width:0} .card{overflow-x:hidden} .scroll{overflow-x:hidden}
 }
 </style>
 </head>
@@ -164,7 +167,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v171';
+const BOARD='v172';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -325,6 +328,8 @@ function tableSheet(name){
     <p class="note">Click an order for its full timeline.</p></div>`;
   document.body.appendChild(box);
   box.onclick=e=>{ if(e.target===box) box.remove(); }; box.ondblclick=()=>box.remove(); $('drillX').onclick=()=>box.remove();
+  { const h=box.querySelector('.sheet h2'); const b=document.createElement('button'); b.className='sh'; b.textContent='📤'; b.title='share on WhatsApp'; b.onclick=e=>{ e.stopPropagation(); const sh=box.querySelector('.sheet'); shareText([ '*'+txt(h).replace('✕','').replace('📤','').trim()+'*', txt(sh.querySelector('.sub')||{innerText:''}), cardText(sh) ].filter(Boolean).join('\n'),''); }; h.insertBefore(b,h.querySelector('.x')); }
+  fitTables();
   $$('[data-drill2]',box).forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill2));
 }
 function floor(){
@@ -479,6 +484,8 @@ function purchaseSheet(key){
     <table><tr><th>Item</th><th>Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">FOC</th><th class="r">Tax %</th><th class="r">Amount</th></tr>${items.map(i=>`<tr><td>${esc(i.n)}</td><td>${esc(i.cat||'')}</td><td class="r">${i.q??''}</td><td>${esc(i.unit||'')}</td><td class="r">${rs(i.cost||0)}</td><td class="r">${i.foc||''}</td><td class="r">${i.tax||''}</td><td class="r">${rs(i.total||0)}</td></tr>`).join('')}<tr><td colspan=7 class="r"><b>Lines ${rs(tot)}${p.discount?' · discount '+rs(p.discount):''}${p.gst?' · GST '+rs(p.gst):''}${p.delivery?' · delivery '+rs(p.delivery):''}</b></td><td class="r"><b>${rs(p.total||tot)}</b></td></tr></table></div>`;
   document.body.appendChild(box);
   box.onclick=e=>{ if(e.target===box) box.remove(); }; box.ondblclick=()=>box.remove(); $('drillX').onclick=()=>box.remove();
+  { const h=box.querySelector('.sheet h2'); const b=document.createElement('button'); b.className='sh'; b.textContent='📤'; b.title='share on WhatsApp'; b.onclick=e=>{ e.stopPropagation(); const sh=box.querySelector('.sheet'); shareText([ '*'+txt(h).replace('✕','').replace('📤','').trim()+'*', txt(sh.querySelector('.sub')||{innerText:''}), cardText(sh) ].filter(Boolean).join('\n'),''); }; h.insertBefore(b,h.querySelector('.x')); }
+  fitTables();
 }
 function drafts(){
   const D=Object.values((DOC&&DOC.drafts)||{}); if(!D.length) return '';
@@ -517,6 +524,8 @@ function drill(key){
     <p class="note">First seen in log ${esc(r.seen||'')} · last change ${esc(r.updated||'')}</p></div>`;
   document.body.appendChild(box);
   box.onclick=e=>{ if(e.target===box) box.remove(); }; box.ondblclick=()=>box.remove(); $('drillX').onclick=()=>box.remove();
+  { const h=box.querySelector('.sheet h2'); const b=document.createElement('button'); b.className='sh'; b.textContent='📤'; b.title='share on WhatsApp'; b.onclick=e=>{ e.stopPropagation(); const sh=box.querySelector('.sheet'); shareText([ '*'+txt(h).replace('✕','').replace('📤','').trim()+'*', txt(sh.querySelector('.sub')||{innerText:''}), cardText(sh) ].filter(Boolean).join('\n'),''); }; h.insertBefore(b,h.querySelector('.x')); }
+  fitTables();
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const d=$('drill'); if(d) d.remove(); } });
 
@@ -833,6 +842,7 @@ function render(){
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
+  addShare(); fitTables();
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
   $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
@@ -868,6 +878,28 @@ async function watchDay(){
 /* the index is read once an hour; today's entry is refreshed from the live doc so every trend has the last sale */
 function syncIndexToday(){ if(!DOC||DAY!==bizToday()) return; const S=recs().filter(r=>r.status==='settled'); const cs=closeStats(recs()), close={}; Object.keys(cs).forEach(k=>{ const a=avg(cs[k].total); if(a!=null) close[k]=a; });
   INDEX[DAY]=Object.assign({},INDEX[DAY]||{},{rev:S.reduce((n,r)=>n+(r.total||0),0),bills:S.length,open:recs().filter(r=>r.status==='open'||r.status==='due').length,paidOut:DOC.paidOut||0,purchases:DOC.purchaseTotal||0,hours:hbucket(S),close,updatedAt:DOC.updatedAt}); }
+/* ---- share any card as WhatsApp text ---- */
+const txt=el=>(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim();
+function cardText(card){
+  const out=[]; const h=card.querySelector('h2'); if(h){ const t=h.cloneNode(true); t.querySelectorAll('button,select,input,a').forEach(x=>x.remove()); const n=t.querySelector('.n'); const sub=n?txt(n):''; if(n) n.remove(); out.push('*'+txt(t)+'*'+(sub?' — '+sub:'')); }
+  card.querySelectorAll('.mrow').forEach(r=>{ const c=r.children; out.push('• '+txt(c[0])+': '+txt(c[c.length-1])); });
+  card.querySelectorAll('.bcard').forEach(b=>{ const l1=b.querySelector('.l1'), l2=b.querySelector('.l2'), l3=b.querySelector('.l3'), l4=b.querySelector('.l4'); out.push('• *'+txt(l1)+'*'); if(l2) out.push('  '+txt(l2)); if(l3) out.push('  '+txt(l3)); if(l4) out.push('  '+txt(l4)); });
+  card.querySelectorAll('.tbl').forEach(t=>out.push('• '+txt(t)));
+  card.querySelectorAll('.ki').forEach(t=>out.push('• '+txt(t)));
+  card.querySelectorAll('.al').forEach(t=>out.push('⚠ '+txt(t)));
+  card.querySelectorAll('.ev').forEach(t=>out.push('• '+txt(t)));
+  card.querySelectorAll('table').forEach(tb=>{ const heads=[...tb.querySelectorAll('tr th')].map(txt); tb.querySelectorAll('tr').forEach(tr=>{ const tds=[...tr.children].filter(td=>td.tagName==='TD'); if(!tds.length) return; const cells=tds.map((td,i)=>{ const v=txt(td); const hd=heads[i]||''; return v?(i===0?'*'+v+'*':hd?hd+' '+v:v):''; }).filter(Boolean); out.push('• '+cells.join(' · ')); }); });
+  const bars=card.querySelector('.bars'); if(bars&&!card.querySelector('table')&&!card.querySelector('.mrow')){ [...bars.querySelectorAll('.bar')].forEach(b=>{ if(b.dataset.t) out.push('• '+b.dataset.t); }); }
+  return out.filter(Boolean).join('\n');
+}
+async function shareText(text,title){ text='🏠 HAYAT · '+(MODE==='period'?PER.label:DAY)+(title?' · '+title:'')+'\n'+text; try{ if(navigator.share){ await navigator.share({text}); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); }catch(e){}
+  window.open('https://wa.me/?text='+encodeURIComponent(text.slice(0,4000)),'_blank'); }
+function kpiText(){ return [...document.querySelectorAll('.kpi')].map(k=>'• '+txt(k.querySelector('small'))+': *'+txt(k.querySelector('b'))+'*'+(k.querySelector('em')?' ('+txt(k.querySelector('em'))+')':'')).join('\n'); }
+function addShare(){ $$('.card h2').forEach(h=>{ if(h.querySelector('.sh')) return; const b=document.createElement('button'); b.className='sh'; b.title='share on WhatsApp'; b.textContent='📤'; b.onclick=e=>{ e.stopPropagation(); e.preventDefault(); shareText(cardText(h.closest('.card')),''); }; h.appendChild(b); });
+  const k=document.querySelector('.kpis'); if(k&&!k.querySelector('.sh')){ const b=document.createElement('button'); b.className='sh kpish'; b.title='share the summary'; b.textContent='📤'; b.onclick=()=>shareText(kpiText(),MODE==='period'?PER.label:'Day'); k.appendChild(b); } }
+/* ---- phones: a table that does not fit becomes stacked row-cards, never a sideways scroll ---- */
+function fitTables(){ if(window.innerWidth>640) return; $$('main table, #main table').forEach(t=>{ t.classList.remove('stack'); const host=t.closest('.scroll')||t.parentElement; if(t.scrollWidth>host.clientWidth+2){ const heads=[...t.querySelectorAll('tr th')].map(txt); t.querySelectorAll('tr').forEach(tr=>[...tr.children].forEach((td,i)=>{ if(td.tagName==='TD') td.dataset.h=heads[i]||''; })); t.classList.add('stack'); } }); }
 function stamp(){ const l=$('live'); if(!DOC){ l.className='live bad'; l.lastElementChild.textContent='no data'; return; }
   if(DAY!==bizToday()){ l.className='live'; l.lastElementChild.textContent=({file:'from file',cache:'from this device',firebase:'from Firebase'}[SRC[DAY]]||'')+' · '+DAY; return; }
   const age=Math.max(0,Math.round((Date.now()-T(DOC.updatedAt))/60000)); l.className='live'+(age>6?' bad':''); l.lastElementChild.textContent=(age>6?'stale · ':'live · ')+age+' min ago'; }
