@@ -23,6 +23,8 @@ a{color:inherit}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .top h1{font:700 18px "Cormorant Garamond",Georgia,serif;margin:0;letter-spacing:.02em}
 .top .sp{flex:1}
+.seg{display:inline-flex;gap:4px;background:var(--soft);border-radius:999px;padding:3px} .seg .tab{border:0;background:transparent} body.period .seg [data-mode=period],body:not(.period) .seg [data-mode=day]{background:var(--pri);color:var(--onpri)}
+body.period #prevDay,body.period #nextDay,body.period #calBtn,body.period #day,body.period #live{display:none}
 .nav{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:8px;height:32px;min-width:32px;padding:0 8px;font-size:16px;cursor:pointer} .nav:hover{background:var(--soft2)} .nav.cal{font-size:14px}
 #calPop[hidden]{display:none} #calPop{position:absolute;top:52px;left:16px;z-index:9;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;gap:18px;flex-wrap:wrap;max-width:calc(100vw - 32px)}
 .cm{min-width:196px} .cm h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)} .cm .g{display:grid;grid-template-columns:repeat(7,26px);gap:3px} .cm .g span{font-size:9px;color:var(--muted);text-align:center}
@@ -73,6 +75,7 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .bars{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;align-items:end;height:90px;margin:4px 0 2px}
 .bar{background:var(--s1);border-radius:3px 3px 0 0;min-height:2px;position:relative} .bar:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--pri);color:var(--onpri);font-size:11px;padding:2px 6px;border-radius:6px;white-space:nowrap;margin-bottom:3px}
 .bar.y{background:var(--line2)}
+.dd{border-top:1px solid var(--line);padding:6px 0} .dd summary{display:flex;gap:10px;align-items:center;cursor:pointer;list-style:none;font-size:13px} .dd summary::-webkit-details-marker{display:none} .dd summary::before{content:'▸';color:var(--muted);width:12px} .dd[open] summary::before{content:'▾'} .dd summary small{color:var(--muted)} .dd summary b{margin-left:auto} .dd table{margin:6px 0 4px}
 .bc{position:relative;display:flex;align-items:flex-end;height:100%} .bc .bar{width:100%} .avgm{position:absolute;left:-1px;right:-1px;border-top:2px dotted var(--line2);pointer-events:none}
 .hx{display:grid;grid-template-columns:repeat(24,1fr);font-size:9px;color:var(--muted);text-align:center}
 .mini{display:grid;gap:4px} .mrow{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:13px}
@@ -83,7 +86,7 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .ha-box{max-width:420px;margin:40px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
 .ha-f{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;margin:0 0 8px;background:var(--bg);color:inherit} .ha-b{width:100%;font:inherit;font-weight:700;padding:11px;border:0;border-radius:10px;background:var(--pri);color:var(--onpri);cursor:pointer} .ha-n{font-size:12px;color:var(--muted)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
-.tabs.main{position:sticky;top:var(--toph,52px);z-index:4;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(8px);padding:6px 0;margin:0 0 8px} .tab{font:inherit;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:inherit;cursor:pointer} .tab.on{background:var(--pri);color:var(--onpri);border-color:transparent}
+.tabs.main{align-items:center;position:sticky;top:var(--toph,52px);z-index:4;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(8px);padding:6px 0;margin:0 0 8px} .tab{font:inherit;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:inherit;cursor:pointer} .tab.on{background:var(--pri);color:var(--onpri);border-color:transparent}
 .hide{display:none}
 .sheetwrap{position:fixed;inset:0;z-index:50;background:rgba(27,26,23,.45);display:flex;justify-content:flex-end}
 .sheet{width:min(620px,100%);height:100%;overflow:auto;background:var(--bg);padding:16px;box-shadow:-12px 0 40px rgba(0,0,0,.25)}
@@ -115,7 +118,7 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
   .kit{grid-template-columns:1fr}
   .mrow{grid-template-columns:90px 1fr 64px;gap:6px;font-size:12px}
   .kpis{display:flex;overflow-x:auto;gap:8px;scroll-snap-type:x mandatory;padding-bottom:4px;margin-bottom:8px} .kpi{flex:0 0 46%;min-width:150px;scroll-snap-align:start} .kpi b{font-size:20px}
-  .tabs.main{overflow-x:auto;flex-wrap:nowrap;padding:6px 0} .tabs.main .tab{white-space:nowrap}
+  .tabs.main{overflow-x:auto;flex-wrap:nowrap;padding:6px 0;align-items:center} .tabs.main .tab{white-space:nowrap} .tabs.main .n{display:none}
   .sheet{width:100%;padding:12px}
   .cmp{grid-template-columns:1fr auto 1fr;gap:4px 8px;font-size:12px}
   .floor{grid-template-columns:repeat(auto-fill,minmax(76px,1fr))}
@@ -130,6 +133,7 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
 <body>
 <div class="top">
   <h1>HAYAT · Owner</h1>
+  <span class="seg"><button class="tab on" data-mode="day">Day</button><button class="tab" data-mode="period">Period</button></span>
   <button class="nav" id="prevDay" title="previous day (←)">‹</button>
   <select id="day"></select>
   <button class="nav" id="nextDay" title="next day (→)">›</button>
@@ -157,7 +161,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v167';
+const BOARD='v169';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -275,9 +279,9 @@ const extraKind=i=>{ const t=(i.cat||'')+' '+(i.n||''); for(const [k,re] of EXTR
 function upsell(){
   const g={}; recs().filter(r=>r.status==='settled'&&r.kind!=='staff'&&r.waiter).forEach(r=>{ const w=g[r.waiter]=g[r.waiter]||{bills:0,with:0,v:0,k:{}}; w.bills++; let any=false;
     (r.items||[]).forEach(i=>{ const k=extraKind(i); if(!k) return; any=true; w.k[k]=(w.k[k]||0)+(i.q||0); w.v+=i.a||0; }); if(any) w.with++; });
-  const rows=Object.entries(g).sort((a,b)=>(b[1].with/b[1].bills)-(a[1].with/a[1].bills)); if(!rows.length) return '';
+  const rows=Object.entries(g).sort((a,b)=>b[1].v-a[1].v); if(!rows.length) return '';
   const cols=EXTRAS.map(e=>e[0]).filter(k=>rows.some(r=>r[1].k[k]));
-  return `<div class="card wide"><h2>Upselling · by waiter <span class="n">extras sold with the main course</span></h2><table><tr><th>Waiter</th><th class="r m">Bills</th><th class="r">Bills with extras</th>${cols.map(c=>`<th class="r">${c}</th>`).join('')}<th class="r m">Extras ₹</th><th class="r">₹ / bill</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r m">${w.bills}</td><td class="r"><b>${Math.round(100*w.with/w.bills)}%</b></td>${cols.map(c=>`<td class="r">${w.k[c]||''}</td>`).join('')}<td class="r m">${rs(w.v)}</td><td class="r">${rs(w.v/w.bills)}</td></tr>`).join('')}</table></div>`;
+  return `<div class="card wide"><h2>Upselling · by waiter <span class="n">extras sold with the main course</span></h2><table><tr><th>Waiter</th><th class="r m">Bills</th><th class="r">Bills with extras</th>${cols.map(c=>`<th class="r">${c}</th>`).join('')}<th class="r">Extras ₹</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r m">${w.bills}</td><td class="r"><b>${Math.round(100*w.with/w.bills)}%</b></td>${cols.map(c=>`<td class="r">${w.k[c]||''}</td>`).join('')}<td class="r"><b>${rs(w.v)}</b></td></tr>`).join('')}</table></div>`;
 }
 /* ordered, not paid: the money still on the floor and on the road */
 function unrealized(){
@@ -427,7 +431,7 @@ function payments(){
   const parties=Object.entries(byParty).sort((a,b)=>b[1].v-a[1].v); const max=Math.max(1,...parties.map(x=>x[1].v));
   const byMode={}; out.forEach(p=>{ const k=p.mode||'—'; byMode[k]=(byMode[k]||0)+(p.amount||0); });
   return `<div class="card"><h2>Paid out · by party <span class="n">${rs(tot)}</span></h2><div class="mini">${parties.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n}</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')||'<div class="note">Nothing entered at the counter yet.</div>'}</div>${Object.keys(byMode).length?`<p class="note">${Object.entries(byMode).map(([k,v])=>esc(k)+' '+rs(v)).join(' · ')}${inn.length?' · received '+rs(inn.reduce((n,p)=>n+(p.amount||0),0)):''}</p>`:''}</div>`+
-    `<div class="card wide"><h2>Counter entries · live <span class="n">${live.length}${P.length-live.length?' · '+(P.length-live.length)+' deleted':''}</span></h2><input class="search" id="q" placeholder="Search party, remark, amount…" value="${esc(Q)}"><div class="scroll"><table><tr><th>Time</th><th class="m">Kind</th><th>Party</th><th>Remarks</th><th>Mode</th><th class="m">By</th><th class="r">Out</th><th class="r">In</th></tr>${P.map(p=>`<tr${p.deleted?' style="opacity:.5;text-decoration:line-through"':''} title="${esc((p.type||'')+(p.deleted?' · deleted '+p.deleted:''))}"><td>${hm(p.at)}</td><td class="m">${esc(p.kind||'')}</td><td>${esc(p.party||'')}</td><td>${esc(p.remarks||'')}</td><td>${esc(p.mode||'')}</td><td class="m">${esc(p.by||'')}</td><td class="r">${p.flow==='out'?rs(p.amount):''}</td><td class="r">${p.flow==='in'?rs(p.amount):''}</td></tr>`).join('')}</table></div></div>`;
+    `<div class="card wide"><h2>Counter entries · live <span class="n">${live.length}${P.length-live.length?' · '+(P.length-live.length)+' deleted':''}</span></h2><input class="search" id="q" placeholder="Search party, remark, amount…" value="${esc(Q)}"><div class="scroll"><table><tr><th>Time</th><th class="m">Kind</th><th>Party</th><th>Remarks</th><th>Mode</th><th class="m">By</th><th class="r">Out</th><th class="r">In</th></tr>${P.map(p=>`<tr${p.deleted?' style="opacity:.5;text-decoration:line-through"':''} title="${esc((p.type||'')+(p.deleted?' · deleted '+p.deleted:''))}"><td>${hm(p.at)}</td><td class="m">${esc(payKind(p))}</td><td>${esc(p.party||'')}</td><td>${esc(p.remarks||'')}</td><td>${esc(p.mode||'')}</td><td class="m">${esc(p.by||'')}</td><td class="r">${p.flow==='out'?rs(p.amount):''}</td><td class="r">${p.flow==='in'?rs(p.amount):''}</td></tr>`).join('')}</table></div></div>`;
 }
 function purchaseSheet(key){
   const p=((DOC&&DOC.purchases)||{})[key]||((DOC&&DOC.drafts)||{})[key]||(RANGE.doc&&(RANGE.doc.purchases[key])); if(!p) return;
@@ -587,11 +591,20 @@ function range(){
 }
 /* ---- one month at a glance; finished months are a saved snapshot in Firebase ---- */
 let MON={key:'',doc:null,busy:false,person:''};
+/* what a counter entry is: a supplier purchase, salary to staff, other expense, or money received */
+function payKind(p){ if(p.flow==='in') return 'receipt'; const t=(p.type||'')+' '+(p.act||''); const grp=(p.creditGroup||'')+' '+(p.debitGroup||'');
+  if(p.kind==='salary'||/salary|wage|advance|payroll/i.test(t)||/employee|staff|salary|payroll/i.test(grp)||staffNames().has(String(p.party||'').trim().toUpperCase())) return 'salary';
+  if(p.kind==='purchase') return 'purchase'; return 'expense'; }
 function staffName(r){ const rem=String(r.remarks||'').trim(); const w=rem.split(/\s+/)[0]; return (w&&!ORDER_WORDS.test(rem))?w.toUpperCase():(r.waiter||'CASHIER'); }
 function buildMonth(m,days,docs){
-  const S={month:m,days:days.length,sales:0,bills:0,byDay:{},kinds:{},sections:{},waiters:{},disc:{by:{},list:[],total:0},staff:{by:{},list:[],total:0,menu:0},voids:{by:{},list:[],total:0,afterBill:{n:0,v:0}},paidOut:0};
+  const S={month:m,days:days.length,sales:0,bills:0,byDay:{},kinds:{},sections:{},waiters:{},disc:{by:{},list:[],total:0},staff:{by:{},list:[],total:0,menu:0},voids:{by:{},list:[],total:0,afterBill:{n:0,v:0}},paidOut:0,pay:{purchase:0,salary:0,expense:0,receipt:0,byParty:{},list:[]},spend:{byItem:{},byCat:{},byDay:{},total:0,salary:0}};
+  const SAL=/salary|wage|advance|payroll|staff pay/i;
   S.days=0;
   days.forEach(d=>{ const doc=docs[d]; if(!doc) return; S.days++; S.paidOut+=doc.paidOut||0; let dr=0,db=0;
+    Object.values(doc.purchases||{}).forEach(pu=>(pu.items||[]).forEach(i=>{ const name=(i.n||'').trim()||'—', cat=SAL.test(name+' '+(i.cat||''))?'Salary':(i.cat||'Other'); const v=i.total||((i.q||0)*(i.cost||0)); const sp=S.spend;
+      const it=sp.byItem[name]=sp.byItem[name]||{n:name,cat,unit:i.unit||'',q:0,v:0,lines:0,costs:[]}; it.q+=i.q||0; it.v+=v; it.lines++; if(i.cost) it.costs.push(i.cost);
+      sp.byCat[cat]=(sp.byCat[cat]||0)+v; (sp.byDay[d]=sp.byDay[d]||[]).push({n:name,cat,q:i.q||0,unit:i.unit||'',cost:i.cost||0,v,by:pu.by||'',at:pu.at||''}); sp.total+=v; if(cat==='Salary') sp.salary+=v; }));
+    Object.values(doc.payments||{}).forEach(p=>{ if(p.deleted) return; const k=payKind(p); S.pay[k]+=p.amount||0; if(k!=='receipt'){ const who=p.party||p.remarks||'—'; const x=S.pay.byParty[who]=S.pay.byParty[who]||{n:0,v:0,kind:k}; x.n++; x.v+=p.amount||0; } S.pay.list.push({d,at:p.at,kind:k,party:p.party||'',remarks:p.remarks||'',mode:p.mode||'',by:p.by||'',amount:p.amount||0,flow:p.flow}); });
     Object.values(doc.records||{}).forEach(r=>{ const key=d+'/'+r.key;
       if(r.status==='settled'){ const v=sum(r); if(r.kind!=='staff'){ dr+=v; db++; S.kinds[r.kind]=(S.kinds[r.kind]||0)+v; S.sections[r.section||'—']=(S.sections[r.section||'—']||0)+v; if(r.waiter){ const w=S.waiters[r.waiter]=S.waiters[r.waiter]||{n:0,v:0}; w.n++; w.v+=v; } }
         const off=discOf(r); if(off>0){ const who=r.cashier||r.waiter||'—'; const x=S.disc.by[who]=S.disc.by[who]||{n:0,v:0}; x.n++; x.v+=off; S.disc.total+=off; S.disc.list.push({d,key,kot:r.kot,kind:r.kind,where:r.table||(r.token?'T'+r.token:''),note:r.remarks||'',waiter:r.waiter||'',by:who,bill:v,off}); }
@@ -601,13 +614,18 @@ function buildMonth(m,days,docs){
         S.voids.list.push({d,key,kot:r.kot,where:r.table||(r.token?'T'+r.token:''),by:who,item:e.item,cut,value:val,reason:e.reason||'',after,at:e.at}); });
     });
     S.byDay[d]={rev:dr,bills:db}; S.sales+=dr; S.bills+=db; });
+  /* the book says "cash" for everything; the item lines say what it was */
+  const sp=S.spend; Object.values(sp.byItem).forEach(it=>{ it.avg=it.costs.length?it.costs.reduce((a,b)=>a+b,0)/it.costs.length:0; delete it.costs; });
+  const salary=sp.salary+S.pay.salary, other=S.pay.expense; const goods=Math.max(0,sp.total-sp.salary);
+  S.pay.purchase=goods; S.pay.salary=salary; S.pay.expense=other;
+  S.expenses=goods+salary+other; S.net=S.sales-S.expenses;
   S.avgDay=S.days?S.sales/S.days:0; S.asOf=tsNow();
   return S;
 }
 async function monthDoc(m,force){
   const cur=m===bizToday().slice(0,7), {fs,db}=FB, ref=fs.doc(db,'vm_months',m);
-  if(!force){ const c=await IDB.get('month:'+m); if(c&&!c.partial) return c;
-    try{ const snap=await fs.getDoc(ref); if(snap.exists()){ const S=snap.data(); const fresh=!S.partial||(Date.now()-T(S.asOf).getTime())<1800000; if(fresh){ if(!S.partial) IDB.set('month:'+m,S); return S; } } }catch(e){} }
+  if(!force){ const c=await IDB.get('month:'+m); if(c&&!c.partial&&c.spend) return c;
+    try{ const snap=await fs.getDoc(ref); if(snap.exists()){ const S=snap.data(); const fresh=S.spend&&(!S.partial||(Date.now()-T(S.asOf).getTime())<1800000); if(fresh){ if(!S.partial) IDB.set('month:'+m,S); return S; } } }catch(e){} }
   const days=Object.keys(INDEX).filter(d=>d.startsWith(m)&&(INDEX[d].bills||INDEX[d].rev)).sort(); const docs={};
   for(const d of days) docs[d]=d===bizToday()?DOC:await loadDay(d);
   const S=buildMonth(m,days,docs); S.partial=cur;
@@ -632,20 +650,97 @@ function month(){
     <div class="kpi click" data-tab="mdisc"><small>Discounts</small><b>${rs(S.disc.total)}</b><em>${S.disc.list.length} bills · ${S.sales?(100*S.disc.total/(S.sales+S.disc.total)).toFixed(1):0}% of gross</em></div>
     <div class="kpi click" data-tab="mstaff"><small>Staff food</small><b>${rs(S.staff.menu)}</b><em>at menu price · ${S.staff.list.length} bills · paid ${rs(S.staff.total)}</em></div>
     <div class="kpi click" data-tab="mvoid"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill printed ${rs(S.voids.afterBill.v)} (${S.voids.afterBill.n})</em></div>
-    <div class="kpi"><small>Paid out</small><b>${rs(S.paidOut)}</b><em>${S.sales?Math.round(100*S.paidOut/S.sales)+'% of sales':''}</em></div></div>`;
+    <div class="kpi click" data-tab="mpay"><small>Expenses</small><b>${rs(S.expenses||S.paidOut)}</b><em class="rows"><span>Purchases <b>${rs((S.pay||{}).purchase||0)}</b></span><span>Salary <b>${rs((S.pay||{}).salary||0)}</b></span><span>Other <b>${rs((S.pay||{}).expense||0)}</b></span></em></div>
+    <div class="kpi"><small>Net</small><b class="${(S.net||0)>=0?'up':'dn'}">${rs(S.net||0)}</b><em>${S.sales?Math.round(100*(S.net||0)/S.sales)+'% margin':''}${(S.pay||{}).receipt?' · received '+rs(S.pay.receipt):''}</em></div></div>`;
   const days=Object.keys(S.byDay).sort(), maxD=Math.max(1,...days.map(d=>S.byDay[d].rev));
   const byDay=`<div class="card wide"><h2>Sales by day</h2><div class="bars" style="grid-template-columns:repeat(${days.length},1fr)">${days.map(d=>`<div class="bar click" data-day="${d}" style="height:${Math.max(2,100*S.byDay[d].rev/maxD)}%" data-t="${d.slice(5)} ${rs(S.byDay[d].rev)} · ${S.byDay[d].bills} bills"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((d,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div></div>`;
   const mini=(title,g,fmt)=>{ const rows=Object.entries(g).sort((a,b)=>(b[1].v??b[1])-(a[1].v??a[1])); const max=Math.max(1,...rows.map(r=>r[1].v??r[1])); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([kk,x])=>`<div class="mrow"><span>${esc(kk)}${x.n!=null?' <small style="color:var(--muted)">'+x.n+'</small>':''}</span><div class="b" style="width:${100*(x.v??x)/max}%"></div><span class="v">${(fmt||rs)(x.v??x)}</span></div>`).join('')||'<div class="note">Nothing.</div>'}</div></div>`; };
-  const people=[...new Set([...S.disc.list.map(x=>x.by),...S.staff.list.map(x=>x.who),...S.voids.list.map(x=>x.by)])].sort();
+  const people=[...new Set([...S.disc.list.map(x=>x.by),...S.staff.list.map(x=>x.who),...S.voids.list.map(x=>x.by),...pay.list.map(x=>x.party).filter(Boolean)])].sort();
   const pf=`<select class="tb sm" id="monPerson"><option value="">Everyone</option>${people.map(p=>`<option${MON.person===p?' selected':''}>${esc(p)}</option>`).join('')}</select>`;
   const P=x=>!MON.person||x.by===MON.person||x.who===MON.person;
   const discList=S.disc.list.filter(P).sort((a,b)=>b.off-a.off), staffList=S.staff.list.filter(P).sort((a,b)=>b.menu-a.menu), voidList2=S.voids.list.filter(P).sort((a,b)=>b.value-a.value);
   const discCard=`<div class="card wide" id="mdisc"><h2>Discounts · every bill <span class="n">${pf} · ${discList.length} · ${rs(discList.reduce((n,x)=>n+x.off,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>KOT</th><th>Where</th><th>Note</th><th class="m">Waiter</th><th>By</th><th class="r">Bill</th><th class="r">Off</th><th class="r">%</th></tr>${discList.map(x=>`<tr class="rowlink" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td>${esc(x.kot)}</td><td><span class="pill ${esc(x.kind)}">${esc(x.kind)}</span> ${esc(x.where)}</td><td>${esc(x.note)}</td><td class="m">${esc(x.waiter)}</td><td>${esc(x.by)}</td><td class="r">${rs(x.bill)}</td><td class="r"><b>${rs(x.off)}</b></td><td class="r">${Math.round(100*x.off/(x.bill+x.off))}%</td></tr>`).join('')}</table></div></div>`;
   const staffCard=`<div class="card wide" id="mstaff"><h2>Staff food · every bill <span class="n">${staffList.length} · menu ${rs(staffList.reduce((n,x)=>n+x.menu,0))} · paid ${rs(staffList.reduce((n,x)=>n+x.paid,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>KOT</th><th>Who</th><th>Items</th><th class="r">Menu</th><th class="r">Paid</th></tr>${staffList.map(x=>`<tr class="rowlink" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td>${esc(x.kot)}</td><td><b>${esc(x.who)}</b> <small style="color:var(--muted)">${esc(x.note)}</small></td><td>${esc(x.items)}</td><td class="r">${rs(x.menu)}</td><td class="r">${rs(x.paid)}</td></tr>`).join('')}</table></div></div>`;
   const voidCard=`<div class="card wide" id="mvoid"><h2>Voids · every one <span class="n">${voidList2.length} · ${rs(voidList2.reduce((n,x)=>n+x.value,0))} · after bill printed ${voidList2.filter(x=>x.after).length}</span></h2><div class="scroll"><table><tr><th>Day</th><th class="m">Time</th><th class="m">KOT</th><th>Where</th><th>By</th><th>Item</th><th class="r">Qty</th><th class="m">Reason</th><th class="r">Value</th><th>When</th></tr>${voidList2.map(x=>`<tr class="rowlink${x.after?' due':''}" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td class="m">${hm(x.at)}</td><td class="m">${esc(x.kot)}</td><td>${esc(x.where)}</td><td>${esc(x.by)}</td><td>${esc(x.item)}</td><td class="r">−${x.cut}</td><td class="m">${esc(x.reason)}</td><td class="r">${rs(x.value)}</td><td>${x.after?'<b>after bill</b>':'<span class="m">before bill</span>'}</td></tr>`).join('')}</table></div></div>`;
+  const pay=S.pay||{purchase:0,salary:0,expense:0,byParty:{},list:[]};
+  const sve=`<div class="card"><h2>Sales vs expenses</h2><div class="mini">${[['Sales',S.sales],['Purchases',pay.purchase],['Salary',pay.salary],['Other',pay.expense],['Net',S.net||0]].map(([kk,v])=>`<div class="mrow"><span>${kk}</span><div class="b" style="width:${100*Math.abs(v)/Math.max(1,S.sales)}%${kk==='Net'?';background:'+((v>=0)?'var(--s3)':'var(--s8)'):kk==='Sales'?'':';background:var(--s2)'}"></div><span class="v">${rs(v)}</span></div>`).join('')}</div></div>`;
+  const payList=pay.list.filter(x=>x.kind!=='receipt'&&(!MON.person||x.party===MON.person)).sort((a,b)=>b.amount-a.amount);
+  const payCard=`<div class="card wide" id="mpay"><h2>Paid out · every entry <span class="n">${payList.length} · ${rs(payList.reduce((n,x)=>n+x.amount,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>Kind</th><th>Party</th><th>Remarks</th><th class="m">Mode</th><th class="m">By</th><th class="r">Amount</th></tr>${payList.map(x=>`<tr><td>${x.d.slice(5)}</td><td><span class="pill ${x.kind==='salary'?'staff':x.kind==='purchase'?'counter':'delivery'}">${x.kind}</span></td><td>${esc(x.party)}</td><td>${esc(x.remarks)}</td><td class="m">${esc(x.mode)}</td><td class="m">${esc(x.by)}</td><td class="r"><b>${rs(x.amount)}</b></td></tr>`).join('')}</table></div></div>`;
+  const partyBy={}; Object.entries(pay.byParty).forEach(([kk,x])=>partyBy[kk+(x.kind==='salary'?' · salary':'')]={n:x.n,v:x.v});
   const staffBy={}; Object.entries(S.staff.by).forEach(([kk,x])=>staffBy[kk]={n:x.n,v:x.menu});
   const voidBy={}; Object.entries(S.voids.by).forEach(([kk,x])=>voidBy[kk]={n:x.n,v:x.v});
-  return head+k+byDay+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+mini('By type',S.kinds)+mini('By section',S.sections)+mini('By waiter',S.waiters)+discCard+staffCard+voidCard;
+  return head+k+byDay+sve+mini('Paid out · by party',partyBy)+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+mini('By type',S.kinds)+mini('By section',S.sections)+mini('By waiter',S.waiters)+discCard+staffCard+voidCard+payCard;
+}
+/* ================= PERIOD MODE: a week, a month, any span ================= */
+let MODE='day', PTAB='overview', PER={from:'',to:'',label:'',doc:null,V:null,busy:false,person:''};
+const isFullMonth=(a,b)=>a.slice(8)==='01'&&a.slice(0,7)===b.slice(0,7)&&(b===ymd(new Date(+a.slice(0,4),+a.slice(5,7),0,12))||(b===bizToday()&&a.slice(0,7)===b.slice(0,7)));
+function periodPresets(){ const t=new Date(bizToday()+'T12:00:00'); const dow=(t.getDay()+6)%7; const mon=new Date(t); mon.setDate(t.getDate()-dow); const lmon=new Date(mon); lmon.setDate(mon.getDate()-7); const lsun=new Date(mon); lsun.setDate(mon.getDate()-1);
+  const m0=bizToday().slice(0,8)+'01'; const pm=new Date(t); pm.setDate(0); const pm0=ymd(pm).slice(0,8)+'01';
+  return [['This week',ymd(mon),bizToday()],['Last week',ymd(lmon),ymd(lsun)],['This month',m0,bizToday()],['Last month',pm0,ymd(pm)],['Last 30 days',ymd(new Date(Date.now()-29*864e5)),bizToday()]]; }
+async function loadPeriod(from,to,label,force){
+  if(from>to){ const x=from; from=to; to=x; }
+  PER={from,to,label:label||from+' → '+to,doc:null,V:null,busy:true,person:PER.person}; render();
+  const days=Object.keys(INDEX).filter(d=>d>=from&&d<=to&&(INDEX[d].bills||INDEX[d].rev)).sort();
+  let S=null;
+  if(isFullMonth(from,to)&&!force){ S=await monthDoc(from.slice(0,7)); }
+  const docs={}; for(const d of days) docs[d]=d===bizToday()?DOC:await loadDay(d);
+  if(!S) S=buildMonth(from+'..'+to,days,docs);
+  /* the virtual day: every record of the span, so the day cards work unchanged */
+  const V={day:from+' → '+to,records:{},purchases:{},payments:{},paidOut:0,paidIn:0,purchaseTotal:0,updatedAt:''};
+  days.forEach(d=>{ const doc=docs[d]; if(!doc) return; Object.entries(doc.records||{}).forEach(([k,r])=>{ V.records[d+'/'+k]=Object.assign({},r,{key:d+'/'+k,day:d}); }); Object.entries(doc.purchases||{}).forEach(([k,r])=>{ V.purchases[d+'/'+k]=Object.assign({},r,{key:d+'/'+k}); }); Object.entries(doc.payments||{}).forEach(([k,r])=>{ V.payments[d+'/'+k]=Object.assign({},r,{key:d+'/'+k}); }); V.paidOut+=doc.paidOut||0; V.paidIn+=doc.paidIn||0; V.purchaseTotal+=doc.purchaseTotal||0; });
+  V.purchaseCount=Object.keys(V.purchases).length; V.paymentCount=Object.values(V.payments).filter(p=>!p.deleted).length;
+  PER.doc=S; PER.V=V; PER.busy=false; RANGE.doc=V; render();
+}
+function prevPeriod(from,to){ const a=new Date(from+'T12:00:00'), b=new Date(to+'T12:00:00'); const n=Math.round((b-a)/864e5)+1; const pb=new Date(a); pb.setDate(a.getDate()-1); const pa=new Date(pb); pa.setDate(pb.getDate()-n+1); return [ymd(pa),ymd(pb)]; }
+function idxSum(from,to){ const o={rev:0,bills:0,out:0,n:0}; Object.keys(INDEX).forEach(d=>{ if(d>=from&&d<=to&&(INDEX[d].rev||INDEX[d].bills)){ o.rev+=INDEX[d].rev||0; o.bills+=INDEX[d].bills||0; o.out+=INDEX[d].paidOut||0; o.n++; } }); return o; }
+function period(){
+  const presets=periodPresets();
+  if(!PER.from){ const p=presets[2]; loadPeriod(p[1],p[2],p[0]); return '<div class="card wide"><div class="note">Loading…</div></div>'; }
+  const first=Object.keys(INDEX).sort()[0]||bizToday();
+  const bar=`<div class="card wide"><div class="tabs" style="margin:0">${presets.map(p=>`<button class="tab${PER.from===p[1]&&PER.to===p[2]?' on':''}" data-per="${p[1]}|${p[2]}|${p[0]}">${p[0]}</button>`).join('')}
+    <span style="display:inline-flex;gap:6px;align-items:center;margin-left:auto"><input type="date" id="pFrom" value="${PER.from}" min="${first}" max="${bizToday()}" class="fld"> <input type="date" id="pTo" value="${PER.to}" min="${first}" max="${bizToday()}" class="fld"> <button class="tab" id="pGo">Show</button> <button class="tab" id="pRefresh" title="rebuild from the day logs">↻</button></span></div>${PER.busy?'<div class="note">Building from the day logs — each day once, then it stays on this device.</div>':''}</div>`;
+  const S=PER.doc; if(!S) return bar;
+  const [pf,pt]=prevPeriod(PER.from,PER.to), prev=idxSum(pf,pt);
+  const d=(a,b)=>b?Math.round(100*(a-b)/b):null, dd=(a,b)=>{ const x=d(a,b); return x==null?'':` <span class="d ${x>=0?'up':'dn'}">${x>=0?'+':''}${x}%</span>`; };
+  const pay=S.pay||{purchase:0,salary:0,expense:0,receipt:0,byParty:{},list:[]}, exp=S.expenses??S.paidOut, net=S.net??(S.sales-exp);
+  const k=`<div class="kpis">
+    <div class="kpi"><small>Sales</small><b>${rs(S.sales)}</b><em>${S.days} days · ${S.bills} bills${dd(S.sales,prev.rev)} vs previous ${prev.n} days</em></div>
+    <div class="kpi"><small>Avg / day</small><b>${rs(S.avgDay)}</b><em>prev ${rs(prev.n?prev.rev/prev.n:0)}${dd(S.avgDay,prev.n?prev.rev/prev.n:0)}</em></div>
+    <div class="kpi"><small>Avg bill</small><b>${rs(S.bills?S.sales/S.bills:0)}</b><em>${Math.round(S.bills/Math.max(1,S.days))} bills/day${dd(S.bills,prev.bills)}</em></div>
+    <div class="kpi click" data-ptab="money"><small>Expenses</small><b>${rs(exp)}</b><em class="rows"><span>Goods <b>${rs(pay.purchase)}</b></span><span>Salary <b>${rs(pay.salary)}</b></span><span>Other <b>${rs(pay.expense)}</b></span></em></div>
+    <div class="kpi"><small>Net</small><b class="${net>=0?'up':'dn'}">${rs(net)}</b><em>${S.sales?Math.round(100*net/S.sales)+'% margin':''} · prev ${rs(prev.rev-prev.out)}</em></div>
+    <div class="kpi click" data-ptab="money"><small>Discounts</small><b>${rs(S.disc.total)}</b><em>${S.disc.list.length} bills · ${S.sales?(100*S.disc.total/(S.sales+S.disc.total)).toFixed(1):0}% of gross</em></div>
+    <div class="kpi click" data-ptab="people"><small>Staff food</small><b>${rs(S.staff.menu)}</b><em>${S.staff.list.length} bills · paid ${rs(S.staff.total)}</em></div>
+    <div class="kpi click" data-ptab="voids"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill ${rs(S.voids.afterBill.v)}</em></div></div>`;
+  const tabs=`<div class="tabs main">${[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['voids','Voids']].map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}<span class="n" style="align-self:center;margin-left:auto">${esc(PER.label)}${S.partial?' · so far':''}</span></div>`;
+  const days=Object.keys(S.byDay).sort(), maxD=Math.max(1,...days.map(x=>S.byDay[x].rev));
+  const byDay=`<div class="card wide"><h2>Sales by day <span class="n">click a day to open it</span></h2><div class="bars" style="grid-template-columns:repeat(${days.length},1fr)">${days.map(x=>`<div class="bar click" data-day="${x}" style="height:${Math.max(2,100*S.byDay[x].rev/maxD)}%" data-t="${x.slice(5)} ${rs(S.byDay[x].rev)} · ${S.byDay[x].bills} bills"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((x,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+x.slice(8)+'</span>').join('')}</div></div>`;
+  const mini=(title,g,fmt)=>{ const rows=Object.entries(g).sort((a,b)=>(b[1].v??b[1])-(a[1].v??a[1])); const max=Math.max(1,...rows.map(r=>r[1].v??r[1])); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([kk,x])=>`<div class="mrow"><span>${esc(kk)}${x.n!=null?' <small style="color:var(--muted)">'+x.n+'</small>':''}</span><div class="b" style="width:${100*(x.v??x)/max}%"></div><span class="v">${(fmt||rs)(x.v??x)}</span></div>`).join('')||'<div class="note">Nothing.</div>'}</div></div>`; };
+  const sve=`<div class="card"><h2>Sales vs expenses</h2><div class="mini">${[['Sales',S.sales],['Goods',pay.purchase],['Salary',pay.salary],['Other',pay.expense],['Net',net]].map(([kk,v])=>`<div class="mrow"><span>${kk}</span><div class="b" style="width:${100*Math.abs(v)/Math.max(1,S.sales)}%${kk==='Net'?';background:'+((v>=0)?'var(--s3)':'var(--s8)'):kk==='Sales'?'':';background:var(--s2)'}"></div><span class="v">${rs(v)}</span></div>`).join('')}</div></div>`;
+  const people=[...new Set([...S.disc.list.map(x=>x.by),...S.staff.list.map(x=>x.who),...S.voids.list.map(x=>x.by),...pay.list.map(x=>x.party).filter(Boolean)])].sort();
+  const pf2=`<select class="tb sm" id="perPerson"><option value="">Everyone</option>${people.map(p=>`<option${PER.person===p?' selected':''}>${esc(p)}</option>`).join('')}</select>`;
+  const P=x=>!PER.person||x.by===PER.person||x.who===PER.person||x.party===PER.person;
+  const discList=S.disc.list.filter(P).sort((a,b)=>b.off-a.off), staffList=S.staff.list.filter(P).sort((a,b)=>b.menu-a.menu), voidL=S.voids.list.filter(P).sort((a,b)=>b.value-a.value), payList=pay.list.filter(x=>x.kind!=='receipt'&&P(x)).sort((a,b)=>b.amount-a.amount);
+  const discCard=`<div class="card wide"><h2>Discounts · every bill <span class="n">${pf2} · ${discList.length} · ${rs(discList.reduce((n,x)=>n+x.off,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>KOT</th><th>Where</th><th>Note</th><th class="m">Waiter</th><th>By</th><th class="r">Bill</th><th class="r">Off</th><th class="r">%</th></tr>${discList.map(x=>`<tr class="rowlink" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td>${esc(x.kot)}</td><td><span class="pill ${esc(x.kind)}">${esc(x.kind)}</span> ${esc(x.where)}</td><td>${esc(x.note)}</td><td class="m">${esc(x.waiter)}</td><td>${esc(x.by)}</td><td class="r">${rs(x.bill)}</td><td class="r"><b>${rs(x.off)}</b></td><td class="r">${Math.round(100*x.off/(x.bill+x.off))}%</td></tr>`).join('')}</table></div></div>`;
+  const staffCard=`<div class="card wide"><h2>Staff food · every bill <span class="n">${pf2} · ${staffList.length} · menu ${rs(staffList.reduce((n,x)=>n+x.menu,0))} · paid ${rs(staffList.reduce((n,x)=>n+x.paid,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>KOT</th><th>Who</th><th>Items</th><th class="r">Menu</th><th class="r">Paid</th></tr>${staffList.map(x=>`<tr class="rowlink" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td>${esc(x.kot)}</td><td><b>${esc(x.who)}</b> <small style="color:var(--muted)">${esc(x.note)}</small></td><td>${esc(x.items)}</td><td class="r">${rs(x.menu)}</td><td class="r">${rs(x.paid)}</td></tr>`).join('')}</table></div></div>`;
+  const voidCard=`<div class="card wide"><h2>Voids · every one <span class="n">${pf2} · ${voidL.length} · ${rs(voidL.reduce((n,x)=>n+x.value,0))} · after bill printed ${voidL.filter(x=>x.after).length}</span></h2><div class="scroll"><table><tr><th>Day</th><th class="m">Time</th><th class="m">KOT</th><th>Where</th><th>By</th><th>Item</th><th class="r">Qty</th><th class="m">Reason</th><th class="r">Value</th><th>When</th></tr>${voidL.map(x=>`<tr class="rowlink${x.after?' due':''}" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td class="m">${hm(x.at)}</td><td class="m">${esc(x.kot)}</td><td>${esc(x.where)}</td><td>${esc(x.by)}</td><td>${esc(x.item)}</td><td class="r">−${x.cut}</td><td class="m">${esc(x.reason)}</td><td class="r">${rs(x.value)}</td><td>${x.after?'<b>after bill</b>':'<span class="m">before bill</span>'}</td></tr>`).join('')}</table></div></div>`;
+  const payCard=`<div class="card wide"><h2>Paid out · every entry <span class="n">${pf2} · ${payList.length} · ${rs(payList.reduce((n,x)=>n+x.amount,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>Kind</th><th>Party</th><th>Remarks</th><th class="m">Mode</th><th class="m">By</th><th class="r">Amount</th></tr>${payList.map(x=>`<tr><td>${x.d.slice(5)}</td><td><span class="pill ${x.kind==='salary'?'staff':x.kind==='purchase'?'counter':'delivery'}">${x.kind}</span></td><td>${esc(x.party)}</td><td>${esc(x.remarks)}</td><td class="m">${esc(x.mode)}</td><td class="m">${esc(x.by)}</td><td class="r"><b>${rs(x.amount)}</b></td></tr>`).join('')}</table></div></div>`;
+  const partyBy={}; Object.entries(pay.byParty).forEach(([kk,x])=>partyBy[kk+(x.kind==='salary'?' · salary':'')]={n:x.n,v:x.v});
+  const staffBy={}; Object.entries(S.staff.by).forEach(([kk,x])=>staffBy[kk]={n:x.n,v:x.menu});
+  const voidBy={}; Object.entries(S.voids.by).forEach(([kk,x])=>voidBy[kk]={n:x.n,v:x.v});
+  const V=PER.V, W=fn=>V?withDoc(V,fn):'';
+  let body='';
+  if(PTAB==='overview') body=byDay+sve+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+trends();
+  else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard;
+  else if(PTAB==='items') body=W(()=>items());
+  else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
+    const items=Object.values(sp.byItem).filter(x=>!PER.person||x.n===PER.person).sort((a,b)=>b.v-a.v), spTot=items.reduce((n,x)=>n+x.v,0);
+    const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
+    const dayKeys=Object.keys(sp.byDay).sort().reverse();
+    const dayCard=`<div class="card wide"><h2>Spend · day by day <span class="n">tap a day to open it</span></h2>${dayKeys.map(dk=>{ const L=sp.byDay[dk]; const t=L.reduce((n,x)=>n+x.v,0); return `<details class="dd"><summary><span>${dk}</span><small>${L.length} lines</small><b>${rs(t)}</b></summary><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th><th class="m">By</th></tr>${L.sort((a,b)=>b.v-a.v).map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${x.q}</td><td>${esc(x.unit)}</td><td class="r">${rs(x.cost)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="m">${esc(x.by)}</td></tr>`).join('')}</table></details>`; }).join('')||'<div class="note">No purchase lines in this span.</div>'}</div>`;
+    body=sve+mini('Spend · by category',sp.byCat)+mini('Discounts · by person',S.disc.by)+itemCard+dayCard+discCard+(pay.list.some(x=>x.kind==='expense'||x.kind==='salary')?payCard:''); }
+  else body=mini('Voids · by person',voidBy)+voidCard;
+  return bar+k+tabs+`<div class="grid">${body}</div>`;
 }
 function trends(){
   const days=Object.keys(INDEX).sort().slice(-30);
@@ -656,7 +751,7 @@ function trends(){
     if(!have.length) return '';
     return `<div class="card wide"><h2>${title} <span class="n">avg ${fmt(have.reduce((a,b)=>a+b,0)/have.length)} · best ${fmt(Math.max(...have))}</span></h2><div class="bars" style="${cols}">${vals.map((v,i)=>`<div class="bar click${days[i]===DAY?' cur':''}" data-day="${days[i]}" style="height:${Math.max(2,100*v/max)}%" data-t="${days[i].slice(5)} ${fmt(v)}"></div>`).join('')}</div>${axis}</div>`; };
   const closeKeys=[...new Set(days.flatMap(d=>Object.keys((INDEX[d]||{}).close||{})))];
-  const all=Object.keys(INDEX).filter(d=>INDEX[d]&&INDEX[d].rev&&d!==bizToday());
+  const all=Object.keys(INDEX).filter(d=>INDEX[d]&&INDEX[d].rev);
   const bucketCard=(title,keyOf,labels,note)=>{ const g={}; all.forEach(d=>{ const k=keyOf(d); (g[k]=g[k]||[]).push(INDEX[d].rev); }); const vals=labels.map(l=>g[l]?g[l].reduce((a,b)=>a+b,0)/g[l].length:0); const max=Math.max(1,...vals);
     return `<div class="card"><h2>${title} <span class="n">avg sales/day · ${all.length} days</span></h2><div class="bars" style="grid-template-columns:repeat(${labels.length},1fr);height:70px">${vals.map((v,i)=>`<div class="bar" style="height:${Math.max(2,100*v/max)}%" data-t="${labels[i]} ${rs(v)} · ${(g[labels[i]]||[]).length} days"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${labels.length},1fr)">${labels.map(l=>'<span>'+l+'</span>').join('')}</div>${note?'<p class="note">'+note+'</p>':''}</div>`; };
   const dom=d=>{ const n=+d.slice(8); return n<=10?'1–10':n<=20?'11–20':'21–end'; };
@@ -665,7 +760,9 @@ function trends(){
     if(!months.length) return '';
     const cell=y=>y?`<b>${rs(y.v)}</b><br><small style="color:var(--muted)">${rs(y.v/y.n)}/day · ${y.n}d</small>`:'—';
     return `<div class="card wide"><h2>Weeks of the month <span class="n">sales · avg per day · days counted</span></h2><table class="wk"><tr><th>Month</th><th class="r">1–7</th><th class="r">8–14</th><th class="r">15–21</th><th class="r">22–28</th><th class="r m">29–end</th><th class="r">Month</th></tr>${months.map(m=>{ const x=g[m], tot=Object.values(x).reduce((a,y)=>a+y.v,0), n=Object.values(x).reduce((a,y)=>a+y.n,0); return `<tr><td>${new Date(m+'-15T12:00:00').toLocaleString('en',{month:'short',year:'numeric'})}</td>${[1,2,3,4,5].map(w=>`<td class="r${w===5?' m':''}">${cell(x[w])}</td>`).join('')}<td class="r"><b>${rs(tot)}</b><br><small style="color:var(--muted)">${rs(tot/n)}/day · ${n}d</small></td></tr>`; }).join('')}</table></div>`; })();
-  const pattern=weeks+(all.length>=14?bucketCard('Start vs end of month',dom,['1–10','11–20','21–end'],'Salary days first, thin days last.')+bucketCard('Day of the week',dow,['Mon','Tue','Wed','Thu','Fri','Sat','Sun']):'');
+  const monthsTbl=(()=>{ const g={}; all.forEach(d=>{ const m=d.slice(0,7); const x=g[m]=g[m]||{rev:0,bills:0,out:0,n:0}; x.rev+=INDEX[d].rev||0; x.bills+=INDEX[d].bills||0; x.out+=INDEX[d].paidOut||0; x.n++; }); const ms=Object.keys(g).sort().reverse(); if(!ms.length) return '';
+    return `<div class="card wide"><h2>Month by month <span class="n">sales · paid out · net · includes today</span></h2><table><tr><th>Month</th><th class="r">Days</th><th class="r">Sales</th><th class="r m">Avg/day</th><th class="r">Paid out</th><th class="r">Net</th><th class="r">Margin</th></tr>${ms.map(m=>{ const x=g[m]; const net=x.rev-x.out; return `<tr><td>${new Date(m+'-15T12:00:00').toLocaleString('en',{month:'short',year:'numeric'})}${m===bizToday().slice(0,7)?' <small style="color:var(--muted)">so far</small>':''}</td><td class="r">${x.n}</td><td class="r"><b>${rs(x.rev)}</b></td><td class="r m">${rs(x.rev/x.n)}</td><td class="r">${rs(x.out)}</td><td class="r"><b class="${net>=0?'up':'dn'}">${rs(net)}</b></td><td class="r">${x.rev?Math.round(100*net/x.rev)+'%':''}</td></tr>`; }).join('')}</table></div>`; })();
+  const pattern=monthsTbl+weeks+(all.length>=14?bucketCard('Start vs end of month',dom,['1–10','11–20','21–end'],'Salary days first, thin days last.')+bucketCard('Day of the week',dow,['Mon','Tue','Wed','Thu','Fri','Sat','Sun']):'');
   return pattern+series('Sales by day',x=>x.rev,rs)+series('Bills by day',x=>x.bills,x=>Math.round(x))+series('Average bill',x=>x.bills?x.rev/x.bills:0,rs)+series('Paid out at the counter',x=>x.paidOut,rs)+
     closeKeys.map(k=>series('Order→paid · '+k+' (minutes)',x=>(x.close||{})[k],x=>Math.round(x)+'m')).join('')+
     '<div class="note">Click a bar to open that day.</div>';
@@ -687,22 +784,24 @@ function waiters(){
 function render(){
   /* a PC whose clock is behind the shop's (or a browser in another zone) must not show negative ages */
   NOW=Math.max(Date.now(), DOC&&DOC.updatedAt?T(DOC.updatedAt).getTime():0);
-  const m=$('main'); if(!DOC){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; return; }
+  const m=$('main'); if(!DOC&&MODE==='day'){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; return; }
   const live=DAY===bizToday();
-  const dayTabs=['sales','floor','bills','items','buy'].includes(TAB);
-  m.innerHTML=(dayTabs?kpis():'')+
-    `<div class="tabs main">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['month','Month'],['trend','Trends'],['range','From → to'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
-    (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${unrealized()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
-     TAB==='trend'?`<div class="grid">${trends()}</div>`:
-     TAB==='range'||TAB==='rbuy'?range():
-     TAB==='month'||TAB==='mdisc'||TAB==='mstaff'||TAB==='mvoid'?month():
-     TAB==='floor'?`<div class="grid">${live?alerts():''}${floor()}${kitchens()}</div>`:
+  document.body.classList.toggle('period',MODE==='period');
+  if(MODE==='period'){ m.innerHTML=period()+`<div class="note">board ${BOARD}</div>`; }
+  else m.innerHTML=kpis()+
+    `<div class="tabs main">${[['floor','Live'],['sales','Sales'],['bills','Bills'],['items','Items'],['buy','Spends'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
+    (TAB==='sales'?`<div class="grid">${hourly()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
+     TAB==='floor'?`<div class="grid">${live?alerts():''}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
-  $$('[data-tab]').forEach(b=>b.onclick=()=>{ const t=b.dataset.tab; TAB=t==='rbuy'?'range':/^m(disc|staff|void)$/.test(t)?'month':t; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); if(/^m(disc|staff|void)$/.test(t)){ const el=document.getElementById(t); if(el) el.scrollIntoView({behavior:'smooth'}); } });
+  $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
+  $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
+  $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
+  const pg=$('pGo'); if(pg) pg.onclick=()=>loadPeriod($('pFrom').value,$('pTo').value,''); const pr=$('pRefresh'); if(pr) pr.onclick=()=>loadPeriod(PER.from,PER.to,PER.label,true); const pp=$('perPerson'); if(pp) pp.onchange=()=>{ PER.person=pp.value; render(); };
+  $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
   $$('[data-pur]').forEach(t=>t.onclick=()=>purchaseSheet(t.dataset.pur));
@@ -710,7 +809,7 @@ function render(){
   $$('[data-mdrill]').forEach(tr=>tr.onclick=async()=>{ const [d,key]=tr.dataset.mdrill.split('|'); const rk=key.split('/')[1]; const doc=d===bizToday()?DOC:await loadDay(d); const r=doc&&doc.records[rk]; if(!r) return; const keep=RANGE.doc; RANGE.doc={records:{[key]:Object.assign({},r,{key})},purchases:{}}; drill(key); RANGE.doc=keep; });
   $$('[data-bf]').forEach(sel=>sel.onchange=()=>{ BF[sel.dataset.bf]=sel.value; render(); }); const bc=document.querySelector('[data-bfclear]'); if(bc) bc.onclick=()=>{ BF={kind:'',status:'',waiter:'',section:'',sort:BF.sort}; render(); };
   const rg=$('rGo'); if(rg){ rg.onclick=()=>{ RANGE.from=$('rFrom').value; RANGE.to=$('rTo').value; if(RANGE.from>RANGE.to){ const t=RANGE.from; RANGE.from=RANGE.to; RANGE.to=t; } loadRange(); }; $$('[data-range]').forEach(b=>b.onclick=()=>{ const p=b.dataset.range.split('|'); RANGE.from=p[0]; RANGE.to=p[1]; loadRange(); }); }
-  $$('[data-day]').forEach(b=>b.onclick=()=>{ TAB='sales'; setDay(b.dataset.day); });
+  $$('[data-day]').forEach(b=>b.onclick=()=>{ MODE='day'; TAB='sales'; setDay(b.dataset.day); render(); });
   $$('[data-csv]').forEach(b=>b.onclick=()=>csv(b.dataset.csv));
   const cd=$('cmpDay'); if(cd) cd.onchange=()=>pickCompare(cd.value);
   $$('[data-cmp]').forEach(b=>b.onclick=()=>pickCompare(b.dataset.cmp));
@@ -727,8 +826,11 @@ async function watchDay(){
     /* a finished day: the published file, else Firebase once */
     const d=await loadDay(DAY); if(want!==DAY) return; DOC=d; stamp(); render(); return;
   }
-  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); CACHE[DAY]=DOC; SRC[DAY]='firebase'; stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
+  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); CACHE[DAY]=DOC; SRC[DAY]='firebase'; syncIndexToday(); stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
 }
+/* the index is read once an hour; today's entry is refreshed from the live doc so every trend has the last sale */
+function syncIndexToday(){ if(!DOC||DAY!==bizToday()) return; const S=recs().filter(r=>r.status==='settled'); const cs=closeStats(recs()), close={}; Object.keys(cs).forEach(k=>{ const a=avg(cs[k].total); if(a!=null) close[k]=a; });
+  INDEX[DAY]=Object.assign({},INDEX[DAY]||{},{rev:S.reduce((n,r)=>n+(r.total||0),0),bills:S.length,open:recs().filter(r=>r.status==='open'||r.status==='due').length,paidOut:DOC.paidOut||0,purchases:DOC.purchaseTotal||0,hours:hbucket(S),close,updatedAt:DOC.updatedAt}); }
 function stamp(){ const l=$('live'); if(!DOC){ l.className='live bad'; l.lastElementChild.textContent='no data'; return; }
   if(DAY!==bizToday()){ l.className='live'; l.lastElementChild.textContent=({file:'from file',cache:'from this device',firebase:'from Firebase'}[SRC[DAY]]||'')+' · '+DAY; return; }
   const age=Math.max(0,Math.round((Date.now()-T(DOC.updatedAt))/60000)); l.className='live'+(age>6?' bad':''); l.lastElementChild.textContent=(age>6?'stale · ':'live · ')+age+' min ago'; }
@@ -783,6 +885,7 @@ async function go(){
   if(ctx.role!=='office'){ $('main').innerHTML=''; await HayatAuth.form($('main'),ctx,['office'],go,'The owner board is for the office sign-in.'); return; }
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','floor'),d=>{ FLOOR=d.exists()?d.data():null; prep(DOC); prep(YDOC); render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','health'),d=>{ HEALTH=d.exists()?d.data():null; healthPill(); },()=>{});
+  $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
   await days(); watchDay();
   setInterval(()=>{ if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
