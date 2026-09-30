@@ -209,6 +209,7 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
             items.append({"id": l.get("itemcode"), "n": it["n"], "kit": it["kit"], "cat": it["cat"],
                           "q": n(l.get("itemquantity")), "p": n(l.get("itemprice")),
                           "a": n((l.get("itemquantity") or 0) * (l.get("itemprice") or 0)),
+                          "disc": n(l.get("itemdiscount")) or None,
                           "kotAt": kt, "servedAt": iso(l.get("foodserve_time"))})
         created = iso(b.get("order_time"))
         kots = sorted({t for t in [created, iso(b.get("running_order"))] + list(kot_times) if t})
@@ -235,7 +236,9 @@ def read_day(src, m: Masters, day: str, start_hour: int, with_open: bool) -> dic
             "dueAt": iso(b.get("duebill_time")), "settledAt": iso(b.get("billingtime")),
             "payMode": PAY.get(n(b.get("payment_mode"))), "cash": n(b.get("cash_amount")), "card": n(b.get("card_amount")),
             "credit": n(b.get("credit_amount")), "total": n(b.get("totalprice")), "paid": n(b.get("settlingprice")),
-            "discount": n(b.get("discount_cash")) or n(b.get("gstdiscount")) or round(n(b.get("totalprice")) * n(b.get("discount_percentage")) / 100, 2),
+            "discount": (n(b.get("discount_cash")) or n(b.get("discount")) or n(b.get("gstdiscount"))
+                         or round(n(b.get("totalprice")) * n(b.get("discount_percentage")) / 100, 2)
+                         or round(sum((i.get("disc") or 0) for i in items), 2)),
             "token": n(b.get("token_no")) or n(b.get("tabletokenno")),
             "customer": {"name": (b.get("cus_name") or "").strip() or None, "address": (b.get("cus_address") or "").strip() or None},
             "remarks": (b.get("remarks") or "").strip() or None,
@@ -508,7 +511,7 @@ def firestore(cfg):
     return fs.client()
 
 
-SCHEMA = 4               # bump when the shape of a day changes: sync then rebuilds every day once
+SCHEMA = 5               # bump when the shape of a day changes: sync then rebuilds every day once
 CARRY = ("rider", "dispatchAt", "dispatch", "foodReady", "dueCount", "billPrinted", "token")
 STAFF_MAX = 200          # a CASHIER bill this small is staff food - not a customer
 
