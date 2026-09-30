@@ -167,7 +167,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v174';
+const BOARD='v175';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -434,9 +434,9 @@ function breakdown(){
   return block('By section',group(r=>r.section))+block('By type',group(r=>r.kind))+block('By payment',group(r=>r.payMode))+block('By waiter',group(r=>r.waiter));
 }
 
-function items(){
-  const S=recs().filter(r=>r.status==='settled'), g={};
-  S.forEach(r=>(r.items||[]).forEach(i=>{ const k=i.n; g[k]=g[k]||{n:i.n,cat:i.cat,q:0,v:0,bills:0}; g[k].q+=i.q||0; g[k].v+=i.a||0; g[k].bills++; }));
+function itemsOf(records){ const g={}; Object.values(records||{}).forEach(r=>{ if(r.status!=='settled') return; (r.items||[]).forEach(i=>{ const k=i.n; g[k]=g[k]||{n:i.n,cat:i.cat||'',q:0,v:0,bills:0}; g[k].q+=i.q||0; g[k].v+=i.a||0; g[k].bills++; }); }); return g; }
+function items(g){
+  g=g||itemsOf(DOC&&DOC.records);
   let rows=Object.values(g).sort((a,b)=>b.v-a.v); if(Q) rows=rows.filter(r=>(r.n+' '+(r.cat||'')).toLowerCase().includes(Q));
   const tot=rows.reduce((n,r)=>n+r.v,0);
   return `<div class="card wide"><h2>Item‑wise <span class="n">${rows.length} items · ${rs(tot)}</span></h2><input class="search" id="q" placeholder="Search item or category…" value="${esc(Q)}"><div class="scroll"><table><tr><th>#</th><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th class="r m">Bills</th><th class="r">Sales</th><th class="r">Share</th></tr>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.n)}</td><td class="m">${esc(r.cat||'')}</td><td class="r">${r.q}</td><td class="r m">${r.bills}</td><td class="r">${rs(r.v)}</td><td class="r">${tot?Math.round(100*r.v/tot):0}%</td></tr>`).join('')}</table></div></div>`;
@@ -665,15 +665,20 @@ function buildMonth(m,days,docs){
   S.pay.purchase=goods; S.pay.salary=salary; S.pay.expense=other;
   S.expenses=goods+salary+other; S.net=S.sales-S.expenses;
   S.avgDay=S.days?S.sales/S.days:0; S.asOf=tsNow();
+  /* item sales + chicken estimate live in the snapshot too, so a past month is one read */
+  const all={}; days.forEach(d=>Object.entries((docs[d]||{}).records||{}).forEach(([k,r])=>all[d+'/'+k]=r));
+  S.items=itemsOf(all); S.v=SNAP_V;
   return S;
 }
+const SNAP_V=2;
+let LASTBUILD=null;   /* the day docs the last snapshot was built from: reuse, do not reload */
 async function monthDoc(m,force){
   const cur=m===bizToday().slice(0,7), {fs,db}=FB, ref=fs.doc(db,'vm_months',m);
-  if(!force){ const c=await IDB.get('month:'+m); if(c&&!c.partial&&c.spend) return c;
-    try{ const snap=await fs.getDoc(ref); if(snap.exists()){ const S=snap.data(); const fresh=S.spend&&(!S.partial||(Date.now()-T(S.asOf).getTime())<1800000); if(fresh){ if(!S.partial) IDB.set('month:'+m,S); return S; } } }catch(e){} }
+  if(!force){ const c=await IDB.get('month:'+m); if(c&&!c.partial&&c.v>=SNAP_V) return c;
+    try{ const snap=await fs.getDoc(ref); if(snap.exists()){ const S=snap.data(); const fresh=S.v>=SNAP_V&&(!S.partial||(Date.now()-T(S.asOf).getTime())<1800000); if(fresh){ if(!S.partial) IDB.set('month:'+m,S); return S; } } }catch(e){} }
   const days=Object.keys(INDEX).filter(d=>d.startsWith(m)&&(INDEX[d].bills||INDEX[d].rev)).sort(); const docs={};
   for(const d of days) docs[d]=d===bizToday()?DOC:await loadDay(d);
-  const S=buildMonth(m,days,docs); S.partial=cur;
+  const S=buildMonth(m,days,docs); S.partial=cur; LASTBUILD={m,days,docs};
   try{ await fs.setDoc(ref,S); }catch(e){}
   if(!cur) IDB.set('month:'+m,S);
   return S;
@@ -728,13 +733,22 @@ async function loadPeriod(from,to,label,force){
   const days=Object.keys(INDEX).filter(d=>d>=from&&d<=to&&(INDEX[d].bills||INDEX[d].rev)).sort();
   let S=null;
   if(isFullMonth(from,to)&&!force){ S=await monthDoc(from.slice(0,7)); }
+  /* a finished month with a full snapshot: one read, no day docs (Details button loads them) */
+  if(S&&!S.partial&&S.v>=SNAP_V&&!force&&!PER.detail){ const L=LASTBUILD&&LASTBUILD.m===from.slice(0,7)?LASTBUILD:null; PER.doc=S; PER.V=L?periodDoc(from,to,L.days,L.docs):null; PER.busy=false; RANGE.doc=PER.V; render(); return; }
   const docs={}; for(const d of days) docs[d]=d===bizToday()?DOC:await loadDay(d);
   if(!S) S=buildMonth(from+'..'+to,days,docs);
+  PER.V=periodDoc(from,to,days,docs);
+  PER.doc=S; PER.busy=false; RANGE.doc=PER.V; render();
+}
+async function loadDetail(){ PER.detail=true; PER.busy=true; render();
+  const days=Object.keys(INDEX).filter(d=>d>=PER.from&&d<=PER.to&&(INDEX[d].bills||INDEX[d].rev)).sort(); const docs={}; for(const d of days) docs[d]=d===bizToday()?DOC:await loadDay(d);
+  PER.V=periodDoc(PER.from,PER.to,days,docs); PER.busy=false; RANGE.doc=PER.V; render(); }
+function periodDoc(from,to,days,docs){
   /* the virtual day: every record of the span, so the day cards work unchanged */
   const V={day:from+' → '+to,records:{},purchases:{},payments:{},paidOut:0,paidIn:0,purchaseTotal:0,updatedAt:''};
   days.forEach(d=>{ const doc=docs[d]; if(!doc) return; Object.entries(doc.records||{}).forEach(([k,r])=>{ V.records[d+'/'+k]=Object.assign({},r,{key:d+'/'+k,day:d}); }); Object.entries(doc.purchases||{}).forEach(([k,r])=>{ V.purchases[d+'/'+k]=Object.assign({},r,{key:d+'/'+k}); }); Object.entries(doc.payments||{}).forEach(([k,r])=>{ V.payments[d+'/'+k]=Object.assign({},r,{key:d+'/'+k}); }); V.paidOut+=doc.paidOut||0; V.paidIn+=doc.paidIn||0; V.purchaseTotal+=doc.purchaseTotal||0; });
   V.purchaseCount=Object.keys(V.purchases).length; V.paymentCount=Object.values(V.payments).filter(p=>!p.deleted).length;
-  PER.doc=S; PER.V=V; PER.busy=false; RANGE.doc=V; render();
+  return V;
 }
 function prevPeriod(from,to){ const a=new Date(from+'T12:00:00'), b=new Date(to+'T12:00:00'); const n=Math.round((b-a)/864e5)+1; const pb=new Date(a); pb.setDate(a.getDate()-1); const pa=new Date(pb); pa.setDate(pb.getDate()-n+1); return [ymd(pa),ymd(pb)]; }
 function idxSum(from,to){ const o={rev:0,bills:0,out:0,n:0}; Object.keys(INDEX).forEach(d=>{ if(d>=from&&d<=to&&(INDEX[d].rev||INDEX[d].bills)){ o.rev+=INDEX[d].rev||0; o.bills+=INDEX[d].bills||0; o.out+=INDEX[d].paidOut||0; o.n++; } }); return o; }
@@ -763,21 +777,25 @@ function chickenGuess(n){ const u=(n||'').toUpperCase(); if(!CHK.test(u)) return
   if(/\bFULL\b/.test(u)||/8 ?PCS|8PC/.test(u)) return 1; if(/\bHALF\b/.test(u)||/4 ?PCS|4PC/.test(u)) return .5; if(/\bQTR\b|QUARTER/.test(u)||/2 ?PCS|2PC/.test(u)) return .25;
   if(/MANDI|KABSA|MAJBOOS/.test(u)) return .25; if(/ALFAHAM|ALFAM|BROAST|SHAWAYA/.test(u)) return .5; return .2; }
 function chickenOf(n){ const u=(n||'').trim().toUpperCase(); if(RCP&&RCP.items&&RCP.items[u]!=null) return +RCP.items[u]; return chickenGuess(u); }
-function chickenCard(S,V){
+function chickenCalc(items,spend){
   const perBird=RCP&&RCP.perBird?+RCP.perBird:1.1;
-  const dishes={}; Object.values((V&&V.records)||{}).forEach(r=>{ if(r.status!=='settled') return; (r.items||[]).forEach(i=>{ const b=chickenOf(i.n); if(!b) return; const x=dishes[i.n]=dishes[i.n]||{n:i.n,q:0,b:0,each:b}; x.q+=i.q||0; x.b+=(i.q||0)*b; }); });
-  const rows=Object.values(dishes).sort((a,b)=>b.b-a.b); const birds=rows.reduce((n,x)=>n+x.b,0), kg=birds*perBird;
-  const bought=Object.values((S.spend||{}).byItem||{}).filter(x=>/chicken|kozhi|broiler/i.test(x.n)&&!/egg/i.test(x.n)); const boughtKg=bought.reduce((n,x)=>n+(/kg/i.test(x.unit||'')?x.q:(/bird|nos|pcs|no\b/i.test(x.unit||'')?x.q*perBird:x.q)),0);
+  const rows=Object.values(items||{}).map(i=>{ const b=chickenOf(i.n); return b?{n:i.n,q:i.q||0,each:b,b:(i.q||0)*b}:null; }).filter(Boolean).sort((a,b)=>b.b-a.b); const birds=rows.reduce((n,x)=>n+x.b,0);
+  const bought=Object.values((spend||{}).byItem||{}).filter(x=>/chicken|kozhi|broiler/i.test(x.n)&&!/egg/i.test(x.n)).map(x=>({n:x.n,q:x.q,unit:x.unit||''})); const boughtKg=bought.reduce((n,x)=>n+(/kg/i.test(x.unit)?x.q:(/bird|nos|pcs|no\b/i.test(x.unit)?x.q*perBird:x.q)),0);
+  return {perBird,rows,birds,kg:birds*perBird,bought,boughtKg};
+}
+function chickenCard(S,V){
+  /* from the item counts (live records when loaded, else the month snapshot) - factor edits apply at once */
+  const {perBird,rows,birds,kg,bought,boughtKg}=chickenCalc(V?itemsOf(V.records):S.items,S.spend);
   const diff=boughtKg?Math.round(100*(kg-boughtKg)/boughtKg):null;
   return `<div class="card wide"><h2>Chicken · estimate <span class="n">${rows.length} dishes · <a href="#" id="rcpEdit">portion factors</a></span></h2>
     <div class="kpis" style="margin-bottom:8px"><div class="kpi"><small>Sold (from dishes)</small><b>${Math.round(birds*10)/10} birds</b><em>≈ ${Math.round(kg)} kg at ${perBird} kg/bird</em></div><div class="kpi"><small>Bought</small><b>${Math.round(boughtKg)} kg</b><em>${bought.map(x=>esc(x.n)+' '+Math.round(x.q)+' '+esc(x.unit||'')).join(', ')||'no chicken purchase lines in this span'}</em></div><div class="kpi"><small>Used vs bought</small><b class="${diff==null?'':Math.abs(diff)<=15?'up':'dn'}">${diff==null?'—':(diff>=0?'+':'')+diff+'%'}</b><em>${diff==null?'':diff>0?'sold more than bought: stock down or factors high':'bought more than sold: waste, stock up, or factors low'}</em></div></div>
     <table><tr><th>Dish</th><th class="r">Qty</th><th class="r">Bird / portion</th><th class="r">Birds</th><th class="r">Share</th></tr>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td class="r">${x.q}</td><td class="r">${x.each}</td><td class="r"><b>${Math.round(x.b*10)/10}</b></td><td class="r">${birds?Math.round(100*x.b/birds):0}%</td></tr>`).join('')}</table>
     <p class="note">Estimate: dish name → birds per portion (Full 1 · Half ½ · Qtr ¼ · 8 pc 1 · 4 pc ½ · mandi ¼ · boneless ≈ 0.2). Fix any factor and it is remembered.</p></div>`;
 }
-function recipeSheet(V){
+function recipeSheet(itemMap){
   const old=document.getElementById('drill'); if(old) old.remove();
   const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
-  const seen={}; Object.values((V&&V.records)||{}).forEach(r=>(r.items||[]).forEach(i=>{ const n=(i.n||'').trim().toUpperCase(); if(!n) return; const x=seen[n]=seen[n]||{n,q:0}; x.q+=i.q||0; }));
+  const seen={}; Object.values(itemMap||{}).forEach(i=>{ const n=(i.n||'').trim().toUpperCase(); if(!n) return; const x=seen[n]=seen[n]||{n,q:0}; x.q+=i.q||0; });
   const items=Object.values(seen).filter(x=>CHK.test(x.n)||chickenOf(x.n)>0).sort((a,b)=>b.q-a.q);
   box.innerHTML=`<div class="sheet"><h2>Chicken portions <button class="x" id="drillX">✕</button></h2><p class="sub">Birds used per portion of each dish. 0 = no chicken.</p>
     <p>Weight per bird (kg): <input type="number" step="0.05" class="fld" style="width:80px" id="rcpBird" value="${RCP&&RCP.perBird?RCP.perBird:1.1}"></p>
@@ -791,7 +809,7 @@ function period(){
   if(!PER.from){ const p=presets[2]; loadPeriod(p[1],p[2],p[0]); return '<div class="card wide"><div class="note">Loading…</div></div>'; }
   const first=Object.keys(INDEX).sort()[0]||bizToday();
   const bar=`<div class="card wide"><div class="tabs" style="margin:0">${presets.map(p=>`<button class="tab${PER.from===p[1]&&PER.to===p[2]?' on':''}" data-per="${p[1]}|${p[2]}|${p[0]}">${p[0]}</button>`).join('')}
-    <span style="display:inline-flex;gap:6px;align-items:center;margin-left:auto"><input type="date" id="pFrom" value="${PER.from}" min="${first}" max="${bizToday()}" class="fld"> <input type="date" id="pTo" value="${PER.to}" min="${first}" max="${bizToday()}" class="fld"> <button class="tab" id="pGo">Show</button> <button class="tab" id="pRefresh" title="rebuild from the day logs">↻</button></span></div>${PER.busy?'<div class="note">Building from the day logs — each day once, then it stays on this device.</div>':''}</div>`;
+    <span style="display:inline-flex;gap:6px;align-items:center;margin-left:auto"><input type="date" id="pFrom" value="${PER.from}" min="${first}" max="${bizToday()}" class="fld"> <input type="date" id="pTo" value="${PER.to}" min="${first}" max="${bizToday()}" class="fld"> <button class="tab" id="pGo">Show</button> ${PER.doc&&!PER.V&&!PER.busy?'<button class="tab" id="pDetail" title="load every bill of the month: hours, tables, waiters">Details ↓</button>':''}<button class="tab" id="pRefresh" title="rebuild from the day logs">↻</button></span></div>${PER.busy?'<div class="note">Building from the day logs — each day once, then it stays on this device.</div>':(PER.doc&&!PER.V?'<div class="note">From the saved month snapshot (one read). <b>Details ↓</b> loads every bill for hours, tables and waiters.</div>':'')}</div>`;
   const S=PER.doc; if(!S) return bar;
   const [pf,pt]=prevPeriod(PER.from,PER.to), prev=idxSum(pf,pt);
   const d=(a,b)=>b?Math.round(100*(a-b)/b):null, dd=(a,b)=>{ const x=d(a,b); return x==null?'':` <span class="d ${x>=0?'up':'dn'}">${x>=0?'+':''}${x}%</span>`; };
@@ -825,7 +843,7 @@ function period(){
   let body='';
   if(PTAB==='overview') body=byDay+sve+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+trends();
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard;
-  else if(PTAB==='items') body=W(()=>items())+chickenCard(S,V);
+  else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
     const items=Object.values(sp.byItem).filter(x=>!PER.person||x.n===PER.person).sort((a,b)=>b.v-a.v), spTot=items.reduce((n,x)=>n+x.v,0);
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
@@ -894,14 +912,14 @@ function render(){
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
   $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
-  const pg=$('pGo'); if(pg) pg.onclick=()=>loadPeriod($('pFrom').value,$('pTo').value,''); const pr=$('pRefresh'); if(pr) pr.onclick=()=>loadPeriod(PER.from,PER.to,PER.label,true); const pp=$('perPerson'); if(pp) pp.onchange=()=>{ PER.person=pp.value; render(); };
+  const pg=$('pGo'); if(pg) pg.onclick=()=>loadPeriod($('pFrom').value,$('pTo').value,''); const pr=$('pRefresh'); if(pr) pr.onclick=()=>loadPeriod(PER.from,PER.to,PER.label,true); const pd=$('pDetail'); if(pd) pd.onclick=()=>loadDetail(); const pp=$('perPerson'); if(pp) pp.onchange=()=>{ PER.person=pp.value; render(); };
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
   $$('[data-sp]').forEach(sel=>sel.onchange=()=>{ SP[sel.dataset.sp]=sel.value; render(); }); const spq=$('spq'); if(spq){ spq.oninput=()=>{ SP.q=spq.value; const pos=spq.selectionStart; render(); const q2=$('spq'); if(q2){ q2.focus(); q2.setSelectionRange(pos,pos); } }; }
   $$('details[data-spk]').forEach(d=>d.ontoggle=()=>{ SP.open[d.dataset.spk]=d.open; });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
   const kt=$('ktime'); if(kt) kt.onclick=e=>{ e.preventDefault(); kitchenSheet(); };
-  const re=$('rcpEdit'); if(re) re.onclick=e=>{ e.preventDefault(); recipeSheet(PER.V); };
+  const re=$('rcpEdit'); if(re) re.onclick=e=>{ e.preventDefault(); recipeSheet(PER.V?itemsOf(PER.V.records):(PER.doc&&PER.doc.items)); };
   $$('[data-pur]').forEach(t=>t.onclick=()=>purchaseSheet(t.dataset.pur));
   const mp=$('monPick'); if(mp) mp.onchange=()=>loadMonth(mp.value); const mr=$('monRefresh'); if(mr) mr.onclick=()=>loadMonth(MON.key,true); const mper=$('monPerson'); if(mper) mper.onchange=()=>{ MON.person=mper.value; render(); };
   $$('[data-mdrill]').forEach(tr=>tr.onclick=async()=>{ const [d,key]=tr.dataset.mdrill.split('|'); const rk=key.split('/')[1]; const doc=d===bizToday()?DOC:await loadDay(d); const r=doc&&doc.records[rk]; if(!r) return; const keep=RANGE.doc; RANGE.doc={records:{[key]:Object.assign({},r,{key})},purchases:{}}; drill(key); RANGE.doc=keep; });
