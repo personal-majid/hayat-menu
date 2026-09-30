@@ -167,7 +167,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v172';
+const BOARD='v173';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -738,6 +738,24 @@ async function loadPeriod(from,to,label,force){
 }
 function prevPeriod(from,to){ const a=new Date(from+'T12:00:00'), b=new Date(to+'T12:00:00'); const n=Math.round((b-a)/864e5)+1; const pb=new Date(a); pb.setDate(a.getDate()-1); const pa=new Date(pb); pa.setDate(pb.getDate()-n+1); return [ymd(pa),ymd(pb)]; }
 function idxSum(from,to){ const o={rev:0,bills:0,out:0,n:0}; Object.keys(INDEX).forEach(d=>{ if(d>=from&&d<=to&&(INDEX[d].rev||INDEX[d].bills)){ o.rev+=INDEX[d].rev||0; o.bills+=INDEX[d].bills||0; o.out+=INDEX[d].paidOut||0; o.n++; } }); return o; }
+/* ---- spend explorer: group / sort / filter, every group opens to its lines ---- */
+let SP={group:'cat',sort:'amount',q:'',cat:'',open:{}};
+const weekOf=d=>{ const x=new Date(d+'T12:00:00'); const dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); return 'Week of '+ymd(x).slice(5); };
+function spendExplorer(sp){
+  const lines=[]; Object.keys(sp.byDay||{}).forEach(d=>(sp.byDay[d]||[]).forEach(x=>lines.push(Object.assign({d},x))));
+  const cats=[...new Set(lines.map(x=>x.cat))].sort();
+  let L=lines; if(SP.q){ const q=SP.q.toLowerCase(); L=L.filter(x=>(x.n+' '+x.cat+' '+x.by).toLowerCase().includes(q)); } if(SP.cat) L=L.filter(x=>x.cat===SP.cat);
+  const keyOf={cat:x=>x.cat,item:x=>x.n,day:x=>x.d,week:x=>weekOf(x.d)}[SP.group];
+  const g={}; L.forEach(x=>{ const k=keyOf(x); const G=g[k]=g[k]||{k,v:0,q:0,n:0,lines:[],unit:x.unit}; G.v+=x.v; G.q+=x.q; G.n++; G.lines.push(x); if(G.unit!==x.unit) G.unit=''; });
+  let groups=Object.values(g); const tot=L.reduce((n,x)=>n+x.v,0);
+  groups.sort({amount:(a,b)=>b.v-a.v,name:(a,b)=>String(a.k).localeCompare(String(b.k)),qty:(a,b)=>b.q-a.q,newest:(a,b)=>String(b.k).localeCompare(String(a.k))}[SP.sort]);
+  const sub=(G)=>{ /* inside a group: by item (for cat/day/week) or by day (for item) */
+    const byK={}; const kf=SP.group==='item'?x=>x.d:x=>x.n; G.lines.forEach(x=>{ const k=kf(x); const Y=byK[k]=byK[k]||{k,q:0,v:0,unit:x.unit,rates:[],days:new Set(),cat:x.cat}; Y.q+=x.q; Y.v+=x.v; if(x.cost) Y.rates.push(x.cost); Y.days.add(x.d); });
+    const rows=Object.values(byK).sort((a,b)=>b.v-a.v);
+    return `<table><tr><th>${SP.group==='item'?'Day':'Item'}</th>${SP.group==='cat'||SP.group==='item'?'':'<th class="m">Category</th>'}<th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th>${SP.group==='item'?'':'<th class="r m">Days</th>'}</tr>${rows.map(y=>`<tr><td>${esc(y.k)}</td>${SP.group==='cat'||SP.group==='item'?'':`<td class="m">${esc(y.cat)}</td>`}<td class="r">${Math.round(y.q*100)/100}</td><td>${esc(y.unit||'')}</td><td class="r">${y.rates.length?rs(y.rates.reduce((a,b)=>a+b,0)/y.rates.length):''}</td><td class="r"><b>${rs(y.v)}</b></td>${SP.group==='item'?'':`<td class="r m">${y.days.size}</td>`}</tr>`).join('')}</table>`; };
+  const ctl=`<div class="tabs" style="margin:0 0 8px"><select class="tb sm" data-sp="group">${[['cat','By category'],['item','By item'],['day','By day'],['week','By week']].map(o=>`<option value="${o[0]}"${SP.group===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="sort">${[['amount','Biggest first'],['name','A → Z'],['qty','Most qty'],['newest','Newest first']].map(o=>`<option value="${o[0]}"${SP.sort===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="cat"><option value="">All categories</option>${cats.map(c=>`<option${SP.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select><input class="search" style="width:auto;flex:1;min-width:120px;margin:0" id="spq" placeholder="Search item…" value="${esc(SP.q)}"></div>`;
+  return `<div class="card wide"><h2>Spend <span class="n">${groups.length} ${SP.group==='cat'?'categories':SP.group==='item'?'items':SP.group==='day'?'days':'weeks'} · ${L.length} lines · ${rs(tot)}</span></h2>${ctl}${groups.map(G=>`<details class="dd"${SP.open[G.k]?' open':''} data-spk="${esc(G.k)}"><summary><span>${esc(G.k)}</span><small>${G.n} lines${SP.group==='item'&&G.unit?' · '+Math.round(G.q*100)/100+' '+esc(G.unit):''} · ${tot?Math.round(100*G.v/tot):0}%</small><b>${rs(G.v)}</b></summary>${sub(G)}</details>`).join('')||'<div class="note">No spend lines in this span.</div>'}</div>`;
+}
 function period(){
   const presets=periodPresets();
   if(!PER.from){ const p=presets[2]; loadPeriod(p[1],p[2],p[0]); return '<div class="card wide"><div class="note">Loading…</div></div>'; }
@@ -783,7 +801,7 @@ function period(){
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
     const dayKeys=Object.keys(sp.byDay).sort().reverse();
     const dayCard=`<div class="card wide"><h2>Spend · day by day <span class="n">tap a day to open it</span></h2>${dayKeys.map(dk=>{ const L=sp.byDay[dk]; const t=L.reduce((n,x)=>n+x.v,0); return `<details class="dd"><summary><span>${dk}</span><small>${L.length} lines</small><b>${rs(t)}</b></summary><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th><th class="m">By</th></tr>${L.sort((a,b)=>b.v-a.v).map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${x.q}</td><td>${esc(x.unit)}</td><td class="r">${rs(x.cost)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="m">${esc(x.by)}</td></tr>`).join('')}</table></details>`; }).join('')||'<div class="note">No purchase lines in this span.</div>'}</div>`;
-    body=sve+mini('Spend · by category',sp.byCat)+mini('Discounts · by person',S.disc.by)+itemCard+dayCard+discCard+(pay.list.some(x=>x.kind==='expense'||x.kind==='salary')?payCard:''); }
+    body=sve+mini('Spend · by category',sp.byCat)+spendExplorer(sp)+mini('Discounts · by person',S.disc.by)+discCard+(pay.list.some(x=>x.kind==='expense'||x.kind==='salary')?payCard:''); }
   else body=mini('Voids · by person',voidBy)+voidCard;
   return bar+k+tabs+`<div class="grid">${body}</div>`;
 }
@@ -848,6 +866,8 @@ function render(){
   $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
   const pg=$('pGo'); if(pg) pg.onclick=()=>loadPeriod($('pFrom').value,$('pTo').value,''); const pr=$('pRefresh'); if(pr) pr.onclick=()=>loadPeriod(PER.from,PER.to,PER.label,true); const pp=$('perPerson'); if(pp) pp.onchange=()=>{ PER.person=pp.value; render(); };
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
+  $$('[data-sp]').forEach(sel=>sel.onchange=()=>{ SP[sel.dataset.sp]=sel.value; render(); }); const spq=$('spq'); if(spq){ spq.oninput=()=>{ SP.q=spq.value; const pos=spq.selectionStart; render(); const q2=$('spq'); if(q2){ q2.focus(); q2.setSelectionRange(pos,pos); } }; }
+  $$('details[data-spk]').forEach(d=>d.ontoggle=()=>{ SP.open[d.dataset.spk]=d.open; });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
   const kt=$('ktime'); if(kt) kt.onclick=e=>{ e.preventDefault(); kitchenSheet(); };
@@ -888,7 +908,8 @@ function cardText(card){
   card.querySelectorAll('.ki').forEach(t=>out.push('• '+txt(t)));
   card.querySelectorAll('.al').forEach(t=>out.push('⚠ '+txt(t)));
   card.querySelectorAll('.ev').forEach(t=>out.push('• '+txt(t)));
-  card.querySelectorAll('table').forEach(tb=>{ const heads=[...tb.querySelectorAll('tr th')].map(txt); tb.querySelectorAll('tr').forEach(tr=>{ const tds=[...tr.children].filter(td=>td.tagName==='TD'); if(!tds.length) return; const cells=tds.map((td,i)=>{ const v=txt(td); const hd=heads[i]||''; return v?(i===0?'*'+v+'*':hd?hd+' '+v:v):''; }).filter(Boolean); out.push('• '+cells.join(' · ')); }); });
+  card.querySelectorAll('.dd').forEach(dd=>{ out.push('▸ *'+txt(dd.querySelector('summary'))+'*'); if(dd.open){ const tb=dd.querySelector('table'); if(tb){ const heads=[...tb.querySelectorAll('tr th')].map(txt); tb.querySelectorAll('tr').forEach(tr=>{ const tds=[...tr.children].filter(td=>td.tagName==='TD'); if(!tds.length) return; out.push('   • '+tds.map((td,i)=>{ const v=txt(td); return v?(i===0?v:(heads[i]||'')+' '+v):''; }).filter(Boolean).join(' · ')); }); } } });
+  card.querySelectorAll('table').forEach(tb=>{ if(tb.closest('.dd')) return; const heads=[...tb.querySelectorAll('tr th')].map(txt); tb.querySelectorAll('tr').forEach(tr=>{ const tds=[...tr.children].filter(td=>td.tagName==='TD'); if(!tds.length) return; const cells=tds.map((td,i)=>{ const v=txt(td); const hd=heads[i]||''; return v?(i===0?'*'+v+'*':hd?hd+' '+v:v):''; }).filter(Boolean); out.push('• '+cells.join(' · ')); }); });
   const bars=card.querySelector('.bars'); if(bars&&!card.querySelector('table')&&!card.querySelector('.mrow')){ [...bars.querySelectorAll('.bar')].forEach(b=>{ if(b.dataset.t) out.push('• '+b.dataset.t); }); }
   return out.filter(Boolean).join('\n');
 }
