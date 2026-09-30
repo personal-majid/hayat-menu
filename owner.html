@@ -82,7 +82,8 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .note{font-size:12px;color:var(--muted);margin:6px 0 0}
 .ha-box{max-width:420px;margin:40px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
 .ha-f{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;margin:0 0 8px;background:var(--bg);color:inherit} .ha-b{width:100%;font:inherit;font-weight:700;padding:11px;border:0;border-radius:10px;background:var(--pri);color:var(--onpri);cursor:pointer} .ha-n{font-size:12px;color:var(--muted)}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px} .tab{font:inherit;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:inherit;cursor:pointer} .tab.on{background:var(--pri);color:var(--onpri);border-color:transparent}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.tabs.main{position:sticky;top:var(--toph,52px);z-index:4;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(8px);padding:6px 0;margin:0 0 8px} .tab{font:inherit;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:inherit;cursor:pointer} .tab.on{background:var(--pri);color:var(--onpri);border-color:transparent}
 .hide{display:none}
 .sheetwrap{position:fixed;inset:0;z-index:50;background:rgba(27,26,23,.45);display:flex;justify-content:flex-end}
 .sheet{width:min(620px,100%);height:100%;overflow:auto;background:var(--bg);padding:16px;box-shadow:-12px 0 40px rgba(0,0,0,.25)}
@@ -113,7 +114,8 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
   #calPop{left:8px;right:8px;max-width:none;flex-wrap:nowrap;flex-direction:column-reverse;justify-content:flex-end;gap:12px;max-height:70vh;overflow:auto}
   .kit{grid-template-columns:1fr}
   .mrow{grid-template-columns:90px 1fr 64px;gap:6px;font-size:12px}
-  .kpis{grid-template-columns:1fr 1fr;gap:8px} .kpi b{font-size:20px}
+  .kpis{display:flex;overflow-x:auto;gap:8px;scroll-snap-type:x mandatory;padding-bottom:4px;margin-bottom:8px} .kpi{flex:0 0 46%;min-width:150px;scroll-snap-align:start} .kpi b{font-size:20px}
+  .tabs.main{overflow-x:auto;flex-wrap:nowrap;padding:6px 0} .tabs.main .tab{white-space:nowrap}
   .sheet{width:100%;padding:12px}
   .cmp{grid-template-columns:1fr auto 1fr;gap:4px 8px;font-size:12px}
   .floor{grid-template-columns:repeat(auto-fill,minmax(76px,1fr))}
@@ -155,7 +157,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v166';
+const BOARD='v167';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -640,7 +642,7 @@ function month(){
   const discList=S.disc.list.filter(P).sort((a,b)=>b.off-a.off), staffList=S.staff.list.filter(P).sort((a,b)=>b.menu-a.menu), voidList2=S.voids.list.filter(P).sort((a,b)=>b.value-a.value);
   const discCard=`<div class="card wide" id="mdisc"><h2>Discounts · every bill <span class="n">${pf} · ${discList.length} · ${rs(discList.reduce((n,x)=>n+x.off,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>KOT</th><th>Where</th><th>Note</th><th class="m">Waiter</th><th>By</th><th class="r">Bill</th><th class="r">Off</th><th class="r">%</th></tr>${discList.map(x=>`<tr class="rowlink" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td>${esc(x.kot)}</td><td><span class="pill ${esc(x.kind)}">${esc(x.kind)}</span> ${esc(x.where)}</td><td>${esc(x.note)}</td><td class="m">${esc(x.waiter)}</td><td>${esc(x.by)}</td><td class="r">${rs(x.bill)}</td><td class="r"><b>${rs(x.off)}</b></td><td class="r">${Math.round(100*x.off/(x.bill+x.off))}%</td></tr>`).join('')}</table></div></div>`;
   const staffCard=`<div class="card wide" id="mstaff"><h2>Staff food · every bill <span class="n">${staffList.length} · menu ${rs(staffList.reduce((n,x)=>n+x.menu,0))} · paid ${rs(staffList.reduce((n,x)=>n+x.paid,0))}</span></h2><div class="scroll"><table><tr><th>Day</th><th>KOT</th><th>Who</th><th>Items</th><th class="r">Menu</th><th class="r">Paid</th></tr>${staffList.map(x=>`<tr class="rowlink" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td>${esc(x.kot)}</td><td><b>${esc(x.who)}</b> <small style="color:var(--muted)">${esc(x.note)}</small></td><td>${esc(x.items)}</td><td class="r">${rs(x.menu)}</td><td class="r">${rs(x.paid)}</td></tr>`).join('')}</table></div></div>`;
-  const voidCard=`<div class="card wide" id="mvoid"><h2>Voids · every one <span class="n">${voidList2.length} · ${rs(voidList2.reduce((n,x)=>n+x.value,0))} · after bill printed ${voidList2.filter(x=>x.after).length}</span></h2><div class="scroll"><table><tr><th>Day</th><th>Time</th><th class="m">KOT</th><th>Where</th><th>By</th><th>Item</th><th class="r">Qty</th><th class="m">Reason</th><th class="r">Value</th><th>When</th></tr>${voidList2.map(x=>`<tr class="rowlink${x.after?' due':''}" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td>${hm(x.at)}</td><td class="m">${esc(x.kot)}</td><td>${esc(x.where)}</td><td>${esc(x.by)}</td><td>${esc(x.item)}</td><td class="r">−${x.cut}</td><td class="m">${esc(x.reason)}</td><td class="r">${rs(x.value)}</td><td>${x.after?'<b>after bill</b>':'before bill'}</td></tr>`).join('')}</table></div></div>`;
+  const voidCard=`<div class="card wide" id="mvoid"><h2>Voids · every one <span class="n">${voidList2.length} · ${rs(voidList2.reduce((n,x)=>n+x.value,0))} · after bill printed ${voidList2.filter(x=>x.after).length}</span></h2><div class="scroll"><table><tr><th>Day</th><th class="m">Time</th><th class="m">KOT</th><th>Where</th><th>By</th><th>Item</th><th class="r">Qty</th><th class="m">Reason</th><th class="r">Value</th><th>When</th></tr>${voidList2.map(x=>`<tr class="rowlink${x.after?' due':''}" data-mdrill="${esc(x.d)}|${esc(x.key)}"><td>${x.d.slice(5)}</td><td class="m">${hm(x.at)}</td><td class="m">${esc(x.kot)}</td><td>${esc(x.where)}</td><td>${esc(x.by)}</td><td>${esc(x.item)}</td><td class="r">−${x.cut}</td><td class="m">${esc(x.reason)}</td><td class="r">${rs(x.value)}</td><td>${x.after?'<b>after bill</b>':'<span class="m">before bill</span>'}</td></tr>`).join('')}</table></div></div>`;
   const staffBy={}; Object.entries(S.staff.by).forEach(([kk,x])=>staffBy[kk]={n:x.n,v:x.menu});
   const voidBy={}; Object.entries(S.voids.by).forEach(([kk,x])=>voidBy[kk]={n:x.n,v:x.v});
   return head+k+byDay+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+mini('By type',S.kinds)+mini('By section',S.sections)+mini('By waiter',S.waiters)+discCard+staffCard+voidCard;
@@ -687,8 +689,9 @@ function render(){
   NOW=Math.max(Date.now(), DOC&&DOC.updatedAt?T(DOC.updatedAt).getTime():0);
   const m=$('main'); if(!DOC){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; return; }
   const live=DAY===bizToday();
-  m.innerHTML=kpis()+
-    `<div class="tabs">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['month','Month'],['trend','Trends'],['range','From → to'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
+  const dayTabs=['sales','floor','bills','items','buy'].includes(TAB);
+  m.innerHTML=(dayTabs?kpis():'')+
+    `<div class="tabs main">${[['sales','Sales'],['floor','Tables & kitchens'],['bills','Bills'],['items','Items'],['buy','Purchases & payments'],['month','Month'],['trend','Trends'],['range','From → to'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
     (TAB==='sales'?`<div class="grid">${live?alerts():''}${hourly()}${pace()}${unrealized()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
      TAB==='trend'?`<div class="grid">${trends()}</div>`:
      TAB==='range'||TAB==='rbuy'?range():
@@ -698,6 +701,7 @@ function render(){
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
+  document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ const t=b.dataset.tab; TAB=t==='rbuy'?'range':/^m(disc|staff|void)$/.test(t)?'month':t; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); if(/^m(disc|staff|void)$/.test(t)){ const el=document.getElementById(t); if(el) el.scrollIntoView({behavior:'smooth'}); } });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
