@@ -3966,6 +3966,7 @@ function paintAdmin(main){
   }), main);
 
   wireSeen(main);
+  wireColNav(main);
 
   /* the filters */
   main.querySelectorAll("[data-mf]").forEach(function(b){
@@ -4009,9 +4010,37 @@ function liveWatch(on, main){
   }
 }
 
+/* the chips above the board on a phone: tap to jump, swipe to follow */
+function wireColNav(main){
+  var board = main.querySelector(".board"), nav = main.querySelector(".colnav");
+  if(!board || !nav) return;
+  var chips = nav.querySelectorAll("[data-colgo]"), cols = board.querySelectorAll(".col");
+  chips.forEach(function(b){
+    b.onclick = function(){
+      var c = cols[+b.dataset.colgo];
+      if(c) board.scrollTo({ left: c.offsetLeft - board.offsetLeft, behavior: "smooth" });
+    };
+  });
+  var mark = function(){
+    var w = board.clientWidth || 1, i = Math.round(board.scrollLeft / w);
+    chips.forEach(function(b, j){ b.classList.toggle("on", j === i); });
+    var on = chips[i]; if(on && on.scrollIntoView) try{ on.scrollIntoView({ block:"nearest", inline:"nearest" }); }catch(e){}
+  };
+  var t = null;
+  board.addEventListener("scroll", function(){ clearTimeout(t); t = setTimeout(mark, 80); }, { passive:true });
+}
+
 /* ---- the board: one column per step, newest at the top ---- */
 function boardHtml(orders){
-  return '<div class="board">' + FLOW.map(function(st){
+  /* On a phone one column fills the screen, so the other four are
+     invisible until swiped to. The chips say what is where and
+     jump to it; the swipe moves the highlight back. */
+  var nav = '<div class="colnav">' + FLOW.map(function(st, i){
+    var n = orders.filter(function(o){ return o.status === st; }).length;
+    return '<button data-colgo="' + i + '"' + (i === 0 ? ' class="on"' : '') + '>' +
+      esc(STEP[st].t) + (n ? '<i>' + n + '</i>' : '') + '</button>';
+  }).join("") + '</div>';
+  return nav + '<div class="board">' + FLOW.map(function(st){
     var col = orders.filter(function(o){ return o.status === st; })
                     .sort(function(a,b){ return wantedAt(a) - wantedAt(b); });
     /* the head stays put, the cards under it scroll on their own,
