@@ -217,7 +217,19 @@ service cloud.firestore {
              get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.code
         && request.resource.data.role ==
              get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.role;
-      allow update, delete: if false;
+      /* Re-signing in on a shared tablet - the next shift, or the
+         same person after a wrong tap. It is the same test as
+         creating the record: the code and the role must match the
+         crew entry being claimed, so this is not a way to edit
+         your own role, only a way to replace it with one you can
+         prove. */
+      allow update: if signedIn() && uid == mine()
+        && exists(/databases/$(database)/documents/crew/$(request.resource.data.crew))
+        && request.resource.data.code ==
+             get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.code
+        && request.resource.data.role ==
+             get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.role;
+      allow delete: if false;
     }
 
     /* ---- the busy bars the crowd robot reads -----------------

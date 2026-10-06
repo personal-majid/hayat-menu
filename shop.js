@@ -110,7 +110,7 @@ var AU = null;                 /* { auth, api } once loaded */
    another; without it every phone looks identical to the
    database and no rule can protect anything.
    ----------------------------------------------------------- */
-var ME = { uid:null, role:"guest", name:"", riderPhone:null, ready:false };
+var ME = { uid:null, role:"guest", name:"", crew:"", riderPhone:null, ready:false };
 var mewatch = [];
 function onMe(f){ mewatch.push(f); if(ME.ready) try{ f(); }catch(e){} }
 function meFire(){ mewatch.slice().forEach(function(f){ try{ f(); }catch(e){} }); fire(); }
@@ -219,9 +219,18 @@ function riderInvite(r){
    the page. With no Firebase there is no identity to check at
    all — the whole thing is one device in demo mode — so the
    console you are standing in is the only answer available. */
+/* The five people who work here. Anyone else holding the phone
+   is a customer, and that is the only other thing to be. */
+var CREW_ROLES = ["office", "captain", "waiter", "kitchen", "cleaner"];
+function isCrewRole(r){ return CREW_ROLES.indexOf(r) >= 0; }
+
 function myVoice(){
   if(LIVE || ME.uid){
-    if(ME.role === "office") return "office";
+    /* A waiter is not a customer. Before roles existed only the
+       office was told apart, so a captain ringing up a sale had
+       it filed under their own past orders and was offered the
+       cancel button meant for the person who ordered it. */
+    if(isCrewRole(ME.role)) return "office";
     if(ME.role === "rider")  return "rider";
     return "customer";
   }
@@ -269,13 +278,29 @@ async function connectFirebase(cfg){
 
     if(user.isAnonymous){
       ME.role = ME.riderPhone ? "rider" : "guest";
-      ME.ready = true; meFire(); return;
+      /* Crew sign in anonymously and are told apart by the record
+         they wrote at staff/<uid>, which the rules let them read
+         back and nobody else. Without this read a waiter was a
+         waiter until the tab closed and a guest afterwards. */
+      if(ME.riderPhone){ ME.ready = true; meFire(); return; }
+      fsMod.getDoc(fsMod.doc(db, "staff", user.uid)).then(function(d){
+        if(d.exists()){
+          var x = d.data();
+          if(x.role){ ME.role = x.role; }
+          ME.crew = x.crew || "";
+          ME.name = x.name || x.crew || ME.name;
+          if(ME.role === "office"){ try{ sessionStorage.setItem("hayat_admin","1"); }catch(e){} }
+        }
+        ME.ready = true; meFire();
+      }).catch(function(){ ME.ready = true; meFire(); });
+      return;
     }
 
     /* a real Google account: the office only if the console says so */
     fsMod.getDoc(fsMod.doc(db, "staff", user.uid)).then(function(d){
       var r = d.exists() ? (d.data().role || "") : "";
-      ME.role = (r === "office") ? "office" : "signed-in";
+      ME.role = r || "signed-in";
+      ME.crew = (d.exists() && d.data().crew) || "";
       ME.name = (d.exists() && d.data().name) || ME.name;
       ME.ready = true; meFire();
     }).catch(function(){
@@ -347,22 +372,51 @@ var STORE = {
      rules check the role sent here against the one stored
      beside that name - so sending "office" for a waiter is a
      refused write, not a promotion. */
-  signInCrew: function(who, code, role){
+  signInCrew: function(who, code, roles, name){
     if(!FB || !AU) return Promise.reject(new Error("offline"));
     if(!ME.uid) return Promise.reject(new Error("no-identity"));
-    var r = String(role || "office");
-    return FB.api.setDoc(FB.api.doc(FB.db, "staff", ME.uid), {
-      crew: String(who),
-      code: String(code).trim(),
-      role: r,
-      at: Date.now()
-    }).then(function(){
-      ME.role = r;
-      ME.name = String(who);
-      if(r === "office"){ try{ sessionStorage.setItem("hayat_admin", "1"); }catch(e){} }
-      meFire();
-      return true;
-    });
+    var want = [].concat(roles || "office");
+    var uid  = ME.uid;
+
+    /* One attempt per role this door accepts. The rules compare
+       the code AND the role against the crew record, so a wrong
+       role is a refused write and not a quiet promotion - which
+       is why trying them in turn is safe. */
+    function attempt(i){
+      if(i >= want.length) return Promise.reject(new Error("no-match"));
+      var r = String(want[i]);
+      return FB.api.setDoc(FB.api.doc(FB.db, "staff", uid), {
+        crew: String(who),
+        code: String(code).trim(),
+        role: r,
+        name: String(name || who),
+        at: Date.now()
+      }).then(function(){
+        ME.role = r;
+        ME.crew = String(who);
+        ME.name = String(name || who);
+        if(r === "office"){ try{ sessionStorage.setItem("hayat_admin", "1"); }catch(e){} }
+        meFire();
+        return r;
+      }).catch(function(){ return attempt(i + 1); });
+    }
+    return attempt(0);
+  },
+
+  /* Shift change on a shared tablet. The staff record cannot be
+     edited once written - that is what stops a waiter rewriting
+     their own role - so the way out is a new anonymous identity,
+     which is what signing out gives you. */
+  signOutCrew: function(){
+    try{ sessionStorage.removeItem("hayat_admin"); }catch(e){}
+    ME.role = "guest"; ME.name = ""; ME.crew = "";
+    if(AU){
+      return AU.api.signOut(AU.auth)
+        .then(function(){ location.reload(); })
+        .catch(function(){ location.reload(); });
+    }
+    location.reload();
+    return Promise.resolve();
   },
 
   signInOffice: function(who, code){
@@ -3498,37 +3552,89 @@ function wireNotes(main, id, after){
 function unlocked(){ try{ return sessionStorage.getItem("hayat_admin")==="1"; }catch(e){ return false; } }
 
 /* ------------------------------------------------------------
-   The office door.
+   The staff door.
 
-   With Firebase up: pick your name, type your code. The code
-   is checked by the security rules, not by this file, so
-   reading this source tells an attacker nothing.
+   One door, several rooms. A page says which roles it is for;
+   the dropdown shows only the people who hold one of them, and
+   the code is still checked by the rules rather than here, so
+   reading this file tells an attacker nothing.
 
-   With Firebase down: the old passcode, so the demo still runs
-   on one machine with no network. That path can only ever reach
-   this browser's own data, which is why it is safe to keep.
+   Who you are lives in staff/<uid>, written when you sign in
+   and read back on every boot. That is what makes a waiter
+   still a waiter after the tablet sleeps - the old build only
+   remembered the office, and only until the tab closed.
+
+   With Firebase down the passcode still opens the office, so
+   the demo runs on one machine with no network. It opens
+   nothing else: a counter with no database has nothing to
+   write to, and a cleaner with no database has no list.
    ------------------------------------------------------------ */
-/* One door, not two. Firestore takes a second or two to connect;
-   showing the offline passcode box in that second and then the
-   staff sign-in after it looked like two different passwords.
-   Wait a moment for the connection before deciding which door. */
-var GATE_WAITED = false;
-function gate(main, then){
-  if(unlocked() || STORE.isOffice()) return then();
+function roleName(r){
+  return { office:"Office", captain:"Captain", waiter:"Waiter",
+           kitchen:"Kitchen", cleaner:"Cleaner" }[r] || r;
+}
 
-  var cfg = C().firebase && C().firebase.projectId;
-  if(cfg && !STORE.live() && !STORE.fault() && !GATE_WAITED){
-    main.innerHTML = shell("Staff only", '<p class="shopsub">Connecting\u2026</p>');
-    setTimeout(function(){ GATE_WAITED = true; if(!unlocked() && !STORE.isOffice() && el("main")) gate(main, then); }, 4000);
+/* "office, captains and waiters" - a door reads better naming
+   the people it is for than listing role keys joined by "or". */
+function rolePhrase(roles){
+  var many = { office:"the office", captain:"captains", waiter:"waiters",
+               kitchen:"the kitchen", cleaner:"cleaners" };
+  var w = roles.map(function(r){ return many[r] || roleName(r); });
+  if(w.length === 1) return w[0];
+  return w.slice(0, -1).join(", ") + " and " + w[w.length - 1];
+}
+
+function hasRoleNow(roles){
+  if(unlocked() || STORE.isOffice()) return true;          /* the office opens every door */
+  return roles.indexOf(ME.role) >= 0;
+}
+
+function gate(main, then){ return gateRoles(main, ["office"], then); }
+
+function gateRoles(main, roles, then){
+  if(hasRoleNow(roles)) return then();
+
+  var wantsOffice = roles.indexOf("office") >= 0;
+  var title = rolePhrase(roles);
+
+  /* Signed in as somebody, just not somebody who belongs here.
+     Say so, rather than showing a sign-in box to a person who
+     is already signed in - that reads as a bug, and they will
+     type their code again and watch it fail. */
+  if(ME.ready && isCrewRole(ME.role)){
+    main.innerHTML = shell("Staff only",
+      '<p class="shopsub">You are signed in as <b>' + esc(ME.name || roleName(ME.role)) +
+        '</b> (' + esc(roleName(ME.role)) + '). This screen is for ' + esc(title) + '.</p>' +
+      '<button class="shopbtn ghost" id="gateOut">Sign in as somebody else</button>');
+    el("gateOut").onclick = function(){ STORE.signOutCrew(); };
     return;
   }
 
+  var cfg = C().firebase && C().firebase.projectId;
+  if(cfg && !STORE.live() && !STORE.fault() && !GATE_WAITED){
+    main.innerHTML = shell("Staff only", '<p class="shopsub">Connecting…</p>');
+    setTimeout(function(){
+      GATE_WAITED = true;
+      if(!hasRoleNow(roles) && el("main")) gateRoles(main, roles, then);
+      else if(el("main")) then();
+    }, 4000);
+    return;
+  }
+
+  /* ---- no database ---------------------------------------- */
   if(!STORE.live()){
+    if(!wantsOffice){
+      main.innerHTML = shell("Staff only",
+        '<p class="shopsub">This screen needs the restaurant’s database, and it ' +
+        'cannot be reached right now. Try again when the connection is back.</p>' +
+        '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>');
+      return;
+    }
     main.innerHTML = shell("Staff only",
       '<input class="fld" id="pw" type="password" placeholder="Passcode" inputmode="numeric">' +
       '<button class="shopbtn" id="pwGo">Unlock</button>' +
       '<p class="shopnote">Offline. This unlocks the copy held on this ' +
-      'device only \u2014 nothing here reaches the restaurant.</p>');
+      'device only — nothing here reaches the restaurant.</p>');
     var unlock = function(){
       if(el("pw").value.trim() === PASSCODE()){
         try{ sessionStorage.setItem("hayat_admin","1"); }catch(e){}
@@ -3541,20 +3647,33 @@ function gate(main, then){
     return;
   }
 
-  main.innerHTML = shell("Staff only",
-    '<div id="crewWrap"><p class="shopsub">Loading\u2026</p></div>');
+  /* ---- the real door -------------------------------------- */
+  main.innerHTML = shell("Staff sign-in",
+    '<p class="shopsub">This screen is for ' + esc(title) + '.</p>' +
+    '<div id="crewWrap"><p class="shopnote">Loading…</p></div>');
 
+  /* The crew list is a cloud read, and a tablet on a slow
+     connection gives somebody time to walk off to another page
+     before it lands. Without this the sign-in box would paint
+     itself over wherever they went. */
+  var cameFrom = location.hash;
   STORE.crew().then(function(people){
+    if(location.hash !== cameFrom || !document.body.contains(main)) return;
+    /* Somebody with no role on the list is from before roles
+       existed, so no door can tell; offer them everywhere and
+       let the rules decide, which is the only thing that can. */
+    var list = people.filter(function(p){ return !p.role || roles.indexOf(p.role) >= 0; });
+
     /* No crew set up yet? Fall back to the code rather than
        locking the office out of its own board. A staff door that
        can refuse everybody is worse than a weak one. */
-    if(!people.length){
+    if(!people.length && wantsOffice){
       el("crewWrap").innerHTML =
         '<input class="fld" id="pw" type="password" inputmode="numeric" ' +
           'autocomplete="off" placeholder="Admin code">' +
         '<button class="shopbtn" id="pwGo">Unlock</button>' +
         '<p class="shopnote">No staff list yet, so this is the shared code. ' +
-        'Firebase console \u2192 Firestore \u2192 <b>crew</b> to give ' +
+        'Open the Cleaning page as office → <b>Staff &amp; codes</b> to give ' +
         'each person their own.</p>';
       var un = function(){
         if(el("pw").value.trim() === PASSCODE()){
@@ -3567,30 +3686,48 @@ function gate(main, then){
       el("pw").focus();
       return;
     }
+
+    if(!list.length){
+      el("crewWrap").innerHTML =
+        '<p class="shopsub">Nobody is set up as ' + esc(title) + ' yet.</p>' +
+        '<p class="shopnote">Open the Cleaning page as office → <b>Staff &amp; codes</b>, ' +
+        'add the person and give them that role. They get a six-digit code to sign in with.</p>' +
+        '<button class="shopbtn ghost" data-go="#/">Back to the menu</button>';
+      return;
+    }
+
     el("crewWrap").innerHTML =
       '<select class="fld" id="crewWho">' +
-        people.map(function(p){
-          return '<option value="' + esc(p.id) + '" data-role="' + esc(p.role || "office") + '">' +
-                 esc(p.name) + '</option>';
+        list.map(function(p){
+          return '<option value="' + esc(p.id) + '" data-role="' + esc(p.role || "") + '">' +
+                 esc(p.name) + (p.role ? ' · ' + esc(roleName(p.role)) : '') + '</option>';
         }).join("") +
       '</select>' +
       '<input class="fld" id="crewCode" type="password" inputmode="numeric" ' +
         'autocomplete="off" placeholder="Your code">' +
       '<button class="shopbtn" id="crewGo">Sign in</button>' +
-      '<p class="shopnote" id="crewNote">Ask Majid if you do not have a code.</p>';
+      '<p class="shopnote" id="crewNote">Once per device. Ask Majid if you do not have a code.</p>';
 
     var busy = false;
     var go = function(){
       if(busy) return;
       var sel = el("crewWho");
+      var opt = sel.options[sel.selectedIndex];
       var who = sel.value, code = el("crewCode").value.trim();
-      var role = (sel.options[sel.selectedIndex] &&
-                  sel.options[sel.selectedIndex].dataset.role) || "office";
+      var name = opt ? opt.text.split(" · ")[0] : who;
+      /* the list usually names the role; if it is an old entry
+         that does not, try each role this door accepts and let
+         the rules say which one is true */
+      var known = opt && opt.dataset.role;
+      var tryRoles = known ? [known] : roles.slice();
       if(!code){ el("crewCode").focus(); return; }
       busy = true;
-      el("crewGo").textContent = "Checking\u2026";
-      STORE.signInCrew(who, code, role).then(function(){
-        then();
+      el("crewGo").textContent = "Checking…";
+      STORE.signInCrew(who, code, tryRoles, name).then(function(){
+        if(hasRoleNow(roles)) return then();
+        busy = false;
+        el("crewGo").textContent = "Sign in";
+        el("crewNote").textContent = "That code works, but not for this screen.";
       }).catch(function(){
         busy = false;
         el("crewGo").textContent = "Sign in";
@@ -5087,6 +5224,18 @@ function riderStrip(box, spots){
    docks of bare icons, and the customer book looked so much
    like the orders console that Majid read its List / Map as
    the orders map and wondered where the Board had gone. */
+/* What somebody may open is what they are shown. A waiter with
+   the orders board greyed out is a waiter who taps it anyway. */
+function dockAllows(key){
+  if(unlocked() || STORE.isOffice()) return true;
+  var r = ME.role;
+  if(r === "captain") return ["pos","kds","wait","orders"].indexOf(key) >= 0;
+  if(r === "waiter")  return ["pos","clean"].indexOf(key) >= 0;
+  if(r === "kitchen") return ["kds","clean"].indexOf(key) >= 0;
+  if(r === "cleaner") return key === "clean";
+  return true;
+}
+
 function officeDock(here){
   var n = STORE.riders().length;
   var B = [
@@ -5107,6 +5256,8 @@ function officeDock(here){
     ["wait",   "waitlist.html",  "\u23F3",       "Waitlist",    "Guests waiting, quoted time, WhatsApp"],
     ["clean",  "clean.html",     "\uD83E\uDDF9", "Cleaning",    "Today's cleaning, overdue, staff codes"]
   ];
+  B = B.filter(function(b){ return dockAllows(b[0]); });
+  M = M.filter(function(m){ return dockAllows(m[0]); });
   var inMore = M.some(function(m){ return m[0] === here; });
   var more = '<div class="dockmore">' +
     '<div class="dockdrawer" role="menu" hidden>' + M.map(function(m){
@@ -8479,7 +8630,8 @@ function paintPos(main){
       total: posSub(),
       source: "counter",
       mode:  POS.mode,
-      by:    (STORE.me() && STORE.me().name) || ""
+      by:    (STORE.me() && STORE.me().name) || "",
+      byRole:(STORE.me() && STORE.me().role) || ""
     };
     if(POS.mode === "dinein") o.table = String(POS.table).trim();
 
@@ -8558,29 +8710,6 @@ function posStyle(){
   document.head.appendChild(s);
 }
 
-/* ------------------------------------------------------------
-   A door for more than the office.
-
-   gate() guards the board, and the board holds every customer's
-   address. The counter does not need that, and a waiter should
-   not get it by walking through the same door. So the counter
-   has its own, which accepts the roles it names and nothing
-   else. An office signature opens both.
-   ------------------------------------------------------------ */
-function gateRoles(main, roles, then){
-  var meNow = STORE.me();
-  if(unlocked() || STORE.isOffice()) return then();
-  if(meNow && roles.indexOf(meNow.role) >= 0) return then();
-  /* not signed in as anybody yet: the ordinary crew door, and
-     the role is checked again when it closes behind them */
-  return gate(main, function(){
-    var m2 = STORE.me();
-    if(unlocked() || STORE.isOffice() || (m2 && roles.indexOf(m2.role) >= 0)) return then();
-    main.innerHTML = shell("Counter",
-      '<p class="shopsub">This screen is for the counter. Your sign-in does not reach it.</p>' +
-      '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>');
-  });
-}
 
 function route(p, main){
   REPAINT = null;
@@ -8614,7 +8743,11 @@ function route(p, main){
   if(p[0] === "admin"){
     if(p[1] === "riders") { REPAINT = function(){ if(REDIT) return; viewRiders(main); }; REPAINT(); return true; }
     if(p[1] === "call")   { REPAINT = function(){ if(isTyping()) return; viewCall(main); }; REPAINT(); return true; }
-    if(p[1] === "pos")    { REPAINT = function(){ if(isTyping()) return; viewPos(main); }; REPAINT(); return true; }
+    /* isTyping() guards the LATER repaints - a cloud update must
+       not yank a half-typed table number away. Arriving here is
+       not a repaint, so it paints even if a box elsewhere still
+       had the caret when the dock was tapped. */
+    if(p[1] === "pos")    { REPAINT = function(){ if(isTyping()) return; viewPos(main); }; viewPos(main); return true; }
     if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
     if(p[1] === "menu")   { REPAINT = function(){ viewMenuAdmin(main); }; REPAINT(); return true; }
     if(p[1] === "google") { REPAINT = function(){ viewGoogleAdmin(main); }; REPAINT(); return true; }
@@ -8828,6 +8961,8 @@ function rowControl(it){
 
 window.SHOP = {
   parseMenuCsv: parseMenuCsv,        /* so a test can feed it a file */
+  gate: gateRoles,                   /* so a test can knock on the door */
+  dockAllows: dockAllows,
   route: route,
   dishButtons: dishButtons,
   rowControl: rowControl,
