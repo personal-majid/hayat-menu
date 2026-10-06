@@ -4022,11 +4022,13 @@ function kotTickets(o){
   var order = (C().kot || {}).order || ["main","front"];
   return order.filter(function(k){ return by[k].length; }).map(function(k){ return { station:k, lines:by[k] }; });
 }
-function printJob(o, kind, auto){
+function printJob(o, kind, auto, only){
   var r = o.riderId ? STORE.rider(o.riderId) : null;
   var job = { kind:kind, at:Date.now(), auto:!!auto, site: base().replace(/^https?:\/\//, "").replace(/\/$/, ""),
     order: Object.assign({}, o, { rider: r ? r.name : "" }),
-    tickets: kind === "kot" ? kotTickets(o) : [],
+    tickets: kind === "kot"
+      ? kotTickets(o).filter(function(t){ return !only || only.indexOf(t.station) >= 0; })
+      : [],
     money: money(o), offLabel: discountLabel(o), reviewUrl: reviewUrl() };
   var ps = STORE.printSettings();
   if(ps.mode === "agent" && STORE.live()){
@@ -8320,7 +8322,10 @@ var POS_CAT = "";      /* "" is the usual grid; otherwise a category id */
 var POS_SCOPE = false; /* true = keep the search inside that category */
 
 function posFresh(){
-  return { lines: [], mode: "takeaway", table: "", name: "", phone: "", addr: "", note: "" };
+  return { lines: [], mode: "takeaway", table: "", name: "", phone: "", addr: "", note: "",
+           editing: null,   /* an order id when an open bill was resumed */
+           base: null,      /* its lines as they were, so only additions are fired */
+           kot: null };     /* which kitchens to print; null = all of them */
 }
 
 /* ---- the token ---------------------------------------------
@@ -8342,6 +8347,58 @@ function posNextToken(){
     });
   }catch(e){}
   return top + 1;
+}
+
+/* ---- the open bills ----------------------------------------
+   Everything still live: rung up and not yet delivered or
+   cancelled, whatever took it - the counter, a table, a phone
+   call or the website. A till that cannot see what is still
+   open is a till you have to remember things for.
+   Newest first, because the one you want is almost always the
+   one you just made.
+   ------------------------------------------------------------ */
+function posOpenBills(){
+  var out = [];
+  try{
+    STORE.orders().forEach(function(o){
+      if(!o || o.status === "delivered" || o.status === "cancelled") return;
+      out.push(o);
+    });
+  }catch(e){}
+  return out.sort(function(a, b){ return (b.at || 0) - (a.at || 0); });
+}
+
+function posWhereFrom(o){
+  if(o.source === "counter") return o.mode === "dinein" ? "Table" : o.mode === "delivery" ? "Delivery" : "Counter";
+  if(o.source === "phone")  return "Phone";
+  if(o.source === "ticket") return "Call-back";
+  return "Website";
+}
+
+/* The kitchens these lines actually reach. kotStation() already
+   knows which is which; this only counts them, so the chips can
+   say Main 3 / Front 2 rather than making somebody guess. */
+function posStations(lines){
+  var by = {};
+  (lines || []).forEach(function(l){
+    var st = kotStation(l);
+    by[st] = (by[st] || 0) + (l.q || 1);
+  });
+  return by;
+}
+
+/* What was added since the bill was reopened. A second helping
+   at table 4 should send the kitchen the second helping, not
+   the whole meal again. */
+function posDelta(now, base){
+  var was = {};
+  (base || []).forEach(function(l){ was[l.k] = (was[l.k] || 0) + l.q; });
+  var out = [];
+  (now || []).forEach(function(l){
+    var had = was[l.k] || 0;
+    if(l.q > had) out.push(Object.assign({}, l, { q: l.q - had }));
+  });
+  return out;
 }
 
 /* ---- the usual ---------------------------------------------
@@ -8478,6 +8535,7 @@ function paintPos(main){
         '</section>' +
 
         '<aside class="posright">' +
+          '<div class="posopen" id="posOpen"></div>' +
           '<div class="postoken" id="posToken"></div>' +
           '<div class="posmode" id="posMode">' +
             '<button class="pmode" data-mode="takeaway">Takeaway</button>' +
@@ -8486,6 +8544,7 @@ function paintPos(main){
           '</div>' +
           '<div class="posticket" id="posTicket"></div>' +
           '<div class="postotal" id="posTotal"></div>' +
+          '<div class="poskot" id="posKot"></div>' +
           '<div class="posbar">' +
             '<button class="posbtn ghost" id="posUndo">Undo last</button>' +
             '<button class="posbtn" id="posGo">Place</button>' +
@@ -8583,7 +8642,7 @@ function paintPos(main){
     posAdd(p[0], p.slice(1, -1).join("|"), +p[p.length - 1], 1);
     b.classList.add("hit");
     setTimeout(function(){ b.classList.remove("hit"); }, 170);
-    drawTicket();
+    drawTicket(); drawKot();
     if(find.value.trim()) find.select();
     find.focus();
   }
@@ -8609,12 +8668,123 @@ function paintPos(main){
     find.focus();
   }
 
+  /* ---- the open bills -------------------------------------
+     A strip at the top of the panel: tap one and it comes back
+     into the ticket to be added to. Folded shut when there is
+     nothing live, which is most of a quiet afternoon. */
+  function drawOpen(){
+    var box = el("posOpen"), live = posOpenBills();
+    if(!live.length){ box.innerHTML = ""; return; }
+    box.innerHTML =
+      '<details class="posopenbox"' + (POS.editing ? ' open' : '') + '>' +
+        '<summary>' + live.length + ' open ' + (live.length === 1 ? 'bill' : 'bills') + '</summary>' +
+        '<div class="posopenlist">' + live.map(function(o){
+          var who = o.token ? ("#" + o.token)
+                  : o.table ? ("T" + o.table)
+                  : (o.name || prettyPhone(o.phone) || o.id);
+          return '<div class="posopenrow' + (POS.editing === o.id ? ' on' : '') + '">' +
+            '<span class="pot">' + esc(who) + '</span>' +
+            '<span class="pon"><b>' + esc(posWhereFrom(o)) + '</b>' +
+              '<small>' + (o.lines || []).length +
+                ((o.lines || []).length === 1 ? ' item \u00b7 ' : ' items \u00b7 ') +
+                esc(STEP[o.status] ? STEP[o.status].t : o.status) + '</small></span>' +
+            '<span class="pov">' + rupee(o.total || 0) + '</span>' +
+            '<button class="poedit" data-resume="' + esc(o.id) + '">' +
+              (POS.editing === o.id ? 'Editing' : 'Edit') + '</button>' +
+          '</div>';
+        }).join("") + '</div>' +
+      '</details>';
+    box.querySelectorAll("[data-resume]").forEach(function(b){
+      b.onclick = function(){ resume(b.dataset.resume); };
+    });
+  }
+
+  /* Pulling an open bill back onto the till. Its lines become
+     the ticket, and a copy of them is kept so that pressing
+     Update sends the kitchen only what was added. */
+  function resume(id){
+    var o = STORE.order(id);
+    if(!o){ shopToast("That bill is gone."); drawOpen(); return; }
+    if(POS.lines.length && !POS.editing &&
+       !confirm("The ticket has items on it. Replace them with bill " +
+                (o.token ? "#" + o.token : id) + "?")) return;
+    POS = posFresh();
+    POS.editing = id;
+    POS.lines = (o.lines || []).map(function(l){
+      return { k: l.id + "|" + (l.label || ""), id: l.id, name: l.name,
+               label: l.label || "", price: l.price, q: l.q };
+    });
+    POS.base  = POS.lines.map(function(l){ return Object.assign({}, l); });
+    POS.mode  = o.mode || (o.table ? "dinein" : "takeaway");
+    POS.table = o.table || "";
+    POS.name  = o.name || ""; POS.phone = o.phone || ""; POS.note = o.note || "";
+    POS.addr  = o.addr || "";
+    drawOpen(); drawWho(); drawTicket(); drawToken(); drawKot();
+    shopToast("Bill " + (o.token ? "#" + o.token : id) + " is on the till. Add to it, then Update.");
+    find.focus();
+  }
+
+  function stopEditing(){
+    var keepMode = POS.mode;
+    POS = posFresh(); POS.mode = keepMode;
+    drawOpen(); drawWho(); drawTicket(); drawToken(); drawKot();
+    find.value = ""; el("posClear").hidden = true;
+    drawWhat(); drawGrid(); find.focus();
+  }
+
+  /* ---- which kitchens get a ticket ------------------------
+     The chips are the items' own doing: a ticket with no bread
+     on it never shows a Main chip. Both start ticked, so the
+     normal order is still one press, and unticking one is how
+     you stop the grill printing a plate of ice cream. */
+  function drawKot(){
+    var box = el("posKot");
+    var lines = POS.editing ? posDelta(POS.lines, POS.base) : POS.lines;
+    var by = posStations(lines), keys = Object.keys(by);
+    if(!keys.length){ box.innerHTML = ""; return; }
+    if(!POS.kot) POS.kot = {};
+    /* The printing page already has a say: if KOTs were set to
+       print automatically the chips start ticked, and if they
+       were not, they start clear and ticking one is how you
+       send it. Either way nothing prints that is not lit. */
+    keys.forEach(function(k){ if(POS.kot[k] == null) POS.kot[k] = autoKot(); });
+
+    var names = { main:"Main kitchen", front:"Front" };
+    box.innerHTML =
+      '<span class="pkl">Kitchen ticket</span>' +
+      keys.map(function(k){
+        return '<button class="pkchip' + (POS.kot[k] ? ' on' : '') + '" data-kot="' + esc(k) + '">' +
+          (POS.kot[k] ? '\u2713 ' : '') + esc(names[k] || k) + ' <small>' + by[k] + '</small></button>';
+      }).join("") +
+      (keys.every(function(k){ return !POS.kot[k]; })
+        ? '<span class="pkn">nothing will print</span>' : '');
+    box.querySelectorAll("[data-kot]").forEach(function(b){
+      b.onclick = function(){ POS.kot[b.dataset.kot] = !POS.kot[b.dataset.kot]; drawKot(); };
+    });
+  }
+
+  function kotChosen(){
+    if(!POS.kot) return null;
+    var out = Object.keys(POS.kot).filter(function(k){ return POS.kot[k]; });
+    return out;
+  }
+
   /* ---- the ticket ----------------------------------------- */
   function drawToken(){
+    var where = POS.mode === "dinein" ? "Dine-in"
+              : POS.mode === "delivery" ? "Delivery" : "Takeaway";
+    if(POS.editing){
+      var o = STORE.order(POS.editing);
+      el("posToken").innerHTML =
+        '<span class="ptk">Editing</span><b>' + (o && o.token ? o.token : "\u2014") + '</b>' +
+        '<small>' + esc(where) + ' \u00b7 open bill</small>' +
+        '<button class="poexit" id="posExit">New bill</button>';
+      var x = el("posExit"); if(x) x.onclick = stopEditing;
+      return;
+    }
     el("posToken").innerHTML =
       '<span class="ptk">Token</span><b>' + posNextToken() + '</b>' +
-      '<small>' + (POS.mode === "dinein" ? "Dine-in"
-                 : POS.mode === "delivery" ? "Delivery" : "Takeaway") + '</small>';
+      '<small>' + esc(where) + '</small>';
   }
 
   function drawTicket(){
@@ -8635,15 +8805,17 @@ function paintPos(main){
         '</div>';
       }).join("");
       box.querySelectorAll("[data-less]").forEach(function(b){
-        b.onclick = function(){ posBump(b.dataset.less, -1); drawTicket(); };
+        b.onclick = function(){ posBump(b.dataset.less, -1); drawTicket(); drawKot(); };
       });
       box.querySelectorAll("[data-more]").forEach(function(b){
-        b.onclick = function(){ posBump(b.dataset.more, 1); drawTicket(); };
+        b.onclick = function(){ posBump(b.dataset.more, 1); drawTicket(); drawKot(); };
       });
     }
     var n = POS.lines.reduce(function(a, l){ return a + l.q; }, 0);
     el("posTotal").innerHTML = '<span>' + n + (n === 1 ? ' item' : ' items') + '</span>' +
                                '<b>' + rupee(posSub()) + '</b>';
+    var go = el("posGo");
+    if(go) go.textContent = POS.editing ? "Update bill" : "Place";
   }
 
   /* ---- who it is for --------------------------------------
@@ -8730,11 +8902,36 @@ function paintPos(main){
   el("posUndo").onclick = function(){
     if(!POS.lines.length){ shopToast("Nothing to undo."); return; }
     posBump(POS.lines[POS.lines.length - 1].k, -1);
-    drawTicket();
+    drawTicket(); drawKot();
   };
 
   el("posGo").onclick = function(){
     if(!POS.lines.length){ shopToast("Add what they ordered first."); find.focus(); return; }
+
+    /* ---- updating an open bill ----------------------------
+       Only the additions reach the kitchen. The bill itself is
+       rewritten whole, which is what the total has to follow. */
+    if(POS.editing){
+      var id = POS.editing, was = STORE.order(id);
+      if(!was){ shopToast("That bill is gone."); stopEditing(); return; }
+      var added = posDelta(POS.lines, POS.base);
+      /* lines, total, note and the stamp - the only keys the
+         rules let a captain or a waiter touch on an order */
+      STORE.edit(id, { lines: POS.lines.slice(), note: POS.note || "" });
+      var now = STORE.order(id);
+      var picked = kotChosen();
+      if(added.length && picked && picked.length){
+        printJob(Object.assign({}, now, { lines: added }), "kot", false, picked);
+      }
+      shopToast(added.length
+        ? ("Bill " + (now.token ? "#" + now.token : id) + " updated \u00b7 " +
+           added.reduce(function(n,l){ return n + l.q; }, 0) + " added \u00b7 " + rupee(now.total))
+        : ("Bill " + (now.token ? "#" + now.token : id) + " updated \u00b7 " + rupee(now.total)));
+      stopEditing();
+      return;
+    }
+
+    /* ---- a new bill --------------------------------------- */
     if(POS.mode === "dinein" && !String(POS.table).trim()){
       el("posWhoBox").open = true;
       shopToast("Which table?"); var t = el("poTable"); if(t) t.focus(); return;
@@ -8751,7 +8948,7 @@ function paintPos(main){
       phone: POS.phone || "",
       addr:  POS.mode === "delivery" ? POS.addr
            : POS.mode === "dinein"   ? ("Table " + String(POS.table).trim())
-           : ("Takeaway · token " + token),
+           : ("Takeaway \u00b7 token " + token),
       note:  POS.note || "",
       lines: POS.lines.slice(),
       total: posSub(),
@@ -8763,24 +8960,29 @@ function paintPos(main){
     };
     if(POS.mode === "dinein") o.table = String(POS.table).trim();
 
-    var id = STORE.place(o);
-    if(!id){ shopToast("Something went wrong."); return; }
-    STORE.setStatus(id, "accepted");
-    var placed = STORE.order(id);
+    var nid = STORE.place(o);
+    if(!nid){ shopToast("Something went wrong."); return; }
+    STORE.setStatus(nid, "accepted");
+    var placed = STORE.order(nid);
     if(placed && phoneKey(placed.phone)) STORE.rememberCustomer(placed);
-    if(autoKot() && placed && placed.lines.length) printJob(placed, "kot", true);
+
+    var want = kotChosen();
+    if(placed && placed.lines.length && want && want.length) printJob(placed, "kot", true, want);
 
     var keepMode = POS.mode;
     POS = posFresh(); POS.mode = keepMode;
-    drawWho(); drawTicket(); drawToken();
+    drawOpen(); drawWho(); drawTicket(); drawToken(); drawKot();
     find.value = ""; el("posClear").hidden = true;
     drawWhat(); drawGrid(); find.focus();
-    shopToast("Token " + token + " · " + rupee(o.total) + " · on the board.");
+    shopToast("Token " + token + " \u00b7 " + rupee(o.total) + " \u00b7 on the board.");
   };
 
-  window.__posRefresh = function(){ drawTicket(); drawToken(); };
+  /* a cloud update: the open list and the next token move on
+     their own, the half-built ticket in front of somebody does not */
+  window.__posRefresh = function(){ drawOpen(); drawTicket(); drawToken(); drawKot(); };
 
-  drawTabs(); drawWhat(); drawGrid(); drawWho(); drawTicket(); drawToken();
+  drawTabs(); drawWhat(); drawGrid(); drawWho();
+  drawOpen(); drawTicket(); drawToken(); drawKot();
   find.focus();
 }
 
@@ -8866,6 +9068,33 @@ function posStyle(){
 
   /* the ticket side */
   ".posright{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px}" +
+  ".posopenbox{border:1px solid var(--line);border-radius:var(--r2);background:var(--card);padding:0 12px}" +
+  ".posopenbox > summary{list-style:none;cursor:pointer;padding:11px 0;font-size:var(--t-small);" +
+    "font-weight:700;color:var(--gold2);letter-spacing:.3px;text-transform:uppercase}" +
+  ".posopenbox > summary::-webkit-details-marker{display:none}" +
+  ".posopenlist{max-height:30vh;overflow:auto;display:flex;flex-direction:column;gap:5px;padding-bottom:11px}" +
+  ".posopenrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;" +
+    "padding:7px 9px;border-radius:var(--r3);background:var(--soft3);border:1px solid var(--line)}" +
+  ".posopenrow.on{border-color:var(--gold);background:var(--accentwash)}" +
+  ".posopenrow .pot{font-weight:700;font-size:var(--t-body);color:var(--gold2);min-width:30px}" +
+  ".posopenrow .pon{display:flex;flex-direction:column;min-width:0}" +
+  ".posopenrow .pon b{font-size:var(--t-small);font-weight:650}" +
+  ".posopenrow .pon small{font-size:var(--t-tiny);color:var(--muted)}" +
+  ".posopenrow .pov{font-size:var(--t-small);font-weight:700}" +
+  ".poedit{height:30px;padding:0 10px;border-radius:var(--r3);border:1px solid var(--line2);" +
+    "background:transparent;color:var(--ink);font-family:inherit;font-size:var(--t-tiny);" +
+    "font-weight:700;text-transform:uppercase;letter-spacing:.3px;cursor:pointer}" +
+  ".poedit:hover{background:var(--soft2)}" +
+  ".poexit{margin-left:8px;height:28px;padding:0 10px;border-radius:var(--r3);" +
+    "border:1px solid var(--line2);background:transparent;color:var(--muted);" +
+    "font-family:inherit;font-size:var(--t-tiny);cursor:pointer}" +
+  ".poskot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:32px}" +
+  ".poskot .pkl{font-size:var(--t-tiny);text-transform:uppercase;letter-spacing:1px;color:var(--muted)}" +
+  ".pkchip{height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--line2);" +
+    "background:transparent;color:var(--muted);font-family:inherit;font-size:var(--t-small);cursor:pointer}" +
+  ".pkchip.on{background:var(--accentwash);border-color:var(--gold);color:var(--gold2);font-weight:700}" +
+  ".pkchip small{opacity:.7;margin-left:2px}" +
+  ".poskot .pkn{font-size:var(--t-tiny);color:var(--hot)}" +
   ".postoken{display:flex;align-items:baseline;gap:9px;padding:12px 14px;border-radius:var(--r2);" +
     "background:var(--accentwash2);border:1px solid var(--line)}" +
   ".postoken .ptk{font-size:var(--t-tiny);letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}" +

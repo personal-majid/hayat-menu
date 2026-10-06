@@ -35,8 +35,12 @@ function check(name, cond, extra) {
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 
   // the offline passcode door, so the test never needs Firebase
+  page.on('dialog', d => d.accept());
   await page.addInitScript(() => {
     try { sessionStorage.setItem('hayat_admin', '1'); } catch (e) {}
+    // printJob opens print.html in a popup; keep it out of the test
+    window.__opened = [];
+    window.open = (u) => { window.__opened.push(u); return null; };
     // the service worker would cache the old build between runs
     if (navigator.serviceWorker) navigator.serviceWorker.register = () => Promise.reject(new Error('off'));
   });
@@ -193,8 +197,10 @@ function check(name, cond, extra) {
     const kids = [...right.children].map(e => e.id || e.className);
     return kids;
   });
-  check('the token leads the panel, not a name field',
-        rightOrder[0] === 'posToken', JSON.stringify(rightOrder));
+  check('no name field sits above the token',
+        rightOrder.indexOf('posToken') <= 1 &&
+        rightOrder.indexOf('posWhoBox') > rightOrder.indexOf('posTicket'),
+        JSON.stringify(rightOrder));
   check('who-it-is-for is folded away for takeaway',
         await page.locator('#posWhoBox[open]').count() === 0);
 
@@ -210,6 +216,123 @@ function check(name, cond, extra) {
         paint.lum > 180, JSON.stringify(paint));
 
   // ---- nothing blew up
+  // ================= the open bills =================
+  const open1 = await page.evaluate(() => ({
+    n: document.querySelectorAll('.posopenrow').length,
+    txt: document.querySelector('.posopenbox summary') &&
+         document.querySelector('.posopenbox summary').textContent,
+  }));
+  check('the bill just placed is listed as open (' + open1.txt + ')', open1.n >= 1,
+        JSON.stringify(open1));
+
+  await page.evaluate(() => { document.querySelector('.posopenbox').open = true; });
+  await page.waitForTimeout(150);
+  await page.locator('[data-resume]').first().click();
+  await page.waitForTimeout(300);
+
+  check('resuming loads its lines back onto the till',
+        await page.locator('.posline').count() > 0);
+  check('the button becomes Update bill',
+        (await page.locator('#posGo').innerText()).trim() === 'Update bill',
+        await page.locator('#posGo').innerText());
+  check('the token panel says it is an edit',
+        /editing/i.test(await page.locator('#posToken').innerText()),
+        await page.locator('#posToken').innerText());
+  check('and offers a way back to a new bill',
+        await page.locator('#posExit').count() === 1);
+
+  // the kitchen should get only what was added, not the whole meal again
+  const beforeAdd = await page.evaluate(() => {
+    const o = window.SHOP.store.orders().filter(x => x.source === 'counter')[0];
+    return { total: o.total, lines: o.lines.length, id: o.id };
+  });
+  await page.evaluate(() => { window.__opened = []; localStorage.removeItem('hayat_print'); });
+  await page.locator('.postile').nth(2).click();
+  await page.waitForTimeout(200);
+  await page.click('#posGo');
+  await page.waitForTimeout(400);
+
+  const afterAdd = await page.evaluate(() => {
+    const o = window.SHOP.store.order(arguments ? undefined : undefined);
+    return null;
+  }).catch(() => null);
+  const upd = await page.evaluate((id) => {
+    const o = window.SHOP.store.order(id);
+    let job = null;
+    try { job = JSON.parse(localStorage.getItem('hayat_print') || 'null'); } catch (e) {}
+    return { total: o.total, lines: o.lines.length, edited: !!o.editedAt,
+             job: job && { kind: job.kind, stations: (job.tickets || []).map(t => t.station),
+                           qty: (job.tickets || []).reduce((n, t) =>
+                                  n + t.lines.reduce((m, l) => m + l.q, 0), 0) } };
+  }, beforeAdd.id);
+
+  check('updating raises the bill total', upd.total > beforeAdd.total,
+        beforeAdd.total + ' -> ' + upd.total);
+  check('and stamps it as edited', upd.edited);
+  check('the kitchen ticket carries ONLY what was added',
+        upd.job && upd.job.kind === 'kot' && upd.job.qty === 1, JSON.stringify(upd.job));
+  check('the till returns to a new bill after updating',
+        (await page.locator('#posGo').innerText()).trim() === 'Place' &&
+        await page.locator('.posline').count() === 0);
+
+  // ================= the KOT chips =================
+  await page.fill('#posFind', 'mandi');
+  await page.waitForTimeout(220);
+  await page.locator('.postile').first().click();
+  await page.waitForTimeout(220);
+  const kot1 = await page.evaluate(() => [...document.querySelectorAll('.pkchip')]
+    .map(b => ({ k: b.dataset.kot, on: b.classList.contains('on'), t: b.textContent.trim() })));
+  check('a chip appears per kitchen the items reach (' + kot1.length + ')',
+        kot1.length >= 1, JSON.stringify(kot1));
+  check('chips start ticked (autoPrint is on in config)', kot1.every(c => c.on),
+        JSON.stringify(kot1));
+  check('each chip counts its own items', /\d/.test(kot1.map(c => c.t).join('')),
+        JSON.stringify(kot1.map(c => c.t)));
+
+  // add something from the other kitchen and expect a second chip
+  await page.fill('#posFind', 'juice');
+  await page.waitForTimeout(250);
+  if (await page.locator('.postile').count()) {
+    await page.locator('.postile').first().click();
+    await page.waitForTimeout(250);
+  }
+  const kot2 = await page.evaluate(() => [...document.querySelectorAll('.pkchip')].map(b => b.dataset.kot));
+  check('two kitchens on the ticket means two chips (' + kot2.join('+') + ')',
+        kot2.length === 2, JSON.stringify(kot2));
+
+  // untick one: only the other prints
+  await page.evaluate(() => { window.__opened = []; localStorage.removeItem('hayat_print'); });
+  const dropped = kot2[0];
+  await page.locator('.pkchip[data-kot="' + dropped + '"]').click();
+  await page.waitForTimeout(200);
+  check('unticking a chip clears it',
+        await page.locator('.pkchip[data-kot="' + dropped + '"].on').count() === 0);
+  await page.click('#posGo');
+  await page.waitForTimeout(400);
+  const printed = await page.evaluate(() => {
+    let j = null; try { j = JSON.parse(localStorage.getItem('hayat_print') || 'null'); } catch (e) {}
+    return j && (j.tickets || []).map(t => t.station);
+  });
+  check('only the ticked kitchen was printed (' + JSON.stringify(printed) + ')',
+        Array.isArray(printed) && printed.length === 1 && printed[0] !== dropped,
+        JSON.stringify({ printed, dropped }));
+
+  // untick everything: nothing prints at all
+  await page.fill('#posFind', '');
+  await page.waitForTimeout(150);
+  await page.locator('.postile').first().click();
+  await page.waitForTimeout(220);
+  await page.evaluate(() => {
+    localStorage.removeItem('hayat_print');
+    document.querySelectorAll('.pkchip.on').forEach(b => b.click());
+  });
+  await page.waitForTimeout(250);
+  check('with nothing ticked the panel warns', await page.locator('.poskot .pkn').count() === 1);
+  await page.click('#posGo');
+  await page.waitForTimeout(400);
+  const none = await page.evaluate(() => localStorage.getItem('hayat_print'));
+  check('and no kitchen ticket is produced', none === null, String(none).slice(0, 60));
+
   const real = errors.filter(e => !/favicon|firebase|gstatic|googleapis|net::ERR|Failed to load resource/i.test(e));
   check('no page errors', real.length === 0, real.slice(0, 3).join(' | '));
 

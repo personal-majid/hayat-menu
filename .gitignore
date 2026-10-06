@@ -34,3 +34,12 @@ local-service/publish_state.json
 local-service/probe_report.txt
 local-service/probe_today.txt
 local-service/print_agent.log*
+
+# node tooling for tests/ — the site is served from this folder,
+# so anything here goes to the website. Never ship these.
+node_modules/
+package.json
+package-lock.json
+.firebase/
+firebase-debug.log
+firestore-debug.log

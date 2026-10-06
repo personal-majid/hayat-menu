@@ -1,0 +1,162 @@
+=============================================================
+ HAYAT — THE SECURITY RULES
+=============================================================
+
+What they are
+-------------
+
+firestore.rules in this folder is the only thing standing
+between the internet and the database. It decides who may read
+customer addresses, who may change a price, and who may sign
+in as what.
+
+The file on disk is NOT live. Firestore runs the copy that was
+last published. Editing the file changes nothing until you
+publish it, and publishing the wrong thing changes everything
+at once - so test first, then publish.
+
+
+Project:  h-menu
+Console:  https://console.firebase.google.com/project/h-menu/firestore/rules
+
+
+-------------------------------------------------------------
+ STEP 1 — test the rules before they go anywhere
+-------------------------------------------------------------
+
+Double-click  RULES-TEST.bat
+
+That is the whole of it. The first run installs what it needs
+(a few minutes, once); every run after is straight into the
+test. It prints GREEN or RED in a box at the end.
+
+TEST.bat runs this plus the counter page and the staff login,
+if you want everything checked at once.
+
+By hand, if you prefer:
+
+  npm i -D firebase firebase-tools @firebase/rules-unit-testing
+  npx firebase emulators:exec --only firestore ^
+      --project hayat-rules-test "node tests/rules.test.js"
+
+It starts a throwaway Firestore on your machine, loads the
+rules file, and tries 25 things a waiter, a captain, the office
+and a customer might do. It prints ALL GREEN or it names what
+broke. It never touches the real database.
+
+The first run downloads the emulator (about 60MB). That needs
+internet and takes a minute. After that it is offline.
+
+What it checks, in short:
+
+  a waiter can ring up an order and move it along
+  a waiter CANNOT claim the office role, even with a real code
+  a waiter CANNOT read the customer book, the bills, or prices
+  a waiter CANNOT mark an order paid or delete one
+  a shared tablet can be re-signed by the next shift
+  re-signing cannot promote anybody
+  a customer can still place their own order and only cancel it
+
+If it is red, do not publish. The message names the rule.
+
+
+-------------------------------------------------------------
+ STEP 2 — publish
+-------------------------------------------------------------
+
+Double-click  RULES-SHIP.bat
+
+It runs the test first and REFUSES to publish if it is red,
+then asks you once before touching the live rules. That is the
+safe path and the one to use.
+
+The two manual ways, if you ever need them:
+
+  A. The console, no tools needed
+
+     1. Open the console link above
+     2. Select everything in the editor, delete it
+     3. Paste the whole of firestore.rules
+     4. Publish
+
+     Takes about a minute to take effect.
+
+  B. The command line, from this folder
+
+     npx firebase login          (once)
+     npx firebase deploy --only firestore:rules
+
+     firebase.json and .firebaserc are already set up, so it
+     knows the project and the file. Nothing else deploys.
+
+A's one failure mode is pasting the wrong half of a file.
+B and RULES-SHIP.bat cannot do that.
+
+
+-------------------------------------------------------------
+ STEP 3 — check it actually took
+-------------------------------------------------------------
+
+The console shows the published rules with a timestamp. Read
+the top of it. A version number is not evidence; the text is.
+
+Then, on the site: sign in as a waiter and open the Counter.
+If the waiter can ring up a sale and cannot reach Customers,
+the rules are live.
+
+
+-------------------------------------------------------------
+ Rolling back
+-------------------------------------------------------------
+
+Console -> Rules -> the clock icon, top right. Every published
+version is kept with its date. Pick the one before, Publish.
+No deploy needed, and it takes effect in under a minute.
+
+Keep the old file in git too, so the two agree.
+
+
+-------------------------------------------------------------
+ Changing them
+-------------------------------------------------------------
+
+The shape of one block:
+
+    match /orders/{id} {
+      allow get:    if true;
+      allow list:   if isOffice();
+      allow create: if signedIn() && ...;
+      allow update: if isOffice() || ( ...a narrower case... );
+      allow delete: if isOffice();
+    }
+
+  - read  is get + list. Granting read grants both; they are
+    usually worth separating, as they are here: anyone with an
+    order's id may open it, but only the office may list them.
+  - the helpers at the top (isOffice, isCrew, hasRole, mine,
+    touching) are plain functions. Prefer adding a case to one
+    of those over repeating a condition in five blocks.
+  - touching().hasOnly([...]) is the important one: it limits
+    WHICH FIELDS a write may change. That is what keeps a
+    waiter from marking their own order paid while still
+    letting them correct the lines.
+  - the last block closes everything not named above. Leave it
+    there. A new collection is invisible until you add a block
+    for it, which is the right way round.
+
+Rules cannot call out, cannot loop, and every get() inside one
+costs a read. Keep them short.
+
+
+-------------------------------------------------------------
+ Still open on this project
+-------------------------------------------------------------
+
+  - crowd/{place} accepts any write carrying the word
+    "ROBOT_WORD". Change that word in both firestore.rules and
+    the crowd robot before this matters.
+  - config.js still ships a shared admin passcode. It only
+    unlocks the offline copy on one device, but change it from
+    112233 anyway.
+
+=============================================================

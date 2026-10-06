@@ -158,7 +158,7 @@ service cloud.firestore {
            writes; everything else about an order stays office. */
         || (
           hasRole(['captain','waiter'])
-          && touching().hasOnly(['status','at','log','lines','total','notes','note'])
+          && touching().hasOnly(['status','at','log','lines','total','notes','note','editedAt'])
         )
         || (
           signedIn() && resource.data.riderUid == mine()
