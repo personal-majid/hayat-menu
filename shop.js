@@ -8279,56 +8279,79 @@ document.addEventListener("focusout", function(){
    The phone-order page asks who they are first, because on a
    call that is the first thing you learn. At the counter it is
    the last thing, and often never: somebody says "two chicken
-   mandi half" and walks away with a token. So this page is the
-   other way round — the menu is the page, and who it is for is
-   one small strip at the foot.
+   mandi half", takes a token and walks away. So the menu is the
+   page, the token writes itself, and who it is for is a small
+   strip at the side that most orders never touch.
 
-   The layout is not a matter of taste. Three findings decide it:
+   The layout is not a matter of taste. Four findings decide it:
 
-     CommandMaps (Scarr & Cockburn, CHI'11) — showing the whole
+     CommandMaps (Scarr & Cockburn, CHI'11) - showing the whole
      command set at once, in positions that never move, was 34%
      faster than menus and 25% faster than a ribbon, with errors
      at 0.6% against 9%. The win is spatial memory, and spatial
      memory dies the moment the layout reorders itself. So the
-     favourites grid is computed ONCE per page load and frozen.
-     A dish does not move under somebody's thumb mid-rush.
+     usual grid is computed ONCE per page load and frozen.
 
-     Zaphiris, depth vs breadth — 8 wide by 2 deep took 20.3s,
-     2 wide by 6 deep took 36s. So: never more than two taps.
-     Category, then dish. There is no third level.
+     Zaphiris, depth vs breadth - 8 wide by 2 deep took 20.3s,
+     2 wide by 6 deep took 36s. So nothing is ever a page away.
+     Choosing a category SHORTLISTS the grid underneath; it does
+     not navigate, and it does not move the scroll.
 
-     Parhi/Karlson/Bederson via NN/g — a touch target wants to be
-     at least 1cm square. Tiles are 92px with 10px gutters.
+     Search beats scoping. A search that quietly only looked
+     inside the open category is the classic failed search -
+     the dish is on the menu, the screen says nothing matches,
+     and the cashier types it again. So typing searches the
+     WHOLE menu and the category steps aside, visibly, with one
+     tap to put it back if that is really what was wanted.
 
-   Everything here writes to the same orders collection the
-   website writes to. There is no second database: the kitchen
-   screen, the print agent, the riders and the day ledger all
-   read orders, and a counter sale that lives somewhere else is
-   a counter sale that never reaches any of them. It is marked
-   source:"counter" and carries its mode, so it can be told
-   apart when that matters and counted with everything else
-   when it does not.
+     Parhi/Karlson/Bederson via NN/g - a touch target wants to
+     be at least 1cm square. Tiles are 96px with 10px gutters.
+
+   Everything writes to the same orders collection the website
+   writes to. There is no second database: the kitchen screen,
+   the print agent, the riders and the day ledger all read
+   orders, and a counter sale that lives somewhere else is a
+   counter sale that never reaches any of them.
    ============================================================ */
 
 var POS = null;        /* the ticket being built */
-var POS_FAV = null;    /* the frozen favourites, computed once */
-var POS_TAB = null;    /* which category is open */
+var POS_FAV = null;    /* the frozen usual, computed once */
+var POS_CAT = "";      /* "" is the usual grid; otherwise a category id */
+var POS_SCOPE = false; /* true = keep the search inside that category */
 
 function posFresh(){
   return { lines: [], mode: "takeaway", table: "", name: "", phone: "", addr: "", note: "" };
 }
 
-/* ---- the favourites ---------------------------------------
-   Every line ever sold, tallied, best first. Computed once and
+/* ---- the token ---------------------------------------------
+   One running number a day, said out loud and printed on the
+   slip. It is read from the orders already on the board rather
+   than kept anywhere, so two tablets ringing up at once cannot
+   drift apart for long, and a reload never restarts at one.
+   The order id stays what it always was; this is only the
+   number a person shouts across a counter.
+   ------------------------------------------------------------ */
+function posNextToken(){
+  var from = dayStartOf(Date.now());
+  var top = 0;
+  try{
+    STORE.orders().forEach(function(o){
+      if(!o || o.at < from) return;
+      var t = +o.token;
+      if(t > top) top = t;
+    });
+  }catch(e){}
+  return top + 1;
+}
+
+/* ---- the usual ---------------------------------------------
+   Every line ever sold, tallied, best first; computed once and
    kept, so the grid a cashier learned this morning is the same
-   grid at nine tonight. Reloading the page is what re-ranks it,
-   which is deliberate: that happens between rushes, not during
-   one. Dishes the menu no longer prices are dropped, and the
-   grid is topped up from the menu order so it is never short.
+   grid at nine tonight. A reload re-ranks it, which happens
+   between rushes rather than during one.
    ------------------------------------------------------------ */
 function posFavourites(){
   if(POS_FAV) return POS_FAV;
-
   var tally = {};
   try{
     STORE.orders().forEach(function(o){
@@ -8340,8 +8363,7 @@ function posFavourites(){
     });
   }catch(e){}
 
-  var idx = findIndex();
-  var byKey = {};
+  var idx = findIndex(), byKey = {};
   idx.forEach(function(r){ byKey[r.id + "|" + r.label] = r; });
 
   var ranked = Object.keys(tally)
@@ -8349,16 +8371,12 @@ function posFavourites(){
     .sort(function(a, b){ return tally[b] - tally[a]; })
     .map(function(k){ return byKey[k]; });
 
-  /* a new shop has sold nothing yet; the menu's own order is a
-     better guess than an empty screen */
-  var seen = {};
-  var out = [];
+  var seen = {}, out = [];
   ranked.concat(idx).forEach(function(r){
     var k = r.id + "|" + r.label;
     if(seen[k] || out.length >= 24) return;
     seen[k] = 1; out.push(r);
   });
-
   POS_FAV = out;
   return POS_FAV;
 }
@@ -8366,25 +8384,43 @@ function posFavourites(){
 function posCats(){
   var out = [];
   (window.MENU || []).forEach(function(c){
-    if((c.items || []).length) out.push({ id: c.id, name: label(c.name) });
+    var n = findIndex().filter(function(r){ return r.catId === c.id; }).length;
+    if(n) out.push({ id: c.id, name: label(c.name), n: n });
   });
   return out;
+}
+
+/* The categories the kitchen actually sells, busiest first, so
+   the four on the bar are the four worth a thumb. Frozen with
+   the usual grid for the same reason. */
+function posCatOrder(){
+  var tally = {};
+  try{
+    STORE.orders().forEach(function(o){
+      if(o.status === "cancelled") return;
+      (o.lines || []).forEach(function(l){
+        var d = dishById(l.id); if(!d) return;
+        (window.MENU || []).forEach(function(c){
+          if((c.items || []).some(function(i){ return i.id === l.id; }))
+            tally[c.id] = (tally[c.id] || 0) + (l.q || 1);
+        });
+      });
+    });
+  }catch(e){}
+  return posCats().slice().sort(function(a, b){ return (tally[b.id] || 0) - (tally[a.id] || 0); });
 }
 
 function posItemsIn(catId){
   return findIndex().filter(function(r){ return r.catId === catId; });
 }
 
-function posSub(){
-  return POS.lines.reduce(function(n, l){ return n + l.q * l.price; }, 0);
-}
+function posSub(){ return POS.lines.reduce(function(n, l){ return n + l.q * l.price; }, 0); }
 
 function posAdd(id, lbl, price, q){
-  var it  = dishById(id);
-  var key = id + "|" + (lbl || "");
+  var it = dishById(id), key = id + "|" + (lbl || "");
   var hit = POS.lines.filter(function(l){ return l.k === key; })[0];
   if(hit) hit.q += (q || 1);
-  else POS.lines.push({ k: key, id: id, name: it ? label(it.name) : id,
+  else POS.lines.push({ k:key, id:id, name: it ? label(it.name) : id,
                         label: lbl || "", price: price, q: q || 1 });
 }
 
@@ -8411,46 +8447,68 @@ function viewPos(main){
 
 function paintPos(main){
   if(!POS) POS = posFresh();
-
-  /* built once; only the panes that change are redrawn, so a
-     table number half-typed survives a cloud update */
   if(el("posWrap")){ if(window.__posRefresh) window.__posRefresh(); return; }
 
-  var cats = posCats();
-  if(POS_TAB == null) POS_TAB = "_fav";
+  var hot = posCatOrder();
+  var TOP = hot.slice(0, 3);          /* the bar; the rest live in the sheet */
 
   main.innerHTML = shell("Counter",
     '<div class="poswrap" id="posWrap">' +
       '<div class="poscols">' +
 
         '<section class="posleft">' +
-          '<input class="fld big posfind" id="posFind" autocomplete="off" ' +
-            'placeholder="Search — type two words, any order">' +
-          '<div class="postabs" id="posTabs">' +
-            '<button class="postab" data-tab="_fav">★ Usual</button>' +
-            cats.map(function(c){
-              return '<button class="postab" data-tab="' + esc(c.id) + '">' + esc(c.name) + '</button>';
-            }).join("") +
+          '<div class="posfindrow">' +
+            '<input class="posfind" id="posFind" autocomplete="off" ' +
+              'placeholder="Search the whole menu…">' +
+            '<button class="posclear" id="posClear" hidden aria-label="Clear">×</button>' +
           '</div>' +
+
+          '<div class="posbarrow">' +
+            '<div class="posbartabs">' +
+              '<button class="postab" data-poscat="">★ Usual</button>' +
+              TOP.map(function(c){
+                return '<button class="postab" data-poscat="' + esc(c.id) + '">' + esc(c.name) + '</button>';
+              }).join("") +
+            '</div>' +
+            '<button class="postab more" id="posMore">All categories ▾</button>' +
+          '</div>' +
+
+          '<div class="poswhat" id="posWhat"></div>' +
           '<div class="posgrid" id="posGrid"></div>' +
         '</section>' +
 
         '<aside class="posright">' +
+          '<div class="postoken" id="posToken"></div>' +
           '<div class="posmode" id="posMode">' +
             '<button class="pmode" data-mode="takeaway">Takeaway</button>' +
             '<button class="pmode" data-mode="dinein">Dine-in</button>' +
             '<button class="pmode" data-mode="delivery">Delivery</button>' +
           '</div>' +
-          '<div id="posWho"></div>' +
           '<div class="posticket" id="posTicket"></div>' +
           '<div class="postotal" id="posTotal"></div>' +
           '<div class="posbar">' +
-            '<button class="shopbtn ghost" id="posUndo">Undo last</button>' +
-            '<button class="shopbtn" id="posGo">Place</button>' +
+            '<button class="posbtn ghost" id="posUndo">Undo last</button>' +
+            '<button class="posbtn" id="posGo">Place</button>' +
           '</div>' +
-          '<p class="shopnote left" id="posHint">Enter adds the top match. Esc clears the search.</p>' +
+          '<details class="poswho" id="posWhoBox"><summary>Who it is for</summary>' +
+            '<div id="posWho"></div>' +
+          '</details>' +
+          '<p class="poshint">↑↓ to move · Enter to add · Esc to clear</p>' +
         '</aside>' +
 
+      '</div>' +
+      '<div class="poscatsheet" id="posSheet" hidden>' +
+        '<div class="poscatbox" role="dialog" aria-label="All categories">' +
+          '<div class="poscathead"><b>All categories</b>' +
+            '<button class="posclear" id="posSheetX" aria-label="Close">×</button></div>' +
+          '<div class="poscatgrid">' +
+            '<button class="poscat" data-poscat="">★ Usual</button>' +
+            hot.map(function(c){
+              return '<button class="poscat" data-poscat="' + esc(c.id) + '">' +
+                esc(c.name) + '<small>' + c.n + '</small></button>';
+            }).join("") +
+          '</div>' +
+        '</div>' +
       '</div>' +
     '</div>', true);
 
@@ -8459,23 +8517,56 @@ function paintPos(main){
   var find = el("posFind"), grid = el("posGrid");
   var at = 0;
 
-  /* ---- the grid ------------------------------------------
-     One of three things: the search results, the frozen
-     favourites, or one category. Never deeper than that. */
-  function drawGrid(){
-    var q = find.value.trim();
-    var rows;
+  function catName(id){
+    var c = posCats().filter(function(x){ return x.id === id; })[0];
+    return c ? c.name : "";
+  }
+
+  /* ---- what the grid is showing, said in words -------------
+     The grid changing under you is only confusing when nothing
+     tells you why it changed. One quiet line does. */
+  function drawWhat(){
+    var q = find.value.trim(), box = el("posWhat");
     if(q){
-      rows = findDishes(q, 40);
-      if(!rows.length){
-        grid.innerHTML = '<p class="shopnote">Nothing matches “' + esc(q) + '”.</p>';
-        return;
-      }
-    } else {
-      rows = POS_TAB === "_fav" ? posFavourites() : posItemsIn(POS_TAB);
+      box.innerHTML =
+        '<span class="pwl">' + (POS_SCOPE && POS_CAT
+          ? 'Searching <b>' + esc(catName(POS_CAT)) + '</b>'
+          : 'Searching the whole menu') + '</span>' +
+        (POS_CAT
+          ? '<button class="pwchip' + (POS_SCOPE ? ' on' : '') + '" id="posScope">' +
+            (POS_SCOPE ? '✓ ' : '') + 'Only ' + esc(catName(POS_CAT)) + '</button>'
+          : '');
+      var sc = el("posScope");
+      if(sc) sc.onclick = function(){ POS_SCOPE = !POS_SCOPE; drawWhat(); drawGrid(); find.focus(); };
+      return;
+    }
+    POS_SCOPE = false;
+    box.innerHTML = '<span class="pwl">' +
+      (POS_CAT ? esc(catName(POS_CAT)) + ' · ' + posItemsIn(POS_CAT).length + ' items'
+               : 'The usual · what sells most, in the same place every day') + '</span>';
+  }
+
+  function rowsNow(){
+    var q = find.value.trim();
+    if(q){
+      var hits = findDishes(q, 60);
+      if(POS_SCOPE && POS_CAT) hits = hits.filter(function(r){ return r.catId === POS_CAT; });
+      return hits;
+    }
+    return POS_CAT ? posItemsIn(POS_CAT) : posFavourites();
+  }
+
+  /* The grid is refilled, never replaced, and the page is not
+     scrolled: shortlisting below the bar is the whole point. */
+  function drawGrid(){
+    var rows = rowsNow(), q = find.value.trim();
+    if(!rows.length){
+      grid.innerHTML = '<p class="posnone">Nothing matches “' + esc(q) + '”' +
+        (POS_SCOPE && POS_CAT ? ' in ' + esc(catName(POS_CAT)) + '.' : '.') + '</p>';
+      return;
     }
     grid.innerHTML = rows.map(posTileHtml).join("");
-    at = 0; markGrid(q);
+    at = 0; markGrid(!!q);
     grid.querySelectorAll("[data-pos]").forEach(function(b, i){
       b.onclick = function(){ takeTile(b); };
       b.onmouseenter = function(){ if(find.value.trim()){ at = i; markGrid(true); } };
@@ -8491,24 +8582,45 @@ function paintPos(main){
     var p = b.dataset.pos.split("|");
     posAdd(p[0], p.slice(1, -1).join("|"), +p[p.length - 1], 1);
     b.classList.add("hit");
-    setTimeout(function(){ b.classList.remove("hit"); }, 180);
+    setTimeout(function(){ b.classList.remove("hit"); }, 170);
     drawTicket();
-    /* the search stays, selected, so the next dish is just typing */
-    if(find.value.trim()){ find.select(); }
+    if(find.value.trim()) find.select();
     find.focus();
   }
 
   function drawTabs(){
-    el("posTabs").querySelectorAll("[data-tab]").forEach(function(t){
-      t.classList.toggle("on", t.dataset.tab === POS_TAB && !find.value.trim());
+    el("posWrap").querySelectorAll("[data-poscat]").forEach(function(t){
+      t.classList.toggle("on", t.dataset.poscat === POS_CAT);
     });
+    /* a category picked from the sheet, not on the bar, still
+       has to look picked - the More button carries it */
+    var onBar = [].slice.call(el("posWrap").querySelectorAll(".posbarrow [data-poscat]"))
+                  .some(function(t){ return t.dataset.poscat === POS_CAT; });
+    var more = el("posMore");
+    more.classList.toggle("on", !!POS_CAT && !onBar);
+    more.textContent = (POS_CAT && !onBar) ? catName(POS_CAT) + " ▾"
+                                           : "All categories ▾";
+  }
+
+  function pickCat(id){
+    POS_CAT = id;
+    drawTabs(); drawWhat(); drawGrid();
+    el("posSheet").hidden = true;
+    find.focus();
   }
 
   /* ---- the ticket ----------------------------------------- */
+  function drawToken(){
+    el("posToken").innerHTML =
+      '<span class="ptk">Token</span><b>' + posNextToken() + '</b>' +
+      '<small>' + (POS.mode === "dinein" ? "Dine-in"
+                 : POS.mode === "delivery" ? "Delivery" : "Takeaway") + '</small>';
+  }
+
   function drawTicket(){
     var box = el("posTicket");
     if(!POS.lines.length){
-      box.innerHTML = '<p class="shopnote left">Nothing on the ticket yet.</p>';
+      box.innerHTML = '<p class="posnone left">Nothing on the ticket yet.</p>';
     } else {
       box.innerHTML = POS.lines.map(function(l){
         return '<div class="posline">' +
@@ -8535,29 +8647,25 @@ function paintPos(main){
   }
 
   /* ---- who it is for --------------------------------------
-     Three modes, three different shapes of truth. Takeaway
-     needs nothing; a token is enough. Dine-in needs a table.
-     Delivery needs a number and a door, which is the same
-     thing the phone page asks for and the same validation. */
+     Folded away, because most counter sales are a token and a
+     total. Dine-in and delivery open it themselves, since they
+     genuinely cannot go out without a table or a door. */
   function drawWho(){
-    var box = el("posWho");
-    var m = POS.mode;
-    var bits = "";
+    var box = el("posWho"), m = POS.mode, bits = "";
     if(m === "dinein"){
       bits = '<input class="fld big" id="poTable" autocomplete="off" inputmode="numeric" ' +
                'placeholder="Table number" value="' + esc(POS.table) + '">';
     } else if(m === "delivery"){
       bits = '<input class="fld" id="poPhone" inputmode="tel" autocomplete="off" ' +
                'placeholder="Phone number" value="' + esc(POS.phone) + '">' +
-             '<input class="fld" id="poName" autocomplete="off" ' +
-               'placeholder="Name" value="' + esc(POS.name) + '">' +
              '<textarea class="fld" id="poAddr" placeholder="Address — house, landmark, area">' +
-               esc(POS.addr) + '</textarea>';
+               esc(POS.addr) + '</textarea>' +
+             '<input class="fld" id="poName" autocomplete="off" ' +
+               'placeholder="Name (optional)" value="' + esc(POS.name) + '">';
     } else {
-      bits = '<input class="fld" id="poName" autocomplete="off" ' +
-               'placeholder="Name or token (optional)" value="' + esc(POS.name) + '">' +
-             '<input class="fld" id="poPhone" inputmode="tel" autocomplete="off" ' +
-               'placeholder="Phone (optional)" value="' + esc(POS.phone) + '">';
+      bits = '<p class="poshint flat">The token is enough. A name only if they ask for one.</p>' +
+             '<input class="fld" id="poName" autocomplete="off" ' +
+               'placeholder="Name (optional)" value="' + esc(POS.name) + '">';
     }
     box.innerHTML = bits +
       '<input class="fld" id="poNote" autocomplete="off" placeholder="Note for the kitchen" value="' +
@@ -8568,33 +8676,51 @@ function paintPos(main){
       var n = el(p[0]); if(!n) return;
       n.oninput = function(){ POS[p[1]] = n.value; };
     });
-
     el("posMode").querySelectorAll("[data-mode]").forEach(function(b){
       b.classList.toggle("on", b.dataset.mode === m);
     });
+    el("posWhoBox").open = (m !== "takeaway");
   }
 
   /* ---- wiring --------------------------------------------- */
-  el("posTabs").querySelectorAll("[data-tab]").forEach(function(t){
-    t.onclick = function(){
-      POS_TAB = t.dataset.tab;
-      find.value = "";
-      drawTabs(); drawGrid(); find.focus();
-    };
+  /* data-tab, data-go, data-var, data-star and data-start are
+     all claimed by the document-level click handler in
+     index.html - a tab named data-tab here was swallowed by the
+     gallery and the counter navigated away mid-order. */
+  el("posWrap").querySelectorAll("[data-poscat]").forEach(function(t){
+    t.onclick = function(){ pickCat(t.dataset.poscat); };
+  });
+
+  el("posMore").onclick = function(){
+    var sh = el("posSheet");
+    sh.hidden = !sh.hidden;
+  };
+  el("posSheetX").onclick = function(){ el("posSheet").hidden = true; };
+  el("posSheet").addEventListener("mousedown", function(e){
+    if(e.target === el("posSheet")) el("posSheet").hidden = true;
   });
 
   el("posMode").querySelectorAll("[data-mode]").forEach(function(b){
-    b.onclick = function(){ POS.mode = b.dataset.mode; drawWho(); };
+    b.onclick = function(){ POS.mode = b.dataset.mode; drawWho(); drawToken(); };
   });
+
+  el("posClear").onclick = function(){
+    find.value = ""; el("posClear").hidden = true;
+    drawWhat(); drawGrid(); find.focus();
+  };
 
   var job = null;
   find.addEventListener("input", function(){
+    el("posClear").hidden = !find.value;
     clearTimeout(job);
-    job = setTimeout(function(){ drawTabs(); drawGrid(); }, 90);
+    job = setTimeout(function(){ drawWhat(); drawGrid(); }, 80);
   });
   find.addEventListener("keydown", function(e){
     var list = grid.querySelectorAll("[data-pos]");
-    if(e.key === "Escape"){ e.preventDefault(); find.value = ""; drawTabs(); drawGrid(); return; }
+    if(e.key === "Escape"){
+      e.preventDefault(); find.value = ""; el("posClear").hidden = true;
+      drawWhat(); drawGrid(); return;
+    }
     if(!find.value.trim()) return;
     if(e.key === "ArrowDown"){ e.preventDefault(); at = Math.min(at + 1, list.length - 1); markGrid(true); return; }
     if(e.key === "ArrowUp"){   e.preventDefault(); at = Math.max(at - 1, 0); markGrid(true); return; }
@@ -8603,33 +8729,35 @@ function paintPos(main){
 
   el("posUndo").onclick = function(){
     if(!POS.lines.length){ shopToast("Nothing to undo."); return; }
-    var last = POS.lines[POS.lines.length - 1];
-    posBump(last.k, -1);
+    posBump(POS.lines[POS.lines.length - 1].k, -1);
     drawTicket();
   };
 
   el("posGo").onclick = function(){
     if(!POS.lines.length){ shopToast("Add what they ordered first."); find.focus(); return; }
-
     if(POS.mode === "dinein" && !String(POS.table).trim()){
+      el("posWhoBox").open = true;
       shopToast("Which table?"); var t = el("poTable"); if(t) t.focus(); return;
     }
     if(POS.mode === "delivery"){
+      el("posWhoBox").open = true;
       if(!digitsOnly(POS.phone)){ shopToast("A phone number, please."); var p = el("poPhone"); if(p) p.focus(); return; }
       if(!String(POS.addr).trim()){ shopToast("Where is it going?"); var a = el("poAddr"); if(a) a.focus(); return; }
     }
 
+    var token = posNextToken();
     var o = {
       name:  POS.name || "",
       phone: POS.phone || "",
       addr:  POS.mode === "delivery" ? POS.addr
            : POS.mode === "dinein"   ? ("Table " + String(POS.table).trim())
-           : "Takeaway — counter",
+           : ("Takeaway · token " + token),
       note:  POS.note || "",
       lines: POS.lines.slice(),
       total: posSub(),
       source: "counter",
       mode:  POS.mode,
+      token: token,
       by:    (STORE.me() && STORE.me().name) || "",
       byRole:(STORE.me() && STORE.me().role) || ""
     };
@@ -8637,76 +8765,150 @@ function paintPos(main){
 
     var id = STORE.place(o);
     if(!id){ shopToast("Something went wrong."); return; }
-
-    /* the counter IS the office taking it, so it is accepted the
-       moment it is rung up - it never sits waiting to be seen */
     STORE.setStatus(id, "accepted");
     var placed = STORE.order(id);
     if(placed && phoneKey(placed.phone)) STORE.rememberCustomer(placed);
     if(autoKot() && placed && placed.lines.length) printJob(placed, "kot", true);
 
     var keepMode = POS.mode;
-    POS = posFresh();
-    POS.mode = keepMode;            /* a counter stays a counter */
-    drawWho(); drawTicket();
-    find.value = ""; drawTabs(); drawGrid(); find.focus();
-    shopToast("Order " + id + " is on the board.");
+    POS = posFresh(); POS.mode = keepMode;
+    drawWho(); drawTicket(); drawToken();
+    find.value = ""; el("posClear").hidden = true;
+    drawWhat(); drawGrid(); find.focus();
+    shopToast("Token " + token + " · " + rupee(o.total) + " · on the board.");
   };
 
-  window.__posRefresh = function(){ drawTicket(); };
+  window.__posRefresh = function(){ drawTicket(); drawToken(); };
 
-  drawTabs(); drawGrid(); drawWho(); drawTicket();
+  drawTabs(); drawWhat(); drawGrid(); drawWho(); drawTicket(); drawToken();
   find.focus();
 }
 
 /* The counter is the only page with this layout, so its styles
    ride with it rather than growing app.css by a screen nobody
-   else loads. Injected once. */
+   else loads. Every colour comes from the palette in app.css,
+   so the counter follows the house theme instead of guessing
+   at one - the first cut guessed dark and looked wrong on the
+   paper skin the restaurant actually runs. */
 function posStyle(){
   if(el("posCss")) return;
   var s = document.createElement("style");
   s.id = "posCss";
   s.textContent =
   ".poswrap{max-width:none}" +
-  ".poscols{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}" +
+  ".poscols{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}" +
   ".posleft{min-width:0}" +
-  ".posfind{width:100%;margin:0 0 10px}" +
-  ".postabs{display:flex;flex-wrap:nowrap;gap:6px;margin:0 0 10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}" +
-  ".postabs::-webkit-scrollbar{display:none}" +
-  ".postab{flex:0 0 auto;white-space:nowrap}" +
-  ".postab{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18);" +
-    "background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.75}" +
-  ".postab.on{background:var(--gold,#c9a227);color:#1a1300;border-color:transparent;opacity:1;font-weight:700}" +
-  ".posgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}" +
-  ".postile{min-height:92px;padding:10px;border-radius:12px;cursor:pointer;text-align:left;" +
-    "border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;" +
-    "display:flex;flex-direction:column;gap:2px;justify-content:space-between;font:inherit}" +
-  ".postile b{font-size:14px;line-height:1.25}" +
-  ".postile .pls{font-size:11px;opacity:.7}" +
-  ".postile .plp{font-size:13px;font-weight:700;opacity:.9}" +
-  ".postile.on{outline:2px solid var(--gold,#c9a227);outline-offset:1px}" +
-  ".postile.hit{background:var(--gold,#c9a227);color:#1a1300}" +
+
+  /* search */
+  ".posfindrow{position:relative;margin:0 0 10px}" +
+  ".posfind{width:100%;height:52px;padding:0 44px 0 16px;border-radius:var(--r2);" +
+    "border:1px solid var(--line2);background:var(--card);color:var(--ink);" +
+    "font-family:inherit;font-size:16px;font-weight:600;outline:none}" +
+  ".posfind::placeholder{color:var(--muted);font-weight:500}" +
+  ".posfind:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--accentwash2)}" +
+  ".posclear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:34px;height:34px;" +
+    "border-radius:50%;border:0;background:var(--soft2);color:var(--muted);font-size:20px;line-height:1;cursor:pointer}" +
+
+  /* the bar: a few, then everything in a sheet */
+  ".posbarrow{display:flex;gap:7px;margin:0 0 9px;align-items:center}" +
+  ".posbartabs{display:flex;gap:7px;flex:1 1 auto;min-width:0;overflow:hidden;flex-wrap:nowrap}" +
+  ".posbartabs .postab{flex:0 0 auto}" +
+  ".postab{height:var(--tap);padding:0 16px;border-radius:var(--r2);min-width:0;" +
+    "overflow:hidden;text-overflow:ellipsis;" +
+    "border:1px solid var(--line);background:var(--card);color:var(--ink);" +
+    "font-family:inherit;font-size:var(--t-h3);font-weight:600;cursor:pointer;" +
+    "white-space:nowrap;transition:background .15s,border-color .15s}" +
+  ".postab:hover{background:var(--soft)}" +
+  ".postab.on{background:var(--accentwash);border-color:var(--gold);color:var(--gold2)}" +
+  ".postab.more{flex:0 0 auto;color:var(--muted)}" +
+  ".postab.more.on{color:var(--gold2)}" +
+
+  /* the one line that says what is below */
+  ".poswhat{display:flex;align-items:center;gap:8px;min-height:26px;margin:0 0 8px}" +
+  ".poswhat .pwl{font-size:var(--t-small);color:var(--muted);letter-spacing:.2px}" +
+  ".poswhat .pwl b{color:var(--ink)}" +
+  ".pwchip{height:28px;padding:0 11px;border-radius:999px;border:1px solid var(--line2);" +
+    "background:transparent;color:var(--muted);font-family:inherit;font-size:var(--t-small);cursor:pointer}" +
+  ".pwchip.on{background:var(--accentwash);border-color:var(--gold);color:var(--gold2);font-weight:700}" +
+
+  /* the grid */
+  ".posgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:10px}" +
+  ".postile{min-height:96px;padding:12px;border-radius:var(--r2);cursor:pointer;text-align:left;" +
+    "border:1px solid var(--line);background:var(--card);color:var(--ink);" +
+    "display:flex;flex-direction:column;gap:3px;justify-content:space-between;" +
+    "font-family:inherit;transition:transform .12s,border-color .15s,background .15s}" +
+  ".postile:hover{border-color:var(--line2);background:var(--soft3)}" +
+  ".postile:active{transform:scale(.97)}" +
+  ".postile b{font-size:var(--t-h3);font-weight:650;line-height:1.3}" +
+  ".postile .pls{font-size:var(--t-tiny);color:var(--muted);letter-spacing:.3px;text-transform:uppercase}" +
+  ".postile .plp{font-size:var(--t-body);font-weight:700;color:var(--gold2)}" +
+  ".postile.on{border-color:var(--gold);box-shadow:0 0 0 2px var(--accentwash)}" +
+  ".postile.hit{background:var(--accentwash);border-color:var(--gold)}" +
+  ".posnone{color:var(--muted);font-size:var(--t-body);padding:14px 2px;margin:0;grid-column:1/-1}" +
+  ".posnone.left{padding:10px 2px}" +
+
+  /* the floating full list */
+  ".poscatsheet{position:fixed;inset:0;z-index:60;background:var(--veil);" +
+    "display:flex;align-items:center;justify-content:center;padding:20px}" +
+  ".poscatsheet[hidden]{display:none}" +
+  ".poscatbox{width:min(640px,100%);max-height:78vh;overflow:auto;background:var(--card);" +
+    "border:1px solid var(--line2);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}" +
+  ".poscathead{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}" +
+  ".poscathead b{font-size:var(--t-h2)}" +
+  ".poscathead .posclear{position:static;transform:none}" +
+  ".poscatgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}" +
+  ".poscat{min-height:var(--tap);padding:0 14px;border-radius:var(--r2);border:1px solid var(--line);" +
+    "background:transparent;color:var(--ink);font-family:inherit;font-size:var(--t-h3);font-weight:600;" +
+    "cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left}" +
+  ".poscat:hover{background:var(--soft)}" +
+  ".poscat.on{background:var(--accentwash);border-color:var(--gold);color:var(--gold2)}" +
+  ".poscat small{color:var(--muted);font-weight:600}" +
+
+  /* the ticket side */
   ".posright{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px}" +
+  ".postoken{display:flex;align-items:baseline;gap:9px;padding:12px 14px;border-radius:var(--r2);" +
+    "background:var(--accentwash2);border:1px solid var(--line)}" +
+  ".postoken .ptk{font-size:var(--t-tiny);letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}" +
+  ".postoken b{font-size:30px;line-height:1;color:var(--gold2)}" +
+  ".postoken small{margin-left:auto;font-size:var(--t-small);color:var(--muted)}" +
   ".posmode{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}" +
-  ".pmode{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.18);" +
-    "background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.7}" +
-  ".pmode.on{background:var(--gold,#c9a227);color:#1a1300;border-color:transparent;opacity:1;font-weight:700}" +
-  ".posticket{max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:6px}" +
-  ".posline{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;" +
-    "padding:7px 8px;border-radius:9px;background:rgba(255,255,255,.04)}" +
+  ".pmode{height:42px;border-radius:var(--r2);border:1px solid var(--line);background:var(--card);" +
+    "color:var(--muted);font-family:inherit;font-size:var(--t-small);font-weight:600;cursor:pointer}" +
+  ".pmode.on{background:var(--accentwash);border-color:var(--gold);color:var(--gold2)}" +
+  ".posticket{max-height:38vh;overflow:auto;display:flex;flex-direction:column;gap:6px}" +
+  ".posline{display:grid;grid-template-columns:1fr auto auto;gap:9px;align-items:center;" +
+    "padding:8px 10px;border-radius:var(--r3);background:var(--soft3);border:1px solid var(--line)}" +
   ".posline .ptn{display:flex;flex-direction:column;min-width:0}" +
-  ".posline .ptn b{font-size:13px}" +
-  ".posline .ptn small{font-size:11px;opacity:.65}" +
-  ".ptq{display:flex;align-items:center;gap:6px}" +
-  ".pq{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.2);" +
-    "background:transparent;color:inherit;font:inherit;font-size:16px;cursor:pointer}" +
-  ".ptp{font-weight:700;font-size:13px;min-width:62px;text-align:right}" +
-  ".postotal{display:flex;justify-content:space-between;align-items:baseline;" +
-    "padding-top:8px;border-top:1px solid rgba(255,255,255,.14);font-size:15px}" +
-  ".postotal b{font-size:20px}" +
-  ".posbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}" +
-  "@media(max-width:900px){.poscols{grid-template-columns:1fr}" +
-    ".posright{position:static}.posgrid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}}";
+  ".posline .ptn b{font-size:var(--t-body);font-weight:650}" +
+  ".posline .ptn small{font-size:var(--t-tiny);color:var(--muted);text-transform:uppercase;letter-spacing:.3px}" +
+  ".ptq{display:flex;align-items:center;gap:7px}" +
+  ".ptq b{min-width:16px;text-align:center;font-size:var(--t-body)}" +
+  ".pq{width:32px;height:32px;border-radius:var(--r3);border:1px solid var(--line2);" +
+    "background:transparent;color:var(--ink);font-family:inherit;font-size:17px;line-height:1;cursor:pointer}" +
+  ".pq:hover{background:var(--soft2)}" +
+  ".ptp{font-weight:700;font-size:var(--t-body);min-width:64px;text-align:right}" +
+  ".postotal{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;" +
+    "border-top:1px solid var(--line2);font-size:var(--t-small);color:var(--muted)}" +
+  ".postotal b{font-size:24px;color:var(--ink)}" +
+  ".posbar{display:grid;grid-template-columns:1fr 1.3fr;gap:8px}" +
+  ".posbtn{height:52px;border-radius:var(--r2);border:1px solid transparent;background:var(--gold);" +
+    "color:#FFF;font-family:inherit;font-size:var(--t-h3);font-weight:700;cursor:pointer}" +
+  ".posbtn:hover{filter:brightness(1.06)}" +
+  ".posbtn.ghost{background:transparent;border-color:var(--line2);color:var(--muted)}" +
+  ".posbtn.ghost:hover{background:var(--soft);filter:none}" +
+  ".poswho{border:1px solid var(--line);border-radius:var(--r2);padding:0 12px;background:var(--card)}" +
+  ".poswho > summary{list-style:none;cursor:pointer;padding:12px 0;font-size:var(--t-small);" +
+    "font-weight:650;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}" +
+  ".poswho > summary::-webkit-details-marker{display:none}" +
+  ".poswho[open]{padding-bottom:12px}" +
+  ".poswho .fld{margin:0 0 8px}" +
+  ".poshint{margin:0;font-size:var(--t-tiny);color:var(--muted);text-align:center;letter-spacing:.3px}" +
+  ".poshint.flat{text-align:left;margin:0 0 8px}" +
+
+  "@media(max-width:980px){.poscols{grid-template-columns:1fr}.posright{position:static}" +
+    ".posgrid{grid-template-columns:repeat(auto-fill,minmax(124px,1fr))}" +
+    ".posbartabs{overflow-x:auto;scrollbar-width:none}" +
+    ".posbartabs::-webkit-scrollbar{display:none}}";
   document.head.appendChild(s);
 }
 

@@ -49,10 +49,53 @@ function check(name, cond, extra) {
   check('search box is there', await page.locator('#posFind').count() === 1);
 
   // ---- research rule: never more than two taps. tabs + grid, no third level
-  const tabs = await page.locator('.postab').count();
-  check('category tabs present (' + tabs + ')', tabs >= 2, 'tabs=' + tabs);
+  const tabs = await page.locator('.posbarrow .postab').count();
+  check('bar carries Usual + 3 busiest + All (' + tabs + ')', tabs === 5, 'tabs=' + tabs);
+  const clipped = await page.evaluate(() => [...document.querySelectorAll('.posbarrow .postab')]
+    .filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.textContent));
+  check('no tab is clipped mid-word', clipped.length === 0, JSON.stringify(clipped));
 
-  const tiles = await page.locator('.postile').count();
+  // the floating full list
+  await page.click('#posMore'); await page.waitForTimeout(200);
+  const sheet = await page.locator('.poscat').count();
+  check('All opens a floating sheet with every category (' + sheet + ')', sheet >= 13, 'cats=' + sheet);
+  await page.click('#posSheetX'); await page.waitForTimeout(150);
+  check('sheet closes', await page.locator('#posSheet[hidden]').count() === 1);
+
+  // picking a category SHORTLISTS below, it does not navigate
+  const hashBefore = await page.evaluate(() => location.hash);
+  const yBefore = await page.evaluate(() => window.scrollY);
+  await page.locator('.posbarrow .postab').nth(1).click();
+  await page.waitForTimeout(250);
+  check('picking a category does not navigate',
+        await page.evaluate(() => location.hash) === hashBefore);
+  check('and does not jump the scroll', await page.evaluate(() => window.scrollY) === yBefore);
+  check('and the grid is still the same grid element',
+        await page.locator('#posGrid').count() === 1);
+  check('the line says which category is showing',
+        /items/.test(await page.locator('#posWhat').innerText()),
+        await page.locator('#posWhat').innerText());
+  const narrowed = await page.locator('.postile').count();
+  check('the grid shortlisted to that category (' + narrowed + ')', narrowed > 0 && narrowed < 60);
+
+  // search takes precedence over the open category
+  await page.fill('#posFind', 'juice');
+  await page.waitForTimeout(250);
+  check('typing searches the WHOLE menu, not the open category',
+        /whole menu/i.test(await page.locator('#posWhat').innerText()),
+        await page.locator('#posWhat').innerText());
+  check('and offers one tap to narrow it back',
+        await page.locator('#posScope').count() === 1);
+  await page.click('#posScope'); await page.waitForTimeout(220);
+  check('tapping the chip scopes the search to the category',
+        /Searching/.test(await page.locator('#posWhat').innerText()) &&
+        await page.locator('#posScope.on').count() === 1);
+  await page.fill('#posFind', '');
+  await page.waitForTimeout(220);
+  await page.locator('.posbarrow .postab').nth(0).click();
+  await page.waitForTimeout(220);
+
+  let tiles = await page.locator('.postile').count();
   check('favourites grid is filled (' + tiles + ' tiles)', tiles > 0 && tiles <= 24, 'tiles=' + tiles);
 
   // ---- research rule: targets of at least 1cm. 1cm ~ 38px at 96dpi
@@ -129,15 +172,42 @@ function check(name, cond, extra) {
     const mine = all.filter(o => o.source === 'counter');
     return { n: mine.length, mode: mine[0] && mine[0].mode, status: mine[0] && mine[0].status,
              lines: mine[0] && mine[0].lines.length, total: mine[0] && mine[0].total,
-             addr: mine[0] && mine[0].addr };
+             addr: mine[0] && mine[0].addr, token: mine[0] && mine[0].token };
   });
   check('one counter order written to orders', placed.n === 1, JSON.stringify(placed));
   check('it is source:counter, mode takeaway', placed.mode === 'takeaway');
   check('it is accepted, not left waiting', placed.status === 'accepted');
   check('it carries its lines and total', placed.lines > 0 && placed.total > 0, JSON.stringify(placed));
+  check('it was given a token', placed.token >= 1, JSON.stringify(placed));
+  check('the takeaway address names the token', /token \d+/.test(placed.addr || ''), placed.addr);
 
   await page.waitForTimeout(250);
   check('ticket clears after placing', await page.locator('.posline').count() === 0);
+  const nextTok = await page.locator('#posToken b').innerText();
+  check('the next token is waiting, one higher (' + nextTok + ')',
+        +nextTok === (placed.token + 1), nextTok + ' vs ' + placed.token);
+
+  // the name field is not the first thing you meet
+  const rightOrder = await page.evaluate(() => {
+    const right = document.querySelector('.posright');
+    const kids = [...right.children].map(e => e.id || e.className);
+    return kids;
+  });
+  check('the token leads the panel, not a name field',
+        rightOrder[0] === 'posToken', JSON.stringify(rightOrder));
+  check('who-it-is-for is folded away for takeaway',
+        await page.locator('#posWhoBox[open]').count() === 0);
+
+  // the palette comes from the house theme, not a guess
+  const paint = await page.evaluate(() => {
+    const t = document.querySelector('.postile');
+    const c = getComputedStyle(t);
+    const toRgb = s => (s.match(/[0-9.]+/g) || []).map(Number);
+    const bg = toRgb(c.backgroundColor);
+    return { bg, lum: (bg[0] * 0.299 + bg[1] * 0.587 + bg[2] * 0.114) };
+  });
+  check('tiles are light, matching the paper skin (lum ' + Math.round(paint.lum) + ')',
+        paint.lum > 180, JSON.stringify(paint));
 
   // ---- nothing blew up
   const real = errors.filter(e => !/favicon|firebase|gstatic|googleapis|net::ERR|Failed to load resource/i.test(e));
