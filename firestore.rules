@@ -151,6 +151,15 @@ service cloud.firestore {
 
       /* the customer may only cancel, and only before it moves */
       allow update: if isOffice()
+        /* the counter: a captain or a waiter rings up a sale and
+           may move it along, but may never touch who it is for
+           once it is down, and may never mark it paid. The keys
+           named here are the whole of what the counter screen
+           writes; everything else about an order stays office. */
+        || (
+          hasRole(['captain','waiter'])
+          && touching().hasOnly(['status','at','log','lines','total','notes','note'])
+        )
         || (
           signedIn() && resource.data.riderUid == mine()
           && touching().hasOnly(['status','rLat','rLng','rAt','at','log','notes'])

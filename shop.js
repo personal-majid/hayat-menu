@@ -342,6 +342,29 @@ var STORE = {
      The browser never learns the code. It offers one, and the
      rules accept the sign-in only if it matches the one stored
      beside that name. A wrong code is simply a refused write. */
+  /* Everyone who signs in is not an "office". A captain and a
+     waiter have their own codes and their own role, and the
+     rules check the role sent here against the one stored
+     beside that name - so sending "office" for a waiter is a
+     refused write, not a promotion. */
+  signInCrew: function(who, code, role){
+    if(!FB || !AU) return Promise.reject(new Error("offline"));
+    if(!ME.uid) return Promise.reject(new Error("no-identity"));
+    var r = String(role || "office");
+    return FB.api.setDoc(FB.api.doc(FB.db, "staff", ME.uid), {
+      crew: String(who),
+      code: String(code).trim(),
+      role: r,
+      at: Date.now()
+    }).then(function(){
+      ME.role = r;
+      ME.name = String(who);
+      if(r === "office"){ try{ sessionStorage.setItem("hayat_admin", "1"); }catch(e){} }
+      meFire();
+      return true;
+    });
+  },
+
   signInOffice: function(who, code){
     if(!FB || !AU) return Promise.reject(new Error("offline"));
     if(!ME.uid) return Promise.reject(new Error("no-identity"));
@@ -3547,7 +3570,8 @@ function gate(main, then){
     el("crewWrap").innerHTML =
       '<select class="fld" id="crewWho">' +
         people.map(function(p){
-          return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>';
+          return '<option value="' + esc(p.id) + '" data-role="' + esc(p.role || "office") + '">' +
+                 esc(p.name) + '</option>';
         }).join("") +
       '</select>' +
       '<input class="fld" id="crewCode" type="password" inputmode="numeric" ' +
@@ -3558,11 +3582,14 @@ function gate(main, then){
     var busy = false;
     var go = function(){
       if(busy) return;
-      var who = el("crewWho").value, code = el("crewCode").value.trim();
+      var sel = el("crewWho");
+      var who = sel.value, code = el("crewCode").value.trim();
+      var role = (sel.options[sel.selectedIndex] &&
+                  sel.options[sel.selectedIndex].dataset.role) || "office";
       if(!code){ el("crewCode").focus(); return; }
       busy = true;
       el("crewGo").textContent = "Checking\u2026";
-      STORE.signInOffice(who, code).then(function(){
+      STORE.signInCrew(who, code, role).then(function(){
         then();
       }).catch(function(){
         busy = false;
@@ -5063,6 +5090,7 @@ function riderStrip(box, spots){
 function officeDock(here){
   var n = STORE.riders().length;
   var B = [
+    ["pos",    "#/admin/pos",    "\u2317",       "Counter"],
     ["call",   "#/admin/call",   "\u260E",       "Phone order"],
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
@@ -8094,6 +8122,466 @@ document.addEventListener("focusout", function(){
   setTimeout(function(){ if(MISSED && !isTyping()) repaintNow(); }, 60);
 }, true);
 
+/* ============================================================
+   THE COUNTER  —  #/admin/pos
+
+   The phone-order page asks who they are first, because on a
+   call that is the first thing you learn. At the counter it is
+   the last thing, and often never: somebody says "two chicken
+   mandi half" and walks away with a token. So this page is the
+   other way round — the menu is the page, and who it is for is
+   one small strip at the foot.
+
+   The layout is not a matter of taste. Three findings decide it:
+
+     CommandMaps (Scarr & Cockburn, CHI'11) — showing the whole
+     command set at once, in positions that never move, was 34%
+     faster than menus and 25% faster than a ribbon, with errors
+     at 0.6% against 9%. The win is spatial memory, and spatial
+     memory dies the moment the layout reorders itself. So the
+     favourites grid is computed ONCE per page load and frozen.
+     A dish does not move under somebody's thumb mid-rush.
+
+     Zaphiris, depth vs breadth — 8 wide by 2 deep took 20.3s,
+     2 wide by 6 deep took 36s. So: never more than two taps.
+     Category, then dish. There is no third level.
+
+     Parhi/Karlson/Bederson via NN/g — a touch target wants to be
+     at least 1cm square. Tiles are 92px with 10px gutters.
+
+   Everything here writes to the same orders collection the
+   website writes to. There is no second database: the kitchen
+   screen, the print agent, the riders and the day ledger all
+   read orders, and a counter sale that lives somewhere else is
+   a counter sale that never reaches any of them. It is marked
+   source:"counter" and carries its mode, so it can be told
+   apart when that matters and counted with everything else
+   when it does not.
+   ============================================================ */
+
+var POS = null;        /* the ticket being built */
+var POS_FAV = null;    /* the frozen favourites, computed once */
+var POS_TAB = null;    /* which category is open */
+
+function posFresh(){
+  return { lines: [], mode: "takeaway", table: "", name: "", phone: "", addr: "", note: "" };
+}
+
+/* ---- the favourites ---------------------------------------
+   Every line ever sold, tallied, best first. Computed once and
+   kept, so the grid a cashier learned this morning is the same
+   grid at nine tonight. Reloading the page is what re-ranks it,
+   which is deliberate: that happens between rushes, not during
+   one. Dishes the menu no longer prices are dropped, and the
+   grid is topped up from the menu order so it is never short.
+   ------------------------------------------------------------ */
+function posFavourites(){
+  if(POS_FAV) return POS_FAV;
+
+  var tally = {};
+  try{
+    STORE.orders().forEach(function(o){
+      if(o.status === "cancelled") return;
+      (o.lines || []).forEach(function(l){
+        var k = l.id + "|" + (l.label || "");
+        tally[k] = (tally[k] || 0) + (l.q || 1);
+      });
+    });
+  }catch(e){}
+
+  var idx = findIndex();
+  var byKey = {};
+  idx.forEach(function(r){ byKey[r.id + "|" + r.label] = r; });
+
+  var ranked = Object.keys(tally)
+    .filter(function(k){ return byKey[k]; })
+    .sort(function(a, b){ return tally[b] - tally[a]; })
+    .map(function(k){ return byKey[k]; });
+
+  /* a new shop has sold nothing yet; the menu's own order is a
+     better guess than an empty screen */
+  var seen = {};
+  var out = [];
+  ranked.concat(idx).forEach(function(r){
+    var k = r.id + "|" + r.label;
+    if(seen[k] || out.length >= 24) return;
+    seen[k] = 1; out.push(r);
+  });
+
+  POS_FAV = out;
+  return POS_FAV;
+}
+
+function posCats(){
+  var out = [];
+  (window.MENU || []).forEach(function(c){
+    if((c.items || []).length) out.push({ id: c.id, name: label(c.name) });
+  });
+  return out;
+}
+
+function posItemsIn(catId){
+  return findIndex().filter(function(r){ return r.catId === catId; });
+}
+
+function posSub(){
+  return POS.lines.reduce(function(n, l){ return n + l.q * l.price; }, 0);
+}
+
+function posAdd(id, lbl, price, q){
+  var it  = dishById(id);
+  var key = id + "|" + (lbl || "");
+  var hit = POS.lines.filter(function(l){ return l.k === key; })[0];
+  if(hit) hit.q += (q || 1);
+  else POS.lines.push({ k: key, id: id, name: it ? label(it.name) : id,
+                        label: lbl || "", price: price, q: q || 1 });
+}
+
+function posBump(key, by){
+  for(var i = 0; i < POS.lines.length; i++){
+    if(POS.lines[i].k !== key) continue;
+    POS.lines[i].q += by;
+    if(POS.lines[i].q <= 0) POS.lines.splice(i, 1);
+    return;
+  }
+}
+
+function posTileHtml(r){
+  return '<button class="postile" data-pos="' + esc(r.id + "|" + r.label + "|" + r.price) + '">' +
+    '<b>' + esc(r.name) + '</b>' +
+    (r.label ? '<span class="pls">' + esc(r.label) + '</span>' : '') +
+    '<span class="plp">' + rupee(r.price) + '</span>' +
+  '</button>';
+}
+
+function viewPos(main){
+  gateRoles(main, ["office", "captain", "waiter"], function(){ paintPos(main); });
+}
+
+function paintPos(main){
+  if(!POS) POS = posFresh();
+
+  /* built once; only the panes that change are redrawn, so a
+     table number half-typed survives a cloud update */
+  if(el("posWrap")){ if(window.__posRefresh) window.__posRefresh(); return; }
+
+  var cats = posCats();
+  if(POS_TAB == null) POS_TAB = "_fav";
+
+  main.innerHTML = shell("Counter",
+    '<div class="poswrap" id="posWrap">' +
+      '<div class="poscols">' +
+
+        '<section class="posleft">' +
+          '<input class="fld big posfind" id="posFind" autocomplete="off" ' +
+            'placeholder="Search — type two words, any order">' +
+          '<div class="postabs" id="posTabs">' +
+            '<button class="postab" data-tab="_fav">★ Usual</button>' +
+            cats.map(function(c){
+              return '<button class="postab" data-tab="' + esc(c.id) + '">' + esc(c.name) + '</button>';
+            }).join("") +
+          '</div>' +
+          '<div class="posgrid" id="posGrid"></div>' +
+        '</section>' +
+
+        '<aside class="posright">' +
+          '<div class="posmode" id="posMode">' +
+            '<button class="pmode" data-mode="takeaway">Takeaway</button>' +
+            '<button class="pmode" data-mode="dinein">Dine-in</button>' +
+            '<button class="pmode" data-mode="delivery">Delivery</button>' +
+          '</div>' +
+          '<div id="posWho"></div>' +
+          '<div class="posticket" id="posTicket"></div>' +
+          '<div class="postotal" id="posTotal"></div>' +
+          '<div class="posbar">' +
+            '<button class="shopbtn ghost" id="posUndo">Undo last</button>' +
+            '<button class="shopbtn" id="posGo">Place</button>' +
+          '</div>' +
+          '<p class="shopnote left" id="posHint">Enter adds the top match. Esc clears the search.</p>' +
+        '</aside>' +
+
+      '</div>' +
+    '</div>', true);
+
+  posStyle();
+
+  var find = el("posFind"), grid = el("posGrid");
+  var at = 0;
+
+  /* ---- the grid ------------------------------------------
+     One of three things: the search results, the frozen
+     favourites, or one category. Never deeper than that. */
+  function drawGrid(){
+    var q = find.value.trim();
+    var rows;
+    if(q){
+      rows = findDishes(q, 40);
+      if(!rows.length){
+        grid.innerHTML = '<p class="shopnote">Nothing matches “' + esc(q) + '”.</p>';
+        return;
+      }
+    } else {
+      rows = POS_TAB === "_fav" ? posFavourites() : posItemsIn(POS_TAB);
+    }
+    grid.innerHTML = rows.map(posTileHtml).join("");
+    at = 0; markGrid(q);
+    grid.querySelectorAll("[data-pos]").forEach(function(b, i){
+      b.onclick = function(){ takeTile(b); };
+      b.onmouseenter = function(){ if(find.value.trim()){ at = i; markGrid(true); } };
+    });
+  }
+
+  function markGrid(on){
+    var list = grid.querySelectorAll("[data-pos]");
+    for(var i = 0; i < list.length; i++) list[i].classList.toggle("on", !!on && i === at);
+  }
+
+  function takeTile(b){
+    var p = b.dataset.pos.split("|");
+    posAdd(p[0], p.slice(1, -1).join("|"), +p[p.length - 1], 1);
+    b.classList.add("hit");
+    setTimeout(function(){ b.classList.remove("hit"); }, 180);
+    drawTicket();
+    /* the search stays, selected, so the next dish is just typing */
+    if(find.value.trim()){ find.select(); }
+    find.focus();
+  }
+
+  function drawTabs(){
+    el("posTabs").querySelectorAll("[data-tab]").forEach(function(t){
+      t.classList.toggle("on", t.dataset.tab === POS_TAB && !find.value.trim());
+    });
+  }
+
+  /* ---- the ticket ----------------------------------------- */
+  function drawTicket(){
+    var box = el("posTicket");
+    if(!POS.lines.length){
+      box.innerHTML = '<p class="shopnote left">Nothing on the ticket yet.</p>';
+    } else {
+      box.innerHTML = POS.lines.map(function(l){
+        return '<div class="posline">' +
+          '<span class="ptn"><b>' + esc(l.name) + '</b>' +
+            (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</span>' +
+          '<span class="ptq">' +
+            '<button class="pq" data-less="' + esc(l.k) + '">−</button>' +
+            '<b>' + l.q + '</b>' +
+            '<button class="pq" data-more="' + esc(l.k) + '">+</button>' +
+          '</span>' +
+          '<span class="ptp">' + rupee(l.q * l.price) + '</span>' +
+        '</div>';
+      }).join("");
+      box.querySelectorAll("[data-less]").forEach(function(b){
+        b.onclick = function(){ posBump(b.dataset.less, -1); drawTicket(); };
+      });
+      box.querySelectorAll("[data-more]").forEach(function(b){
+        b.onclick = function(){ posBump(b.dataset.more, 1); drawTicket(); };
+      });
+    }
+    var n = POS.lines.reduce(function(a, l){ return a + l.q; }, 0);
+    el("posTotal").innerHTML = '<span>' + n + (n === 1 ? ' item' : ' items') + '</span>' +
+                               '<b>' + rupee(posSub()) + '</b>';
+  }
+
+  /* ---- who it is for --------------------------------------
+     Three modes, three different shapes of truth. Takeaway
+     needs nothing; a token is enough. Dine-in needs a table.
+     Delivery needs a number and a door, which is the same
+     thing the phone page asks for and the same validation. */
+  function drawWho(){
+    var box = el("posWho");
+    var m = POS.mode;
+    var bits = "";
+    if(m === "dinein"){
+      bits = '<input class="fld big" id="poTable" autocomplete="off" inputmode="numeric" ' +
+               'placeholder="Table number" value="' + esc(POS.table) + '">';
+    } else if(m === "delivery"){
+      bits = '<input class="fld" id="poPhone" inputmode="tel" autocomplete="off" ' +
+               'placeholder="Phone number" value="' + esc(POS.phone) + '">' +
+             '<input class="fld" id="poName" autocomplete="off" ' +
+               'placeholder="Name" value="' + esc(POS.name) + '">' +
+             '<textarea class="fld" id="poAddr" placeholder="Address — house, landmark, area">' +
+               esc(POS.addr) + '</textarea>';
+    } else {
+      bits = '<input class="fld" id="poName" autocomplete="off" ' +
+               'placeholder="Name or token (optional)" value="' + esc(POS.name) + '">' +
+             '<input class="fld" id="poPhone" inputmode="tel" autocomplete="off" ' +
+               'placeholder="Phone (optional)" value="' + esc(POS.phone) + '">';
+    }
+    box.innerHTML = bits +
+      '<input class="fld" id="poNote" autocomplete="off" placeholder="Note for the kitchen" value="' +
+        esc(POS.note) + '">';
+
+    [["poTable","table"],["poPhone","phone"],["poName","name"],
+     ["poAddr","addr"],["poNote","note"]].forEach(function(p){
+      var n = el(p[0]); if(!n) return;
+      n.oninput = function(){ POS[p[1]] = n.value; };
+    });
+
+    el("posMode").querySelectorAll("[data-mode]").forEach(function(b){
+      b.classList.toggle("on", b.dataset.mode === m);
+    });
+  }
+
+  /* ---- wiring --------------------------------------------- */
+  el("posTabs").querySelectorAll("[data-tab]").forEach(function(t){
+    t.onclick = function(){
+      POS_TAB = t.dataset.tab;
+      find.value = "";
+      drawTabs(); drawGrid(); find.focus();
+    };
+  });
+
+  el("posMode").querySelectorAll("[data-mode]").forEach(function(b){
+    b.onclick = function(){ POS.mode = b.dataset.mode; drawWho(); };
+  });
+
+  var job = null;
+  find.addEventListener("input", function(){
+    clearTimeout(job);
+    job = setTimeout(function(){ drawTabs(); drawGrid(); }, 90);
+  });
+  find.addEventListener("keydown", function(e){
+    var list = grid.querySelectorAll("[data-pos]");
+    if(e.key === "Escape"){ e.preventDefault(); find.value = ""; drawTabs(); drawGrid(); return; }
+    if(!find.value.trim()) return;
+    if(e.key === "ArrowDown"){ e.preventDefault(); at = Math.min(at + 1, list.length - 1); markGrid(true); return; }
+    if(e.key === "ArrowUp"){   e.preventDefault(); at = Math.max(at - 1, 0); markGrid(true); return; }
+    if(e.key === "Enter"){     e.preventDefault(); if(list[at]) takeTile(list[at]); return; }
+  });
+
+  el("posUndo").onclick = function(){
+    if(!POS.lines.length){ shopToast("Nothing to undo."); return; }
+    var last = POS.lines[POS.lines.length - 1];
+    posBump(last.k, -1);
+    drawTicket();
+  };
+
+  el("posGo").onclick = function(){
+    if(!POS.lines.length){ shopToast("Add what they ordered first."); find.focus(); return; }
+
+    if(POS.mode === "dinein" && !String(POS.table).trim()){
+      shopToast("Which table?"); var t = el("poTable"); if(t) t.focus(); return;
+    }
+    if(POS.mode === "delivery"){
+      if(!digitsOnly(POS.phone)){ shopToast("A phone number, please."); var p = el("poPhone"); if(p) p.focus(); return; }
+      if(!String(POS.addr).trim()){ shopToast("Where is it going?"); var a = el("poAddr"); if(a) a.focus(); return; }
+    }
+
+    var o = {
+      name:  POS.name || "",
+      phone: POS.phone || "",
+      addr:  POS.mode === "delivery" ? POS.addr
+           : POS.mode === "dinein"   ? ("Table " + String(POS.table).trim())
+           : "Takeaway — counter",
+      note:  POS.note || "",
+      lines: POS.lines.slice(),
+      total: posSub(),
+      source: "counter",
+      mode:  POS.mode,
+      by:    (STORE.me() && STORE.me().name) || ""
+    };
+    if(POS.mode === "dinein") o.table = String(POS.table).trim();
+
+    var id = STORE.place(o);
+    if(!id){ shopToast("Something went wrong."); return; }
+
+    /* the counter IS the office taking it, so it is accepted the
+       moment it is rung up - it never sits waiting to be seen */
+    STORE.setStatus(id, "accepted");
+    var placed = STORE.order(id);
+    if(placed && phoneKey(placed.phone)) STORE.rememberCustomer(placed);
+    if(autoKot() && placed && placed.lines.length) printJob(placed, "kot", true);
+
+    var keepMode = POS.mode;
+    POS = posFresh();
+    POS.mode = keepMode;            /* a counter stays a counter */
+    drawWho(); drawTicket();
+    find.value = ""; drawTabs(); drawGrid(); find.focus();
+    shopToast("Order " + id + " is on the board.");
+  };
+
+  window.__posRefresh = function(){ drawTicket(); };
+
+  drawTabs(); drawGrid(); drawWho(); drawTicket();
+  find.focus();
+}
+
+/* The counter is the only page with this layout, so its styles
+   ride with it rather than growing app.css by a screen nobody
+   else loads. Injected once. */
+function posStyle(){
+  if(el("posCss")) return;
+  var s = document.createElement("style");
+  s.id = "posCss";
+  s.textContent =
+  ".poswrap{max-width:none}" +
+  ".poscols{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}" +
+  ".posleft{min-width:0}" +
+  ".posfind{width:100%;margin:0 0 10px}" +
+  ".postabs{display:flex;flex-wrap:nowrap;gap:6px;margin:0 0 10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}" +
+  ".postabs::-webkit-scrollbar{display:none}" +
+  ".postab{flex:0 0 auto;white-space:nowrap}" +
+  ".postab{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18);" +
+    "background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.75}" +
+  ".postab.on{background:var(--gold,#c9a227);color:#1a1300;border-color:transparent;opacity:1;font-weight:700}" +
+  ".posgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}" +
+  ".postile{min-height:92px;padding:10px;border-radius:12px;cursor:pointer;text-align:left;" +
+    "border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;" +
+    "display:flex;flex-direction:column;gap:2px;justify-content:space-between;font:inherit}" +
+  ".postile b{font-size:14px;line-height:1.25}" +
+  ".postile .pls{font-size:11px;opacity:.7}" +
+  ".postile .plp{font-size:13px;font-weight:700;opacity:.9}" +
+  ".postile.on{outline:2px solid var(--gold,#c9a227);outline-offset:1px}" +
+  ".postile.hit{background:var(--gold,#c9a227);color:#1a1300}" +
+  ".posright{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px}" +
+  ".posmode{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}" +
+  ".pmode{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.18);" +
+    "background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.7}" +
+  ".pmode.on{background:var(--gold,#c9a227);color:#1a1300;border-color:transparent;opacity:1;font-weight:700}" +
+  ".posticket{max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:6px}" +
+  ".posline{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;" +
+    "padding:7px 8px;border-radius:9px;background:rgba(255,255,255,.04)}" +
+  ".posline .ptn{display:flex;flex-direction:column;min-width:0}" +
+  ".posline .ptn b{font-size:13px}" +
+  ".posline .ptn small{font-size:11px;opacity:.65}" +
+  ".ptq{display:flex;align-items:center;gap:6px}" +
+  ".pq{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.2);" +
+    "background:transparent;color:inherit;font:inherit;font-size:16px;cursor:pointer}" +
+  ".ptp{font-weight:700;font-size:13px;min-width:62px;text-align:right}" +
+  ".postotal{display:flex;justify-content:space-between;align-items:baseline;" +
+    "padding-top:8px;border-top:1px solid rgba(255,255,255,.14);font-size:15px}" +
+  ".postotal b{font-size:20px}" +
+  ".posbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}" +
+  "@media(max-width:900px){.poscols{grid-template-columns:1fr}" +
+    ".posright{position:static}.posgrid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}}";
+  document.head.appendChild(s);
+}
+
+/* ------------------------------------------------------------
+   A door for more than the office.
+
+   gate() guards the board, and the board holds every customer's
+   address. The counter does not need that, and a waiter should
+   not get it by walking through the same door. So the counter
+   has its own, which accepts the roles it names and nothing
+   else. An office signature opens both.
+   ------------------------------------------------------------ */
+function gateRoles(main, roles, then){
+  var meNow = STORE.me();
+  if(unlocked() || STORE.isOffice()) return then();
+  if(meNow && roles.indexOf(meNow.role) >= 0) return then();
+  /* not signed in as anybody yet: the ordinary crew door, and
+     the role is checked again when it closes behind them */
+  return gate(main, function(){
+    var m2 = STORE.me();
+    if(unlocked() || STORE.isOffice() || (m2 && roles.indexOf(m2.role) >= 0)) return then();
+    main.innerHTML = shell("Counter",
+      '<p class="shopsub">This screen is for the counter. Your sign-in does not reach it.</p>' +
+      '<button class="shopbtn ghost" data-go="#/admin">Back to orders</button>');
+  });
+}
+
 function route(p, main){
   REPAINT = null;
   closePanel();                           /* a new page; the order panel belongs to the old one */
@@ -8106,7 +8594,8 @@ function route(p, main){
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
-           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google" && p[1] !== "print");
+           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google" &&
+           p[1] !== "print" && p[1] !== "pos");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -8125,6 +8614,7 @@ function route(p, main){
   if(p[0] === "admin"){
     if(p[1] === "riders") { REPAINT = function(){ if(REDIT) return; viewRiders(main); }; REPAINT(); return true; }
     if(p[1] === "call")   { REPAINT = function(){ if(isTyping()) return; viewCall(main); }; REPAINT(); return true; }
+    if(p[1] === "pos")    { REPAINT = function(){ if(isTyping()) return; viewPos(main); }; REPAINT(); return true; }
     if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
     if(p[1] === "menu")   { REPAINT = function(){ viewMenuAdmin(main); }; REPAINT(); return true; }
     if(p[1] === "google") { REPAINT = function(){ viewGoogleAdmin(main); }; REPAINT(); return true; }
