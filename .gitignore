@@ -43,3 +43,4 @@ package-lock.json
 .firebase/
 firebase-debug.log
 firestore-debug.log
+rules-run.log
