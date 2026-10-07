@@ -262,6 +262,7 @@ service cloud.firestore {
                           agent (admin SDK) marks it done and prunes */
     match /settings/{id}   { allow read: if isCrew(); allow write: if isOffice(); }
     match /print_jobs/{id} { allow read, create, update: if isOffice(); allow delete: if false; }
+    match /pos_days/{d}    { allow read: if isCrew(); allow write: if isOffice(); }   /* the drawer: float, cash in/out, day close */
 
     /* ---- cleaning -------------------------------------------
          cleanplan/main      the master cleaning schedule (office edits)

@@ -2755,3 +2755,51 @@ html[data-theme="paper"] .dditem{color:var(--ink)}
   .tiles{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
   .tile{min-height:76px;padding:8px 9px}
 }
+
+/* ---- the till, part two: types, comment, charges, tender ---- */
+.tktype .tab{flex:1;text-align:center;padding:9px 6px;font-size:12.5px}
+.tkwho{margin:0 0 8px}
+.linky.tiny{font-size:12px;padding:0;margin:-4px 0 8px}
+.namerow[hidden]{display:none}
+.tkcomment{margin:10px 0 6px}
+.tkcomment textarea{min-height:76px;resize:vertical;margin:0 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips .chip{cursor:pointer;font-size:12px;padding:5px 10px}
+.chips .chip.on{background:var(--cream);color:var(--bg);border-color:transparent}
+.lnedit .chips{flex:1 1 100%}
+.charges{border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin:8px 0}
+.charges summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:4px 0}
+.charges .trow{margin:6px 0}
+.charges .disc{display:flex;gap:6px;align-items:center}
+.charges .fld{margin:0;width:110px;padding:8px 10px}
+.trow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.trow label{font-size:13px;color:var(--muted);font-weight:600}
+.trow .fld{margin:0;width:150px;text-align:right;padding:9px 10px}
+.trow .fld.sm{width:auto;text-align:left;padding:6px 8px}
+.trow.big b{font-size:22px;color:var(--gold2)} .trow.big b.dn{color:var(--hot)}
+.tkpay{margin:8px 0 4px}
+.tkpay .tabs{margin:0 0 8px}
+.tkpay .tabs .tab{flex:1;text-align:center}
+.tender{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card2)}
+.tmodes{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.tmode{flex:1 1 auto;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:10px;padding:8px 6px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.tmode.on{background:var(--cream);color:var(--bg);border-color:transparent}
+.tquick{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.tnote{border:1px solid var(--line);background:var(--card);color:var(--cream);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}
+.tnote.on{background:var(--gold);color:var(--onaccent);border-color:transparent}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin:10px 0}
+.settle .shead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 12px}
+.settle .shead small{display:block;color:var(--muted);font-size:12px}
+.settle .stot{font-size:24px;font-weight:800;color:var(--gold2);white-space:nowrap}
+.settle .shopbtn{width:100%;margin:12px 0 6px}
+/* the counter */
+.counter{max-width:720px;margin:0 auto}
+.counter .dtiles{margin:10px 0}
+.drawer{border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;background:var(--card);margin:0 0 12px}
+.drawer .trow{margin:6px 0}
+.drawer .prow{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.cform{border:1px dashed var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 0}
+.cform b{display:block;margin:0 0 6px}
+.counter .lines .line .linky{margin:0}
+.prow .shopbtn.small{width:auto;min-width:0}
+.sheetwrap.top{z-index:960}

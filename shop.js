@@ -54,7 +54,7 @@ function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} });
 try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
-var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, settings:{}, prints:{}, seq:100 };
+var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, settings:{}, prints:{}, pos:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
 var FAULT = null;              /* why it is not live, in one word */
 
@@ -63,8 +63,8 @@ function lsRead(){
   try{ var d = JSON.parse(localStorage.getItem(KEY)) || {};
     return { orders:d.orders||{}, riders:d.riders||{}, customers:d.customers||{},
              verify:d.verify||{}, pings:d.pings||{}, menus:d.menus||{}, crowd:d.crowd||{},
-             settings:d.settings||{}, prints:d.prints||{}, seq:d.seq||100 }; }
-  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, settings:{}, prints:{}, seq:100 }; }
+             settings:d.settings||{}, prints:d.prints||{}, pos:d.pos||{}, seq:d.seq||100 }; }
+  catch(e){ return { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, settings:{}, prints:{}, pos:{}, seq:100 }; }
 }
 function lsWrite(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
@@ -307,7 +307,7 @@ async function connectFirebase(cfg){
   watch("crowd",  "crowd");        /* the busy bars, from the extension */
   watch("settings", "settings");   /* one small doc per thing the office set up: printers, ... */
   /* print_jobs is watched only once the office opens; see printWatch() */
-  window.__printWatch = function(){ watch("print_jobs", "prints"); };
+  window.__printWatch = function(){ watch("print_jobs", "prints"); watch("pos_days", "pos"); };
 
   /* ask the REST endpoint once, so a missing database is named plainly
      instead of showing up later as writes that quietly disappear */
@@ -943,16 +943,21 @@ var STORE = {
   /* ---- the money ------------------------------------------
      Marked by a person, never guessed. UPI cannot tell a web
      page that it was paid, so whoever saw the money says so. */
-  setPaid: function(id, paid, mode, amt){
+  setPaid: function(id, paid, mode, amt, t){
     var o = DB.orders[id];
     if(!o) return null;
-    var who = myVoice();
+    var who = myVoice(); t = t || {};
     var patch = {
       paid: !!paid,
       payMode: paid ? (mode || "cash") : null,
       paidAt: paid ? Date.now() : null,
       paidBy: paid ? who : null,
-      paidAmt: paid && amt != null && amt !== o.total ? amt : null   /* only when it differs */
+      paidAmt: paid && amt != null && amt !== o.total ? amt : null,  /* only when it differs */
+      pays: paid ? (t.pays || null) : null,
+      tendered: paid && t.tendered != null ? t.tendered : null,
+      change: paid && t.change ? t.change : null,
+      payParty: paid ? (t.party || null) : null,
+      payRef: paid ? (t.ref || null) : null
     };
     for(var k in patch) o[k] = patch[k];
     if(FB){
@@ -1186,7 +1191,8 @@ function money(o){
     off = (d.type === "pct") ? sub * Math.min(d.value, 100) / 100 : Math.min(d.value, sub);
   }
   off = Math.round(off);
-  return { sub: sub, off: off, total: Math.max(0, sub - off) };
+  var charge = Math.max(0, Math.round(+o.charge || 0));          /* delivery / packing */
+  return { sub: sub, off: off, charge: charge, total: Math.max(0, sub - off) + charge };
 }
 function discountLabel(o){
   var d = o.discount;
@@ -1402,7 +1408,7 @@ function payBlock(o, who){
     return '<div class="paid on">' +
       '<span class="pdot">\u2713</span>' +
       '<div class="pt"><b>Paid</b><small>' +
-        esc(o.payMode === "upi" ? "By UPI" : "Cash") + ' \u00b7 ' + when(o.paidAt) +
+        esc(payWord(o)) + (o.change ? ' \u00b7 change ' + rupee(o.change) : '') + ' \u00b7 ' + when(o.paidAt) +
         (o.paidBy ? ' \u00b7 ' + esc((VOICE[o.paidBy]||{}).t || o.paidBy) : '') +
       '</small></div>' +
       (who === "customer" ? '' :
@@ -1430,14 +1436,16 @@ function payBlock(o, who){
       (u ? "Scan the code, or hand over cash." : "Cash on delivery.") + '</small></div>' +
     (who === "customer" ? '' :
       '<div class="prow">' +
-        '<button class="shopbtn small" data-paid="' + esc(o.id) + '|1|cash">Cash taken</button>' +
-        (u ? '<button class="shopbtn small ghost" data-paid="' + esc(o.id) + '|1|upi">Paid by UPI</button>' : '') +
+        '<button class="shopbtn small" data-settle="' + esc(o.id) + '">Take payment</button>' +
+        '<button class="shopbtn small ghost" data-paid="' + esc(o.id) + '|1|cash">Cash, exact</button>' +
+        (u ? '<button class="shopbtn small ghost" data-paid="' + esc(o.id) + '|1|upi">UPI</button>' : '') +
       '</div>') +
   '</div>' + qr;
 }
 
 /* one handler for every Paid button anywhere */
 function wirePaid(main, after){
+  main.querySelectorAll("[data-settle]").forEach(function(b){ b.onclick = function(){ settleSheet(b.dataset.settle, after); }; });
   main.querySelectorAll("[data-paid]").forEach(function(b){
     b.onclick = function(){
       var p = b.dataset.paid.split("|");
@@ -3366,7 +3374,7 @@ function riderState(r){
 function payTag(o){
   if(o.status !== "delivered" && !o.paid) return "";
   return o.paid
-    ? '<span class="ptag on" title="' + esc((o.payMode === "upi" ? "UPI" : "Cash") + (o.paidAmt != null ? " · " + rupee(o.paidAmt) : "")) + '">\u2713 paid</span>'
+    ? '<span class="ptag on" title="' + esc(payWord(o) + (o.paidAmt != null ? " · " + rupee(o.paidAmt) : "")) + '">\u2713 ' + esc(o.payMode === "credit" ? "credit" : "paid") + '</span>'
     : '<button class="ptag off" data-paysheet="' + esc(o.id) + '" title="Take the money">unpaid \u203A</button>';
 }
 
@@ -3722,6 +3730,7 @@ function dayLedger(orders){
   var upi  = done.filter(function(o){ return o.paid && o.payMode === "upi"; });
   var open = done.filter(function(o){ return !o.paid; });
   var canc = rows.filter(function(o){ return o.status === "cancelled"; });
+  var DS = daySales(start);
   var tile = function(n, t, cls){ return '<div class="dtile' + (cls ? " " + cls : "") + '"><b>' + n + '</b><small>' + t + '</small></div>'; };
   return '<div class="conscroll ledger">' +
     '<div class="dayhead">' +
@@ -3733,10 +3742,11 @@ function dayLedger(orders){
     '</div>' +
     '<div class="dtiles">' +
       tile(done.length, "delivered") + tile(rupee(sum(done)), "takings") +
-      tile(rupee(sum(cash)), "cash \u00b7 " + cash.length) + tile(rupee(sum(upi)), "UPI \u00b7 " + upi.length) +
+      tile(rupee(DS.cash), "cash") + tile(rupee(DS.upi), "UPI") + (DS.card ? tile(rupee(DS.card), "card") : "") + (DS.credit ? tile(rupee(DS.credit), "credit", "warn") : "") +
       tile(rupee(sum(open)), "unpaid \u00b7 " + open.length, open.length ? "warn" : "") +
       (canc.length ? tile(canc.length, "cancelled", "dim") : "") +
     '</div>' +
+    '<p class="shopnote left"><a class="linky" href="#/admin/cash">Counter \u2192 float, cash in / out, close the day</a></p>' +
     backupBar() +
     (rows.length
       ? '<div class="lines">' + rows.map(function(o){
@@ -3828,6 +3838,7 @@ function bundleFor(o){
    everything else is Front. A ticket per kitchen, a bill per order,
    printed from print.html on an 80 mm roll.
    ============================================================ */
+function autoBill(){ var ps = STORE.printSettings(); return !!ps.autoBill; }
 function autoKot(){
   var ps = STORE.printSettings();
   return ps.autoKot != null ? !!ps.autoKot : !!(C().kot || {}).autoPrint;
@@ -4076,7 +4087,7 @@ function boardCard(o){
     '</div>';
   } else if(empty){
     act = '<p class="shopnote emptyord">No items. Sort it out with the customer.</p>';
-  } else if(o.status === "accepted" && o.type === "pickup"){
+  } else if(o.status === "accepted" && (o.type === "pickup" || o.type === "counter")){
     /* nobody rides: the customer walks in and takes it */
     act = '<button class="mini" data-adv="' + o.id + '|delivered">Collected</button>';
   } else if(o.status === "accepted"){
@@ -4115,7 +4126,7 @@ function boardCard(o){
     return l.q + "× " + l.name + (l.label ? " (" + l.label + ")" : "") + (l.note ? " \u2013 " + l.note : "");
   });
   var more = lines.length > 3 ? ' <span class="bmore">+' + (lines.length - 3) + ' more</span>' : '';
-  var where = o.type === "pickup" ? "\uD83D\uDECD Pickup \u2014 they collect"
+  var where = o.type === "pickup" ? "\uD83D\uDECD Pickup \u2014 they collect" : o.type === "counter" ? "\uD83C\uDFEA Counter"
             : [shortAddr(o.addr), distLabel(o) ? distLabel(o) + " away" : ""].filter(Boolean).join(" · ");
 
   return '<div class="bcard' + (ticket ? " ticket" : empty ? " empty" : "") +
@@ -5067,13 +5078,14 @@ function riderStrip(box, spots){
 function officeDock(here){
   var n = STORE.riders().length;
   var B = [
-    ["call",   "#/admin/call",   "\u260E",       "Phone order"],
+    ["call",   "#/admin/call",   "\u260E",       "Till"],
     ["orders", "#/admin",        "\u25A6",       "Orders"],
     ["who",    "#/admin/who",    "\uD83D\uDC64", "Customers"],
     ["riders", "#/admin/riders", "\uD83C\uDFCD", "Riders"]
   ];
   /* the rest live in a drawer, so the dock fits any screen */
   var M = [
+    ["cash",   "#/admin/cash",   "\uD83D\uDCB5", "Counter",     "Float, cash in and out, close the day"],
     ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
     ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],
     ["print",  "#/admin/print",  "\uD83D\uDDA8", "Printing",    "Kitchen and bill printers, KOT split"],
@@ -6467,6 +6479,216 @@ function viewCall(main){
   gate(main, function(){ paintCall(main); });
 }
 
+/* ============================================================
+   TENDER - taking the money
+
+   One widget, used in three places: inline on the till ("pay
+   now"), in the settle sheet over the board, and in the order
+   editor. It knows cash (tendered, change, quick notes), UPI,
+   card, credit (a party who pays later) and a split between two.
+   ============================================================ */
+var MODES = [["cash","💵 Cash"],["upi","📱 UPI"],["card","💳 Card"],["credit","📒 Credit"],["split","½ Split"]];
+function tenderState(total, prev){
+  prev = prev || {};
+  return { total: total, mode: prev.mode || "cash", tendered: prev.tendered != null ? prev.tendered : "",
+           a: prev.a != null ? prev.a : "", b: prev.b != null ? prev.b : "", bmode: prev.bmode || "upi", party: prev.party || "", ref: prev.ref || "" };
+}
+function tenderHtml(st){
+  var t = st.total, tn = +st.tendered || 0, change = st.mode === "cash" && tn > t ? tn - t : 0;
+  var notes = [t, 100, 200, 500, 2000].filter(function(v, i, a){ return a.indexOf(v) === i; });
+  var body = "";
+  if(st.mode === "cash"){
+    body = '<div class="tcash">' +
+      '<div class="tquick">' + notes.map(function(v){ return '<button class="tnote' + (tn === v ? " on" : "") + '" data-tnote="' + v + '">' + (v === t ? "Exact " : "") + rupee(v) + '</button>'; }).join("") + '</div>' +
+      '<div class="trow"><label>Tendered</label><input class="fld" inputmode="numeric" id="tnTend" placeholder="' + esc(rupee(t)) + '" value="' + esc(st.tendered) + '"></div>' +
+      '<div class="trow big"><label>Change</label><b class="' + (tn && tn < t ? "dn" : "") + '">' + (tn ? (tn < t ? "short " + rupee(t - tn) : rupee(change)) : "—") + '</b></div>' +
+    '</div>';
+  } else if(st.mode === "split"){
+    var a = +st.a || 0, b = st.a === "" ? t : Math.max(0, t - a);
+    body = '<div class="tsplit">' +
+      '<div class="trow"><label>Cash</label><input class="fld" inputmode="numeric" id="tnA" placeholder="0" value="' + esc(st.a) + '"></div>' +
+      '<div class="trow"><label><select class="fld sm" id="tnBmode">' + ["upi","card","credit"].map(function(m){ return '<option value="' + m + '"' + (st.bmode === m ? " selected" : "") + '>' + m.toUpperCase() + '</option>'; }).join("") + '</select></label><b>' + rupee(b) + '</b></div>' +
+      (st.bmode === "credit" ? '<div class="trow"><label>Party</label><input class="fld" id="tnParty" placeholder="Who pays later" value="' + esc(st.party) + '"></div>' : '') +
+    '</div>';
+  } else if(st.mode === "credit"){
+    body = '<div class="trow"><label>Party</label><input class="fld" id="tnParty" placeholder="Who pays later — name or company" value="' + esc(st.party) + '"></div>' +
+           '<p class="shopnote left">Goes on the books as owed. Mark it paid when the money comes.</p>';
+  } else {
+    body = '<div class="trow"><label>Ref</label><input class="fld" id="tnRef" placeholder="UTR / last digits (optional)" value="' + esc(st.ref) + '"></div>';
+  }
+  return '<div class="tender">' +
+    '<div class="tmodes">' + MODES.map(function(m){ return '<button class="tmode' + (st.mode === m[0] ? " on" : "") + '" data-tmode="' + m[0] + '">' + m[1] + '</button>'; }).join("") + '</div>' +
+    body + '</div>';
+}
+function wireTender(root, st, redraw){
+  root.querySelectorAll("[data-tmode]").forEach(function(b){ b.onclick = function(){ st.mode = b.dataset.tmode; redraw(); }; });
+  root.querySelectorAll("[data-tnote]").forEach(function(b){ b.onclick = function(){ st.tendered = +b.dataset.tnote; redraw(); var i = el("tnTend"); if(i) i.blur(); }; });
+  var bind = function(id, key, re){ var n = el(id); if(!n) return; n.oninput = function(){ st[key] = n.value; if(re) redrawSoft(); }; n.onchange = function(){ redraw(); }; };
+  function redrawSoft(){ /* only the change line, so the caret stays */
+    var t = st.total, tn = +st.tendered || 0, b = root.querySelector(".trow.big b");
+    if(b){ b.textContent = tn ? (tn < t ? "short " + rupee(t - tn) : rupee(tn - t)) : "—"; b.className = tn && tn < t ? "dn" : ""; }
+    var sb = root.querySelector(".tsplit .trow:nth-child(2) b"); if(sb){ var a = +st.a || 0; sb.textContent = rupee(Math.max(0, t - a)); }
+  }
+  bind("tnTend", "tendered", true); bind("tnA", "a", true); bind("tnParty", "party"); bind("tnRef", "ref");
+  var bm = el("tnBmode"); if(bm) bm.onchange = function(){ st.bmode = bm.value; redraw(); };
+}
+/* what the widget says was paid: { mode, amt, pays:[{mode,amt}], tendered, change, party, ref } or null */
+function tenderResult(st){
+  var t = st.total;
+  if(st.mode === "cash"){ var tn = +st.tendered || t; if(tn < t) return null; return { mode:"cash", amt:t, pays:[{mode:"cash",amt:t}], tendered:tn, change:tn - t }; }
+  if(st.mode === "split"){ var a = Math.min(t, Math.max(0, +st.a || 0)), b = t - a; if(st.bmode === "credit" && !st.party.trim()) return null;
+    return { mode:"split", amt:t, pays:[{mode:"cash",amt:a},{mode:st.bmode,amt:b,party:st.party.trim()||null}], party: st.bmode === "credit" ? st.party.trim() : null }; }
+  if(st.mode === "credit"){ if(!st.party.trim()) return null; return { mode:"credit", amt:t, pays:[{mode:"credit",amt:t,party:st.party.trim()}], party:st.party.trim() }; }
+  return { mode: st.mode, amt:t, pays:[{mode:st.mode,amt:t,ref:st.ref.trim()||null}], ref: st.ref.trim() || null };
+}
+function payWord(o){
+  if(!o.paid) return "";
+  if(o.payMode === "split") return (o.pays || []).map(function(p){ return p.mode + " " + rupee(p.amt); }).join(" + ");
+  if(o.payMode === "credit") return "credit" + (o.payParty ? " · " + o.payParty : "");
+  return o.payMode === "upi" ? "UPI" : o.payMode === "card" ? "card" : "cash";
+}
+
+/* the settle sheet: any order, from anywhere */
+function settleSheet(id, after){
+  var o = STORE.order(id); if(!o) return;
+  var old = el("settleSheet"); if(old) old.remove();
+  var m = money(o), st = tenderState(m.total);
+  var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "settleSheet";
+  document.body.appendChild(box);
+  var collect = o.status !== "delivered" && (o.type === "pickup" || o.type === "counter");
+  function draw(){
+    box.innerHTML = '<div class="panel small settle">' +
+      '<div class="shead"><div><b>' + esc(o.name || prettyPhone(o.phone) || "Walk-in") + '</b><small>' + esc(o.id) + ' · ' + esc(orderLine(o)).slice(0, 70) + '</small></div><span class="stot">' + rupee(m.total) + '</span></div>' +
+      (o.paid ? '<div class="paid on"><span class="pdot">✓</span><div class="pt"><b>Paid · ' + esc(payWord(o)) + '</b><small>' + when(o.paidAt) + (o.change ? ' · change ' + rupee(o.change) : '') + '</small></div><button class="linky" id="stUnpay">Not paid</button></div>'
+               : tenderHtml(st) +
+                 (collect ? '<label class="chk"><input type="checkbox" id="stCollect" checked> Also mark collected</label>' : '') +
+                 '<button class="shopbtn" id="stGo">Take ' + rupee(m.total) + '</button>') +
+      '<button class="linky" id="stX">Close</button></div>';
+    wireTender(box, st, draw);
+    el("stX").onclick = function(){ box.remove(); };
+    var go = el("stGo"); if(go) go.onclick = function(){
+      var r = tenderResult(st); if(!r){ shopToast(st.mode === "cash" ? "Tendered is less than the bill." : "Who is the party?"); return; }
+      STORE.setPaid(id, true, r.mode, r.amt, r);
+      var c = el("stCollect"); if(c && c.checked) STORE.setStatus(id, "delivered");
+      box.remove(); shopToast(r.change ? "Paid. Change " + rupee(r.change) : "Paid."); if(after) after();
+    };
+    var un = el("stUnpay"); if(un) un.onclick = function(){ STORE.setPaid(id, false); box.remove(); shopToast("Marked unpaid."); if(after) after(); };
+  }
+  box.onclick = function(e){ if(e.target === box) box.remove(); };
+  draw();
+}
+
+/* ============================================================
+   THE COUNTER - the drawer and the day
+
+   pos_days/{day}: { float, ins:[{at,amt,why,by}], outs:[...],
+                     closed:{at,by,counted,expected,diff,note} }
+   Sales come from the orders themselves; this doc is only what
+   the orders cannot know: the float, cash in and out, the count.
+   ============================================================ */
+function posDay(day){ return (DB.pos || {})[day] || { id: day, float: null, ins: [], outs: [] }; }
+function posSave(day, patch){
+  var d = Object.assign(posDay(day), patch, { id: day, updatedAt: Date.now(), by: myName() });
+  DB.pos = DB.pos || {}; DB.pos[day] = d;
+  if(FB){ FB.api.setDoc(FB.api.doc(FB.db, "pos_days", day), d).catch(function(e){ console.warn("pos", e); }); fire(); }
+  else lsWrite();
+}
+function myName(){ return (ME && ME.name) || myVoice() || ""; }
+function dayKey(ts){ var d = new Date(dayStartOf(ts)); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+
+/* the day's money, from the orders */
+function daySales(start){
+  var end = start + 86400000, S = { cash:0, upi:0, card:0, credit:0, sales:0, n:0, unpaid:0, unpaidN:0, canc:0, disc:0, charge:0, counter:0, delivery:0, pickup:0, change:0 };
+  STORE.orders().forEach(function(o){
+    var t = orderDayAt(o); if(t < start || t >= end) return;
+    if(o.status === "cancelled"){ S.canc++; return; }
+    if(o.status !== "delivered" && !o.paid) { if(o.status !== "placed") { S.unpaid += o.total || 0; S.unpaidN++; } return; }
+    var m = money(o); S.disc += m.off; S.charge += o.charge || 0;
+    S[o.type === "counter" ? "counter" : o.type === "pickup" ? "pickup" : "delivery"] += m.total;
+    if(!o.paid){ S.unpaid += m.total; S.unpaidN++; return; }
+    S.sales += m.total; S.n++;
+    (o.pays && o.pays.length ? o.pays : [{ mode: o.payMode === "upi" ? "upi" : o.payMode || "cash", amt: o.paidAmt != null ? o.paidAmt : m.total }]).forEach(function(p){
+      var k = p.mode === "upi" ? "upi" : p.mode === "card" ? "card" : p.mode === "credit" ? "credit" : "cash"; S[k] += p.amt || 0; });
+  });
+  return S;
+}
+function viewCounter(main){ gate(main, function(){ paintCounter(main); }); }
+var CDAY = null, CFORM = null;
+function paintCounter(main){
+  var start = CDAY == null ? dayStartOf(Date.now()) : CDAY, day = dayKey(start), P = posDay(day), S = daySales(start);
+  var ins = (P.ins || []).reduce(function(n, x){ return n + x.amt; }, 0), outs = (P.outs || []).reduce(function(n, x){ return n + x.amt; }, 0);
+  var expected = (P.float || 0) + S.cash + ins - outs;
+  var tile = function(n, t, cls){ return '<div class="dtile' + (cls ? " " + cls : "") + '"><b>' + n + '</b><small>' + t + '</small></div>'; };
+  var row = function(x, kind, i){ return '<div class="line"><span class="dt">' + when(x.at) + '</span><div class="ln"><b>' + esc(x.why || (kind === "in" ? "Cash in" : "Paid out")) + '</b><small>' + esc(x.by || "") + '</small></div><span class="dtot">' + (kind === "in" ? "+" : "−") + rupee(x.amt) + '</span><button class="linky warn" data-pdel="' + kind + '|' + i + '">✕</button></div>'; };
+  main.innerHTML = shell("Counter",
+    '<div class="counter">' +
+      '<div class="dayhead">' +
+        '<button class="mini ghostmini" data-cday="-1">‹</button><b class="daylbl">' + esc(dayLabel(start)) + '</b>' +
+        '<button class="mini ghostmini" data-cday="1"' + (start >= dayStartOf(Date.now()) ? ' disabled' : '') + '>›</button>' +
+        (CDAY != null ? '<button class="linky" data-cday="0">Today</button>' : '') +
+      '</div>' +
+      '<div class="dtiles">' +
+        tile(rupee(S.sales), "sales · " + S.n + " paid") + tile(rupee(S.cash), "cash") + tile(rupee(S.upi), "UPI") + tile(rupee(S.card), "card") +
+        (S.credit ? tile(rupee(S.credit), "credit", "warn") : "") +
+        tile(rupee(S.unpaid), "unpaid · " + S.unpaidN, S.unpaidN ? "warn" : "") +
+        (S.disc ? tile(rupee(S.disc), "discounts", "dim") : "") + (S.canc ? tile(S.canc, "cancelled", "dim") : "") +
+      '</div>' +
+      '<div class="dtiles">' + tile(rupee(S.counter), "counter") + tile(rupee(S.delivery), "delivery") + tile(rupee(S.pickup), "pickup") + '</div>' +
+      '<h3 class="mini">The drawer</h3>' +
+      '<div class="drawer">' +
+        '<div class="trow"><label>Opening float</label><input class="fld" inputmode="numeric" id="pFloat" placeholder="0" value="' + (P.float != null ? P.float : "") + '"' + (P.closed ? ' disabled' : '') + '></div>' +
+        '<div class="trow"><label>+ cash sales</label><b>' + rupee(S.cash) + '</b></div>' +
+        '<div class="trow"><label>+ cash in</label><b>' + rupee(ins) + '</b></div>' +
+        '<div class="trow"><label>− paid out</label><b>' + rupee(outs) + '</b></div>' +
+        '<div class="trow big"><label>Should be in the drawer</label><b>' + rupee(expected) + '</b></div>' +
+        (P.closed
+          ? '<div class="paid on"><span class="pdot">✓</span><div class="pt"><b>Closed · counted ' + rupee(P.closed.counted) + ' · ' +
+              (Math.abs(P.closed.diff) < 1 ? 'exact' : (P.closed.diff > 0 ? 'over ' : 'short ') + rupee(Math.abs(P.closed.diff))) + '</b><small>' + when(P.closed.at) + ' · ' + esc(P.closed.by || "") + (P.closed.note ? ' · ' + esc(P.closed.note) : '') + '</small></div>' +
+              '<button class="linky" id="pReopen">Reopen</button></div>'
+          : (CFORM
+              ? '<div class="cform"><b>' + (CFORM === "in" ? "Cash in" : CFORM === "out" ? "Paid out of the drawer" : "Close the day — count the drawer") + '</b>' +
+                '<div class="trow"><label>' + (CFORM === "close" ? "Counted" : "Amount") + '</label><input class="fld" inputmode="numeric" id="cfAmt" placeholder="₹"' + (CFORM === "close" ? ' value="' + expected + '"' : '') + '></div>' +
+                '<div class="trow"><label>' + (CFORM === "close" ? "Note" : "What for") + '</label><input class="fld" id="cfWhy" placeholder="' + (CFORM === "in" ? "e.g. owner put in change" : CFORM === "out" ? "e.g. vegetables, gas, auto" : "optional — e.g. ₹2,000 taken home") + '"></div>' +
+                '<div class="prow"><button class="shopbtn small" id="cfGo">' + (CFORM === "close" ? "Close" : "Add") + '</button><button class="linky" id="cfX">Cancel</button></div></div>'
+              : '<div class="prow"><button class="shopbtn small" id="pIn">Cash in</button><button class="shopbtn small ghost" id="pOut">Pay out</button><button class="shopbtn small" id="pClose">Close the day</button></div>')) +
+      '</div>' +
+      ((P.ins || []).length || (P.outs || []).length
+        ? '<div class="lines">' + (P.ins || []).map(function(x, i){ return row(x, "in", i); }).join("") + (P.outs || []).map(function(x, i){ return row(x, "out", i); }).join("") + '</div>' : '') +
+      '<div class="prow"><button class="linky" id="pShare">Share the day on WhatsApp</button><a class="linky" href="#/admin">Back to orders</a></div>' +
+    '</div>', true);
+  main.querySelectorAll("[data-cday]").forEach(function(b){ b.onclick = function(){
+    var d = +b.dataset.cday; if(d === 0) CDAY = null; else { var s = (CDAY == null ? dayStartOf(Date.now()) : CDAY) + d * 86400000; CDAY = s >= dayStartOf(Date.now()) ? null : s; }
+    paintCounter(main); }; });
+  var fl = el("pFloat"); if(fl) fl.onchange = function(){ posSave(day, { float: +fl.value || 0 }); paintCounter(main); };
+  var pi = el("pIn"); if(pi) pi.onclick = function(){ CFORM = "in"; paintCounter(main); };
+  var po = el("pOut"); if(po) po.onclick = function(){ CFORM = "out"; paintCounter(main); };
+  var cf = el("cfGo"); if(cf) cf.onclick = function(){
+    if(CFORM === "close"){
+      var counted = +el("cfAmt").value; if(el("cfAmt").value === ""){ shopToast("Count the drawer first."); return; }
+      posSave(day, { closed: { at: Date.now(), by: myName(), counted: counted, expected: expected, diff: counted - expected, note: el("cfWhy").value.trim(), sales: S } });
+      CFORM = null; paintCounter(main); shopToast("Day closed."); return;
+    }
+    var amt = +el("cfAmt").value, why = el("cfWhy").value.trim(); if(!amt){ shopToast("Amount?"); return; }
+    var list = (P[CFORM === "in" ? "ins" : "outs"] || []).slice(); list.push({ at: Date.now(), amt: amt, why: why, by: myName() });
+    posSave(day, CFORM === "in" ? { ins: list } : { outs: list }); CFORM = null; paintCounter(main);
+  };
+  var cx = el("cfX"); if(cx) cx.onclick = function(){ CFORM = null; paintCounter(main); };
+  var ca = el("cfAmt"); if(ca){ ca.focus(); ca.onkeydown = function(e){ if(e.key === "Enter") el("cfGo").click(); }; }
+  main.querySelectorAll("[data-pdel]").forEach(function(b){ b.onclick = function(){
+    var p = b.dataset.pdel.split("|"), key = p[0] === "in" ? "ins" : "outs", list = (P[key] || []).slice(); list.splice(+p[1], 1);
+    var patch = {}; patch[key] = list; posSave(day, patch); paintCounter(main); }; });
+  var pc = el("pClose"); if(pc) pc.onclick = function(){ CFORM = "close"; paintCounter(main); };
+  var pr = el("pReopen"); if(pr) pr.onclick = function(){ if(!confirm("Reopen " + dayLabel(start) + "?")) return; posSave(day, { closed: null }); paintCounter(main); };
+  var ps = el("pShare"); if(ps) ps.onclick = function(){
+    var txt = "Hayat — " + dayLabel(start) + "\nSales " + rupee(S.sales) + " (" + S.n + " bills)\nCash " + rupee(S.cash) + " · UPI " + rupee(S.upi) + " · Card " + rupee(S.card) + (S.credit ? " · Credit " + rupee(S.credit) : "") +
+      "\nCounter " + rupee(S.counter) + " · Delivery " + rupee(S.delivery) + " · Pickup " + rupee(S.pickup) +
+      (S.unpaidN ? "\nUnpaid " + rupee(S.unpaid) + " (" + S.unpaidN + ")" : "") + (S.disc ? "\nDiscounts " + rupee(S.disc) : "") +
+      "\nFloat " + rupee(P.float || 0) + " + cash in " + rupee(ins) + " − paid out " + rupee(outs) + "\nDrawer should be " + rupee(expected) +
+      (P.closed ? "\nCounted " + rupee(P.closed.counted) + " · " + (P.closed.diff >= 0 ? "over " : "short ") + rupee(Math.abs(P.closed.diff)) : "");
+    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank", "noopener");
+  };
+}
+
 /* ------------------------------------------------------------
    THE TILL
 
@@ -6479,6 +6701,15 @@ function viewCall(main){
    held while the next call comes in and recalled after.
    ------------------------------------------------------------ */
 var TILL = { cat: "popular", q: "" };
+var ORDER_CHIPS = ["Less spicy","Extra spicy","No onion","Extra gravy","Pack separately","Cutlery","Call on arrival","Leave at the gate","Urgent"];
+var LINE_CHIPS  = ["Less spicy","Extra spicy","No onion","No garlic","Extra gravy","Well done","Boneless","Pack separately"];
+function hasChip(text, c){ return (text || "").toLowerCase().split(/\s*[,\n]\s*/).indexOf(c.toLowerCase()) >= 0; }
+function toggleChip(text, c){
+  var parts = (text || "").split(/\s*[,\n]\s*/).filter(Boolean);
+  var i = parts.map(function(x){ return x.toLowerCase(); }).indexOf(c.toLowerCase());
+  if(i >= 0) parts.splice(i, 1); else parts.push(c);
+  return parts.join(", ");
+}
 var HOLD_KEY = "hayat_hold";
 function holdList(){ try{ return JSON.parse(localStorage.getItem(HOLD_KEY)) || []; }catch(e){ return []; } }
 function holdSave(list){ try{ localStorage.setItem(HOLD_KEY, JSON.stringify(list)); }catch(e){} }
@@ -6565,7 +6796,7 @@ function tillMenu(root, onPick){
 /* a dish that comes in sizes: pick one */
 function sizeSheet(it, ch, done){
   var old = el("sizeSheet"); if(old) old.remove();
-  var box = document.createElement("div"); box.className = "sheetwrap"; box.id = "sizeSheet";
+  var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "sizeSheet";
   box.innerHTML = '<div class="panel small"><h3 class="mini">' + esc(label(it.name)) + '</h3><div class="sizes">' +
     ch.map(function(c, i){ return '<button class="sizebtn" data-sz="' + i + '"><span>' + esc(c.label || "Standard") + '</span><b>' + rupee(c.price) + '</b></button>'; }).join("") +
     '</div><button class="linky" id="szX">Cancel</button></div>';
@@ -6589,6 +6820,7 @@ function ticketLines(lines, opts){
       '<div class="qty"><button data-lq="' + i + '|-1">−</button><span>' + l.q + '</span><button data-lq="' + i + '|1">+</button></div>' +
       '<div class="lp">' + rupee(l.q * l.price) + '</div>' +
       (open ? '<div class="lnedit"><input class="fld" data-lnote="' + i + '" placeholder="Comment for this item — less spicy, no onion, extra gravy" value="' + esc(l.note || "") + '">' +
+              '<div class="chips">' + (opts.chips || LINE_CHIPS).map(function(c){ return '<button class="chip' + (hasChip(l.note, c) ? " on" : "") + '" data-lchip="' + i + '|' + esc(c) + '">' + esc(c) + '</button>'; }).join("") + '</div>' +
               '<button class="linky warn" data-lrm="' + i + '">Remove</button><button class="linky" data-ldone="' + i + '">Done</button></div>' : '') +
     '</div>';
   }).join("") + '</div>';
@@ -6608,7 +6840,10 @@ function wireTicket(box, lines, mutate0, state){
     inp.onblur = function(){ setTimeout(function(){ if(state && state.dirty) mutate(function(){}); }, 200); };
     setTimeout(function(){ inp.focus(); }, 20);
   });
-  box.querySelectorAll("[data-lrm]").forEach(function(b){ b.onclick = function(){ var i = +b.dataset.lrm; mutate(function(L){ L.splice(i, 1); if(state) state.open = null; }); }; });
+  box.querySelectorAll("[data-lchip]").forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){
+    var p = b.dataset.lchip.split("|"), i = +p[0]; lines[i].note = toggleChip(lines[i].note, p[1]); if(state) state.dirty = true;
+    var inp = box.querySelector('[data-lnote="' + i + '"]'); if(inp) inp.value = lines[i].note; b.classList.toggle("on", hasChip(lines[i].note, p[1])); }; });
+  box.querySelectorAll("[data-lrm]").forEach(function(b){ b.onmousedown = function(e){ e.preventDefault(); }; b.onclick = function(){ var i = +b.dataset.lrm; mutate(function(L){ L.splice(i, 1); if(state) state.open = null; }); }; });
   box.querySelectorAll("[data-ldone]").forEach(function(b){ b.onclick = function(){ mutate(function(){ if(state) state.open = null; }); }; });
 }
 
@@ -6619,7 +6854,7 @@ function paintCall(main){
   if(el("callForm")){ if(window.__callRefresh) window.__callRefresh(); return; }
   CALL.lines = CALL.lines || []; CALL.type = CALL.type || "delivery";
 
-  main.innerHTML = shell("Order by phone",
+  main.innerHTML = shell("Till",
     '<div class="till" id="callForm">' +
       '<section class="tillmenu">' +
         '<div class="tillbar">' +
@@ -6631,16 +6866,30 @@ function paintCall(main){
       '</section>' +
       '<section class="tillticket" id="tlTicket">' +
         '<div class="tktype">' +
-          '<button class="tab' + (CALL.type !== "pickup" ? " on" : "") + '" data-ttype="delivery">🏍 Delivery</button>' +
-          '<button class="tab' + (CALL.type === "pickup" ? " on" : "") + '" data-ttype="pickup">🛍 Pickup</button>' +
+          [["delivery","\uD83C\uDFCD Delivery"],["pickup","\uD83D\uDECD Pickup"],["counter","\uD83C\uDFEA Counter"]].map(function(t){
+            return '<button class="tab' + (CALL.type === t[0] ? " on" : "") + '" data-ttype="' + t[0] + '">' + t[1] + '</button>'; }).join("") +
         '</div>' +
-        '<input class="fld big" id="clPhone" inputmode="tel" autocomplete="off" placeholder="Their phone number" value="' + esc(CALL.phone || "") + '">' +
-        '<div id="clCust"></div>' +
-        '<input class="fld" id="clName" autocomplete="off" placeholder="Name" value="' + esc(CALL.name || "") + '">' +
-        '<textarea class="fld" id="clAddr" placeholder="Address — house, landmark, area"' + (CALL.type === "pickup" ? ' hidden' : '') + '>' + esc(CALL.addr || "") + '</textarea>' +
+        '<div class="tkwho">' +
+          '<input class="fld big" id="clPhone" inputmode="tel" autocomplete="off" placeholder="' + (CALL.type === "delivery" ? "Their phone number" : "Phone \u2014 optional") + '" value="' + esc(CALL.phone || "") + '">' +
+          '<div id="clCust"></div>' +
+          '<div class="namerow" id="clNameRow"' + (CALL.name ? '' : ' hidden') + '><input class="fld" id="clName" autocomplete="off" placeholder="Name" value="' + esc(CALL.name || "") + '"></div>' +
+          (CALL.name ? '' : '<button class="linky tiny" id="clAddName">+ name</button>') +
+          '<textarea class="fld" id="clAddr" placeholder="Address \u2014 house, landmark, area"' + (CALL.type !== "delivery" ? ' hidden' : '') + '>' + esc(CALL.addr || "") + '</textarea>' +
+        '</div>' +
         '<div id="clUsual"></div>' +
         '<div id="clLines"></div>' +
-        '<input class="fld" id="clNote" autocomplete="off" placeholder="Comment for the whole order (optional)" value="' + esc(CALL.note || "") + '">' +
+        '<div class="tkcomment">' +
+          '<textarea class="fld" id="clNote" rows="3" placeholder="Comment \u2014 for the kitchen, the packing, the rider">' + esc(CALL.note || "") + '</textarea>' +
+          '<div class="chips" id="clChips">' + ORDER_CHIPS.map(function(c){ return '<button class="chip' + (hasChip(CALL.note, c) ? " on" : "") + '" data-chip="' + esc(c) + '">' + esc(c) + '</button>'; }).join("") + '</div>' +
+        '</div>' +
+        '<details class="charges" id="clCharges"' + ((CALL.discount && CALL.discount.value) || CALL.charge ? ' open' : '') + '><summary>Discount &amp; charges</summary>' +
+          '<div class="trow"><label>Discount</label><span class="disc"><button class="dtab' + ((CALL.discount||{}).type !== "rs" ? " on" : "") + '" data-cdt="pct">%</button><button class="dtab' + ((CALL.discount||{}).type === "rs" ? " on" : "") + '" data-cdt="rs">\u20B9</button><input class="fld" id="clDisc" inputmode="numeric" placeholder="0" value="' + ((CALL.discount||{}).value || "") + '"></span></div>' +
+          '<div class="trow"><label>Delivery / packing</label><input class="fld" id="clCharge" inputmode="numeric" placeholder="0" value="' + (CALL.charge || "") + '"></div>' +
+        '</details>' +
+        '<div class="tkpay">' +
+          '<div class="tabs"><button class="tab' + (!CALL.payNow ? " on" : "") + '" data-paynow="0">Pay later</button><button class="tab' + (CALL.payNow ? " on" : "") + '" data-paynow="1">Pay now</button></div>' +
+          '<div id="clTender"></div>' +
+        '</div>' +
         '<div class="oedbar tkbar">' +
           '<button class="shopbtn" id="clGo">Put it on the board</button>' +
           '<button class="linky" id="clHold" title="Keep this ticket for later">Hold</button>' +
@@ -6651,7 +6900,7 @@ function paintCall(main){
       '<div class="tillsum" id="tlSum"></div>' +
     '</div>', true);
 
-  var ph = el("clPhone"), fetchT = null, ST = { open: null };
+  var ph = el("clPhone"), fetchT = null, ST = { open: null }, TN = tenderState(0, CALL.tn);
 
   tillMenu(main, function(did, lbl, price){ addLine(did, lbl, price, 1); callLines(); });
 
@@ -6663,10 +6912,22 @@ function paintCall(main){
   main.querySelectorAll("[data-ttype]").forEach(function(b){
     b.onclick = function(){
       CALL.type = b.dataset.ttype;
-      main.querySelectorAll("[data-ttype]").forEach(function(x){ x.classList.toggle("on", x === b); });
-      el("clAddr").hidden = CALL.type === "pickup";
+      if(CALL.type === "counter" && CALL.payNow == null) CALL.payNow = true;
+      rebuild(); el("tlQ").focus();
     };
   });
+  var an = el("clAddName"); if(an) an.onclick = function(){ el("clNameRow").hidden = false; an.hidden = true; el("clName").focus(); };
+  main.querySelectorAll("[data-chip]").forEach(function(b){
+    b.onclick = function(){ CALL.note = toggleChip(el("clNote").value, b.dataset.chip); el("clNote").value = CALL.note; b.classList.toggle("on", hasChip(CALL.note, b.dataset.chip)); };
+  });
+  el("clNote").oninput = function(){ CALL.note = el("clNote").value; main.querySelectorAll("[data-chip]").forEach(function(b){ b.classList.toggle("on", hasChip(CALL.note, b.dataset.chip)); }); };
+  var charges = function(){
+    CALL.discount = { type: (CALL.discount || {}).type || "pct", value: +(el("clDisc").value || 0) };
+    CALL.charge = +(el("clCharge").value || 0); callLines();
+  };
+  main.querySelectorAll("[data-cdt]").forEach(function(b){ b.onclick = function(){ CALL.discount = { type: b.dataset.cdt, value: +(el("clDisc").value || 0) }; main.querySelectorAll("[data-cdt]").forEach(function(x){ x.classList.toggle("on", x === b); }); callLines(); }; });
+  el("clDisc").onchange = charges; el("clCharge").onchange = charges;
+  main.querySelectorAll("[data-paynow]").forEach(function(b){ b.onclick = function(){ CALL.payNow = b.dataset.paynow === "1"; main.querySelectorAll("[data-paynow]").forEach(function(x){ x.classList.toggle("on", x === b); }); callLines(); }; });
 
   ph.oninput = function(){
     CALL.phone = ph.value;
@@ -6688,33 +6949,38 @@ function paintCall(main){
   };
 
   el("clGo").onclick = function(){
-    var sub = callSub();
+    var m = callMoney(), delivery = CALL.type === "delivery";
     if(!CALL.lines.length){ shopToast("Add what they ordered first."); el("tlQ").focus(); return; }
-    if(!digitsOnly(CALL.phone)){ shopToast("A phone number, please."); ph.focus(); return; }
-    if(CALL.type !== "pickup" && !CALL.addr){ shopToast("Where is it going?"); el("clAddr").focus(); return; }
+    if(delivery && !digitsOnly(CALL.phone)){ shopToast("A phone number, please."); ph.focus(); return; }
+    if(delivery && !CALL.addr){ shopToast("Where is it going?"); el("clAddr").focus(); return; }
+    var pay = null;
+    if(CALL.payNow){ pay = tenderResult(TN); if(!pay){ shopToast(TN.mode === "cash" ? "Tendered is less than the bill." : "Who is the party?"); return; } }
 
     var o = {
-      name: CALL.name || "", phone: CALL.phone, addr: CALL.type === "pickup" ? "" : CALL.addr, note: CALL.note || "",
-      type: CALL.type === "pickup" ? "pickup" : "delivery",
-      lines: CALL.lines.slice(), total: sub, source: "phone", custUid: null
+      name: CALL.name || "", phone: CALL.phone || "", addr: delivery ? CALL.addr : "", note: (CALL.note || "").trim(),
+      type: CALL.type || "delivery", discount: CALL.discount && CALL.discount.value ? CALL.discount : null, charge: CALL.charge || 0,
+      lines: CALL.lines.slice(), total: m.total, source: CALL.type === "counter" ? "counter" : "phone", custUid: null, by: myName()
     };
-    if(CALL.lat && o.type !== "pickup"){ o.lat = CALL.lat; o.lng = CALL.lng; }
+    if(CALL.lat && delivery){ o.lat = CALL.lat; o.lng = CALL.lng; }
 
     var id = STORE.place(o);
     if(!id){ shopToast("Something went wrong."); return; }
     STORE.setStatus(id, "accepted");      /* the office took it, so it is accepted */
+    if(pay) STORE.setPaid(id, true, pay.mode, pay.amt, pay);
+    if(pay && o.type === "counter") STORE.setStatus(id, "delivered");   /* paid and handed over: straight to the day book */
     var placed = STORE.order(id);
-    STORE.rememberCustomer(placed);
+    if(phoneKey(placed.phone)) STORE.rememberCustomer(placed);
     if(autoKot() && placed.lines.length) printJob(placed, "kot", true);
+    if(pay && autoBill()) printJob(placed, "bill", true);
     CALL = { lines: [] };
     /* The customer was on the phone and has nothing in writing.
        WhatsApp opens with what they ordered, the total and the link
        that shows it moving. The office presses send. */
-    if(phoneKey(placed.phone)){
+    if(delivery && phoneKey(placed.phone)){
       try{ window.open(waCustomer(placed, msgAccepted(placed)), "_blank", "noopener"); }catch(e){}
     }
-    shopToast("Order " + id + " is on the board — WhatsApp is open to send them the link.");
-    location.hash = "#/admin";
+    shopToast(pay ? (pay.change ? "Paid \u2014 change " + rupee(pay.change) : "Paid.") + " Order " + id + "." : "Order " + id + " is on the board" + (delivery ? " \u2014 WhatsApp is open to send them the link." : "."));
+    if(o.type === "counter" && pay) rebuild(); else location.hash = "#/admin";
   };
 
   /* hold: the ticket goes to the shelf, the till is clear for the next call */
@@ -6740,10 +7006,11 @@ function paintCall(main){
 
   /* ---- the pieces ---- */
   function callSub(){ return CALL.lines.reduce(function(n,l){ return n + l.q * l.price; }, 0); }
+  function callMoney(){ return money({ lines: CALL.lines, discount: CALL.discount, charge: CALL.charge }); }
 
   function useKnown(k, quiet){
     var filled = false;
-    if(!CALL.name && k.name){ CALL.name = k.name; el("clName").value = k.name; filled = true; }
+    if(!CALL.name && k.name){ CALL.name = k.name; el("clName").value = k.name; el("clNameRow").hidden = false; var an = el("clAddName"); if(an) an.hidden = true; filled = true; }
     if(!CALL.addr && k.addr){ CALL.addr = k.addr; el("clAddr").value = k.addr; filled = true; }
     if(k.lat){ CALL.lat = k.lat; CALL.lng = k.lng; }
     if(filled && !quiet) shopToast("Filled in from their last order.");
@@ -6838,12 +7105,18 @@ function paintCall(main){
 
   function callLines(){
     var box = el("clLines"); if(!box) return;
-    var sub = callSub(), n = CALL.lines.reduce(function(a,l){ return a + l.q; }, 0);
-    box.innerHTML = ticketLines(CALL.lines, { open: ST.open, empty: "Tap dishes on the left to add them." }) +
-      (CALL.lines.length ? '<div class="total"><span>Total</span><b>' + rupee(sub) + '</b></div>' : '');
+    var m = callMoney(), sub = m.total, n = CALL.lines.reduce(function(a,l){ return a + l.q; }, 0);
+    box.innerHTML = ticketLines(CALL.lines, { open: ST.open, empty: "Tap dishes to add them.", chips: LINE_CHIPS }) +
+      (CALL.lines.length ? (m.off || m.charge ? '<div class="total sub"><span>Subtotal</span><b>' + rupee(m.sub) + '</b></div>' : '') +
+        (m.off ? '<div class="total sub off"><span>' + esc(discountLabel({ discount: CALL.discount })) + '</span><b>\u2212 ' + rupee(m.off) + '</b></div>' : '') +
+        (m.charge ? '<div class="total sub"><span>Delivery / packing</span><b>' + rupee(m.charge) + '</b></div>' : '') +
+        '<div class="total"><span>Total</span><b>' + rupee(sub) + '</b></div>' : '');
     wireTicket(box, CALL.lines, function(fn){ fn(CALL.lines); callLines(); }, ST);
+    /* pay now: the tender widget, kept in step with the total */
+    var tb = el("clTender");
+    if(tb){ TN.total = sub; CALL.tn = TN; tb.innerHTML = CALL.payNow ? tenderHtml(TN) : ''; wireTender(tb, TN, callLines); }
     var go = el("clGo");
-    if(go) go.textContent = sub ? "Put it on the board · " + rupee(sub) : "Put it on the board";
+    if(go) go.textContent = !sub ? "Put it on the board" : CALL.payNow ? "Take " + rupee(sub) + (CALL.type === "counter" ? " \u00b7 done" : " \u00b7 to the board") : "Put it on the board \u00b7 " + rupee(sub);
     var sm = el("tlSum");
     if(sm){ sm.innerHTML = n ? '<span>' + n + (n === 1 ? ' item' : ' items') + ' · <b>' + rupee(sub) + '</b></span><button class="shopbtn" id="tlToTicket">Ticket ↑</button>' : ''; var tt = el("tlToTicket"); if(tt) tt.onclick = function(){ el("tlTicket").scrollIntoView({ behavior:"smooth", block:"start" }); }; }
     var pk = el("tlPark"), held = holdList();
@@ -6853,7 +7126,7 @@ function paintCall(main){
   function parkedSheet(){
     var list = holdList(); if(!list.length){ shopToast("Nothing on hold."); return; }
     var old = el("parkSheet"); if(old) old.remove();
-    var box = document.createElement("div"); box.className = "sheetwrap"; box.id = "parkSheet";
+    var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "parkSheet";
     box.innerHTML = '<div class="panel small"><h3 class="mini">Tickets on hold</h3>' + list.map(function(h, i){
       var sub = (h.lines || []).reduce(function(n,l){ return n + l.q * l.price; }, 0);
       return '<div class="parked"><div><b>' + esc(h.name || prettyPhone(h.phone) || "No number") + '</b>' +
@@ -6972,9 +7245,11 @@ function orderBody(o, inPanel){
           '<button class="dtab' + (d.type==="pct"?" on":"") + '" data-dt="pct">%</button>' +
           '<button class="dtab' + (d.type==="rs"?" on":"") + '" data-dt="rs">₹</button>' +
           '<input class="fld" id="edDisc" inputmode="numeric" placeholder="0" value="' + (d.value || "") + '">' +
+          '<span class="dlbl">Charge</span><input class="fld" id="edCharge" inputmode="numeric" placeholder="0" title="Delivery / packing" value="' + (o.charge || "") + '">' +
         '</div>' +
         '<div class="total sub"><span>Subtotal</span><b>' + rupee(m.sub) + '</b></div>' +
         (m.off ? '<div class="total sub off"><span>' + esc(discountLabel(o)) + '</span><b>− ' + rupee(m.off) + '</b></div>' : '') +
+        (m.charge ? '<div class="total sub"><span>Delivery / packing</span><b>' + rupee(m.charge) + '</b></div>' : '') +
         '<div class="total"><span>Total</span><b>' + rupee(m.total) + '</b></div>' +
         payBlock(o, "office") +
       '</section>' +
@@ -7036,6 +7311,7 @@ function wireOrder(root, id, repaint){
   };
   root.querySelectorAll("[data-dt]").forEach(function(b){ b.onclick = function(){ disc(b.dataset.dt); }; });
   var ed = el("edDisc"); if(ed){ ed.onchange = function(){ disc(); }; }
+  var ec = el("edCharge"); if(ec){ ec.onchange = function(){ STORE.edit(id, { charge: +(ec.value || 0) }); repaint(); }; }
 
   var f = el("edFind");
   if(f) f.onclick = function(){
@@ -7114,7 +7390,7 @@ function closePanel(){
 document.addEventListener("click", function(e){
   var a = e.target && e.target.closest ? e.target.closest('a[href^="#/admin/o/"]') : null;
   if(!a || a.classList.contains("nopanel")) return;
-  if(!/^#\/?admin(\/(who|riders|call|menu|google|c\/[^/]*))?$/.test(location.hash || "")) return;
+  if(!/^#\/?admin(\/(who|riders|call|cash|menu|google|c\/[^/]*))?$/.test(location.hash || "")) return;
   e.preventDefault();
   orderPanel(decodeURIComponent(a.getAttribute("href").split("/").pop()));
 }, true);
@@ -8292,7 +8568,7 @@ function route(p, main){
   /* the board owns the window; every other office page does not */
   deskMode(p[0] === "admin",
            p[0] === "admin" && p[1] !== "o" && p[1] !== "riders" &&
-           p[1] !== "call" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google" && p[1] !== "print");
+           p[1] !== "call" && p[1] !== "cash" && p[1] !== "c" && p[1] !== "menu" && p[1] !== "google" && p[1] !== "print");
   rideMode(p[0] === "drive");
   if(p[0] !== "admin") liveWatch(false, main);
   if(p[0] !== "drive") stopPing();      /* never track off the job page */
@@ -8311,6 +8587,7 @@ function route(p, main){
   if(p[0] === "admin"){
     if(p[1] === "riders") { REPAINT = function(){ if(REDIT) return; viewRiders(main); }; REPAINT(); return true; }
     if(p[1] === "call")   { REPAINT = function(){ if(isTyping()) return; viewCall(main); }; REPAINT(); return true; }
+    if(p[1] === "cash")   { REPAINT = function(){ if(isTyping()) return; viewCounter(main); }; REPAINT(); return true; }
     if(p[1] === "who")    { REPAINT = function(){ if(isTyping()) return; viewCustomers(main); }; REPAINT(); return true; }
     if(p[1] === "menu")   { REPAINT = function(){ viewMenuAdmin(main); }; REPAINT(); return true; }
     if(p[1] === "google") { REPAINT = function(){ viewGoogleAdmin(main); }; REPAINT(); return true; }
