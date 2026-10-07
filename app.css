@@ -2695,3 +2695,63 @@ a.pill{text-decoration:none}
 .ddtx b{display:block;font-weight:700} .ddtx small{display:block;color:var(--muted);font-size:var(--t-small)}
 html[data-theme="paper"] .dockdrawer{background:var(--card);border-color:var(--line2)}
 html[data-theme="paper"] .dditem{color:var(--ink)}
+
+/* ============================================================
+   THE TILL - the phone order as a point of sale
+   ============================================================ */
+.till{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;max-width:none}
+.tillmenu,.tillticket{min-width:0}
+@media (min-width:900px){
+  .till{grid-template-columns:minmax(0,1fr) 400px;align-items:start}
+  .tillticket{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;scrollbar-width:thin}
+  .tillsum{display:none}
+}
+.tillbar{display:flex;gap:8px;align-items:center;margin:0 0 10px}
+.tillbar .fld{flex:1;margin:0}
+.tillbar .tab{white-space:nowrap}
+.tillbar .tab[hidden]{display:none}
+.tillcats{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;margin:0 0 10px;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.tillcats::-webkit-scrollbar{display:none}
+.tcat{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;
+  padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.tcat.on{background:var(--cream);color:var(--bg);border-color:transparent}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;min-height:84px;
+  padding:10px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card2);color:var(--cream);cursor:pointer;
+  transition:transform .08s,border-color .15s}
+.tile:hover{border-color:var(--gold)} .tile:active{transform:scale(.97)}
+.tile.added{border-color:var(--green);box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 40%,transparent)}
+.tile b{font-size:14px;line-height:1.25;font-weight:700}
+.tile small{font-size:11.5px;color:var(--muted);line-height:1.2}
+.tile .tp{margin-top:auto;font-size:13px;font-weight:800;color:var(--gold2)}
+.tile .tp i{font-style:normal;font-weight:600;color:var(--muted);font-size:11px;margin-left:4px}
+.tiles .fnone{grid-column:1/-1}
+.tillticket{border:1px solid var(--line);border-radius:var(--r2);padding:14px;background:var(--card)}
+.tktype{display:flex;gap:6px;margin:0 0 10px}
+.tktype .tab{flex:1;text-align:center}
+.tillticket .fld{margin:0 0 8px}
+.tillticket .fld[hidden]{display:none}
+.tkempty{padding:18px 0;text-align:center}
+.lines.ticket .ln{cursor:pointer}
+.lnote{display:block;font-size:12px;font-style:italic;color:var(--gold2);margin-top:2px}
+.lnedit{flex:1 1 100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.lnedit .fld{flex:1 1 180px;margin:0;padding:8px 10px;font-size:14px}
+.tkbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tillsum{position:sticky;bottom:0;z-index:40;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  margin:0 -16px -24px;padding:10px 16px;background:var(--bg);border-top:1px solid var(--line)}
+.tillsum:empty,.till .tillsum.off{display:none}
+.tillsum .shopbtn{min-height:40px;padding:0 16px;width:auto;margin:0}
+.tkbar{position:static;margin:12px -14px -14px;padding:12px 14px;backdrop-filter:none;background:transparent}
+@media (min-width:900px){ .tillsum{display:none} }
+.sheetwrap .panel.small{width:min(440px,100%);max-height:85vh;overflow:auto;background:var(--bg);border-radius:16px;padding:18px;margin:auto}
+.sizes{display:grid;gap:8px;margin:0 0 12px}
+.sizebtn{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border:1px solid var(--line);
+  border-radius:12px;background:var(--card2);color:var(--cream);font-size:15px;cursor:pointer}
+.sizebtn:hover{border-color:var(--gold)} .sizebtn b{color:var(--gold2)}
+.parked{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.parked > div{flex:1;min-width:0} .parked small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:899px){
+  .tillticket{order:2}
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+  .tile{min-height:76px;padding:8px 9px}
+}

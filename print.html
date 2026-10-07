@@ -71,7 +71,7 @@
         '<div class="row meta"><span>' + esc(o.name || "") + '</span><span>' + esc(o.rider ? "Rider: " + o.rider : "") + '</span></div>' +
         (o.wantAt ? '<div class="row meta"><span>FOR</span><span>' + esc(when(o.wantAt)) + '</span></div>' : '') +
         '<hr>' +
-        t.lines.map(function(l){ return '<div class="it"><span class="q">' + l.q + ' ×</span><span>' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</span></div>'; }).join("") +
+        t.lines.map(function(l){ return '<div class="it"><span class="q">' + l.q + ' ×</span><span>' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + (l.note ? '<small><b>\u270E ' + esc(l.note) + '</b></small>' : '') + '</span></div>'; }).join("") +
         (o.note ? '<div class="note">' + esc(o.note) + '</div>' : '') +
         '<div class="foot">' + (job.tickets.length > 1 ? esc("Ticket " + (job.tickets.indexOf(t) + 1) + " of " + job.tickets.length + " · ") : "") + esc(t.lines.reduce(function(n,l){ return n + l.q; }, 0) + " items") + '</div>' +
       '</div>');
@@ -84,7 +84,7 @@
       '<div class="row"><span>' + esc(o.name || "") + '</span><span>' + esc(o.phone || "") + '</span></div>' +
       (o.addr ? '<div style="font-size:11px">' + esc(o.addr) + '</div>' : '') +
       '<hr>' +
-      (o.lines || []).map(function(l){ return '<div class="it"><span class="q">' + l.q + '×</span><span class="n">' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</span><span class="a">' + rupee(l.q * l.price) + '</span></div>'; }).join("") +
+      (o.lines || []).map(function(l){ return '<div class="it"><span class="q">' + l.q + '×</span><span class="n">' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + (l.note ? '<small>\u270E ' + esc(l.note) + '</small>' : '') + '</span><span class="a">' + rupee(l.q * l.price) + '</span></div>'; }).join("") +
       '<hr>' +
       (m.off ? '<div class="sub"><span>Subtotal</span><span>' + rupee(m.sub) + '</span></div><div class="sub"><span>' + esc(job.offLabel || "Discount") + '</span><span>− ' + rupee(m.off) + '</span></div>' : '') +
       '<div class="tot"><span>TOTAL</span><span>' + rupee(m.total != null ? m.total : o.total) + '</span></div>' +

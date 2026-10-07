@@ -167,7 +167,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v175';
+const BOARD='v177';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -658,7 +658,7 @@ function buildMonth(m,days,docs){
         const x=S.voids.by[who]=S.voids.by[who]||{n:0,v:0,after:0}; x.n++; x.v+=val; if(after){ x.after+=val; S.voids.afterBill.n++; S.voids.afterBill.v+=val; } S.voids.total+=val;
         S.voids.list.push({d,key,kot:r.kot,where:r.table||(r.token?'T'+r.token:''),by:who,item:e.item,cut,value:val,reason:e.reason||'',after,at:e.at}); });
     });
-    S.byDay[d]={rev:dr,bills:db}; S.sales+=dr; S.bills+=db; });
+    S.byDay[d]={rev:dr,bills:db,t:tenderOf(doc)}; S.sales+=dr; S.bills+=db; });
   /* the book says "cash" for everything; the item lines say what it was */
   const sp=S.spend; Object.values(sp.byItem).forEach(it=>{ it.avg=it.costs.length?it.costs.reduce((a,b)=>a+b,0)/it.costs.length:0; delete it.costs; });
   const salary=sp.salary+S.pay.salary, other=S.pay.expense; const goods=Math.max(0,sp.total-sp.salary);
@@ -670,7 +670,7 @@ function buildMonth(m,days,docs){
   S.items=itemsOf(all); S.v=SNAP_V;
   return S;
 }
-const SNAP_V=2;
+const SNAP_V=3;
 let LASTBUILD=null;   /* the day docs the last snapshot was built from: reuse, do not reload */
 async function monthDoc(m,force){
   const cur=m===bizToday().slice(0,7), {fs,db}=FB, ref=fs.doc(db,'vm_months',m);
@@ -770,6 +770,95 @@ function spendExplorer(sp){
   const ctl=`<div class="tabs" style="margin:0 0 8px"><select class="tb sm" data-sp="group">${[['cat','By category'],['item','By item'],['day','By day'],['week','By week']].map(o=>`<option value="${o[0]}"${SP.group===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="sort">${[['amount','Biggest first'],['name','A → Z'],['qty','Most qty'],['newest','Newest first']].map(o=>`<option value="${o[0]}"${SP.sort===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="cat"><option value="">All categories</option>${cats.map(c=>`<option${SP.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select><input class="search" style="width:auto;flex:1;min-width:120px;margin:0" id="spq" placeholder="Search item…" value="${esc(SP.q)}"></div>`;
   return `<div class="card wide"><h2>Spend <span class="n">${groups.length} ${SP.group==='cat'?'categories':SP.group==='item'?'items':SP.group==='day'?'days':'weeks'} · ${L.length} lines · ${rs(tot)}</span></h2>${ctl}${groups.map(G=>`<details class="dd"${SP.open[G.k]?' open':''} data-spk="${esc(G.k)}"><summary><span>${esc(G.k)}</span><small>${G.n} lines${SP.group==='item'&&G.unit?' · '+Math.round(G.q*100)/100+' '+esc(G.unit):''} · ${tot?Math.round(100*G.v/tot):0}%</small><b>${rs(G.v)}</b></summary>${sub(G)}</details>`).join('')||'<div class="note">No spend lines in this span.</div>'}</div>`;
 }
+
+/* ---- cash & bank: what should be in the drawer and the bank, against what the owner counted ----
+   vm_cash/{day} = {day, pos:'open'|'close', cash, bank, note, by, at}
+   A count anchors the chain: from there, every day's expected = previous + money in - money out,
+   and the next count says how far off the drawer was. */
+let COUNTS=null, CASHV={busy:false,from:null,to:null,rows:null};
+async function loadCounts(force){ if(COUNTS&&!force) return COUNTS; COUNTS={}; try{ const snap=await FB.fs.getDocs(FB.fs.collection(FB.db,'vm_cash')); snap.docs.forEach(d=>{ const x=d.data(); if(!x||!x.day) return; (COUNTS[x.day]=COUNTS[x.day]||{})[x.pos==='open'?'open':'close']=x; }); }catch(e){} return COUNTS; }
+function tenderOf(doc){ const t={cash:0,card:0,credit:0,inCash:0,inBank:0,outCash:0,outBank:0,outCredit:0,receipts:0,bills:0,multi:0};
+  Object.values((doc&&doc.records)||{}).forEach(r=>{ if(r.status!=='settled') return; const v=sum(r); let c=r.cash||0,k=r.card||0,cr=r.credit||0;
+    if(!c&&!k&&!cr){ if(r.payMode==='card') k=v; else if(r.payMode==='credit') cr=v; else c=v; }
+    if((c?1:0)+(k?1:0)+(cr?1:0)>1) t.multi++; t.cash+=c; t.card+=k; t.credit+=cr; t.bills++; });
+  Object.values((doc&&doc.payments)||{}).forEach(p=>{ if(p.deleted) return; const a=p.amount||0, bank=/bank|card|upi|gpay/i.test(p.mode||''), credit=/credit/i.test(p.mode||'');
+    if(p.flow==='in'){ if(bank) t.inBank+=a; else t.inCash+=a; if(payKind(p)==='receipt') t.receipts+=a; } else { if(credit) t.outCredit+=a; else if(bank) t.outBank+=a; else t.outCash+=a; } });
+  t.inCash=Math.round(t.inCash*100)/100; return t; }
+/* per-day tender for a span: month snapshots (byDay[d].t) + today's live doc */
+async function tenderDays(from,to){
+  const out={}; const months=[]; for(let m=from.slice(0,7); m<=to.slice(0,7); ){ months.push(m); const y=+m.slice(0,4), mo=+m.slice(5,7); m=mo===12?(y+1)+'-01':y+'-'+String(mo+1).padStart(2,'0'); }
+  for(const m of months){ const S=await monthDoc(m); if(S&&S.byDay) Object.keys(S.byDay).forEach(d=>{ if(d>=from&&d<=to&&S.byDay[d].t) out[d]=S.byDay[d].t; }); }
+  const td=bizToday(); if(td>=from&&td<=to&&DOC) out[td]=tenderOf(DOC);
+  return out; }
+/* the chain: anchor = latest count on or before `from`; walk day by day to `to` */
+function cashChain(from,to,T,counts){
+  /* anchor: the latest count before the span - a close on an earlier day, or an open on the first day */
+  const keys=Object.keys(counts).sort(); let anchor=null, aPos=null; keys.forEach(k=>{ const c=counts[k]; if(k<from&&c.close){ anchor=k; aPos='close'; } else if(k<from&&c.open){ anchor=k; aPos='open'; } else if(k===from&&c.open){ anchor=k; aPos='open'; } });
+  const A=anchor?counts[anchor][aPos]:null; let cash=A&&A.cash!=null?+A.cash:0, bank=A&&A.bank!=null?+A.bank:0, credit=0, payable=0;
+  const start=anchor?(aPos==='open'?anchor:ymd(new Date(new Date(anchor+'T12:00:00').getTime()+864e5))):from;
+  const rows=[]; for(let d=start; d<=to; d=ymd(new Date(new Date(d+'T12:00:00').getTime()+864e5))){
+    const t=T[d]||{cash:0,card:0,credit:0,inCash:0,inBank:0,outCash:0,outBank:0,outCredit:0,receipts:0,bills:0,multi:0}; const c=counts[d]||{};
+    if(c.open&&!(d===start&&aPos==='open'&&anchor===d)){ const o=c.open; const oc=o.cash!=null?+o.cash:null, ob=o.bank!=null?+o.bank:null; rows.push({d,open:true,countCash:oc,countBank:ob,diffCash:oc!=null?oc-cash:null,diffBank:ob!=null?ob-bank:null,note:o.note||'',by:o.by||''}); if(oc!=null) cash=oc; if(ob!=null) bank=ob; }
+    const expC=cash+t.cash+t.inCash-t.outCash, expB=bank+t.card+t.inBank-t.outBank; credit+=t.credit-t.receipts; payable+=t.outCredit;
+    const row={d,t,openCash:cash,openBank:bank,expCash:expC,expBank:expB,credit,payable,inCash:t.cash+t.inCash,outCash:t.outCash,inBank:t.card+t.inBank,outBank:t.outBank};
+    cash=expC; bank=expB;
+    if(c.close){ const x=c.close; row.note=x.note||''; row.by=x.by||''; if(x.cash!=null){ row.countCash=+x.cash; row.diffCash=row.countCash-expC; cash=row.countCash; } if(x.bank!=null){ row.countBank=+x.bank; row.diffBank=row.countBank-expB; bank=row.countBank; } }
+    if(d>=from) rows.push(row); }
+  return {anchor,aPos,rows,cash,bank,credit,payable}; }
+async function loadCash(from,to){ CASHV={busy:true,from,to,rows:null}; render(); await loadCounts(); const T=await tenderDays(from,to); const C=cashChain(from,to,T,COUNTS||{}); CASHV={busy:false,from,to,T,chain:C}; render(); }
+const dc=(v,inv)=>v==null?'':`<b class="${Math.abs(v)<1?'':(inv?v>0:v<0)?'dn':'up'}">${v>=0?'+':'−'}${rs(Math.abs(v))}</b>`;
+function cashCard(day){
+  /* one day: the sums, then the chain row for the day (today keeps moving) */
+  if(CASHV.busy) return `<div class="card wide"><h2>Cash & bank</h2><div class="note">Working out the drawer…</div></div>`;
+  if(!CASHV.chain||CASHV.to!==day){ setTimeout(()=>loadCash(day,day),0); return `<div class="card wide"><h2>Cash & bank</h2><div class="note">Loading…</div></div>`; }
+  const C=CASHV.chain, row=C.rows.filter(r=>!r.open).find(r=>r.d===day), t=(row&&row.t)||tenderOf(DOC), live=day===bizToday();
+  const anchorTxt=C.anchor?`since the count on ${C.anchor} (${C.aPos==='open'?'start':'end'} of day)`:'<b>no count yet</b> — enter cash & bank once and every day after is carried forward';
+  const k=(lbl,v,sub,cls)=>`<div class="kpi"><small>${lbl}</small><b class="${cls||''}">${rs(v)}</b><em>${sub||''}</em></div>`;
+  const kp=`<div class="kpis">${k('Cash sales',t.cash,t.bills+' bills'+(t.multi?' · '+t.multi+' split':''))}${k('Card / UPI',t.card,'to the bank')}${k('Credit',t.credit,'not yet received')}${k('Cash in · out',t.inCash-t.outCash,'in '+rs(t.inCash)+' · out '+rs(t.outCash))}
+    ${row?k('Expected in drawer',row.expCash,'opening '+rs(row.openCash)+' + cash in − paid out'):''}${row?k('Expected in bank',row.expBank,'opening '+rs(row.openBank)+' + card − bank payouts'):''}
+    ${row&&(row.countCash!=null||row.countBank!=null)?`<div class="kpi"><small>Counted</small><b>${row.countCash!=null?rs(row.countCash):'—'}</b><em>bank ${row.countBank!=null?rs(row.countBank):'—'}</em></div><div class="kpi"><small>Short / over</small>${row.countCash!=null?dc(row.diffCash):'<b>—</b>'}<em>cash · bank ${row.countBank!=null?dc(row.diffBank):'—'}</em></div>`:''}</div>`;
+  const btn=`<button class="tab" id="cashEnter">${row&&row.countCash!=null?'Edit count':'Enter count'}</button>`;
+  return `<div class="card wide"><h2>Cash & bank <span class="n">${anchorTxt} · ${btn}</span></h2>${kp}
+    ${row&&row.note?`<div class="note">${esc(row.note)}${row.by?' · '+esc(row.by):''}</div>`:''}
+    <p class="note">Expected = last count + cash sales + receipts − cash paid out. Count the drawer at the end of the day${live?' (or now)':''} and the difference shows as short / over. A count on the morning of the 1st anchors the month.</p></div>`;
+}
+function cashTable(C){
+  const rows=C.rows; if(!rows.length) return '<div class="note">No days in this span.</div>';
+  return `<div class="scroll"><table><tr><th>Day</th><th class="r">Open cash</th><th class="r">Cash in</th><th class="r">Paid out</th><th class="r">Expected</th><th class="r">Counted</th><th class="r">Diff</th><th class="r m">Card/UPI</th><th class="r m">Bank exp.</th><th class="r m">Bank counted</th><th class="r m">Credit</th><th class="m">Note</th></tr>
+    ${rows.map(r=>r.open?`<tr class="due"><td>${r.d.slice(5)} <small>start</small></td><td class="r" colspan="3">opening count</td><td class="r"></td><td class="r">${r.countCash!=null?rs(r.countCash):''}</td><td class="r">${dc(r.diffCash)}</td><td class="r m"></td><td class="r m"></td><td class="r m">${r.countBank!=null?rs(r.countBank):''}</td><td class="r m"></td><td class="m">${esc(r.note)}</td></tr>`
+      :`<tr class="rowlink" data-cashday="${r.d}"><td>${r.d.slice(5)}</td><td class="r">${rs(r.openCash)}</td><td class="r">${rs(r.inCash)}</td><td class="r">${rs(r.outCash)}</td><td class="r"><b>${rs(r.expCash)}</b></td><td class="r">${r.countCash!=null?rs(r.countCash):'<span class="m">—</span>'}</td><td class="r">${dc(r.diffCash)}</td><td class="r m">${rs(r.inBank)}</td><td class="r m">${rs(r.expBank)}</td><td class="r m">${r.countBank!=null?rs(r.countBank):''}</td><td class="r m">${rs(r.credit)}</td><td class="m">${esc(r.note||'')}</td></tr>`).join('')}</table></div>`;
+}
+function cashPeriod(){
+  const from=PER.from,to=PER.to;
+  if(CASHV.busy) return `<div class="card wide"><h2>Cash & bank</h2><div class="note">Working out the drawer day by day…</div></div>`;
+  if(!CASHV.chain||CASHV.from!==from||CASHV.to!==to){ setTimeout(()=>loadCash(from,to),0); return `<div class="card wide"><h2>Cash & bank</h2><div class="note">Loading…</div></div>`; }
+  const C=CASHV.chain, R=C.rows.filter(r=>!r.open), last=R[R.length-1];
+  const inC=R.reduce((n,r)=>n+r.inCash,0), outC=R.reduce((n,r)=>n+r.outCash,0), inB=R.reduce((n,r)=>n+r.inBank,0), outB=R.reduce((n,r)=>n+r.outBank,0), counted=R.filter(r=>r.countCash!=null), short=counted.reduce((n,r)=>n+r.diffCash,0);
+  const k=(lbl,v,sub)=>`<div class="kpi"><small>${lbl}</small><b>${rs(v)}</b><em>${sub||''}</em></div>`;
+  return `<div class="card wide"><h2>Cash & bank <span class="n">${C.anchor?'anchored on '+C.anchor:'<b>no count yet</b>'} · <button class="tab" id="cashEnter">Enter count</button></span></h2>
+    <div class="kpis">${k('Cash in',inC,'sales + receipts')}${k('Cash paid out',outC,'purchases, salary, expenses')}${last?k('Expected in drawer',last.expCash,'at the end of '+last.d.slice(5)):''}${k('To the bank',inB-outB,'card/UPI '+rs(inB)+' − bank payouts '+rs(outB))}${last?k('Credit outstanding',last.credit,'credit bills − receipts, approx.'):''}${last&&last.payable?k('Owed to suppliers',last.payable,'credit purchases in this span'):''}<div class="kpi"><small>Short / over</small>${counted.length?dc(short):'<b>—</b>'}<em>${counted.length} counts in this span</em></div></div>
+    ${cashTable(C)}<p class="note">Tap a day to count it. Expected carries forward from the last count; a count resets the chain.</p></div>`;
+}
+function cashSheet(day){
+  const old=document.getElementById('drill'); if(old) old.remove();
+  const both=(COUNTS||{})[day]||{}; const live=day===bizToday(); let P=both.close?'close':both.open?'open':((live&&new Date().getHours()<12)?'open':'close'); const c=both[P]||{}; const pos=P;
+  const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  box.innerHTML=`<div class="sheet"><h2>Count · ${esc(day)} <button class="x" id="drillX">✕</button></h2><p class="sub">What is actually there. Everything after it is worked out from this.</p>
+    <div class="tabs" style="margin:0 0 10px"><button class="tab${pos==='close'?' on':''}" data-pos="close">End of day</button><button class="tab${pos==='open'?' on':''}" data-pos="open">Start of day</button></div>
+    <p>Cash in drawer <input type="number" inputmode="numeric" class="fld" style="width:140px" id="cnCash" value="${c.cash!=null?c.cash:''}" placeholder="₹"></p>
+    <p>Bank balance <input type="number" inputmode="numeric" class="fld" style="width:140px" id="cnBank" value="${c.bank!=null?c.bank:''}" placeholder="₹"></p>
+    <p><input class="fld" id="cnNote" placeholder="Note (optional) — e.g. ₹2,000 taken home" value="${esc(c.note||'')}" style="width:100%"></p>
+    <p><button class="tab on" id="cnSave">Save</button> <button class="tab" id="cnDel"${c.cash!=null?'':' hidden'}>Remove this count</button></p></div>`;
+  document.body.appendChild(box);
+  const fill=()=>{ const x=both[P]||{}; $('cnCash').value=x.cash!=null?x.cash:''; $('cnBank').value=x.bank!=null?x.bank:''; $('cnNote').value=x.note||''; const d=$('cnDel'); if(d) d.hidden=x.cash==null; };
+  $$('[data-pos]',box).forEach(b=>b.onclick=()=>{ P=b.dataset.pos; $$('[data-pos]',box).forEach(x=>x.classList.toggle('on',x===b)); fill(); });
+  $('drillX').onclick=()=>box.remove(); box.onclick=e=>{ if(e.target===box) box.remove(); };
+  $('cnSave').onclick=async()=>{ const cash=$('cnCash').value===''?null:+$('cnCash').value, bank=$('cnBank').value===''?null:+$('cnBank').value; if(cash==null&&bank==null){ alert('Enter the cash or the bank amount.'); return; }
+    const doc={day,pos:P,cash,bank,note:$('cnNote').value.trim(),by:(FB.name||''),at:tsNow()};
+    try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'vm_cash',day+'_'+P),doc); }catch(e){ alert('Could not save: '+(e.code||e)); return; }
+    COUNTS=COUNTS||{}; (COUNTS[day]=COUNTS[day]||{})[P]=doc; box.remove(); CASHV.chain=null; render(); };
+  const del=$('cnDel'); if(del) del.onclick=async()=>{ if(!confirm('Remove the count for '+day+'?')) return; try{ await FB.fs.deleteDoc(FB.fs.doc(FB.db,'vm_cash',day+'_'+P)); }catch(e){ alert('Could not remove: '+(e.code||e)); return; } if(COUNTS[day]) delete COUNTS[day][P]; box.remove(); CASHV.chain=null; render(); };
+}
 /* ---- chicken: how many birds left the kitchen, from the dishes sold ---- */
 let RCP=null;   /* settings/recipes: {perBird:1.1, items:{NAME:birds}} */
 const CHK=/alfaham|alfam|broast|chicken|shawarma|shawaya|tikka|kebab|\b65\b|wings|nugget|lollipop|kanthari|peri|kuzhi|mandi/i, NOTCHK=/fish|mutton|beef|prawn|crab|squid|pomfret|\begg|veg\b|paneer|mushroom|juice|soda|lime|rice\b(?!.*chicken)/i;
@@ -823,7 +912,7 @@ function period(){
     <div class="kpi click" data-ptab="money"><small>Discounts</small><b>${rs(S.disc.total)}</b><em>${S.disc.list.length} bills · ${S.sales?(100*S.disc.total/(S.sales+S.disc.total)).toFixed(1):0}% of gross</em></div>
     <div class="kpi click" data-ptab="people"><small>Staff food</small><b>${rs(S.staff.menu)}</b><em>${S.staff.list.length} bills · paid ${rs(S.staff.total)}</em></div>
     <div class="kpi click" data-ptab="voids"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill ${rs(S.voids.afterBill.v)}</em></div></div>`;
-  const tabs=`<div class="tabs main">${[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['voids','Voids']].map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}<span class="n" style="align-self:center;margin-left:auto">${esc(PER.label)}${S.partial?' · so far':''}</span></div>`;
+  const tabs=`<div class="tabs main">${[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['cash','Cash'],['voids','Voids']].map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}<span class="n" style="align-self:center;margin-left:auto">${esc(PER.label)}${S.partial?' · so far':''}</span></div>`;
   const days=Object.keys(S.byDay).sort(), maxD=Math.max(1,...days.map(x=>S.byDay[x].rev));
   const byDay=`<div class="card wide"><h2>Sales by day <span class="n">click a day to open it</span></h2><div class="bars" style="grid-template-columns:repeat(${days.length},1fr)">${days.map(x=>`<div class="bar click" data-day="${x}" style="height:${Math.max(2,100*S.byDay[x].rev/maxD)}%" data-t="${x.slice(5)} ${rs(S.byDay[x].rev)} · ${S.byDay[x].bills} bills"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((x,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+x.slice(8)+'</span>').join('')}</div></div>`;
   const mini=(title,g,fmt)=>{ const rows=Object.entries(g).sort((a,b)=>(b[1].v??b[1])-(a[1].v??a[1])); const max=Math.max(1,...rows.map(r=>r[1].v??r[1])); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([kk,x])=>`<div class="mrow"><span>${esc(kk)}${x.n!=null?' <small style="color:var(--muted)">'+x.n+'</small>':''}</span><div class="b" style="width:${100*(x.v??x)/max}%"></div><span class="v">${(fmt||rs)(x.v??x)}</span></div>`).join('')||'<div class="note">Nothing.</div>'}</div></div>`; };
@@ -850,6 +939,7 @@ function period(){
     const dayKeys=Object.keys(sp.byDay).sort().reverse();
     const dayCard=`<div class="card wide"><h2>Spend · day by day <span class="n">tap a day to open it</span></h2>${dayKeys.map(dk=>{ const L=sp.byDay[dk]; const t=L.reduce((n,x)=>n+x.v,0); return `<details class="dd"><summary><span>${dk}</span><small>${L.length} lines</small><b>${rs(t)}</b></summary><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th><th class="m">By</th></tr>${L.sort((a,b)=>b.v-a.v).map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${x.q}</td><td>${esc(x.unit)}</td><td class="r">${rs(x.cost)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="m">${esc(x.by)}</td></tr>`).join('')}</table></details>`; }).join('')||'<div class="note">No purchase lines in this span.</div>'}</div>`;
     body=sve+mini('Spend · by category',sp.byCat)+spendExplorer(sp)+mini('Discounts · by person',S.disc.by)+discCard+(pay.list.some(x=>x.kind==='expense'||x.kind==='salary')?payCard:''); }
+  else if(PTAB==='cash') body=cashPeriod();
   else body=mini('Voids · by person',voidBy)+voidCard;
   return bar+k+tabs+`<div class="grid">${body}</div>`;
 }
@@ -900,12 +990,13 @@ function render(){
   document.body.classList.toggle('period',MODE==='period');
   if(MODE==='period'){ m.innerHTML=period()+`<div class="note">board ${BOARD}</div>`; }
   else m.innerHTML=kpis()+
-    `<div class="tabs main">${[['floor','Live'],['sales','Sales'],['bills','Bills'],['items','Items'],['buy','Spends'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
+    `<div class="tabs main">${[['floor','Live'],['sales','Sales'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
     (TAB==='sales'?`<div class="grid">${hourly()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
-     TAB==='cmp'?`<div class="grid">${compare()}</div>`:`<div class="grid">${items()}</div>`)+
+     TAB==='cmp'?`<div class="grid">${compare()}</div>`:
+     TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
   addShare(); fitTables();
@@ -921,6 +1012,7 @@ function render(){
   const kt=$('ktime'); if(kt) kt.onclick=e=>{ e.preventDefault(); kitchenSheet(); };
   const re=$('rcpEdit'); if(re) re.onclick=e=>{ e.preventDefault(); recipeSheet(PER.V?itemsOf(PER.V.records):(PER.doc&&PER.doc.items)); };
   $$('[data-pur]').forEach(t=>t.onclick=()=>purchaseSheet(t.dataset.pur));
+  const ce=$('cashEnter'); if(ce) ce.onclick=()=>cashSheet(MODE==='period'?PER.to:DAY); $$('[data-cashday]').forEach(tr=>tr.onclick=()=>cashSheet(tr.dataset.cashday));
   const mp=$('monPick'); if(mp) mp.onchange=()=>loadMonth(mp.value); const mr=$('monRefresh'); if(mr) mr.onclick=()=>loadMonth(MON.key,true); const mper=$('monPerson'); if(mper) mper.onchange=()=>{ MON.person=mper.value; render(); };
   $$('[data-mdrill]').forEach(tr=>tr.onclick=async()=>{ const [d,key]=tr.dataset.mdrill.split('|'); const rk=key.split('/')[1]; const doc=d===bizToday()?DOC:await loadDay(d); const r=doc&&doc.records[rk]; if(!r) return; const keep=RANGE.doc; RANGE.doc={records:{[key]:Object.assign({},r,{key})},purchases:{}}; drill(key); RANGE.doc=keep; });
   $$('[data-bf]').forEach(sel=>sel.onchange=()=>{ BF[sel.dataset.bf]=sel.value; render(); }); const bc=document.querySelector('[data-bfclear]'); if(bc) bc.onclick=()=>{ BF={kind:'',status:'',waiter:'',section:'',sort:BF.sort}; render(); };
