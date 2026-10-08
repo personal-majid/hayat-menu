@@ -1,0 +1,463 @@
+<meta charset="utf-8">
+<title>Hayat Owner Next</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: phone frame on a desk, full-bleed on a phone. Everything you touch sits at the bottom:
+   range chips, the nav, filters as bottom sheets. The top only tells. Hayat tokens: cream, ink, gold, sea, ember. */
+:root{--bg:#FBF6EC;--card:#F3E9D8;--card2:#FFFDF8;--ink:#241811;--muted:#6B5A4A;--gold:#C0882C;--gold-deep:#8A5E16;--sea:#1F4D4A;--ember:#8C3A1E;--line:#E2D5BF;
+  --good:#2E6B3A;--warn:#9A6A12;--bad:#9E2B1E;--display:"Cormorant Garamond","Times New Roman",serif;--sans:"Outfit",system-ui,sans-serif;--ageS:62%;--ageL:38%}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#191310;--card:#221A14;--card2:#2A2019;--ink:#F7EFE3;--muted:#B4A08A;--gold:#D9A344;--gold-deep:#E3B963;--sea:#8FC7C2;--ember:#E4906F;--line:#3A2E24;--good:#8FD19A;--warn:#E3B963;--bad:#F0A090;--ageS:55%;--ageL:58%;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#191310;--card:#221A14;--card2:#2A2019;--ink:#F7EFE3;--muted:#B4A08A;--gold:#D9A344;--gold-deep:#E3B963;--sea:#8FC7C2;--ember:#E4906F;--line:#3A2E24;--good:#8FD19A;--warn:#E3B963;--bad:#F0A090;--ageS:55%;--ageL:58%;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.45 var(--sans);padding-block:0}
+.desk{max-width:1240px;margin:0 auto;padding:16px;display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:960px){.desk{grid-template-columns:412px minmax(0,1fr);align-items:start}.notes{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding-right:8px}}
+.phone{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:30px;overflow:hidden;height:820px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(36,24,17,.12)}
+@media (max-width:959px){.phone{border:0;border-radius:0;box-shadow:none;height:100vh;height:100dvh}}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 8px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5}
+.brand{font:700 24px/1 var(--display)}
+.brand small{display:block;font:500 10px/1 var(--sans);letter-spacing:.34em;color:var(--gold-deep);margin-top:4px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted);display:inline-flex;gap:6px;align-items:center;background:var(--card2)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+main{flex:1;overflow:auto;padding:0 16px 12px;display:grid;gap:12px;align-content:start;scrollbar-width:thin}
+.screen{display:none;gap:12px}.screen.on{display:grid}
+h2{font:700 20px/1.15 var(--display);margin:0;text-wrap:balance;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 small{font:500 12px var(--sans);color:var(--muted);white-space:nowrap}
+.card{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.strip{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.big{font:700 38px/1 var(--display);font-variant-numeric:tabular-nums}
+.big em{font:500 13px var(--sans);color:var(--muted);font-style:normal;display:block;margin-top:4px}
+.ring{width:76px;height:76px;position:relative}
+.ring svg{width:76px;height:76px;transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font:700 17px var(--display)}
+.ring small{position:absolute;left:-6px;right:-6px;bottom:-15px;text-align:center;font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}
+.row:first-child{border-top:0}
+.row b{font-variant-numeric:tabular-nums}
+.up{color:var(--good)}.dn{color:var(--bad)}.wn{color:var(--warn)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tiles.t3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tile{background:var(--card);border-radius:10px;padding:10px 12px;min-width:0}
+.tile small{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tile b{display:block;font:700 21px/1.1 var(--display);margin-top:2px;font-variant-numeric:tabular-nums}
+.tile i{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:2px}
+/* open orders: age colours the edge and the clock, green → amber → red as minutes pass */
+.orders{display:grid;gap:8px}
+.ord{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 10px;border-radius:10px;background:var(--card);border-left:4px solid hsl(var(--h) var(--ageS) var(--ageL))}
+.ord .age{font:700 15px var(--sans);color:hsl(var(--h) var(--ageS) var(--ageL));min-width:38px;font-variant-numeric:tabular-nums;text-align:center}
+.ord .age small{display:block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
+.ord .what{min-width:0}
+.ord .what b{display:block;font-size:14px}
+.ord .what small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ord .amt{font:700 15px var(--sans);font-variant-numeric:tabular-nums}
+.tag{display:inline-block;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--line);color:var(--ink);margin-right:4px}
+.tag.dl{background:var(--sea);color:var(--bg)} .tag.pc{background:var(--ember);color:var(--bg)} .tag.due{background:var(--gold);color:#241811}
+/* floor: tiles colour by stay, free tiles stay quiet */
+.floor{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.tb{aspect-ratio:1;border-radius:8px;background:var(--card);display:grid;place-items:center;font:700 12px var(--sans);color:var(--muted);position:relative;border:1px solid var(--line)}
+.tb.busy{background:hsl(var(--h) var(--ageS) var(--ageL));color:#fff;border-color:transparent}
+.tb.busy i{position:absolute;bottom:3px;font:500 9px var(--sans);opacity:.9;font-style:normal}
+.sec{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:4px 0 -4px}
+.legend{display:flex;gap:10px;font-size:11px;color:var(--muted);flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.grad{height:8px;border-radius:4px;flex:1;min-width:60px;background:linear-gradient(90deg,hsl(120 var(--ageS) var(--ageL)),hsl(45 var(--ageS) var(--ageL)),hsl(0 var(--ageS) var(--ageL)))}
+/* charts */
+.chart{display:grid;grid-template-columns:36px minmax(0,1fr);gap:4px;align-items:stretch}
+.yax{position:relative;font-size:9px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.yax span{position:absolute;right:0;transform:translateY(50%)}
+.plot{position:relative;height:110px}
+.plot .g{position:absolute;left:0;right:0;border-top:1px dashed var(--line)}
+.bars{position:absolute;inset:0;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;align-items:end}
+.bars div{background:var(--gold);border-radius:3px 3px 0 0;position:relative;min-width:0}
+.bars div.now{background:var(--ember)}
+.bars div.fc{background:repeating-linear-gradient(45deg,var(--line) 0 3px,transparent 3px 6px);border:1px dashed var(--muted);border-bottom:0}
+.bars div.cur{outline:2px solid var(--ember);outline-offset:1px}
+.bars div.avg::after{content:"";position:absolute;left:-2px;right:-2px;bottom:var(--a);border-top:2px dotted var(--sea)}
+.hx{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;font-size:9.5px;color:var(--muted);text-align:center;margin-left:40px}
+.line{width:100%;height:120px;display:block}
+.list{display:grid}
+.item{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.item:first-child{border-top:0}
+.item small{display:block;color:var(--muted);font-size:12px}
+.item.bar3{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto}
+.meter{height:6px;border-radius:3px;background:var(--line);overflow:hidden;min-width:0}
+.meter i{display:block;height:100%;background:var(--sea)}
+.meter i.e{background:var(--ember)}
+.btn{border:0;border-radius:10px;background:var(--ink);color:var(--bg);font:600 14px var(--sans);padding:11px 16px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:7px 12px;font-size:13px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+/* the bottom: range, filters, nav - all within a thumb */
+.bottom{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:6}
+.range{display:flex;gap:6px;padding:8px 12px 4px;overflow-x:auto;scrollbar-width:none}
+.range::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card2);color:var(--muted);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--bg);border-color:transparent}
+.chip.f{border-style:dashed}
+.nav{display:grid;grid-template-columns:repeat(6,1fr);padding:4px 6px 6px}
+.nav button{border:0;background:transparent;color:var(--muted);font:600 10.5px var(--sans);padding:6px 2px;border-radius:8px;cursor:pointer;display:grid;gap:3px;justify-items:center}
+.nav button span{font-size:18px;line-height:1}
+.nav button.on{color:var(--ink);background:var(--card)}
+.sheet{position:absolute;inset:0;background:rgba(36,24,17,.4);display:none;align-items:flex-end;z-index:9}
+.sheet.on{display:flex}
+.sheet .box{background:var(--bg);width:100%;border-radius:18px 18px 0 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85%;overflow:auto;display:grid;gap:10px}
+.sheet .box::before{content:"";width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 2px}
+.fld{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:500 16px var(--sans);background:var(--card2);color:var(--ink)}
+.photo{border:1px dashed var(--muted);border-radius:10px;padding:14px;text-align:center;color:var(--muted);font-size:13px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px;font:600 13px var(--sans);cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:12px;text-align:center}
+.cal div{padding:8px 0;border-radius:8px;background:var(--card);font-variant-numeric:tabular-nums}
+.cal div.h{background:transparent;color:var(--muted);font-size:10px;letter-spacing:.08em}
+.cal div.on{background:var(--ink);color:var(--bg)}
+.cal div.hot{background:var(--gold);color:#241811}
+.cal div.dim{opacity:.35}
+.more{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.more button{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:14px 12px;text-align:left;font:600 14px var(--sans);color:var(--ink);cursor:pointer;display:grid;gap:4px}
+.more button small{font-weight:500;color:var(--muted);font-size:12px}
+.more button span{font-size:20px}
+/* notes */
+.notes h1{font:700 32px/1.1 var(--display);margin:0 0 6px}
+.notes p{color:var(--muted);max-width:64ch;margin:0 0 12px}
+.notes table{border-collapse:collapse;width:100%;font-size:13.5px;margin:0 0 18px}
+.notes th,.notes td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.notes th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.notes h3{font:700 20px var(--display);margin:18px 0 6px}
+.eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-deep);margin:0 0 6px}
+.k{font-weight:600;color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.chip,.nav button{transition:background .15s}}
+</style>
+
+<div class="desk">
+<div class="phone" id="phone">
+  <div class="top">
+    <div class="brand">Hayat<small>OWNER · THU 8 OCT</small></div>
+    <span class="pill"><span class="dot"></span> shop PC · 11:42</span>
+  </div>
+  <main id="main">
+
+  <!-- LIVE -->
+  <section class="screen on" data-s="live">
+    <div class="card">
+      <div class="strip">
+        <div><div class="big">₹28,460<em>so far · 52 bills · avg ₹547 · <span class="up">+8% vs last Thu</span></em></div></div>
+        <div class="ring"><svg viewBox="0 0 76 76"><circle cx="38" cy="38" r="32" fill="none" stroke="var(--line)" stroke-width="8"/><circle cx="38" cy="38" r="32" fill="none" stroke="var(--gold)" stroke-width="8" stroke-dasharray="201" stroke-dashoffset="86" stroke-linecap="round"/></svg><b>57%</b><small>of ₹49.8K</small></div>
+      </div>
+      <div class="tiles t3">
+        <div class="tile"><small>Next hour</small><b>₹6.9K</b><i>12 – 1 pm</i></div>
+        <div class="tile"><small>Open</small><b>₹3,900</b><i>7 orders · 2 due</i></div>
+        <div class="tile"><small>Drawer</small><b>₹14.2K</b><i>should hold</i></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Open orders <small>7 · newest first</small></h2>
+      <div class="orders" id="openOrders"></div>
+      <div class="legend"><span>age</span><i class="grad"></i><span>0 → 40 min</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Tables <small>9 of 22 busy · colour = how long seated</small></h2>
+      <div class="sec">AC</div>
+      <div class="floor" id="floorAC"></div>
+      <div class="sec">Non-AC</div>
+      <div class="floor" id="floorNAC"></div>
+      <div class="sec">Hut</div>
+      <div class="floor" id="floorHut"></div>
+    </div>
+
+    <div class="card">
+      <h2>Kitchen pass <small>live</small></h2>
+      <div class="item bar3"><div>Mandi<small>6 cooking · 3 late</small></div><div class="meter"><i class="e" style="width:92%"></i></div><b class="dn">31 min</b></div>
+      <div class="item bar3"><div>Fry &amp; grill<small>2 cooking</small></div><div class="meter"><i style="width:30%"></i></div><b class="up">7 min</b></div>
+      <div class="item bar3"><div>Gravy &amp; Chinese<small>1 cooking</small></div><div class="meter"><i style="width:40%"></i></div><b>9 min</b></div>
+    </div>
+
+    <div class="card">
+      <h2>Just settled <small>last 5</small></h2>
+      <div class="item"><div>11:38 · T 7 · Shafi<small>2× mandi half, lime · cash</small></div><b>₹810</b></div>
+      <div class="item"><div>11:31 · Delivery · dmu<small>alfaham full, porotta ×4 · UPI · <span class="dn">void ₹480</span></small></div><b>₹690</b></div>
+      <div class="item"><div>11:29 · Counter<small>lime ×2 · UPI</small></div><b>₹140</b></div>
+      <div class="item"><div>11:20 · T 3 · Anas<small>fish fry, meals ×2 · card</small></div><b>₹560</b></div>
+      <div class="item"><div>11:12 · T 12 · Rafeek<small>mandi full, 7up · cash</small></div><b>₹1,120</b></div>
+    </div>
+  </section>
+
+  <!-- SALES -->
+  <section class="screen" data-s="sales">
+    <div class="card">
+      <h2>Sales by hour <small>dotted = avg Thu</small></h2>
+      <div class="chart"><div class="yax" id="yax1"></div><div class="plot" id="plot1"></div></div>
+      <div class="hx"><span>11</span><span>12</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span></div>
+      <div class="legend"><span><i style="background:var(--gold)"></i>done</span><span><i style="background:var(--ember)"></i>this hour</span><span><i style="border:1px dashed var(--muted)"></i>forecast</span><span><i style="border-top:2px dotted var(--sea);height:0"></i>avg Thu</span></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><small>Dine-in</small><b>₹19,100</b><i>AC ₹12.4K · Non-AC ₹6.7K</i></div>
+      <div class="tile"><small>Delivery</small><b>₹6,800</b><i>14 orders · 31 min avg</i></div>
+      <div class="tile"><small>Counter</small><b>₹2,560</b><i>11 bills</i></div>
+      <div class="tile"><small>Unrealised</small><b>₹3,900</b><i>7 open · 2 due</i></div>
+    </div>
+    <div class="card list">
+      <h2>Top items <small>today · tap for all</small></h2>
+      <div class="item bar3"><div>Chicken mandi · Half<small>21 sold</small></div><div class="meter"><i style="width:100%"></i></div><b>₹7,980</b></div>
+      <div class="item bar3"><div>Alfaham · Full<small>9 sold</small></div><div class="meter"><i style="width:62%"></i></div><b>₹4,950</b></div>
+      <div class="item bar3"><div>Fresh lime<small>34 sold</small></div><div class="meter"><i style="width:30%"></i></div><b>₹2,380</b></div>
+      <div class="item bar3"><div>Kingfish fry<small>7 sold</small></div><div class="meter"><i style="width:27%"></i></div><b>₹2,170</b></div>
+    </div>
+    <div class="card list">
+      <h2>Bills <small>52 · <button class="btn ghost sm" data-sheet="filter">Filter</button></small></h2>
+      <div class="item"><div><span class="tag">dine</span>KOT 1194 · T 7 · Shafi<small>2× mandi half, lime · 11:38 · 24 min</small></div><b>₹810</b></div>
+      <div class="item"><div><span class="tag dl">delivery</span>KOT 1193 · dmu<small>alfaham full, porotta ×4 · 11:31 · <span class="dn">void after bill ₹480</span></small></div><b>₹690</b></div>
+      <div class="item"><div><span class="tag pc">counter</span>KOT 1192<small>lime ×2 · 11:29 · UPI</small></div><b>₹140</b></div>
+      <div class="item"><div><span class="tag">dine</span>KOT 1191 · T 3 · Anas<small>fish fry, meals ×2 · 11:20 · 41 min · <span class="wn">10% off</span></small></div><b>₹560</b></div>
+    </div>
+  </section>
+
+  <!-- MONEY -->
+  <section class="screen" data-s="money">
+    <div class="card">
+      <h2>Cash &amp; bank <small>from Tue night's count</small></h2>
+      <div class="row"><span>Opening cash</span><b>₹3,000</b></div>
+      <div class="row"><span>+ cash sales · receipts</span><b>₹12,730</b></div>
+      <div class="row"><span>− paid out</span><b>₹1,500</b></div>
+      <div class="row"><span><b>Should be in the drawer</b></span><b>₹14,230</b></div>
+      <div class="row"><span>Bank should be</span><b>₹1,38,600</b></div>
+      <div class="btnrow"><button class="btn" data-sheet="count">Count the drawer</button><button class="btn ghost">History</button></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><small>Sales</small><b>₹28,460</b><i>cash 45 · UPI 48 · card 7 %</i></div>
+      <div class="tile"><small>Expenses</small><b>₹1,500</b><i>goods · no salary today</i></div>
+      <div class="tile"><small>Gross profit</small><b class="up">₹16,900</b><i>59% · after recipes</i></div>
+      <div class="tile"><small>Net today</small><b class="up">₹11,200</b><i>after ₹5.7K fixed/day</i></div>
+    </div>
+    <div class="card list">
+      <h2>Spend <small>by category</small></h2>
+      <div class="item bar3"><div>Vegetables<small>2 lines · Sabu</small></div><div class="meter"><i class="e" style="width:60%"></i></div><b>₹900</b></div>
+      <div class="item bar3"><div>Gas<small>1 line</small></div><div class="meter"><i class="e" style="width:40%"></i></div><b>₹600</b></div>
+    </div>
+    <div class="card list">
+      <h2>Credit book <small>owed to us</small></h2>
+      <div class="item"><div>Al Noor caterers<small>3 bills · oldest 9 days</small></div><b>₹3,000</b></div>
+      <div class="item"><div>Nazeer<small>1 bill · 2 days</small></div><b>₹1,200</b></div>
+    </div>
+    <div class="card list">
+      <h2>Salaries <small>forecast · next 7 days</small></h2>
+      <div class="item"><div>Rafeek · weekly<small>due Sat · ₹3,500 × 4 weeks</small></div><b>₹3,500</b></div>
+      <div class="item"><div>Kitchen (3) · monthly<small>due 1 Nov · usually ₹42,000</small></div><b>—</b></div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="screen" data-s="team">
+    <div class="card list">
+      <h2>Waiters <small>today</small></h2>
+      <div class="item bar3"><div>Shafi<small>19 bills · avg ₹612 · 2 upsells</small></div><div class="meter"><i style="width:100%"></i></div><b>₹11,630</b></div>
+      <div class="item bar3"><div>Rafeek<small>16 bills · avg ₹540 · <span class="dn">1 void after bill</span></small></div><div class="meter"><i style="width:74%"></i></div><b>₹8,640</b></div>
+      <div class="item bar3"><div>Anas<small>12 bills · avg ₹498</small></div><div class="meter"><i style="width:51%"></i></div><b>₹5,980</b></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><small>Voids</small><b>₹480</b><i>1 after bill · Rafeek</i></div>
+      <div class="tile"><small>Discounts</small><b>₹320</b><i>3 bills · cashier</i></div>
+      <div class="tile"><small>Staff food</small><b>₹260</b><i>2 bills · tan, viva</i></div>
+      <div class="tile"><small>Table turn</small><b>34 min</b><i>AC 38 · Non-AC 29</i></div>
+    </div>
+    <div class="card list">
+      <h2>Voids &amp; discounts <small>today · tap to open bill</small></h2>
+      <div class="item"><div><span class="tag due">after bill</span>KOT 1193 · Rafeek<small>1× alfaham full · 11:20 · "customer changed"</small></div><b class="dn">₹480</b></div>
+      <div class="item"><div><span class="tag">discount</span>KOT 1191 · cashier<small>10% · Anas's table</small></div><b>₹56</b></div>
+    </div>
+  </section>
+
+  <!-- FORECAST -->
+  <section class="screen" data-s="fc">
+    <div class="card">
+      <h2>Today <small>normal Thursday</small></h2>
+      <div class="strip">
+        <div><div class="big">₹49,800<em>forecast · ₹47.2K at open · ± ₹3.1K</em></div></div>
+        <div class="ring"><svg viewBox="0 0 76 76"><circle cx="38" cy="38" r="32" fill="none" stroke="var(--line)" stroke-width="8"/><circle cx="38" cy="38" r="32" fill="none" stroke="var(--sea)" stroke-width="8" stroke-dasharray="201" stroke-dashoffset="30" stroke-linecap="round"/></svg><b>85%</b><small>confidence</small></div>
+      </div>
+      <svg class="line" viewBox="0 0 320 120" aria-label="Cumulative sales today: forecast band and actual line">
+        <path d="M10,110 C60,105 110,80 150,62 C200,40 250,30 310,14" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/>
+        <path d="M10,110 C60,105 110,80 150,62 C200,40 250,30 310,14" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <path d="M10,110 C40,108 80,92 120,70 L138,60" fill="none" stroke="var(--gold)" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="138" cy="60" r="4" fill="var(--ember)"/>
+        <text x="10" y="118" font-size="9" fill="var(--muted)">11 am</text><text x="150" y="118" font-size="9" fill="var(--muted)">4 pm</text><text x="286" y="118" font-size="9" fill="var(--muted)">11 pm</text>
+        <text x="146" y="54" font-size="10" fill="var(--ember)" font-weight="700">now · +8%</text>
+      </svg>
+      <div class="row"><span>Next hour</span><b>₹6,900 <span style="color:var(--muted)">(5.9 – 7.8K)</span></b></div>
+      <div class="row"><span>Base · Thursdays, 6 wks</span><b>₹45,100</b></div>
+      <div class="row"><span>Month week 2 · trend · rain</span><b>×1.02 · <span class="up">×1.03</span> · <span class="dn">×0.97</span></b></div>
+      <div class="row"><span>Live correction</span><b class="up">×1.05</b></div>
+    </div>
+    <div class="card">
+      <h2>Next 7 days</h2>
+      <div class="chart"><div class="yax" id="yax2"></div><div class="plot" id="plot2" style="height:80px"></div></div>
+      <div class="hx"><span>Fri</span><span>Sat</span><span>Sun</span><span class="wn">Mon ✦</span><span>Tue</span><span>Wed</span><span>Thu</span></div>
+      <div class="legend"><span>✦ Mon 13 Oct · Kerala holiday · ×1.35 from the last 3</span></div>
+      <div class="row"><span>Week</span><b>₹3,46,000 <span style="color:var(--muted)">vs ₹3,21,400</span></b></div>
+    </div>
+    <div class="card list">
+      <h2>Accuracy <small>last 14 days</small></h2>
+      <div class="item"><div>Day total at open</div><b>9.4%</b></div>
+      <div class="item"><div>Day total by 4 pm</div><b class="up">4.1%</b></div>
+      <div class="item"><div>Next hour</div><b>14%</b></div>
+      <div class="btnrow"><button class="btn ghost sm" data-sheet="special">Mark a special day</button></div>
+    </div>
+  </section>
+
+  <!-- ITEMS -->
+  <section class="screen" data-s="items">
+    <div class="card list">
+      <h2>Costing <small>today · by group</small></h2>
+      <div class="item bar3"><div>Mandi<small>sales ₹13,200 · cost ₹5,280</small></div><div class="meter"><i style="width:60%"></i></div><b class="up">60%</b></div>
+      <div class="item bar3"><div>Alfaham &amp; grill<small>₹7,100 · ₹3,340</small></div><div class="meter"><i style="width:53%"></i></div><b class="up">53%</b></div>
+      <div class="item bar3"><div>Fish<small>₹3,400 · ₹1,970</small></div><div class="meter"><i style="width:42%"></i></div><b class="wn">42%</b></div>
+      <div class="item bar3"><div>Juices<small>₹2,900 · ₹700</small></div><div class="meter"><i style="width:76%"></i></div><b class="up">76%</b></div>
+      <div class="btnrow"><button class="btn ghost sm" data-sheet="recipe">Recipes &amp; costs</button></div>
+    </div>
+    <div class="card list">
+      <h2>Usage vs bought <small>this month</small></h2>
+      <div class="item"><div>Chicken<small>est. 412 birds · 453 kg · bought 470 kg</small></div><b class="up">−4%</b></div>
+      <div class="item"><div>Rice<small>est. 290 kg · bought 300 kg</small></div><b class="up">−3%</b></div>
+      <div class="item"><div>Oil<small>est. 118 L · bought 140 L</small></div><b class="wn">−16%</b></div>
+    </div>
+    <div class="card list">
+      <h2>All items <small>75 · <button class="btn ghost sm" data-sheet="filter">Sort</button></small></h2>
+      <div class="item bar3"><div>Chicken mandi · Half<small>21 · margin 61%</small></div><div class="meter"><i style="width:100%"></i></div><b>₹7,980</b></div>
+      <div class="item bar3"><div>Alfaham · Full<small>9 · 52%</small></div><div class="meter"><i style="width:62%"></i></div><b>₹4,950</b></div>
+      <div class="item bar3"><div>Fresh lime<small>34 · 78%</small></div><div class="meter"><i style="width:30%"></i></div><b>₹2,380</b></div>
+    </div>
+  </section>
+
+  <!-- MORE -->
+  <section class="screen" data-s="more">
+    <div class="more">
+      <button data-go2="items"><span>🍗</span>Items &amp; costing<small>margins, usage vs bought</small></button>
+      <button><span>⇄</span>Compare<small>any two days</small></button>
+      <button><span>📅</span>Calendar<small>heat-map, pick a day</small></button>
+      <button><span>⬇</span>Export<small>day JSON · CSVs</small></button>
+      <button data-sheet="recipe"><span>🍳</span>Recipes &amp; costs<small>birds, rice, oil, fixed</small></button>
+      <button><span>⏱</span>Kitchen timing<small>mandi 20 · fry 10</small></button>
+      <button data-sheet="special"><span>✦</span>Special days<small>hartal, festival</small></button>
+      <button><span>💻</span>Shop PC<small>ok · last tick 11:42</small></button>
+      <button><span>📤</span>Share<small>any card to WhatsApp</small></button>
+    </div>
+  </section>
+  </main>
+
+  <div class="bottom">
+    <div class="range" id="range">
+      <button class="chip on">Today</button><button class="chip">Yesterday</button><button class="chip">Week</button><button class="chip">Month</button><button class="chip">Last month</button><button class="chip f" data-sheet="cal">Pick…</button>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="on" data-go="live"><span>◉</span>Live</button>
+      <button data-go="sales"><span>▤</span>Sales</button>
+      <button data-go="money"><span>₹</span>Money</button>
+      <button data-go="team"><span>⚉</span>Team</button>
+      <button data-go="fc"><span>◔</span>Forecast</button>
+      <button data-go="more"><span>⋯</span>More</button>
+    </nav>
+  </div>
+
+  <div class="sheet" id="sheet-cal"><div class="box">
+    <h2>Pick a day <small>darker = bigger sales</small></h2>
+    <div class="seg"><button>‹ Sep</button><button class="on">Oct 2026</button><button>Nov ›</button></div>
+    <div class="cal" id="cal"></div>
+    <div class="btnrow"><button class="btn ghost sm" data-close>Close</button></div>
+  </div></div>
+  <div class="sheet" id="sheet-filter"><div class="box">
+    <h2>Bills <small>filter &amp; sort</small></h2>
+    <div class="seg"><button class="on">All</button><button>Dine</button><button>Delivery</button><button>Counter</button><button>Staff</button></div>
+    <div class="seg"><button class="on">Newest</button><button>Biggest</button><button>Longest stay</button><button>Voids</button></div>
+    <input class="fld" id="f1" placeholder="Search KOT, table, waiter, item, remark">
+    <div class="btnrow"><button class="btn" data-close>Show 52 bills</button><button class="btn ghost" data-close>Clear</button></div>
+  </div></div>
+  <div class="sheet" id="sheet-count"><div class="box">
+    <h2>Count the drawer <small>Thu 8 Oct</small></h2>
+    <div class="seg"><button class="on">End of day</button><button>Start of day</button></div>
+    <input class="fld" id="c1" placeholder="Cash in drawer ₹" value="14,000">
+    <input class="fld" id="c2" placeholder="Bank balance ₹">
+    <div class="photo">📷 Photo of the slip or the drawer · optional</div>
+    <input class="fld" id="c3" placeholder="Note · ₹2,000 taken home">
+    <div class="row"><span>Expected</span><b>₹14,230</b></div>
+    <div class="row"><span>Short / over</span><b class="dn">− ₹230</b></div>
+    <div class="btnrow"><button class="btn" data-close>Save count</button><button class="btn ghost" data-close>Cancel</button></div>
+  </div></div>
+  <div class="sheet" id="sheet-special"><div class="box">
+    <h2>Special day</h2>
+    <input class="fld" id="s1" type="date" value="2026-10-13">
+    <div class="seg"><button class="on">Busier</button><button>Quieter</button><button>Closed</button></div>
+    <input class="fld" id="s2" placeholder="Why · hartal, local festival, college event">
+    <div class="btnrow"><button class="btn" data-close>Save</button><button class="btn ghost" data-close>Cancel</button></div>
+  </div></div>
+  <div class="sheet" id="sheet-recipe"><div class="box">
+    <h2>Recipes &amp; costs <small>per portion</small></h2>
+    <div class="seg"><button class="on">Mandi</button><button>Alfaham</button><button>Fry</button><button>Gravy</button><button>Juice</button></div>
+    <div class="row"><span>Chicken</span><b>¼ · ½ · 1 bird</b></div>
+    <div class="row"><span>Rice</span><b>0.25 kg per quarter</b></div>
+    <div class="row"><span>Oil</span><b>40 ml</b></div>
+    <div class="row"><span>Masala · cooking · packing</span><b>₹8 · ₹10 · ₹7</b></div>
+    <div class="row"><span>Unit costs (auto from purchases)</span><b>bird ₹170 · rice ₹52/kg · oil ₹128/L</b></div>
+    <div class="row"><span>Fixed per month</span><b>rent 25K · power 9K · gas 14K · salaries auto</b></div>
+    <div class="btnrow"><button class="btn" data-close>Save</button><button class="btn ghost" data-close>Cancel</button></div>
+  </div></div>
+</div>
+
+<div class="notes">
+  <p class="eyebrow">Design review · owner app next · v2</p>
+  <h1>Everything you touch is at the bottom.</h1>
+  <p>Range chips, the nav and every filter sit within a thumb. The top only tells. Live is the home screen: open orders newest first, every table, the pass, the last bills. Colour is time: an order or a table goes green → amber → red as the minutes pass, continuously, not in three steps.</p>
+  <table>
+    <tr><th>Screen</th><th>First thing you see</th><th>Then</th></tr>
+    <tr><td class="k">Live</td><td>Sales so far vs forecast, next hour, open value, drawer</td><td>Open orders (age-coloured) · tables by section (stay-coloured) · pass · just settled</td></tr>
+    <tr><td class="k">Sales</td><td>Hour chart with ₹ axis, avg dotted, forecast hatched</td><td>By type · top items · bills (filter sheet from the bottom)</td></tr>
+    <tr><td class="k">Money</td><td>Drawer chain and the Count button</td><td>Sales / expenses / gross / net · spends · credit book · salary forecast</td></tr>
+    <tr><td class="k">Team</td><td>Waiters ranked</td><td>Voids, discounts, staff food, table turn · every void with its reason</td></tr>
+    <tr><td class="k">Forecast</td><td>Today's number, curve, next hour</td><td>Next 7 days with holidays · accuracy · special days</td></tr>
+    <tr><td class="k">Items</td><td>Costing by group (margin %)</td><td>Usage vs bought (birds, rice, oil) · all items · recipe sheet</td></tr>
+    <tr><td class="k">More (⋯ long-press / scroll)</td><td colspan="2">Compare · calendar · export · recipes · kitchen timing · special days · shop PC · share</td></tr>
+  </table>
+  <h3>Age colour</h3>
+  <p>Hue runs 120° (green) to 0° (red) over 0–40 min for orders, 0–60 min for a seated table, 0–prep-time×1.5 for a kitchen ticket. Same scale everywhere so one glance reads the room. Lightness is held constant so red never looks "louder" than green.</p>
+  <h3>Range chips</h3>
+  <p>One strip, always visible: Today · Yesterday · Week · Month · Last month · Pick. Today is live; the others show the same screens as totals. Pick opens the calendar heat-map as a bottom sheet.</p>
+  <h3>Open questions for you</h3>
+  <table>
+    <tr><td>1</td><td>Items &amp; costing lives under More. Should it be in the nav instead of Team?</td></tr>
+    <tr><td>2</td><td>Should the Live screen also show deliveries on a mini map, or is the list enough?</td></tr>
+    <tr><td>3</td><td>Forecast on Live: ring only, or also the "next hour" line in the strip (as drawn)?</td></tr>
+  </table>
+</div>
+</div>
+
+<script>
+(function(){
+  var phone=document.getElementById('phone');
+  function go(s){ phone.querySelectorAll('.screen').forEach(function(x){ x.classList.toggle('on', x.dataset.s===s); }); phone.querySelectorAll('#nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.go===s); }); document.getElementById('main').scrollTop=0; try{ localStorage.setItem('hayat-next-tab', s); }catch(e){} }
+  phone.querySelectorAll('#nav button').forEach(function(b){ b.onclick=function(){ go(b.dataset.go); }; });
+  phone.querySelectorAll('[data-go2]').forEach(function(b){ b.onclick=function(){ go(b.dataset.go2); phone.querySelector('#nav [data-go="more"]').classList.add('on'); }; });
+  phone.querySelectorAll('.chip:not(.f)').forEach(function(c){ c.onclick=function(){ phone.querySelectorAll('.chip').forEach(function(x){ x.classList.toggle('on', x===c); }); }; });
+  phone.querySelectorAll('[data-sheet]').forEach(function(b){ b.onclick=function(){ document.getElementById('sheet-'+b.dataset.sheet).classList.add('on'); }; });
+  phone.querySelectorAll('[data-close]').forEach(function(b){ b.onclick=function(){ b.closest('.sheet').classList.remove('on'); }; });
+  phone.querySelectorAll('.sheet').forEach(function(s){ s.onclick=function(e){ if(e.target===s) s.classList.remove('on'); }; });
+  phone.querySelectorAll('.seg button').forEach(function(b){ b.onclick=function(){ b.parentNode.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); }; });
+  /* age → hue, 120 (fresh) to 0 (late), continuous */
+  var hue=function(min,span){ return Math.round(120*Math.max(0,1-min/span)); };
+  var open=[{m:3,t:'dine',w:'T 9 · Shafi',i:'2× mandi half, 7up ×2',a:1120},{m:8,t:'delivery',w:'dmu · Pullanur',i:'alfaham full, porotta ×6',a:890},{m:12,t:'dine',w:'T 4 · Anas',i:'fish fry, meals',a:560,due:true},{m:17,t:'counter',w:'Parcel 18',i:'mandi qtr ×2',a:420},{m:24,t:'dine',w:'T 12 · Rafeek',i:'mandi full, salad',a:1380},{m:31,t:'delivery',w:'dmu · Valanchery',i:'broast 8pc, mojito ×2',a:760,due:true},{m:39,t:'dine',w:'T 2 · Shafi',i:'kabsa half',a:380}];
+  document.getElementById('openOrders').innerHTML=open.map(function(o){ return '<div class="ord" style="--h:'+hue(o.m,40)+'"><div class="age">'+o.m+'<small>min</small></div><div class="what"><b><span class="tag'+(o.t==='delivery'?' dl':o.t==='counter'?' pc':'')+'">'+o.t+'</span>'+(o.due?'<span class="tag due">due bill</span>':'')+o.w+'</b><small>'+o.i+'</small></div><div class="amt">₹'+o.a.toLocaleString('en-IN')+'</div></div>'; }).join('');
+  function floor(id, names, busy){ document.getElementById(id).innerHTML=names.map(function(n){ var b=busy[n]; return b!=null?'<div class="tb busy" style="--h:'+hue(b,60)+'" title="'+b+' min">'+n+'<i>'+b+'′</i></div>':'<div class="tb">'+n+'</div>'; }).join(''); }
+  floor('floorAC',['A1','A2','A3','A4','A5','A6','A7','A8','A9','A10','A11','A12'],{A2:3,A4:12,A9:24,A12:52,A7:41});
+  floor('floorNAC',['N1','N2','N3','N4','N5','N6'],{N2:8,N5:33});
+  floor('floorHut',['H1','H2','H3','H4'],{H1:19,H3:61});
+  /* charts with a ₹ axis */
+  function chart(yid,pid,vals,max,ticks,cls){ var y=document.getElementById(yid), p=document.getElementById(pid); y.innerHTML=ticks.map(function(t){ return '<span style="bottom:'+(100*t/max)+'%">'+(t>=1000?'₹'+(t/1000)+'K':t)+'</span>'; }).join('');
+    p.innerHTML=ticks.map(function(t){ return '<div class="g" style="bottom:'+(100*t/max)+'%"></div>'; }).join('')+'<div class="bars">'+vals.map(function(v,i){ return '<div class="'+(cls?cls(i,v):'')+'" style="height:'+Math.max(3,100*v.v/max)+'%;--a:'+(v.a!=null?(100*v.a/v.v).toFixed(0)+'%':'0')+'" title="'+v.v+'"></div>'; }).join('')+'</div>'; }
+  var act=[1800,4100,5200,3900,2100,900,1200,2600,4800,6200,5400,3100,900], avg=[1500,3900,5600,3600,2000,1000,1100,2400,5100,5900,5000,2800,800], now=6;
+  chart('yax1','plot1',act.map(function(v,i){ return {v:v,a:avg[i]}; }),7500,[2500,5000,7500],function(i){ return (i<now?'avg':i===now?'now avg':'fc avg'); });
+  chart('yax2','plot2',[52,50,66,74,72,45,47].map(function(v){ return {v:v*1000}; }),80000,[20000,40000,60000,80000]);
+  var cal=document.getElementById('cal'); var h=['M','T','W','T','F','S','S'].map(function(d){ return '<div class="h">'+d+'</div>'; }).join(''); var cells=''; for(var i=0;i<3;i++) cells+='<div class="dim"></div>'; for(var d=1; d<=31; d++){ var cls=d===8?' on':(d===4||d===5||d===11)?' hot':d>8?' dim':''; cells+='<div class="'+cls+'">'+d+'</div>'; } cal.innerHTML=h+cells;
+  var t=null; try{ t=localStorage.getItem('hayat-next-tab'); }catch(e){} if(t) go(t);
+  var hh=(location.hash||'').replace('#',''); if(/^(live|sales|money|team|fc|items|more)$/.test(hh)) go(hh);
+})();
+</script>

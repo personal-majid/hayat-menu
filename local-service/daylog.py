@@ -589,6 +589,35 @@ def push_masters(db, m: Masters):
     MASTERS_SENT = sig
 
 
+def drift(src, since: str, until: str) -> list:
+    """Days whose spends in VMENU no longer match the day log.
+
+    A purchase saved on the wrong date and then corrected moves between
+    days; the day it left never gets re-read on its own, so the entry
+    showed twice. One grouped query per table says how many heads and
+    book entries each calendar day has now; a day whose count differs
+    from its log is rebuilt."""
+    q = src.q
+    lo = dt.datetime.strptime(since, "%Y-%m-%d")
+    hi = dt.datetime.strptime(until, "%Y-%m-%d") + dt.timedelta(days=1)
+    pur, pay = {}, {}
+    if src.has("svr_inv_purchase_item_parent"):
+        for r in q("SELECT DATE(donetime) AS d, COUNT(*) AS n FROM svr_inv_purchase_item_parent WHERE donetime >= %s AND donetime < %s GROUP BY DATE(donetime)", (lo, hi)):
+            pur[str(r["d"])] = int(r["n"])
+    if src.has("act_paymentorrecipt"):
+        for r in q("SELECT DATE(transactiondate) AS d, COUNT(*) AS n FROM act_paymentorrecipt WHERE transactiondate >= %s AND transactiondate < %s "
+                   "AND (transaction_type IS NULL OR transaction_type NOT LIKE 'POS%%') GROUP BY DATE(transactiondate)", (lo, hi)):
+            pay[str(r["d"])] = int(r["n"])
+    out, d = [], lo.date()
+    while d < hi.date():
+        day = d.strftime("%Y-%m-%d")
+        l = load_local(day)
+        if l.get("updatedAt") and ((l.get("purchaseCount") or 0) != pur.get(day, 0) or (l.get("paymentCount") or 0) != pay.get(day, 0)):
+            out.append(day)
+        d += dt.timedelta(days=1)
+    return out
+
+
 def run_day(cfg, src, m, day: str, db, with_open: bool) -> dict:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     fresh = read_day(src, m, day, cfg.getint("vmenu", "day_start_hour", fallback=5), with_open)
@@ -806,7 +835,14 @@ def main(argv):
     db = None if a.no_upload else firestore(cfg)
     try:
         if a.cmd == "tick":
+            before = load_local(today_business(start_hour)).get("spendAt")
             print(run_day(cfg, src, m, today_business(start_hour), db, True))
+            if load_local(today_business(start_hour)).get("spendAt") != before:
+                # spends were just read: an entry moved off an earlier day must leave that day too
+                t = dt.datetime.strptime(today_business(start_hour), "%Y-%m-%d").date()
+                for day in drift(src, (t - dt.timedelta(days=3)).strftime("%Y-%m-%d"), (t - dt.timedelta(days=1)).strftime("%Y-%m-%d")):
+                    LOG.warning("spends moved: rebuilding %s", day)
+                    print(run_day(cfg, src, m, day, db, False))
         elif a.cmd == "day":
             day = a.arg or today_business(start_hour)
             print(run_day(cfg, src, m, day, db, day == today_business(start_hour)))
@@ -829,6 +865,11 @@ def main(argv):
                 else:
                     todo.append(day)
                 d += dt.timedelta(days=1)
+            moved = [x for x in drift(src, since.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")) if x not in todo]
+            if moved:
+                print(f"spends moved between days: {', '.join(moved)}")
+                todo += moved
+                fine -= len(moved)
             print(f"{fine} days already in step, {len(todo)} to do: {', '.join(todo) if len(todo) < 12 else todo[0] + ' .. ' + todo[-1]}")
             for day in todo:
                 print(run_day(cfg, src, m, day, db, day == today.strftime("%Y-%m-%d")))

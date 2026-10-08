@@ -72,7 +72,13 @@ table{width:100%;border-collapse:collapse;font-size:13px} th{font-size:11px;lett
 tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{background:color-mix(in srgb,var(--s4) 12%,transparent)}
 .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--soft2)}
 .pill.dine{background:color-mix(in srgb,var(--s1) 18%,transparent)} .pill.counter{background:color-mix(in srgb,var(--s4) 22%,transparent)} .pill.delivery{background:color-mix(in srgb,var(--s3) 18%,transparent)}
-.bars{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;align-items:end;height:90px;margin:4px 0 2px}
+.bars{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;align-items:end;height:90px;margin:4px 0 2px;position:relative}
+.bars.axed,.hx.axed{margin-left:40px}
+#cmpDay{max-width:min(60vw,320px)}
+.card h2 .n{min-width:0;max-width:100%}
+.bars .yg{position:absolute;left:0;right:0;border-top:1px dashed var(--line2);pointer-events:none}
+.bars .yl{position:absolute;left:-40px;width:36px;text-align:right;font-size:9px;color:var(--muted);transform:translateY(50%);font-variant-numeric:tabular-nums;pointer-events:none}
+.bars .bar{position:relative;z-index:1}
 .bar{background:var(--s1);border-radius:3px 3px 0 0;min-height:2px;position:relative} .bar:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--pri);color:var(--onpri);font-size:11px;padding:2px 6px;border-radius:6px;white-space:nowrap;margin-bottom:3px}
 .bar.y{background:var(--line2)}
 .dd{border-top:1px solid var(--line);padding:6px 0} .dd summary{display:flex;gap:10px;align-items:center;cursor:pointer;list-style:none;font-size:13px} .dd summary::-webkit-details-marker{display:none} .dd summary::before{content:'▸';color:var(--muted);width:12px} .dd[open] summary::before{content:'▾'} .dd summary small{color:var(--muted)} .dd summary b{margin-left:auto} .dd table{margin:6px 0 4px}
@@ -167,7 +173,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v177';
+const BOARD='v181';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -410,14 +416,17 @@ function hbucket(rows){ const H=Array(24).fill(0); rows.forEach(r=>{ const i=bh(
 /* only the active hours: one before the first sale, one after the last */
 function hspan(...Hs){ let lo=24,hi=-1; Hs.forEach(H=>(H||[]).forEach((v,i)=>{ if(v>0){ lo=Math.min(lo,i); hi=Math.max(hi,i); } })); if(hi<0) return [5,20]; return [Math.max(0,lo-1),Math.min(23,hi+1)]; }
 function hlabel(i){ return String((i+BH0)%24); }
+/* a money axis: dashed lines at round values (₹5K, ₹10K…) behind any bar chart */
+const kfmt=v=>v>=1e5?'₹'+(v/1e5).toFixed(v%1e5?1:0)+'L':v>=1000?'₹'+(v/1000).toFixed(v%1000?1:0)+'K':'₹'+Math.round(v);
+function ygrid(max,fmt){ if(!(max>0)) return ''; const raw=max/4, p=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/p, step=(m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; let out=''; for(let v=step; v<=max*1.001; v+=step){ const pc=100*v/max; out+=`<i class="yg" style="bottom:${pc}%"></i><b class="yl" style="bottom:${pc}%">${(fmt||kfmt)(v)}</b>`; } return out; }
 function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH){ const n=hi-lo+1;
-  return `<div class="bars" style="grid-template-columns:repeat(${n},1fr)${height?';height:'+height+'px':''}">`+H.slice(lo,hi+1).map((v,j)=>{ const i=lo+j; const bar=`<div class="bar${cls?' '+cls:''}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
+  return `<div class="bars axed" style="grid-template-columns:repeat(${n},1fr)${height?';height:'+height+'px':''}">`+ygrid(max)+H.slice(lo,hi+1).map((v,j)=>{ const i=lo+j; const bar=`<div class="bar${cls?' '+cls:''}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
     return avgH?`<div class="bc">${bar}<i class="avgm" style="bottom:${Math.min(100,100*(avgH[i]||0)/max)}%"></i></div>`:bar; }).join('')+'</div>'; }
 /* the same weekday's hourly average, from the day index (no reads) */
 function weekdayAvg(day){ const dow=new Date(day+'T12:00:00').getDay(); const days=Object.keys(INDEX).filter(d=>d!==day&&INDEX[d].hours&&new Date(d+'T12:00:00').getDay()===dow); if(days.length<2) return null;
   const A=Array(24).fill(0); days.forEach(d=>INDEX[d].hours.forEach((v,i)=>A[i]+=v||0)); return {H:A.map(v=>v/days.length),n:days.length}; }
 function hx(lo,hi){ const n=hi-lo+1, step=n>14?2:1;
-  return `<div class="hx" style="grid-template-columns:repeat(${n},1fr)">`+Array.from({length:n},(_,j)=>j%step?'<span></span>':'<span>'+hlabel(lo+j)+'</span>').join('')+'</div>'; }
+  return `<div class="hx axed" style="grid-template-columns:repeat(${n},1fr)">`+Array.from({length:n},(_,j)=>j%step?'<span></span>':'<span>'+hlabel(lo+j)+'</span>').join('')+'</div>'; }
 
 function hourly(){
   const H=hbucket(recs().filter(r=>r.status==='settled'));
@@ -583,7 +592,9 @@ function stats(doc){
 function compare(){
   const A=stats(DOC), B=CMP&&CMP.doc?stats(CMP.doc):null, bd=CMP?CMP.day:'';
   const row=(k,a,b,fmt)=>{ fmt=fmt||rs; const d=(b!=null&&a!=null&&b)?Math.round(100*(a-b)/b):null; return `<div class="a">${a==null?'—':fmt(a)}${d!=null?`<span class="d ${d>=0?'up':'dn'}">${d>=0?'+':''}${d}%</span>`:''}</div><div class="k">${k}</div><div class="b">${b==null?'—':fmt(b)}</div>`; };
-  const opts=(DAYS||[]).filter(d=>d!==DAY).map(d=>`<option value="${d}"${d===bd?' selected':''}>${d}</option>`).join('');
+  /* the list says what each day was: weekday, sales, bills - so the pick is informed */
+  const dayOpt=d=>{ const x=INDEX[d]||{}, wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()]; return `${d} · ${wd}${x.rev?' · '+rs(x.rev)+' · '+(x.bills||0)+' bills':''}`; };
+  const opts=(DAYS||[]).filter(d=>d!==DAY).map(d=>`<option value="${d}"${d===bd?' selected':''}>${dayOpt(d)}</option>`).join('');
   const max=Math.max(1,...A.H,...(B?B.H:[0]));
   const mini=(title,ga,gb)=>{ const keys=[...new Set([...Object.keys(ga),...Object.keys(gb||{})])].sort((x,y)=>(ga[y]||0)-(ga[x]||0)).slice(0,8); const m=Math.max(1,...keys.map(k=>Math.max(ga[k]||0,(gb||{})[k]||0)));
     return `<div class="card"><h2>${title}</h2><div class="mini">${keys.map(k=>`<div class="mrow"><span>${esc(k)}</span><div><div class="b" style="width:${100*(ga[k]||0)/m}%"></div>${gb?`<div class="b" style="width:${100*(gb[k]||0)/m}%;background:var(--line2);margin-top:2px"></div>`:''}</div><span class="v">${rs(ga[k]||0)}${gb?'<br><small style="color:var(--muted)">'+rs(gb[k]||0)+'</small>':''}</span></div>`).join('')}</div></div>`; };
@@ -592,9 +603,9 @@ function compare(){
   const shift=(days,months)=>{ const x=new Date(DAY+'T12:00:00'); if(months) x.setMonth(x.getMonth()+months); if(days) x.setDate(x.getDate()+days); return ymd(x); };
   const best=(DAYS||[]).filter(d=>d!==DAY&&INDEX[d]).sort((a,b)=>(INDEX[b].rev||0)-(INDEX[a].rev||0))[0];
   const picks=[['Yesterday',shift(-1)],['Same day last week',shift(-7)],['Two weeks back',shift(-14)],['Same date last month',shift(0,-1)],['Best day',best]].filter(p=>p[1]&&(DAYS||[]).includes(p[1]));
-  const pickBtns=picks.map(p=>`<button class="tab${bd===p[1]?' on':''}" data-cmp="${p[1]}" title="${p[1]}">${p[0]}</button>`).join('');
+  const pickBtns=picks.map(p=>{ const x=INDEX[p[1]]||{}, wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(p[1]+'T12:00:00').getDay()]; return `<button class="tab${bd===p[1]?' on':''}" data-cmp="${p[1]}" title="${p[1]}">${p[0]}<small style="display:block;font-weight:500;opacity:.75">${wd} ${p[1].slice(5)}${x.rev?' · '+rs(x.rev):''}</small></button>`; }).join('');
   return `<div class="card wide"><h2>Compare <span class="n"><select id="cmpDay"><option value="">choose a day…</option>${opts}</select></span></h2><div class="tabs" style="margin:6px 0 10px">${pickBtns}</div>
-      <div class="cmp"><div class="a"><b>${esc(DAY)}</b></div><div class="k"></div><div class="b"><b>${esc(bd||'—')}</b></div>
+      <div class="cmp"><div class="a"><b>${esc(DAY)}</b><br><small style="color:var(--muted)">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(DAY+'T12:00:00').getDay()]}</small></div><div class="k"></div><div class="b"><b>${esc(bd||'—')}</b>${bd?`<br><small style="color:var(--muted)">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(bd+'T12:00:00').getDay()]}</small>`:''}</div>
       ${row('Sales',A.rev,B&&B.rev)}${row('Bills',A.bills,B&&B.bills,x=>x)}${row('Avg bill',A.avg,B&&B.avg)}${row('Dine‑in',A.dine,B&&B.dine)}${row('Counter',A.counter,B&&B.counter)}${row('Delivery',A.delivery,B&&B.delivery)}${row('Covers',A.covers,B&&B.covers,x=>x)}${row('Avg table min',A.stay,B&&B.stay,x=>x+'m')}${row('Cash',A.cash,B&&B.cash)}${row('Card',A.card,B&&B.card)}${row('Edits/voids',A.edits,B&&B.edits,x=>x)}${row('Discounts',A.discounts,B&&B.discounts)}${['AC','NON AC','JUICY HUT','Counter','Delivery'].filter(k=>A.close[k]!=null||(B&&B.close[k]!=null)).map(k=>row('Order→paid · '+k,A.close[k],B&&B.close[k],x=>x+'m')).join('')}${row('Paid out',A.paidOut,B&&B.paidOut)}${row('Supplier bills',A.purchases,B&&B.purchases)}</div></div>`+
     week+
     (()=>{ const [lo,hi]=hspan(A.H,B?B.H:[]); return `<div class="card wide"><h2>Sales by hour <span class="n">blue ${esc(DAY)} · grey ${esc(bd||'')}</span></h2>${hbars(A.H,lo,hi,max,B?B.H:null,'')}${B?hbars(B.H,lo,hi,max,null,'','b2',50):''}${hx(lo,hi)}</div>`; })()+
@@ -703,7 +714,7 @@ function month(){
     <div class="kpi click" data-tab="mpay"><small>Expenses</small><b>${rs(S.expenses||S.paidOut)}</b><em class="rows"><span>Purchases <b>${rs((S.pay||{}).purchase||0)}</b></span><span>Salary <b>${rs((S.pay||{}).salary||0)}</b></span><span>Other <b>${rs((S.pay||{}).expense||0)}</b></span></em></div>
     <div class="kpi"><small>Net</small><b class="${(S.net||0)>=0?'up':'dn'}">${rs(S.net||0)}</b><em>${S.sales?Math.round(100*(S.net||0)/S.sales)+'% margin':''}${(S.pay||{}).receipt?' · received '+rs(S.pay.receipt):''}</em></div></div>`;
   const days=Object.keys(S.byDay).sort(), maxD=Math.max(1,...days.map(d=>S.byDay[d].rev));
-  const byDay=`<div class="card wide"><h2>Sales by day</h2><div class="bars" style="grid-template-columns:repeat(${days.length},1fr)">${days.map(d=>`<div class="bar click" data-day="${d}" style="height:${Math.max(2,100*S.byDay[d].rev/maxD)}%" data-t="${d.slice(5)} ${rs(S.byDay[d].rev)} · ${S.byDay[d].bills} bills"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((d,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div></div>`;
+  const byDay=`<div class="card wide"><h2>Sales by day</h2><div class="bars axed" style="grid-template-columns:repeat(${days.length},1fr)">${ygrid(maxD)}${days.map(d=>`<div class="bar click" data-day="${d}" style="height:${Math.max(2,100*S.byDay[d].rev/maxD)}%" data-t="${d.slice(5)} ${rs(S.byDay[d].rev)} · ${S.byDay[d].bills} bills"></div>`).join('')}</div><div class="hx axed" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((d,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div></div>`;
   const mini=(title,g,fmt)=>{ const rows=Object.entries(g).sort((a,b)=>(b[1].v??b[1])-(a[1].v??a[1])); const max=Math.max(1,...rows.map(r=>r[1].v??r[1])); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([kk,x])=>`<div class="mrow"><span>${esc(kk)}${x.n!=null?' <small style="color:var(--muted)">'+x.n+'</small>':''}</span><div class="b" style="width:${100*(x.v??x)/max}%"></div><span class="v">${(fmt||rs)(x.v??x)}</span></div>`).join('')||'<div class="note">Nothing.</div>'}</div></div>`; };
   const people=[...new Set([...S.disc.list.map(x=>x.by),...S.staff.list.map(x=>x.who),...S.voids.list.map(x=>x.by),...pay.list.map(x=>x.party).filter(Boolean)])].sort();
   const pf=`<select class="tb sm" id="monPerson"><option value="">Everyone</option>${people.map(p=>`<option${MON.person===p?' selected':''}>${esc(p)}</option>`).join('')}</select>`;
@@ -914,7 +925,7 @@ function period(){
     <div class="kpi click" data-ptab="voids"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill ${rs(S.voids.afterBill.v)}</em></div></div>`;
   const tabs=`<div class="tabs main">${[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['cash','Cash'],['voids','Voids']].map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}<span class="n" style="align-self:center;margin-left:auto">${esc(PER.label)}${S.partial?' · so far':''}</span></div>`;
   const days=Object.keys(S.byDay).sort(), maxD=Math.max(1,...days.map(x=>S.byDay[x].rev));
-  const byDay=`<div class="card wide"><h2>Sales by day <span class="n">click a day to open it</span></h2><div class="bars" style="grid-template-columns:repeat(${days.length},1fr)">${days.map(x=>`<div class="bar click" data-day="${x}" style="height:${Math.max(2,100*S.byDay[x].rev/maxD)}%" data-t="${x.slice(5)} ${rs(S.byDay[x].rev)} · ${S.byDay[x].bills} bills"></div>`).join('')}</div><div class="hx" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((x,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+x.slice(8)+'</span>').join('')}</div></div>`;
+  const byDay=`<div class="card wide"><h2>Sales by day <span class="n">click a day to open it</span></h2><div class="bars axed" style="grid-template-columns:repeat(${days.length},1fr)">${ygrid(maxD)}${days.map(x=>`<div class="bar click" data-day="${x}" style="height:${Math.max(2,100*S.byDay[x].rev/maxD)}%" data-t="${x.slice(5)} ${rs(S.byDay[x].rev)} · ${S.byDay[x].bills} bills"></div>`).join('')}</div><div class="hx axed" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((x,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+x.slice(8)+'</span>').join('')}</div></div>`;
   const mini=(title,g,fmt)=>{ const rows=Object.entries(g).sort((a,b)=>(b[1].v??b[1])-(a[1].v??a[1])); const max=Math.max(1,...rows.map(r=>r[1].v??r[1])); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([kk,x])=>`<div class="mrow"><span>${esc(kk)}${x.n!=null?' <small style="color:var(--muted)">'+x.n+'</small>':''}</span><div class="b" style="width:${100*(x.v??x)/max}%"></div><span class="v">${(fmt||rs)(x.v??x)}</span></div>`).join('')||'<div class="note">Nothing.</div>'}</div></div>`; };
   const sve=`<div class="card"><h2>Sales vs expenses</h2><div class="mini">${[['Sales',S.sales],['Goods',pay.purchase],['Salary',pay.salary],['Other',pay.expense],['Net',net]].map(([kk,v])=>`<div class="mrow"><span>${kk}</span><div class="b" style="width:${100*Math.abs(v)/Math.max(1,S.sales)}%${kk==='Net'?';background:'+((v>=0)?'var(--s3)':'var(--s8)'):kk==='Sales'?'':';background:var(--s2)'}"></div><span class="v">${rs(v)}</span></div>`).join('')}</div></div>`;
   const people=[...new Set([...S.disc.list.map(x=>x.by),...S.staff.list.map(x=>x.who),...S.voids.list.map(x=>x.by),...pay.list.map(x=>x.party).filter(Boolean)])].sort();
@@ -947,10 +958,10 @@ function trends(){
   const days=Object.keys(INDEX).sort().slice(-30);
   if(days.length<2) return '<div class="card wide"><div class="note">Trends need the day index. On the shop PC run <b>daylog-backfill-all.bat</b> once.</div></div>';
   const step=days.length>16?2:1, cols=`grid-template-columns:repeat(${days.length},1fr)`;
-  const axis=`<div class="hx" style="${cols}">${days.map((d,i)=>i%step?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div>`;
+  const axis=`<div class="hx axed" style="${cols}">${days.map((d,i)=>i%step?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div>`;
   const series=(title,f,fmt,unit)=>{ const vals=days.map(d=>+f(INDEX[d]||{})||0), have=vals.filter(Boolean); const max=Math.max(1,...vals);
     if(!have.length) return '';
-    return `<div class="card wide"><h2>${title} <span class="n">avg ${fmt(have.reduce((a,b)=>a+b,0)/have.length)} · best ${fmt(Math.max(...have))}</span></h2><div class="bars" style="${cols}">${vals.map((v,i)=>`<div class="bar click${days[i]===DAY?' cur':''}" data-day="${days[i]}" style="height:${Math.max(2,100*v/max)}%" data-t="${days[i].slice(5)} ${fmt(v)}"></div>`).join('')}</div>${axis}</div>`; };
+    return `<div class="card wide"><h2>${title} <span class="n">avg ${fmt(have.reduce((a,b)=>a+b,0)/have.length)} · best ${fmt(Math.max(...have))}</span></h2><div class="bars axed" style="${cols}">${ygrid(max,unit==='n'?(v=>Math.round(v)):kfmt)}${vals.map((v,i)=>`<div class="bar click${days[i]===DAY?' cur':''}" data-day="${days[i]}" style="height:${Math.max(2,100*v/max)}%" data-t="${days[i].slice(5)} ${fmt(v)}"></div>`).join('')}</div>${axis}</div>`; };
   const closeKeys=[...new Set(days.flatMap(d=>Object.keys((INDEX[d]||{}).close||{})))];
   const all=Object.keys(INDEX).filter(d=>INDEX[d]&&INDEX[d].rev);
   const bucketCard=(title,keyOf,labels,note)=>{ const g={}; all.forEach(d=>{ const k=keyOf(d); (g[k]=g[k]||[]).push(INDEX[d].rev); }); const vals=labels.map(l=>g[l]?g[l].reduce((a,b)=>a+b,0)/g[l].length:0); const max=Math.max(1,...vals);
@@ -964,7 +975,7 @@ function trends(){
   const monthsTbl=(()=>{ const g={}; all.forEach(d=>{ const m=d.slice(0,7); const x=g[m]=g[m]||{rev:0,bills:0,out:0,n:0}; x.rev+=INDEX[d].rev||0; x.bills+=INDEX[d].bills||0; x.out+=INDEX[d].paidOut||0; x.n++; }); const ms=Object.keys(g).sort().reverse(); if(!ms.length) return '';
     return `<div class="card wide"><h2>Month by month <span class="n">sales · paid out · net · includes today</span></h2><table><tr><th>Month</th><th class="r">Days</th><th class="r">Sales</th><th class="r m">Avg/day</th><th class="r">Paid out</th><th class="r">Net</th><th class="r">Margin</th></tr>${ms.map(m=>{ const x=g[m]; const net=x.rev-x.out; return `<tr><td>${new Date(m+'-15T12:00:00').toLocaleString('en',{month:'short',year:'numeric'})}${m===bizToday().slice(0,7)?' <small style="color:var(--muted)">so far</small>':''}</td><td class="r">${x.n}</td><td class="r"><b>${rs(x.rev)}</b></td><td class="r m">${rs(x.rev/x.n)}</td><td class="r">${rs(x.out)}</td><td class="r"><b class="${net>=0?'up':'dn'}">${rs(net)}</b></td><td class="r">${x.rev?Math.round(100*net/x.rev)+'%':''}</td></tr>`; }).join('')}</table></div>`; })();
   const pattern=monthsTbl+weeks+(all.length>=14?bucketCard('Start vs end of month',dom,['1–10','11–20','21–end'],'Salary days first, thin days last.')+bucketCard('Day of the week',dow,['Mon','Tue','Wed','Thu','Fri','Sat','Sun']):'');
-  return pattern+series('Sales by day',x=>x.rev,rs)+series('Bills by day',x=>x.bills,x=>Math.round(x))+series('Average bill',x=>x.bills?x.rev/x.bills:0,rs)+series('Paid out at the counter',x=>x.paidOut,rs)+
+  return pattern+series('Sales by day',x=>x.rev,rs)+series('Bills by day',x=>x.bills,x=>Math.round(x),'n')+series('Average bill',x=>x.bills?x.rev/x.bills:0,rs)+series('Paid out at the counter',x=>x.paidOut,rs)+
     closeKeys.map(k=>series('Order→paid · '+k+' (minutes)',x=>(x.close||{})[k],x=>Math.round(x)+'m')).join('')+
     '<div class="note">Click a bar to open that day.</div>';
 }
