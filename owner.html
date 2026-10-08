@@ -325,6 +325,21 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
 .ptlseg{display:inline-flex;gap:3px;background:var(--soft);border-radius:999px;padding:3px;margin:4px 0 6px} .ptlseg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:800;color:var(--muted);border-radius:999px;padding:7px 12px;cursor:pointer;min-height:36px} .ptlseg button.on{background:var(--pri);color:var(--onpri)}
 svg.ptl{height:260px} .ptleg{margin-top:8px} .ptleg .chip i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 @media (max-width:640px){ svg.ptl{height:220px} }
+
+/* forecast lab */
+.labseg{display:inline-flex;flex-wrap:wrap;gap:3px;background:var(--soft);border-radius:999px;padding:3px} .labseg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:800;color:var(--muted);border-radius:999px;padding:7px 12px;cursor:pointer;min-height:36px} .labseg button.on{background:var(--pri);color:var(--onpri)}
+.labrow{display:grid;grid-template-columns:26px minmax(0,1.3fr) minmax(60px,1fr) 52px;grid-template-areas:"rk nm tr b" "rk sm sm sm";gap:2px 10px;align-items:center;width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;font:inherit;color:inherit;text-align:left;padding:9px 4px;cursor:pointer}
+.labrow.on{background:var(--soft);border-radius:10px} .labrow .rk{grid-area:rk;font-weight:800;color:var(--muted)} .labrow .nm{grid-area:nm;font-weight:700} .labrow .tr{grid-area:tr;height:12px;background:var(--soft);border-radius:6px;overflow:hidden;position:relative} .labrow .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.labrow b{grid-area:b;text-align:right;font-size:18px} .labrow small{grid-area:sm;color:var(--muted);font-size:12px} .win{font-style:normal;font-size:11px;font-weight:800;color:#fff;background:#2E7D4F;border-radius:999px;padding:1px 7px;margin-left:4px}
+.labnext{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px} .labnext .ln{background:var(--soft);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:1px} .labnext .v{font-size:22px;font-weight:800} .labnext small{color:var(--muted)} .labnext em{font-style:normal;font-size:11px;color:var(--muted)}
+.labbars{height:180px} .labbars .bc{cursor:pointer} .fcl{position:absolute;left:-1px;right:-1px;border-top:3px solid var(--text);z-index:3;pointer-events:none}
+td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{color:#A63A26;font-weight:700}
+.sigrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px} .sigrow>span:first-child{flex:1 1 auto} .sigrow small{color:var(--muted)} .sigrow b.up{color:#2E7D4F} .sigrow b.dn{color:#A63A26}
+.effbar{width:120px;height:10px;position:relative;background:var(--soft);border-radius:5px} .effbar i{position:absolute;top:0;bottom:0;border-radius:5px} .effbar i.p{left:50%;background:#2E7D4F} .effbar i.m{right:50%;background:#A63A26}
+.missrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)} .missrow .small{color:var(--muted);font-size:12px;margin-top:2px}
+.labday{margin-top:10px;background:var(--soft);border-radius:12px;padding:10px 12px} .labdayp{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0;font-size:13px}
+.labhow summary{cursor:pointer;font-weight:700} .simtags{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 5px} .simtags span{font-size:11px;font-weight:700;background:var(--soft);color:var(--muted);border-radius:999px;padding:2px 8px}
+@media (max-width:640px){ .labrow{grid-template-columns:26px minmax(0,1fr) 52px;grid-template-areas:"rk nm b" "rk tr tr" "rk sm sm"} .labrow .nm{font-size:14px} }
 </style>
 </head>
 <body>
@@ -376,7 +391,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v201';
+const BOARD='v202';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -812,7 +827,7 @@ function patterns(){
         <span class="t">Forecast</span><b class="t">${rs(F.total)}</b></div>
       <h2 style="margin-top:14px">By hour <span class="n">hatched = forecast · band = usual range${act?' · dark line = actual so far':''}</span></h2>
       <div class="bars axed ptbars" style="grid-template-columns:repeat(${n},1fr)">${Y.html}${Array.from({length:n},(_,j)=>{ const h=lo+j; return `<div class="bc"><i class="band" style="bottom:${100*F.L[h]/Y.top}%;height:${Math.max(1,100*(F.U[h]-F.L[h])/Y.top)}%"></i><div class="bar fcp" style="height:${Math.max(2,100*F.H[h]/Y.top)}%" data-t="${hlabel(h)}:00 forecast ${rs(F.H[h])} · usual ${rs(F.L[h])}–${rs(F.U[h])}${act&&act[h]?' · actual '+rs(act[h]):''}"></div>${act&&act[h]?`<i class="actm" style="bottom:${Math.min(100,100*act[h]/Y.top)}%"></i>`:''}</div>`; }).join('')}</div>${hx(lo,hi)}
-      <h2 style="margin-top:14px">How good is it <span class="n">last ${A.n} days, each forecast from the days before it</span></h2>
+      <h2 style="margin-top:14px">How good is it <span class="n">last ${A.n} days, each forecast from the days before it · <a href="#" data-labgo>test every method in the Forecast lab ›</a></span></h2>
       <div class="scroll"><table><tr><th>Week of month</th><th class="r">miss with week</th><th class="r">without</th><th class="r">days</th></tr>${['W1','W2','W3','W4','W5'].map(w=>{ const x=A.by[w]; return `<tr${w===F.wk?' class="cur"':''}><td>${esc(PT_WKN[w])}</td><td class="r"><b>${x?Math.round(100*x.w/x.n)+'%':'—'}</b></td><td class="r">${x?Math.round(100*x.o/x.n)+'%':'—'}</td><td class="r">${x?x.n:0}</td></tr>`; }).join('')}</table></div>
       ${wb&&wb.o>wb.w?`<p class="note">Counting the week of the month cuts the miss in ${esc(PT_WKN[F.wk])} from ${Math.round(100*wb.o/wb.n)}% to ${Math.round(100*wb.w/wb.n)}%.</p>`:''}</div>`; }
   else fc=`<div class="card wide"><div class="note">Not enough past days to forecast ${esc(rpName(PT.fday))} yet.</div></div>`;
@@ -830,6 +845,193 @@ function ptWire(){
   $$('[data-ptl]').forEach(b=>b.onclick=()=>{ PT.lines=b.dataset.ptl; PT.hl=null; render(); });
   $$('[data-pth]').forEach(b=>b.onclick=()=>{ PT.hl=PT.hl===b.dataset.pth?null:b.dataset.pth; render(); });
   $$('[data-ptgo]').forEach(b=>b.onclick=()=>{ TAB='sales'; setDay(b.dataset.ptgo); });
+}
+
+/* ============================================================
+   FORECAST LAB - every method forecasts every past day using only the days
+   before it; the closest wins. Day tags (signals) are tested the same way.
+   Large orders and one-off events (weddings...) never enter the averages.
+   ============================================================ */
+/* calendar facts the forecast needs - approximate where marked; owner events override */
+const LAB_SPANS={
+  ramadan:[['2025-03-01','2025-03-30'],['2026-02-18','2026-03-19'],['2027-02-08','2027-03-09']],
+  school:[['2025-04-01','2025-06-01'],['2025-08-29','2025-09-07'],['2025-12-24','2026-01-04'],['2026-04-01','2026-05-31'],['2026-08-21','2026-08-30'],['2026-12-24','2027-01-03']],
+  exams:[['2025-03-03','2025-03-26'],['2026-03-05','2026-03-30']],
+  gulf:[['2025-07-04','2025-08-24'],['2025-12-08','2026-01-04'],['2026-03-16','2026-03-29'],['2026-07-03','2026-08-30'],['2026-12-14','2027-01-03']]
+};
+let EVENTS={};   /* settings/events {e:{'YYYY-MM-DD|n':{d,kind,note,oneoff}}} */
+const LAB_KINDS=[['match','Big match'],['wedding','Wedding season / local event'],['strike','Hartal / strike'],['rain','Heavy rain / alert'],['gulf','Gulf news (war, jobs)'],['fest','Festival / pooram'],['other','Other']];
+const inSpan=(d,L)=>L.some(([a,b])=>d>=a&&d<=b);
+const addDays=(d,n)=>{ const x=new Date(d+'T12:00:00'); x.setDate(x.getDate()+n); return ymd(x); };
+const evOf=d=>Object.values(EVENTS).filter(e=>e&&e.d===d);
+const oneOff=d=>evOf(d).some(e=>e.oneoff);
+/* the signals of a day, as flags (for the model) and as labels (for people) */
+function dayTags(d){
+  const dow=new Date(d+'T12:00:00').getDay(), n=+d.slice(8,10), dim=new Date(+d.slice(0,4),+d.slice(5,7),0).getDate();
+  const hol=!!HOLI[d], eve=!hol&&!!HOLI[addDays(d,1)], after=!hol&&!!HOLI[addDays(d,-1)];
+  /* long weekend: a Fri or Mon holiday, and the weekend touching it */
+  let longwk=false; [d,addDays(d,-1),addDays(d,1),addDays(d,-2),addDays(d,2)].forEach(x=>{ const w=new Date(x+'T12:00:00').getDay(); if(HOLI[x]&&(w===5||w===1)&&Math.abs((new Date(x+'T12:00:00')-new Date(d+'T12:00:00'))/864e5)<=2&&[0,6,5,1].includes(dow)) longwk=true; });
+  const ev=evOf(d);
+  const F={pay:n<=7, monthend:n>=dim-4, hol, eve, after, longwk, ramadan:inSpan(d,LAB_SPANS.ramadan), school:inSpan(d,LAB_SPANS.school), exams:inSpan(d,LAB_SPANS.exams), gulf:inSpan(d,LAB_SPANS.gulf), match:ev.some(e=>e.kind==='match'), rain:ev.some(e=>e.kind==='rain'), strike:ev.some(e=>e.kind==='strike')};
+  const L=[]; if(hol) L.push(HOLI[d][0]); if(eve) L.push('eve of '+HOLI[addDays(d,1)][0]); if(after) L.push('after '+HOLI[addDays(d,-1)][0]); if(longwk) L.push('long weekend');
+  if(F.pay) L.push('pay week'); if(F.monthend) L.push('month end'); if(F.ramadan) L.push('Ramadan'); if(F.school) L.push('school holidays'); if(F.exams) L.push('SSLC exams'); if(F.gulf) L.push('Gulf break');
+  ev.forEach(e=>L.push((LAB_KINDS.find(k=>k[0]===e.kind)||[0,e.kind])[1]+(e.note?': '+e.note:'')+(e.oneoff?' (one-off)':'')));
+  return {F,L,dow,wk:PT_WK(d)};
+}
+const LAB_GROUPS=[['wk','Week of month + pay week',['w2','w3','w4','w5','pay','monthend']],['hol','Holidays, eve, after, long weekend',['hol','eve','after','longwk']],['ramadan','Ramadan',['ramadan']],['school','School holidays + exams',['school','exams']],['gulf','Gulf breaks',['gulf']],['events','Your events (match, rain, strike)',['match','rain','strike']]];
+const LAB_FEATS=['w2','w3','w4','w5','pay','monthend','hol','eve','after','longwk','ramadan','school','exams','gulf','match','rain','strike','d1','d2','d3','d4','d5','d6'];
+function labX(d,drop){ const t=dayTags(d), F=t.F; const v={w2:t.wk==='W2',w3:t.wk==='W3',w4:t.wk==='W4',w5:t.wk==='W5'}; Object.assign(v,F); for(let i=1;i<7;i++) v['d'+i]=t.dow===i;
+  return LAB_FEATS.map(k=>drop&&drop.includes(k)?0:(v[k]?1:0)); }
+/* the days the lab learns from: real sales, no holiday-free assumption, no one-off events */
+function labDays(){ return Object.keys(INDEX).filter(d=>d<bizToday()&&INDEX[d].hours&&nrev(d)>0).sort(); }
+const labTrain=(all,d)=>all.filter(x=>x<d&&!oneOff(x));
+const sameWd=(hist,d,n)=>{ const w=new Date(d+'T12:00:00').getDay(); return hist.filter(x=>new Date(x+'T12:00:00').getDay()===w).slice(-n); };
+const med=v=>{ const a=v.slice().sort((x,y)=>x-y), n=a.length; return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):null; };
+const mean=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
+/* ridge regression: target = log(day / mean of last 4 same weekdays); features = signals */
+function ridgeFit(rows,lam){ const p=rows[0].x.length+1, A=Array.from({length:p},()=>Array(p).fill(0)), b=Array(p).fill(0);
+  rows.forEach(r=>{ const x=[1].concat(r.x); for(let i=0;i<p;i++){ b[i]+=x[i]*r.y; for(let j=0;j<p;j++) A[i][j]+=x[i]*x[j]; } });
+  for(let i=1;i<p;i++) A[i][i]+=lam;
+  /* Gauss-Jordan */
+  const M=A.map((r,i)=>r.concat([b[i]])); for(let c=0;c<p;c++){ let piv=c; for(let r=c+1;r<p;r++) if(Math.abs(M[r][c])>Math.abs(M[piv][c])) piv=r; [M[c],M[piv]]=[M[piv],M[c]]; const v=M[c][c]||1e-9; for(let k=c;k<=p;k++) M[c][k]/=v; for(let r=0;r<p;r++) if(r!==c){ const f=M[r][c]; if(f) for(let k=c;k<=p;k++) M[r][k]-=f*M[c][k]; } }
+  return M.map(r=>r[p]); }
+/* per day, once: its baseline (mean of the 4 same weekdays before it, one-offs left out) and its signal row */
+function labPre(all){ const P={base:{},x:{}}, byW={}; all.forEach(d=>{ P.x[d]=labX(d); if(oneOff(d)) return; const w=new Date(d+'T12:00:00').getDay(), L=byW[w]=byW[w]||[]; if(L.length>=2) P.base[d]=mean(L.slice(-4).map(nrev)); L.push(d); }); return P; }
+function ridgeRows(hist,drop){ const P=LAB.pre, idx=drop?drop.map(k=>LAB_FEATS.indexOf(k)):[]; return hist.filter(d=>P.base[d]&&P.x[d]).map(d=>{ let x=P.x[d]; if(idx.length){ x=x.slice(); idx.forEach(i=>{ if(i>=0) x[i]=0; }); } return {x,y:Math.log(nrev(d)/P.base[d])}; }); }
+/* Holt-Winters, multiplicative weekly season, run along the calendar (closed days are skipped, not zero) */
+function hwRun(all,params){ const [al,ga]=params; const S=Array(7).fill(1); let L=null, out={};
+  const first=all[0]; if(!first) return out; const start=new Date(first+'T12:00:00'); const end=new Date(bizToday()+'T12:00:00');
+  const seed=all.slice(0,21); if(seed.length<7) return out; const m=mean(seed.map(nrev)); const byW={}; seed.forEach(d=>{ const w=new Date(d+'T12:00:00').getDay(); (byW[w]=byW[w]||[]).push(nrev(d)/m); }); for(let w=0;w<7;w++) S[w]=byW[w]?mean(byW[w]):1; L=m;
+  const have=new Set(all);
+  for(let t=new Date(start); t<=end; t.setDate(t.getDate()+1)){ const d=ymd(t), w=t.getDay(); out[d]=L*S[w];
+    if(have.has(d)&&!oneOff(d)){ const y=nrev(d); const Lp=L; L=al*(y/S[w])+(1-al)*L; S[w]=ga*(y/Lp)+(1-ga)*S[w]; } }
+  return out; }
+/* the methods. Each: (day, history before it) -> total */
+const LAB_M={
+  wd8:{name:'Same weekday · middle of last 8',f:(d,h)=>med(sameWd(h,d,8).map(nrev))},
+  wd4:{name:'Same weekday · average of last 4',f:(d,h)=>mean(sameWd(h,d,4).map(nrev))},
+  wom:{name:'Weekday × week of month',f:(d,h)=>{ const F=ptForecast(d,true); return F?F.total:null; }},
+  app:{name:'Current app forecast',f:(d)=>{ try{ const M=fcModel(d,FC_BEST||'trim'); return M?M.plan:null; }catch(e){ return null; } }},
+  hw:{name:'Holt-Winters (weekly)',f:(d)=>LAB.hw?LAB.hw[d]:null},
+  knn:{name:'Similar situation days',f:(d,h)=>{ const t=dayTags(d); const c=sameWd(h,d,26).map(x=>{ const u=dayTags(x); let s=0; ['pay','monthend','hol','eve','after','longwk','ramadan','school','exams','gulf','match'].forEach(k=>{ if(u.F[k]!==t.F[k]) s+=k==='hol'||k==='ramadan'?3:1; }); if(u.wk!==t.wk) s+=0.5; return {x,s}; }).sort((a,b)=>a.s-b.s||(b.x>a.x?1:-1)).slice(0,5); if(c.length<3) return null; return med(c.map(o=>nrev(o.x))); }},
+  ridge:{name:'Signals model (regression)',f:(d,h)=>{ const base=mean(sameWd(h,d,4).map(nrev)); if(!base) return null; const B=LAB.coef(h); if(!B) return null; const x=[1].concat(labX(d)); return base*Math.exp(x.reduce((s,v,i)=>s+v*B[i],0)); }},
+};
+let LAB={res:null,key:'',hw:null,coefCache:{},busy:false,view:'day',sel:null};
+LAB.coef=function(h,drop){ const k=h.length+'|'+(h[h.length-1]||'')+'|'+(drop||[]).join(','); if(LAB.coefCache[k]!==undefined) return LAB.coefCache[k]; const rows=ridgeRows(h,drop); const B=rows.length>=28?ridgeFit(rows,3):null; LAB.coefCache[k]=B; return B; };
+/* the shape of a day, for hour scores and live updates */
+function labShape(d,h){ const L=sameWd(h,d,8); if(!L.length) return null; const P=Array(24).fill(0); for(let i=0;i<24;i++) P[i]=med(L.map(x=>INDEX[x].hours[i]||0)); const s=P.reduce((a,b)=>a+b,0)||1; return P.map(v=>v/s); }
+/* live update at a cut-off hour: shrink the gap between what came and what was expected */
+function labLive(T,shape,act,cut){ let O=0,s=0; for(let i=0;i<cut;i++){ O+=act[i]||0; s+=shape[i]; } if(s<0.02) return T; const r=O/Math.max(1,T*s), w=s/(s+0.15); const T2=T*(1+w*(r-1)); return O+T2*(1-s); }
+const LAB_CUTS=[['c12',7,'12:00'],['c15',10,'3 pm'],['c18',13,'6 pm']];
+function labRun(){
+  const all=labDays(); const key=all.length+'|'+all[all.length-1]+'|'+Object.keys(EVENTS).length+'|'+Object.keys(LARGE).length+'|'+PT.method+'|'+PT.back;
+  if(LAB.res&&LAB.key===key) return LAB.res; LAB.coefCache={};
+  if(all.length<45) return LAB.res={short:all.length};
+  LAB.pre=labPre(all);
+  /* Holt-Winters: pick the smoothing that missed least before the test window */
+  const test=all.filter(d=>labTrain(all,d).length>=35).slice(-90), t0=test[0];
+  let bestP=[0.3,0.2],bestE=1e9; [[0.1,0.1],[0.2,0.1],[0.3,0.2],[0.4,0.2],[0.5,0.3],[0.2,0.3]].forEach(p=>{ const o=hwRun(all,p); let e=0,n=0; all.filter(d=>d<t0&&d>=all[21]&&!oneOff(d)).forEach(d=>{ if(o[d]){ e+=Math.abs(o[d]-nrev(d)); n++; } }); if(n&&e/n<bestE){ bestE=e/n; bestP=p; } });
+  LAB.hw=hwRun(all,bestP);
+  const M=Object.keys(LAB_M).concat(['blend']); const rows=[];
+  const err={}; M.forEach(m=>err[m]=[]);
+  test.forEach(d=>{ const h=labTrain(all,d), a=nrev(d), act=INDEX[d].hours, shape=labShape(d,h); const r={d,a,p:{},cut:{},hr:{},one:oneOff(d)};
+    Object.keys(LAB_M).forEach(m=>{ let v=null; try{ v=LAB_M[m].f(d,h); }catch(e){} if(v>0) r.p[m]=v; });
+    /* blend: the 3 best by recent error (only errors from before this day), weighted 1/error */
+    const recent=Object.keys(LAB_M).map(m=>({m,e:err[m].slice(-28)})).filter(x=>x.e.length>=7&&r.p[x.m]).map(x=>({m:x.m,e:mean(x.e)})).sort((a,b)=>a.e-b.e).slice(0,3);
+    if(recent.length){ const W=recent.map(x=>1/Math.max(0.02,x.e)), sw=W.reduce((a,b)=>a+b,0); r.p.blend=recent.reduce((s,x,i)=>s+r.p[x.m]*W[i]/sw,0); r.blendOf=recent.map(x=>x.m); }
+    else if(r.p.wd8) r.p.blend=r.p.wd8;
+    M.forEach(m=>{ const v=r.p[m]; if(!v) return; if(!r.one) err[m].push(Math.abs(v-a)/a);
+      if(shape){ r.hr[m]=shape.reduce((s,f,i)=>s+Math.abs(f*v-(act[i]||0)),0); r.cut[m]={}; LAB_CUTS.forEach(([k,c])=>{ r.cut[m][k]=labLive(v,shape,act,c); }); } });
+    rows.push(r); });
+  /* scores */
+  const score={}; M.forEach(m=>{ const R=rows.filter(r=>r.p[m]&&!r.one); if(!R.length) return; const A=R.reduce((s,r)=>s+r.a,0);
+    const s={n:R.length,wape:R.reduce((s,r)=>s+Math.abs(r.p[m]-r.a),0)/A,bias:R.reduce((s,r)=>s+(r.p[m]-r.a),0)/A,in10:R.filter(r=>Math.abs(r.p[m]-r.a)/r.a<=0.1).length/R.length,in20:R.filter(r=>Math.abs(r.p[m]-r.a)/r.a<=0.2).length/R.length,
+      hour:R.filter(r=>r.hr[m]!=null).reduce((s,r)=>s+r.hr[m],0)/Math.max(1,R.filter(r=>r.hr[m]!=null).reduce((s,r)=>s+r.a,0)),
+      recent:(()=>{ const T=R.slice(-28), A2=T.reduce((s,r)=>s+r.a,0); return T.reduce((s,r)=>s+Math.abs(r.p[m]-r.a),0)/A2; })(),
+      byDow:{}, byWk:{}, cut:{} };
+    for(let w=0;w<7;w++){ const T=R.filter(r=>new Date(r.d+'T12:00:00').getDay()===w); if(T.length) s.byDow[w]=T.reduce((x,r)=>x+Math.abs(r.p[m]-r.a),0)/T.reduce((x,r)=>x+r.a,0); }
+    ['W1','W2','W3','W4','W5'].forEach(k=>{ const T=R.filter(r=>PT_WK(r.d)===k); if(T.length) s.byWk[k]=T.reduce((x,r)=>x+Math.abs(r.p[m]-r.a),0)/T.reduce((x,r)=>x+r.a,0); });
+    LAB_CUTS.forEach(([k])=>{ const T=R.filter(r=>r.cut[m]); if(T.length) s.cut[k]=T.reduce((x,r)=>x+Math.abs(r.cut[m][k]-r.a),0)/T.reduce((x,r)=>x+r.a,0); });
+    /* honest range from its own misses: 10th and 90th percentile of (actual / forecast) */
+    const q=R.map(r=>r.a/r.p[m]).sort((a,b)=>a-b); s.lo=q[Math.floor(q.length*0.1)]; s.hi=q[Math.min(q.length-1,Math.floor(q.length*0.9))];
+    score[m]=s; });
+  const rank=Object.keys(score).sort((a,b)=>score[a].recent-score[b].recent);
+  /* which signals help: the signals model with each group switched off, scored on the same days */
+  const sig=[]; const base=score.ridge?score.ridge.wape:null;
+  if(base!=null){ LAB_GROUPS.forEach(([g,label,keys])=>{ let e=0,A=0; rows.forEach(r=>{ if(r.one) return; const h=labTrain(all,r.d), b4=mean(sameWd(h,r.d,4).map(nrev)), B=LAB.coef(h,keys); if(!b4||!B) return; const x=[1].concat(labX(r.d,keys)); const v=b4*Math.exp(x.reduce((s,q,i)=>s+q*B[i],0)); e+=Math.abs(v-r.a); A+=r.a; }); const idx=keys.map(k=>LAB_FEATS.indexOf(k)); const nd=rows.filter(r=>!r.one&&idx.some(i=>LAB.pre.x[r.d]&&LAB.pre.x[r.d][i])).length; if(A) sig.push({g,label,without:e/A,gain:e/A-base,nd}); }); }
+  /* what each signal does to sales, fitted on all history */
+  const hAll=all.filter(d=>!oneOff(d)); const Ball=LAB.coef(hAll); const eff=[];
+  if(Ball){ LAB_FEATS.forEach((k,i)=>{ const n=hAll.filter(d=>labX(d)[i]).length; if(n>=2&&!/^d\d$/.test(k)) eff.push({k,n,pct:Math.exp(Ball[i+1])-1}); }); }
+  return LAB.res={rows,score,rank,sig,eff,test,all,hwP:bestP,key};
+}
+const LAB_FN={w2:'Week 2 (8–14)',w3:'Week 3 (15–21)',w4:'Week 4 (22–28)',w5:'29th – 31st',pay:'Pay week (1–7)',monthend:'Month end',hol:'Holiday',eve:'Day before a holiday',after:'Day after a holiday',longwk:'Long weekend',ramadan:'Ramadan',school:'School holidays',exams:'SSLC exams',gulf:'Gulf school break',match:'Big match',rain:'Heavy rain / alert',strike:'Hartal / strike'};
+function labNext(R){ const m=R.rank[0], all=R.all, h=all.filter(d=>!oneOff(d)); const out=[]; const s=R.score[m];
+  for(let i=0;i<7;i++){ const d=addDays(bizToday(),i); let v=null; try{ v=m==='blend'?mean((R.rows[R.rows.length-1].blendOf||['wd8']).map(k=>LAB_M[k].f(d,h)).filter(x=>x>0)):LAB_M[m].f(d,h); }catch(e){} if(!(v>0)) v=LAB_M.wd8.f(d,h);
+    out.push({d,v,lo:v*(s.lo||0.85),hi:v*(s.hi||1.15),tags:dayTags(d).L}); } return {m,out}; }
+function lab(){
+  const R=labRun(); const pct=x=>x==null?'—':Math.round(x*100)+'%';
+  if(R.short!=null) return `<div class="card wide"><h2>Forecast lab</h2><div class="note">Needs at least 45 days of history; ${R.short} so far.</div></div>`;
+  const name=m=>m==='blend'?'Blend of the best 3':LAB_M[m].name;
+  const best=R.rank[0], mx=Math.max(...R.rank.map(m=>R.score[m].recent));
+  const view=LAB.view, metric=m=>view==='day'?R.score[m].recent:view==='hour'?R.score[m].hour:R.score[m].cut[view];
+  const order=R.rank.slice().sort((a,b)=>(metric(a)??9)-(metric(b)??9)); const vmx=Math.max(0.05,...order.map(m=>metric(m)||0));
+  const board=`<div class="card wide labboard"><h2>Leaderboard <span class="n">${R.test.length} past days · each forecast made only from the days before it</span></h2>
+    <div class="seg labseg">${[['day','Day total'],['hour','Each hour'],['c12','At 12:00'],['c15','At 3 pm'],['c18','At 6 pm']].map(v=>`<button class="${view===v[0]?'on':''}" data-labv="${v[0]}">${v[1]}</button>`).join('')}</div>
+    <p class="note" style="margin:6px 0">${view==='day'?'Miss % on the whole day (last 28 days). Lower is better.':view==='hour'?'Miss % spread over the hours.':'Miss % on the day total when the forecast is updated at '+LAB_CUTS.find(c=>c[0]===view)[2]+' with the real hours so far.'}</p>
+    ${order.map((m,i)=>{ const v=metric(m), s=R.score[m]; return `<button class="labrow${LAB.sel===m?' on':''}" data-labm="${m}"><span class="rk">${i+1}</span><span class="nm">${esc(name(m))}${m===best&&view==='day'?' <i class="win">best</i>':''}</span><span class="tr"><i style="width:${v==null?0:Math.max(3,100*v/vmx)}%;background:${i===0?'#2E7D4F':i<3?'#C0882C':'#8b8178'}"></i></span><b>${pct(v)}</b><small>${pct(s.in10)} within ±10% · ${s.bias>=0?'+':''}${Math.round(s.bias*100)}% bias</small></button>`; }).join('')}</div>`;
+  /* next 7 days from the winner */
+  const N=labNext(R);
+  const next=`<div class="card wide"><h2>Next 7 days <span class="n">${esc(name(N.m))} · range = its own misses (80% of days)</span></h2>
+    <div class="labnext">${N.out.map(x=>`<div class="ln"><b>${x.d===bizToday()?'Today':PT_DN[new Date(x.d+'T12:00:00').getDay()]+' '+(+x.d.slice(8))}</b><span class="v">${kfmt(x.v)}</span><small>${kfmt(x.lo)} – ${kfmt(x.hi)}</small>${x.tags.length?`<em>${esc(x.tags.join(' · '))}</em>`:''}</div>`).join('')}</div></div>`;
+  /* actual vs forecast, last 60 days, for the chosen method */
+  const sm=LAB.sel&&R.score[LAB.sel]?LAB.sel:best; const L=R.rows.slice(-60); const Y=yscale(Math.max(1,...L.map(r=>Math.max(r.a,r.p[sm]||0))));
+  const chart=`<div class="card wide"><h2>Forecast vs real · last ${L.length} days <span class="n">${esc(name(sm))} · bar = real, line = forecast · tap a bar</span></h2>
+    <div class="bars axed labbars" style="grid-template-columns:repeat(${L.length},1fr)">${Y.html}${L.map(r=>{ const f=r.p[sm], e=f?(f-r.a)/r.a:0; return `<div class="bc" data-labd="${r.d}"><div class="bar" style="height:${Math.max(2,100*r.a/Y.top)}%;background:${r.one?'#8b8178':Math.abs(e)<=0.1?'#2E7D4F':Math.abs(e)<=0.2?'#C0882C':'#A63A26'}" data-t="${r.d} real ${rs(r.a)}${f?' · forecast '+rs(f)+' ('+(e>=0?'+':'')+Math.round(e*100)+'%)':''}"></div>${f?`<i class="fcl" style="bottom:${Math.min(100,100*f/Y.top)}%"></i>`:''}</div>`; }).join('')}</div>
+    <div class="ptkey"><span><i style="background:#2E7D4F"></i>within ±10%</span><span><i style="background:#C0882C"></i>±10–20%</span><span><i style="background:#A63A26"></i>more</span><span><i style="background:#8b8178"></i>one-off event</span></div>${LAB.day?labDayCard(R,LAB.day,sm):''}</div>`;
+  /* where each method misses */
+  const top=R.rank.slice(0,4); const dn=[1,2,3,4,5,6,0];
+  const where=`<div class="card wide"><h2>Where they miss <span class="n">miss % by weekday and week of month</span></h2><div class="scroll"><table><tr><th>Method</th>${dn.map(w=>`<th class="r">${PT_DN[w]}</th>`).join('')}${['W1','W2','W3','W4','W5'].map(k=>`<th class="r">${k==='W5'?'29+':k}</th>`).join('')}</tr>
+    ${top.map(m=>`<tr><td>${esc(name(m))}</td>${dn.map(w=>{ const v=R.score[m].byDow[w]; return `<td class="r ${v==null?'':v<=0.1?'cg':v<=0.2?'ca':'cr'}">${pct(v)}</td>`; }).join('')}${['W1','W2','W3','W4','W5'].map(k=>{ const v=R.score[m].byWk[k]; return `<td class="r ${v==null?'':v<=0.1?'cg':v<=0.2?'ca':'cr'}">${pct(v)}</td>`; }).join('')}</tr>`).join('')}</table></div></div>`;
+  /* signals */
+  const sigs=R.sig.slice().sort((a,b)=>b.gain-a.gain);
+  const sig=`<div class="card"><h2>Which signals help <span class="n">signals model with each one switched off</span></h2>${sigs.map(s=>`<div class="sigrow"><span>${esc(s.label)}</span><b class="${s.gain>0.002?'up':s.gain<-0.002?'dn':''}">${!s.nd?'no such days lately':s.gain>0.002?'helps '+(s.gain*100).toFixed(1)+' pts':s.gain<-0.002?'hurts '+(-s.gain*100).toFixed(1)+' pts':'no clear effect'}</b><small style="margin-left:6px">${s.nd} days</small></div>`).join('')||'<div class="note">Needs a few more weeks of history.</div>'}<p class="note">"helps 2 pts" = the miss would be 2 points worse without it.</p></div>`;
+  const effs=R.eff.slice().sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  const eff=`<div class="card"><h2>What each signal does to sales <span class="n">vs the last 4 same weekdays · your history</span></h2>${effs.map(e=>`<div class="sigrow"><span>${esc(LAB_FN[e.k]||e.k)} <small>${e.n} days</small></span><span class="effbar"><i class="${e.pct>=0?'p':'m'}" style="width:${Math.min(50,Math.abs(e.pct)*100)}%"></i></span><b class="${e.pct>=0?'up':'dn'}">${e.pct>=0?'+':''}${Math.round(e.pct*100)}%</b></div>`).join('')||'<div class="note">Not enough flagged days yet.</div>'}</div>`;
+  /* biggest misses */
+  const bm=R.rows.filter(r=>r.p[best]).map(r=>({r,e:(r.p[best]-r.a)/r.a})).sort((a,b)=>Math.abs(b.e)-Math.abs(a.e)).slice(0,10);
+  const miss=`<div class="card wide"><h2>Biggest misses <span class="n">add the reason once; one-off days leave the averages</span></h2>${bm.map(({r,e})=>{ const t=dayTags(r.d); return `<div class="missrow"><div><b>${esc(rpName(r.d))}</b> <span class="d ${e<0?'up':'dn'}">${e<0?'busier':'quieter'} than forecast · real ${rs(r.a)} vs ${rs(r.p[best])}</span><div class="small">${esc(t.L.join(' · ')||'no tags')}</div></div><button class="chip" data-labev="${r.d}">+ reason</button></div>`; }).join('')}</div>`;
+  const how=`<details class="card wide labhow"><summary>How the lab works</summary><ul class="small">
+    <li>Every past day is forecast as if it were that morning, using only the days before it.</li>
+    <li>Large orders are taken out; days you mark one-off (wedding, strike) are not learnt from.</li>
+    <li>Ranking uses the last 28 days, so it follows how the shop is now.</li>
+    <li>The blend mixes the 3 methods that were closest recently; it re-weights itself every day.</li>
+    <li>Holt-Winters smoothing chosen from the days before the test: ${R.hwP.join(' / ')}.</li>
+    <li>School, Gulf-break and Ramadan dates are approximate; add an event to correct a day.</li></ul></details>`;
+  return `<div class="grid">${board}${next}${chart}${where}${sig}${eff}${miss}${how}</div>`;
+}
+function labDayCard(R,d,sm){ const r=R.rows.find(x=>x.d===d); if(!r) return ''; const t=dayTags(d);
+  return `<div class="labday"><b>${esc(rpName(d))}</b> · real ${rs(r.a)}${r.p[sm]?' · forecast '+rs(r.p[sm]):''}<div class="small">${esc(t.L.join(' · ')||'no tags')}</div>
+    <div class="labdayp">${Object.keys(r.p).map(m=>`<span>${esc(m==='blend'?'Blend':LAB_M[m].name)} <b>${kfmt(r.p[m])}</b></span>`).join('')}</div><button class="chip" data-labev="${d}">+ reason for this day</button></div>`; }
+function labEventSheet(d){ const old=$('labEv'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='labEv';
+  const cur=evOf(d);
+  box.innerHTML=`<div class="sheet"><h2>${esc(rpName(d))}<button class="x" id="labEvX">✕</button></h2><p class="sub">What made this day different? Saved for the forecast and shown on this day everywhere.</p>
+    ${cur.length?`<div class="mini">${Object.entries(EVENTS).filter(([k,e])=>e&&e.d===d).map(([k,e])=>`<div class="mrow"><span>${esc((LAB_KINDS.find(x=>x[0]===e.kind)||[0,e.kind])[1])}${e.note?' · '+esc(e.note):''}${e.oneoff?' · one-off':''}</span><button class="chip" data-labdel="${esc(k)}">Remove</button></div>`).join('')}</div>`:''}
+    <div class="chips" style="margin:10px 0">${LAB_KINDS.map(k=>`<button class="chip" data-labk="${k[0]}">${k[1]}</button>`).join('')}</div>
+    <input id="labNote" class="search" placeholder="Note (optional): e.g. Argentina vs Brazil 8:30pm">
+    <label class="rronce"><input type="checkbox" id="labOne" checked> One-off <small>Won't happen again on a normal day (wedding, strike). Keeps it out of the averages.</small></label>
+    <button class="simgo" id="labSave" disabled>Save</button></div>`;
+  document.body.appendChild(box); let kind=null;
+  box.onclick=e=>{ if(e.target===box) box.remove(); }; $('labEvX').onclick=()=>box.remove();
+  $$('[data-labk]',box).forEach(b=>b.onclick=()=>{ kind=b.dataset.labk; $$('[data-labk]',box).forEach(x=>x.classList.toggle('on',x===b)); $('labOne').checked=['wedding','strike','other'].includes(kind); $('labSave').disabled=false; });
+  $('labSave').onclick=async()=>{ const id=d+'|'+Date.now().toString(36); const v={d,kind,note:$('labNote').value.trim(),oneoff:$('labOne').checked,at:new Date().toISOString()}; EVENTS[id]=v; LAB.res=null; box.remove(); render(); try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','events'),{e:{[id]:v}},{merge:true}); }catch(e){ alert('Could not save: '+(e.code||e)); } };
+  $$('[data-labdel]',box).forEach(b=>b.onclick=async()=>{ const k=b.dataset.labdel; delete EVENTS[k]; LAB.res=null; box.remove(); render(); try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','events'),{e:{[k]:FB.fs.deleteField()}},{merge:true}); }catch(e){} });
+}
+function labWire(){
+  $$('[data-labv]').forEach(b=>b.onclick=()=>{ LAB.view=b.dataset.labv; render(); });
+  $$('[data-labm]').forEach(b=>b.onclick=()=>{ LAB.sel=LAB.sel===b.dataset.labm?null:b.dataset.labm; render(); });
+  $$('[data-labd]').forEach(b=>b.onclick=()=>{ LAB.day=LAB.day===b.dataset.labd?null:b.dataset.labd; render(); });
+  $$('[data-labev]').forEach(b=>b.onclick=()=>labEventSheet(b.dataset.labev));
+  $$('[data-labgo]').forEach(b=>b.onclick=e=>{ e.preventDefault(); TAB='lab'; render(); });
 }
 
 function hourly(){
@@ -1208,13 +1410,20 @@ function simDays(){
   const S=simBase(); const {A,hc,mine,nowMin}=S; if(!(mine>0)) return {S,rows:[]};
   const dow=new Date(DAY+'T12:00:00').getDay(), floor=Math.max(200,0.02*mine), tol=SIM.tol;
   const hrs=[]; for(let i=0;i<hc;i++) if((A[i]||0)>=floor) hrs.push(i);
-  const keep=d=>{ const w=new Date(d+'T12:00:00').getDay(); return SIM.filter==='all'||(SIM.filter==='dow'&&w===dow)||(SIM.filter==='wk'&&w>0&&w<6)||(SIM.filter==='we'&&(w===0||w===6)); };
+  const SK=['pay','monthend','hol','eve','after','longwk','ramadan','school','exams','gulf'], me=dayTags(DAY).F;
+  const keep=d=>{ const w=new Date(d+'T12:00:00').getDay(); if(oneOff(d)) return false; return SIM.filter==='all'||(SIM.filter==='dow'&&w===dow)||(SIM.filter==='wk'&&w>0&&w<6)||(SIM.filter==='we'&&(w===0||w===6))||(SIM.filter==='same'&&w===dow&&SK.every(k=>dayTags(d).F[k]===me[k])); };
+  /* hours compared with one hour of slack: a rush at 1pm one day and at 2pm another still count as alike */
+  const sm3=H=>H.map((v,i)=>((H[i-1]||0)+2*(v||0)+(H[i+1]||0))/4);
+  const As=sm3(A), cumA=[]; { let c=0; for(let i=0;i<24;i++){ c+=A[i]||0; cumA.push(c); } }
   const rows=Object.keys(INDEX).filter(d=>d!==DAY&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0&&keep(d)).map(d=>{
-    const B=INDEX[d].hours, sofar=cumTill(B,nowMin), md=(sofar-mine)/mine;
-    const cells=[]; let ws=0, w=0, within=0; for(let i=0;i<hc;i++){ const a=A[i]||0, b=B[i]||0; if(a<floor&&b<floor){ cells.push({i,a,b,k:'z'}); continue; }
-      const e=Math.abs(b-a)/Math.max(a,floor); cells.push({i,a,b,e,k:e<=tol?'g':e<=tol*2.5?'a':'r'}); if(a>=floor){ ws+=a*Math.max(0,1-e/0.5); w+=a; if(e<=tol) within++; } }
-    const ms=Math.max(0,1-Math.abs(md)/0.5), hs=w?ws/w:0, match=Math.round(100*(0.5*ms+0.5*hs))+(new Date(d+'T12:00:00').getDay()===dow?2:0);
-    return {d,sofar,md,end:INDEX[d].rev,rest:nrev(d)-sofar,cells,within,n:hrs.length,match:Math.min(100,match),close:Math.abs(md)<=tol&&hrs.length&&within/hrs.length>=0.7}; })
+    const B=INDEX[d].hours, sofar=cumTill(B,nowMin), md=(sofar-mine)/mine, Bs=sm3(B);
+    const tl=Math.max(tol,0.2);   /* one hour on its own swings ±30%: judge hours at ±20% at least */
+    const cells=[]; let within=0, ce=0, cn=0, cb=0; for(let i=0;i<hc;i++){ const a=A[i]||0, b=B[i]||0; cb+=b; if(a>=floor||b>=floor){ ce+=Math.abs(cb-cumA[i]); cn++; }
+      if(a<floor&&b<floor){ cells.push({i,a,b,k:'z'}); continue; }
+      const e=Math.min(...[i-1,i,i+1].filter(j=>j>=0&&j<24).map(j=>Math.abs((Bs[j]||0)-As[i])))/Math.max(As[i],floor); cells.push({i,a,b,e,k:e<=tl?'g':e<=tl*2?'a':'r'}); if(a>=floor&&e<=tl) within++; }
+    /* match = half the money so far, half the running total hour by hour */
+    const ms=Math.max(0,1-Math.abs(md)/0.5), hs=cn?Math.max(0,1-(ce/cn)/(0.3*mine)):0, match=Math.round(100*(0.5*ms+0.5*hs))+(new Date(d+'T12:00:00').getDay()===dow?2:0);
+    return {d,sofar,md,end:INDEX[d].rev,rest:nrev(d)-sofar,cells,within,n:hrs.length,match:Math.min(100,match),tags:dayTags(d).L,close:Math.abs(md)<=tol&&hs>=0.75}; })
     .sort((a,b)=>b.match-a.match).slice(0,8);
   return {S,rows};
 }
@@ -1228,7 +1437,7 @@ function similar(){
   const {S,rows}=simDays(), wd=rpWd, live=S.live;
   if(!(S.mine>0)) return `<div class="card wide"><h2>Similar days</h2><div class="note">No sales yet for ${esc(rpName(DAY))}. Come back after the first hour.</div></div>`;
   const tolC=[0.05,0.10,0.20].map(t=>`<button class="chip${SIM.tol===t?' on':''}" data-simt="${t}">±${Math.round(t*100)}%</button>`).join('');
-  const fC=[['all','Any day'],['dow','Same weekday'],['wk','Mon–Fri'],['we','Sat–Sun']].map(f=>`<button class="chip${SIM.filter===f[0]?' on':''}" data-simf="${f[0]}">${f[1]}</button>`).join('');
+  const fC=[['all','Any day'],['dow','Same weekday'],['same','Same situation'],['wk','Mon–Fri'],['we','Sat–Sun']].map(f=>`<button class="chip${SIM.filter===f[0]?' on':''}" data-simf="${f[0]}">${f[1]}</button>`).join('');
   SIM.pick=SIM.pick.filter(d=>rows.some(r=>r.d===d)); if(!SIM.touched&&!SIM.pick.length) SIM.pick=rows.filter(r=>r.close).slice(0,3).map(r=>r.d); if(!SIM.touched&&!SIM.pick.length) SIM.pick=rows.slice(0,2).map(r=>r.d);
   const close=rows.filter(r=>r.close), ref=close.length?close:rows.slice(0,3);
   const ends=ref.map(r=>S.mine+r.rest).sort((a,b)=>a-b), med=ends.length?ends[Math.floor(ends.length/2)]:0;
@@ -1236,12 +1445,12 @@ function similar(){
     <div class="chips">${tolC}<span style="width:8px"></span>${fC}</div>
     ${live&&ends.length?`<div class="simfin"><small>Days like this finished at</small><b>${rs(ends[0])}${ends.length>1?' – '+rs(ends[ends.length-1]):''}</b><em>middle ${rs(med)} · from ${ref.length} ${close.length?'close':'nearest'} day${ref.length>1?'s':''}${!close.length&&rows[0]&&rows[0].match<60?' · weak match, treat as rough':''}</em></div>`:''}
     <button class="simgo" id="simGo"${SIM.pick.length?'':' disabled'}>▶ Simulate today + ${SIM.pick.length} day${SIM.pick.length===1?'':'s'}</button></div>`;
-  const list=`<div class="card wide"><h2>Best matches <span class="n">tick up to 4 · green = hour within ±${Math.round(SIM.tol*100)}%</span></h2>${rows.map(r=>{ const on=SIM.pick.includes(r.d), up=r.md>=0;
+  const list=`<div class="card wide"><h2>Best matches <span class="n">match = half money so far, half running total by hour · green hour = within ±${Math.round(Math.max(SIM.tol,0.2)*100)}%, one hour of slack</span></h2>${rows.map(r=>{ const on=SIM.pick.includes(r.d), up=r.md>=0;
       return `<div class="simrow${r.close?' close':''}"><label class="simck"><input type="checkbox" data-simp="${r.d}"${on?' checked':''}></label>
         <div class="simm"><b>${r.match}%</b><small>match</small></div>
         <div class="simi"><div class="simt"><b>${esc(rpName(r.d))}</b>${r.close?'<span class="tag">close</span>':''}</div>
-          <div class="simn">so far ${rs(r.sofar)} <span class="d ${up?'up':'dn'}">${up?'+':''}${Math.round(100*r.md)}%</span>${r.n?` · ${r.within}/${r.n} hours match`:''}${live?` · then +${rs(r.rest)} → ended ${rs(r.end)}`:` · ended ${rs(r.end)}`}</div>
-          <div class="simstrip">${r.cells.filter(c=>c.k!=='z'||c.i>=Math.min(...r.cells.filter(x=>x.k!=='z').map(x=>x.i))).map(c=>`<i class="${c.k}" data-simh="${c.i}" title="${hlabel(c.i)}:00 · today ${rs(c.a)} · ${rs(c.b)}">${hlabel(c.i)}</i>`).join('')}</div></div>
+          <div class="simn">so far ${rs(r.sofar)} <span class="d ${up?'up':'dn'}">${up?'+':''}${Math.round(100*r.md)}%</span>${r.n?` · ${r.within}/${r.n} hours close (±1 h)`:''}${live?` · then +${rs(r.rest)} → ended ${rs(r.end)}`:` · ended ${rs(r.end)}`}</div>
+          ${r.tags.length?`<div class="simtags">${r.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}<div class="simstrip">${r.cells.filter(c=>c.k!=='z'||c.i>=Math.min(...r.cells.filter(x=>x.k!=='z').map(x=>x.i))).map(c=>`<i class="${c.k}" data-simh="${c.i}" title="${hlabel(c.i)}:00 · today ${rs(c.a)} · ${rs(c.b)}">${hlabel(c.i)}</i>`).join('')}</div></div>
         <button class="simx" data-simo="${r.d}" title="hour by hour">${SIM.open===r.d?'▴':'▾'}</button></div>${SIM.open===r.d?simDetail(r,S):''}`; }).join('')||'<div class="note">No day within reach. Try ±20% or Any day.</div>'}</div>`;
   /* similar hours */
   const done=[]; for(let i=0;i<S.hc;i++) if((S.A[i]||0)>0) done.push(i); const h=SIM.hour!=null&&done.includes(SIM.hour)?SIM.hour:done[done.length-1];
@@ -1629,6 +1838,7 @@ function spendExplorer(sp){
    ============================================================ */
 let FC=false; try{ FC=localStorage.getItem('hayat-fc')==='on'; }catch(e){}
 const HOLI={'2026-01-26':['Republic Day',1.2],'2026-03-20':['Eid al-Fitr',1.8],'2026-03-21':['Eid 2nd day',1.5],'2026-04-03':['Good Friday',1.1],'2026-04-14':['Vishu',1.2],'2026-05-01':['May Day',1.15],'2026-05-27':['Bakrid',1.8],'2026-05-28':['Bakrid 2nd day',1.4],'2026-06-26':['Muharram',1.1],'2026-08-15':['Independence Day',1.2],'2026-08-25':['Milad-un-Nabi',1.2],'2026-08-26':['Thiruvonam',1.3],'2026-08-27':['Onam 3rd',1.2],'2026-10-02':['Gandhi Jayanti',1.15],'2026-10-20':['Vijayadashami',1.15],'2026-11-08':['Deepavali',1.1],'2026-12-25':['Christmas',1.3],'2027-01-26':['Republic Day',1.2],'2027-03-10':['Eid al-Fitr',1.8],'2027-03-11':['Eid 2nd day',1.5]};
+Object.assign(HOLI,{'2025-01-26':['Republic Day',1.2],'2025-03-31':['Eid al-Fitr',1.8],'2025-04-01':['Eid 2nd day',1.4],'2025-04-14':['Vishu',1.2],'2025-04-18':['Good Friday',1.1],'2025-05-01':['May Day',1.15],'2025-06-07':['Bakrid',1.8],'2025-07-06':['Muharram',1.1],'2025-08-15':['Independence Day',1.2],'2025-09-04':['Onam (Uthradam)',1.2],'2025-09-05':['Thiruvonam / Milad-un-Nabi',1.3],'2025-09-06':['Onam 3rd',1.2],'2025-10-02':['Gandhi Jayanti / Vijayadashami',1.15],'2025-10-20':['Deepavali',1.1],'2025-12-25':['Christmas',1.3]});
 const wom=d=>Math.min(3,Math.floor((+d.slice(8,10)-1)/7));          /* week of month 0..3 */
 /* three ways to build the hour profile; the one that would have missed least over the last 28 days is the one used */
 const FC_VARIANTS={
@@ -1943,7 +2153,7 @@ function dock(){
   const IC={live:'<path d="M3 12h4l2-6 4 12 2-6h6"/>',sales:'<path d="M5 20V10M12 20V4M19 20v-7"/>',patterns:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',similar:'<path d="M4 17l5-5 4 3 7-8"/><path d="M4 12l5-3 4 2 7-5" opacity=".45"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',over:'<path d="M4 19h16M6 15l4-5 4 3 4-6"/>',people:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.4"/>',items:'<path d="M5 6h14M5 12h14M5 18h9"/>',money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>'};
   const svg=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
   const prim=MODE==='period'?[['overview','Overview','over'],['people','People','people'],['items','Items','items'],['money','Money','money']]:[['floor','Live','live'],['sales','Sales','sales'],['patterns','Patterns','patterns'],['similar','Similar','similar']];
-  const sec=MODE==='period'?[['cash','Cash'],['voids','Voids']]:[['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']];
+  const sec=MODE==='period'?[['cash','Cash'],['voids','Voids']]:[['lab','Forecast lab'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']];
   const cur=MODE==='period'?PTAB:TAB, attr=MODE==='period'?'data-ptab':'data-tab', inSec=sec.find(t=>t[0]===cur);
   $('dockTabs').innerHTML=prim.map(t=>`<button class="dtab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${svg(t[2])}<span>${t[1]}</span></button>`).join('')+`<button class="dtab${inSec?' on':''}" id="dockMoreBtn" aria-expanded="${!$('dockSheet').hidden}">${svg('more')}<span>${inSec?inSec[1]:'More'}</span></button>`;
   $('dockMore').innerHTML=(MODE==='period'?'':`<button class="tab rpgo" id="rpOpen">▶ Replay</button>`)+sec.map(t=>`<button class="tab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${t[1]}</button>`).join('');
@@ -1999,13 +2209,14 @@ function render(){
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
      TAB==='patterns'?patterns():
+     TAB==='lab'?lab():
      TAB==='similar'?`<div class="grid">${similar()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
   dock(); addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
-  simWire(); lgCardWire(); ptWire();
+  simWire(); lgCardWire(); ptWire(); labWire();
   $$('[data-rpgo]').forEach(a=>a.onclick=e=>{ e.preventDefault(); openReplay(); });
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
@@ -2129,6 +2340,7 @@ async function go(){
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','kitchen'),d=>{ KSET=d.exists()?d.data():null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','recipes'),d=>{ RCP=d.exists()?d.data():null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','events'),d=>{ EVENTS=(d.exists()&&d.data().e)||{}; LAB.res=null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','large_orders'),d=>{ LARGE=(d.exists()&&d.data().b)||{}; applyLarge(); syncIndexToday(); FC_BT=null; render(); },()=>{});
   await days(); watchDay();
   setInterval(()=>{ if(DOC){ stamp(); render(); } healthPill(); },60000);
