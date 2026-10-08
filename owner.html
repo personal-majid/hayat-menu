@@ -54,6 +54,15 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .tbl.click{cursor:pointer} .tbl.click:hover{border-color:var(--line2)}
 .tbl{border:1px solid var(--line);border-radius:10px;padding:8px;min-height:74px;background:var(--soft);position:relative}
 .tbl b{display:block;font-size:14px} .tbl small{display:block;font-size:11px;color:var(--muted);line-height:1.35}
+.tbl .tk{font-size:11px;letter-spacing:.04em;color:var(--muted);font-weight:700} .tbl b.amt{font-size:20px;line-height:1.15;font-variant-numeric:tabular-nums;margin:1px 0 2px}
+/* open orders: newest first, the amount leads, the edge and the clock colour with age (green → amber → red over 40 min) */
+.olist{display:grid;gap:6px;margin-top:8px}
+.oo{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--soft);border-left:4px solid hsl(var(--h) 60% 42%);cursor:pointer}
+.oo .ag{font-weight:800;font-size:15px;color:hsl(var(--h) 60% 38%);text-align:center;font-variant-numeric:tabular-nums;line-height:1.1} .oo .ag small{display:block;font-size:9px;letter-spacing:.08em;color:inherit;opacity:.8}
+.oo .w{min-width:0} .oo .w b{display:block;font-size:14px} .oo .w small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oo .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.oo.new{box-shadow:inset 0 0 0 1px hsl(120 50% 45% / .5)} .oo.new .w b::after{content:'new';font-size:9px;letter-spacing:.1em;background:hsl(120 50% 40%);color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+@media (prefers-color-scheme:dark){ .oo .ag{color:hsl(var(--h) 55% 60%)} .oo{border-left-color:hsl(var(--h) 55% 55%)} }
 .tbl.on{background:color-mix(in srgb,var(--s1) 14%,var(--card));border-color:color-mix(in srgb,var(--s1) 50%,transparent)}
 .tbl.due{background:color-mix(in srgb,var(--s4) 18%,var(--card));border-color:color-mix(in srgb,var(--s4) 60%,transparent)}
 .tbl.late{background:color-mix(in srgb,var(--s8) 14%,var(--card));border-color:color-mix(in srgb,var(--s8) 55%,transparent)}
@@ -78,17 +87,24 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .top .seg,.top #prevDay,.top #nextDay,.top #day,.top #calBtn{display:none}
 #main{padding-bottom:calc(var(--dockh,120px) + 16px)}
 #dock{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);border-top:1px solid var(--line2);padding:0 0 env(safe-area-inset-bottom,0px);box-shadow:0 -8px 30px rgba(0,0,0,.08)}
-#dock .drow{display:flex;gap:6px;align-items:center;padding:6px 12px;overflow-x:auto;scrollbar-width:none}
+#dock .drow{display:flex;gap:6px;align-items:center;padding:6px 12px;flex-wrap:wrap}
+#dock .tabs.main .tab{padding:6px 11px;font-size:12.5px}
+#dock .tslide{flex-wrap:nowrap;border-top:1px solid var(--line);padding:4px 12px}
+#dock .tslide input{flex:1;min-width:0;accent-color:var(--pri);height:28px}
+#dock .tslide b{font-size:12px;min-width:64px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#dock .dn.sm{width:32px;height:32px;font-size:14px;border-radius:9px}
+body.period #dockTime{display:none}
+#dock .tslide.ago input{accent-color:var(--s8,#c0882c)} #dock .tslide.ahead input{accent-color:var(--sea,#1f4d4a)}
 #dock .drow::-webkit-scrollbar{display:none}
-#dock .tabs.main{position:static;background:transparent;backdrop-filter:none;margin:0;padding:0;flex-wrap:nowrap;border:0}
+#dock .tabs.main{position:static;background:transparent;backdrop-filter:none;margin:0;padding:0;flex-wrap:wrap;border:0;overflow:visible}
 #dock .tabs.main .n{display:none}
-#dock .chip{flex:0 0 auto;border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+#dock .chip{flex:0 0 auto;border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
 #dock .chip.on{background:var(--pri);color:var(--onpri);border-color:transparent}
 #dock .daybar{justify-content:space-between;border-top:1px solid var(--line);padding:6px 10px}
 #dock .dn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);font-size:20px;cursor:pointer;flex:0 0 auto}
 #dock .dpill{flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:0 10px;font:inherit}
 #dock .dpill b{font-size:15px;white-space:nowrap} #dock .dpill small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#dock.fold #dockTabs,#dock.fold #dockRange{display:none}
+#dock.fold #dockTabs,#dock.fold #dockRange,#dock.fold #dockTime{display:none}
 #dock.fold #dockFold{transform:rotate(180deg)}
 body.period #dPrev,body.period #dNext{visibility:hidden}
 @media (min-width:900px){ #dock{left:50%;transform:translateX(-50%);max-width:980px;border-radius:16px 16px 0 0;border:1px solid var(--line2);border-bottom:0} }
@@ -181,7 +197,12 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
 <div id="dock">
   <div class="drow" id="dockTabs"></div>
   <div class="drow range" id="dockRange">
-    <button class="chip" data-r="today">Today</button><button class="chip" data-r="yday">Yesterday</button><button class="chip" data-r="week">Week</button><button class="chip" data-r="month">Month</button><button class="chip" data-r="lmonth">Last month</button><button class="chip" data-r="pick">Pick…</button><span style="flex:0 0 6px"></span><button class="chip fc" id="fcChip" title="show the forecast on the charts and the strip">◔ Forecast</button>
+    <button class="chip" data-r="today">Today</button><button class="chip fc" id="fcChip" title="forecast on the strip and the charts">◔ Forecast</button><button class="chip" data-r="week">Week</button><button class="chip" data-r="month">Month</button><button class="chip" data-r="lmonth">Last month</button><button class="chip" data-r="pick">Pick a day…</button><button class="chip" data-r="range">Range…</button>
+  </div>
+  <div class="drow tslide" id="dockTime">
+    <button class="dn sm" id="tLive" title="back to live">⏺</button>
+    <input type="range" id="tRange" min="0" max="1440" step="15" value="1440" aria-label="time of day">
+    <b id="tLab">live</b>
   </div>
   <div class="drow daybar">
     <button class="dn" id="dPrev" title="previous day">‹</button>
@@ -206,11 +227,21 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v183';
+const BOARD='v187';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
-function recs(){ return Object.values((DOC&&DOC.records)||{}); }
+/* the time slider: TCUT = minutes after the day start, null = live. Before now the day is replayed as it stood then
+   (a bill settled later is open again); after now the forecast carries the strip. */
+let TCUT=null;
+const dayStartMs=d=>new Date(d+'T00:00:00').getTime()+BH0*3600e3;
+function cutTs(){ return TCUT==null?null:dayStartMs(DAY)+TCUT*60000; }
+function recs(){ const all=Object.values((DOC&&DOC.records)||{}); const cut=cutTs(); if(cut==null||MODE!=='day'||cut>=Date.now()) return all;
+  const ts=s=>s?T(s).getTime():null; const out=[];
+  all.forEach(r=>{ const c=ts(r.createdAt); if(c!=null&&c>cut) return; const st=ts(r.settledAt);
+    if(r.status==='settled'&&st!=null&&st>cut){ const x=Object.assign({},r,{status:(r.dueAt&&ts(r.dueAt)<=cut)?'due':'open',settledAt:null,foodReady:0}); x.items=(r.items||[]).filter(i=>!i.kotAt||ts(i.kotAt)<=cut); out.push(x); return; }
+    out.push(r); });
+  return out; }
 /* a CASHIER bill this small is staff food, not a customer: shown, counted, never alerted or averaged */
 const STAFF_MAX=300;
 const ORDER_WORDS=/^(co|c\/o|c\.o|dm|dmu|hd|h\.d|cnt|cntr|counter|parcel|take ?away|ta|pack\w*|deliver\w*|home ?del\w*|zomato|swiggy|online)\b/i;
@@ -329,12 +360,13 @@ function upsell(){
 }
 /* ordered, not paid: the money still on the floor and on the road */
 function unrealized(){
-  const O=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff').sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
-  const g={dine:{n:0,v:0},counter:{n:0,v:0},delivery:{n:0,v:0}}; O.forEach(r=>{ const x=g[r.kind]||(g[r.kind]={n:0,v:0}); x.n++; x.v+=sum(r); });
+  /* every open ticket, staff-looking ones included - a remark can fool the staff rule, and a hidden table is worse than a mislabelled one */
+  const O=recs().filter(r=>r.status==='open'||r.status==='due').sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  const g={dine:{n:0,v:0},counter:{n:0,v:0},delivery:{n:0,v:0},staff:{n:0,v:0}}; O.forEach(r=>{ const x=g[r.kind]||(g[r.kind]={n:0,v:0}); x.n++; x.v+=sum(r); });
   const tot=O.reduce((n,r)=>n+sum(r),0), max=Math.max(1,...Object.values(g).map(x=>x.v));
   if(!tot) return '';
   const state=r=>r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt)+(r.rider?' · '+r.rider:''):r.status==='due'?'billed · with rider':'cooking'):r.status==='due'?'bill printed, unpaid':(r.foodReady||0)+'/'+(r.items||[]).length+' ready';
-  return `<div class="card"><h2>Unrealized sales <span class="n">${rs(tot)} · ${O.length} open</span></h2><div class="mini">${[['dine','On tables'],['counter','At the counter'],['delivery','Out for delivery']].map(([k,l])=>`<div class="mrow"><span>${l} <small style="color:var(--muted)">${g[k].n}</small></span><div class="b" style="width:${100*g[k].v/max}%"></div><span class="v">${rs(g[k].v)}</span></div>`).join('')}</div>${O.length?`<table style="margin-top:8px"><tr><th>Since</th><th>Where</th><th class="m">Waiter</th><th>State</th><th class="r">Amount</th></tr>${O.map(r=>`<tr class="rowlink" data-drill="${esc(r.key)}"><td>${hm(r.createdAt)} <small style="color:var(--muted)">${mins(r.createdAt,tsNow())}m</small></td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span> ${esc(r.table||(r.token?'T'+r.token:'KOT '+r.kot))}${r.remarks?' <small style="color:var(--muted)">“'+esc(r.remarks)+'”</small>':''}</td><td class="m">${esc(r.waiter||'')}</td><td>${state(r)}</td><td class="r">${rs(sum(r))}</td></tr>`).join('')}</table>`:'<div class="note">Everything is paid.</div>'}</div>`;
+  return `<div class="card"><h2>Unrealized sales <span class="n">${rs(tot)} · ${O.length} open</span></h2><div class="mini">${[['dine','On tables'],['counter','At the counter'],['delivery','Out for delivery'],['staff','Staff (by remark)']].filter(([k])=>k!=='staff'||g.staff.n).map(([k,l])=>`<div class="mrow"><span>${l} <small style="color:var(--muted)">${g[k].n}</small></span><div class="b" style="width:${100*g[k].v/max}%"></div><span class="v">${rs(g[k].v)}</span></div>`).join('')}</div>${O.length?`<div class="olist">${O.map(r=>{ const age=mins(r.createdAt,tsNow())||0, h=Math.round(120*Math.max(0,1-age/40)); return `<div class="oo${age<10?' new':''}" style="--h:${h}" data-drill="${esc(r.key)}"><div class="ag">${age}<small>min</small></div><div class="w"><b><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span> ${esc(r.table||(r.token?'T'+r.token:'KOT '+r.kot))}${r.waiter?' · '+esc(r.waiter):''}</b><small>${hm(r.createdAt)} · ${state(r)}${r.remarks?' · “'+esc(r.remarks)+'”':''}</small></div><div class="v">${rs(sum(r))}</div></div>`; }).join('')}</div>`:'<div class="note">Everything is paid.</div>'}</div>`;
 }
 /* every rupee knocked off a bill, and who did it */
 function discounts(){
@@ -372,22 +404,23 @@ function tableSheet(name){
   $$('[data-drill2]',box).forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill2));
 }
 function floor(){
-  const open=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind==='dine');
+  /* a seated table is busy even when the remark made the ticket look like staff food */
+  const open=recs().filter(r=>(r.status==='open'||r.status==='due')&&(r.kind==='dine'||(r.kindRaw==='dine'&&r.table)));
   const byT={}; open.forEach(r=>{ byT[String(r.table)]=r; });
   const tables=(FLOOR?FLOOR.tables.filter(t=>t.active):[]);
   if(!tables.length&&!open.length) return `<div class="card wide"><h2>Tables</h2><div class="note">Waiting for the shop PC to send the floor.</div></div>`;
   const secs={}; tables.forEach(t=>{ (secs[t.section||'?']=secs[t.section||'?']||[]).push(t); });
   // open tables not in the master (e.g. section without table map) still show
   open.forEach(r=>{ if(!tables.some(t=>t.name===r.table)) (secs[r.section||'?']=secs[r.section||'?']||[]).push({name:r.table,chairs:r.chairs,section:r.section,ghost:true}); });
-  const counter=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='dine');
+  const counter=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='dine'&&!(r.kindRaw==='dine'&&r.table));
   return `<div class="card wide"><h2>Tables <span class="n">${open.length} busy · ${counter.length} counter / delivery</span></h2><div class="floor">`+
     Object.keys(secs).sort().map(sec=>`<div class="sechead">${esc(sec)}</div>`+secs[sec].sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true})).map(t=>{
       const r=byT[String(t.name)]; if(!r){ const H=tableHistory(t.name), done=H.filter(x=>x.status==='settled'); const tt=done.length?done.map(x=>hm(x.createdAt)+'–'+hm(x.settledAt)+' '+rs(sum(x))+(x.waiter?' · '+x.waiter:'')).join('\n'):'free all day';
         return `<div class="tbl click" data-table="${esc(t.name)}" title="${esc(tt)}"><b>${esc(t.name)}</b><small>${t.chairs?t.chairs+' chairs':''}</small>${done.length?`<small>${done.length} turn${done.length>1?'s':''} · ${rs(done.reduce((n,x)=>n+sum(x),0))}</small>`:''}</div>`; }
       const age=mins(r.createdAt,tsNow()); const cls=r.status==='due'?'due':age>75?'late':'on';
-      return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><b>${esc(t.name)}</b><small>${esc(r.waiter||'')}${r.pax?' · '+r.pax+' pax':''}</small><small>${r.kotCount} KOT · ${rs(sum(r))}</small><small>${r.status==='due'?'BILL PRINTED':(()=>{ const L=(r.items||[]).map(i=>lineState(i,r)); const c=L.filter(x=>x==='cooking').length, l=L.filter(x=>x==='late').length; return l?'<b>'+l+' late</b>'+(c?' · '+c+' cooking':''):c?c+' cooking':'served'; })()}</small></div>`;
+      return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><small class="tk">${esc(t.name)}${r.pax?' · '+r.pax+' pax':''}</small><b class="amt">${rs(sum(r))}</b><small>${esc(r.waiter||'')}${r.kotCount>1?' · '+r.kotCount+' KOT':''}</small><small>${r.status==='due'?'BILL PRINTED':(()=>{ const L=(r.items||[]).map(i=>lineState(i,r)); const c=L.filter(x=>x==='cooking').length, l=L.filter(x=>x==='late').length; return l?'<b>'+l+' late</b>'+(c?' · '+c+' cooking':''):c?c+' cooking':'served'; })()}</small></div>`;
     }).join('')).join('')+
-    (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl click ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><b>${r.kind==='delivery'?'🛵':r.kind==='staff'?'👤':'🎟'}${esc(r.token||r.kot)}</b>${r.remarks?`<small>“${esc(r.remarks)}”</small>`:''}<small>${r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt):r.status==='due'?'billed · with rider':'cooking'):esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items · ${rs(sum(r))}</small></div>`; }).join(''):'')+
+    (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl click ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><small class="tk">${r.kind==='delivery'?'🛵':r.kind==='staff'?'👤':'🎟'} ${esc(r.token||r.kot)}</small><b class="amt">${rs(sum(r))}</b>${r.remarks?`<small>“${esc(r.remarks)}”</small>`:''}<small>${r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt):r.status==='due'?'billed · with rider':'cooking'):esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items</small></div>`; }).join(''):'')+
   '</div></div>';
 }
 
@@ -465,12 +498,14 @@ function hx(lo,hi){ const n=hi-lo+1, step=n>14?2:1;
   return `<div class="hx axed" style="grid-template-columns:repeat(${n},1fr)">`+Array.from({length:n},(_,j)=>j%step?'<span></span>':'<span>'+hlabel(lo+j)+'</span>').join('')+'</div>'; }
 
 function hourly(){
-  const H=hbucket(recs().filter(r=>r.status==='settled'));
+  let H=hbucket(recs().filter(r=>r.status==='settled'));
+  /* a span of days: the chart shows an average day, not the pile of all of them */
+  const span=String((DOC&&DOC.day)||DAY).includes('→'); let nd=0; if(span){ nd=(PER.doc&&PER.doc.days)||new Set(recs().map(r=>r.day)).size||1; H=H.map(v=>v/nd); }
   const HY=hbucket(YDOC?Object.values(YDOC.records||{}).filter(r=>r.status==='settled'):[]);
-  const wa=DAY.includes('→')?null:weekdayAvg(DAY), dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(DAY.slice(0,10)+'T12:00:00').getDay()];
+  const wa=span?null:weekdayAvg(DAY), dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(DAY.slice(0,10)+'T12:00:00').getDay()];
   const F=fcToday(); const HF=F?F.fcH:null;
   const [lo,hi]=hspan(H,HY,wa?wa.H:[],HF||[]), max=Math.max(1,...H,...HY,...(wa?wa.H:[]),...(HF||[]));
-  return `<div class="card"><h2>Sales by hour <span class="n">${YDOC?'grey = yesterday':''}${wa?(YDOC?' · ':'')+'dotted = avg '+dow+' ('+wa.n+')':''}${F?' · hatched = forecast':''}</span></h2>${hbars(H,lo,hi,max,YDOC?HY:null,'y ',null,null,wa?wa.H:null,F)}${hx(lo,hi)}</div>`;
+  return `<div class="card"><h2>Sales by hour <span class="n">${span?'avg per day · '+nd+' days':''}${YDOC?'grey = yesterday':''}${wa?(YDOC?' · ':'')+'dotted = avg '+dow+' ('+wa.n+')':''}${F?' · hatched = forecast':''}</span></h2>${hbars(H,lo,hi,max,YDOC?HY:null,'y ',null,null,wa?wa.H:null,F)}${hx(lo,hi)}</div>`;
 }
 
 function breakdown(){
@@ -852,13 +887,19 @@ function spendExplorer(sp){
 let FC=false; try{ FC=localStorage.getItem('hayat-fc')==='on'; }catch(e){}
 const HOLI={'2026-01-26':['Republic Day',1.2],'2026-03-20':['Eid al-Fitr',1.8],'2026-03-21':['Eid 2nd day',1.5],'2026-04-03':['Good Friday',1.1],'2026-04-14':['Vishu',1.2],'2026-05-01':['May Day',1.15],'2026-05-27':['Bakrid',1.8],'2026-05-28':['Bakrid 2nd day',1.4],'2026-06-26':['Muharram',1.1],'2026-08-15':['Independence Day',1.2],'2026-08-25':['Milad-un-Nabi',1.2],'2026-08-26':['Thiruvonam',1.3],'2026-08-27':['Onam 3rd',1.2],'2026-10-02':['Gandhi Jayanti',1.15],'2026-10-20':['Vijayadashami',1.15],'2026-11-08':['Deepavali',1.1],'2026-12-25':['Christmas',1.3],'2027-01-26':['Republic Day',1.2],'2027-03-10':['Eid al-Fitr',1.8],'2027-03-11':['Eid 2nd day',1.5]};
 const wom=d=>Math.min(3,Math.floor((+d.slice(8,10)-1)/7));          /* week of month 0..3 */
-function fcModel(day){
+/* three ways to build the hour profile; the one that would have missed least over the last 28 days is the one used */
+const FC_VARIANTS={
+  trim:(same)=>{ const prof=Array(24).fill(0); for(let h=0;h<24;h++){ let v=same.map((d,i)=>({v:INDEX[d].hours[h]||0,w:1+i*0.25})); if(v.length>=5){ v=v.slice().sort((a,b)=>a.v-b.v).slice(1,-1); } const W=v.reduce((n,x)=>n+x.w,0); prof[h]=v.reduce((n,x)=>n+x.v*x.w,0)/(W||1); } return prof; },
+  median:(same)=>{ const prof=Array(24).fill(0); for(let h=0;h<24;h++){ const v=same.map(d=>INDEX[d].hours[h]||0).sort((a,b)=>a-b); const m=v.length; prof[h]=m%2?v[(m-1)/2]:(v[m/2-1]+v[m/2])/2; } return prof; },
+  ewma:(same)=>{ const prof=Array(24).fill(0); for(let h=0;h<24;h++){ let e=null; same.forEach(d=>{ const v=INDEX[d].hours[h]||0; e=e==null?v:e+0.45*(v-e); }); prof[h]=e||0; } return prof; },
+  blend:(same)=>{ const a=FC_VARIANTS.trim(same), b=FC_VARIANTS.ewma(same); return a.map((v,i)=>(v+b[i])/2); }
+};
+let FC_BEST=null, FC_BT=null;
+function fcModel(day,variant){
   const days=Object.keys(INDEX).filter(d=>d<day&&INDEX[d].hours&&INDEX[d].rev>0).sort(), dow=new Date(day+'T12:00:00').getDay();
   const same=days.filter(d=>new Date(d+'T12:00:00').getDay()===dow).slice(-6);
   if(same.length<2) return null;
-  /* hourly profile: per hour, drop the top and bottom when 5+, weight recent weeks more */
-  const prof=Array(24).fill(0);
-  for(let h=0;h<24;h++){ let v=same.map((d,i)=>({v:INDEX[d].hours[h]||0,w:1+i*0.25})); if(v.length>=5){ v=v.slice().sort((a,b)=>a.v-b.v).slice(1,-1); } const W=v.reduce((n,x)=>n+x.w,0); prof[h]=v.reduce((n,x)=>n+x.v*x.w,0)/(W||1); }
+  const prof=FC_VARIANTS[variant||FC_BEST||'trim'](same);
   const base=prof.reduce((a,b)=>a+b,0);
   const mean=L=>L.length?L.reduce((n,d)=>n+INDEX[d].rev,0)/L.length:0;
   const last28=days.slice(-28), prev28=days.slice(-56,-28);
@@ -880,20 +921,35 @@ function fcLive(day,H,nowH,frac){
   const total=act+rest.reduce((a,b)=>a+b,0);
   return Object.assign(M,{P,fcH,rest,total,next,corr,share,act,exp,nowH});
 }
+/* backtest: for each of the last 28 days, what would the plan have said at open, and at 4 pm with the live correction */
+function fcBacktest(){
+  if(FC_BT) return FC_BT;
+  const days=Object.keys(INDEX).filter(d=>d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort().slice(-28);
+  const out={};
+  Object.keys(FC_VARIANTS).forEach(v=>{ let e=0,b=0,n=0; days.forEach(d=>{ const M=fcModel(d,v); if(!M) return; const act=INDEX[d].rev; e+=Math.abs(M.plan-act)/act; b+=(M.plan-act)/act; n++; }); out[v]={mape:n?100*e/n:null,bias:n?100*b/n:null,n}; });
+  const best=Object.keys(out).filter(v=>out[v].n>=5).sort((a,b)=>out[a].mape-out[b].mape)[0]||'trim';
+  FC_BEST=best;
+  let e4=0,n4=0,eh=0,nh=0; days.forEach(d=>{ const H=INDEX[d].hours; const F=fcLive(d,H,11,0); if(!F) return; e4+=Math.abs(F.total-INDEX[d].rev)/INDEX[d].rev; n4++;
+    for(let h=4;h<18;h++){ const G=fcLive(d,H,h,0); if(G&&H[h+1]>200){ eh+=Math.abs(G.next-H[h+1])/H[h+1]; nh++; } } });
+  out.best=best; out.at4pm=n4?100*e4/n4:null; out.nextHour=nh?100*eh/nh:null; out.days=days.length;
+  FC_BT=out; return out;
+}
 function fcNow(){ const d=new Date(NOW); const h=(d.getHours()-BH0+24)%24; return {nowH:h,frac:d.getMinutes()/60}; }
-function fcToday(){ if(!FC||DAY!==bizToday()||!DOC) return null; const {nowH,frac}=fcNow(); return fcLive(DAY,hbucket(recs().filter(r=>r.status==='settled')),nowH,frac); }
-function fcDay(day){ if(!FC) return null; const M=fcModel(day); return M?M.plan:null; }
+function fcToday(){ if(!FC||DAY!==bizToday()||!DOC) return null; if(!FC_BT) fcBacktest(); const {nowH,frac}=fcNow(); return fcLive(DAY,hbucket(recs().filter(r=>r.status==='settled')),nowH,frac); }
+function fcDay(day){ if(!FC) return null; if(!FC_BT) fcBacktest(); const M=fcModel(day); return M?M.plan:null; }
 /* keep what was said, to score it later: vm_forecast/{day}.at[h] = {total,next} */
 let FC_SAVED={};
 function fcRecord(F){ if(!F||!FB||!FB.fs||FB.role!=='office') return; const h=F.nowH; const k=DAY+':'+h; if(FC_SAVED[k]) return; FC_SAVED[k]=1;
   try{ FB.fs.setDoc(FB.fs.doc(FB.db,'vm_forecast',DAY),{day:DAY,plan:Math.round(F.plan),f:{trend:F.trend,pos:F.pos,cal:F.cal},at:{[h]:{total:Math.round(F.total),next:Math.round(F.next),corr:F.corr,ts:tsNow()}}},{merge:true}).catch(()=>{}); }catch(e){} }
 function fcCard(F){ if(!F) return ''; const pct=F.total?Math.round(100*F.act/F.total):0, dev=F.exp?Math.round(100*(F.act/F.exp-1)):null;
-  return `<div class="kpi click" id="fcTile" title="tap for how it is worked out"><small>Forecast today ${F.why?'· '+esc(F.why):''}</small><b>${rs(F.total)}</b><em class="rows"><span>Next hour <b>${rs(F.next)}</b></span><span>Done <b>${pct}%</b></span><span>vs plan <b class="${dev==null?'':dev>=0?'up':'dn'}">${dev==null?'—':(dev>=0?'+':'')+dev+'%'}</b></span></em></div>`; }
+  const cut=cutTs(); let by=''; if(cut!=null&&cut>Date.now()&&TCUT!=null){ const h=Math.min(23,Math.floor(TCUT/60)), fr=(TCUT%60)/60; let v=0; for(let i=0;i<h;i++) v+=F.fcH[i]||0; v+=(F.fcH[h]||0)*fr; const hh=String(Math.floor((h+BH0)%24)).padStart(2,'0'), mm=String(TCUT%60).padStart(2,'0'); by=`<span>By ${hh}:${mm} <b>${rs(v)}</b></span>`; }
+  return `<div class="kpi click" id="fcTile" title="tap for how it is worked out"><small>Forecast today ${F.why?'· '+esc(F.why):''}</small><b>${rs(F.total)}</b><em class="rows">${by}<span>Next hour <b>${rs(F.next)}</b></span><span>Done <b>${pct}%</b></span><span>vs plan <b class="${dev==null?'':dev>=0?'up':'dn'}">${dev==null?'—':(dev>=0?'+':'')+dev+'%'}</b></span></em></div>`; }
 function fcSheet(){ const F=fcToday(); if(!F) return; const old=document.getElementById('drill'); if(old) old.remove();
   const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill'; const x=v=>'× '+v.toFixed(2);
   box.innerHTML=`<div class="sheet"><h2>Forecast · ${esc(DAY)} <button class="x" id="drillX">✕</button></h2><p class="sub">Each link in the chain, so a wrong one is visible.</p>
     <table><tr><td>Base · same weekday, last ${F.n} wks (trimmed, recent heavier)</td><td class="r">${rs(F.base)}</td></tr><tr><td>Trend · last 4 wks vs the 4 before, damped</td><td class="r">${x(F.trend)}</td></tr><tr><td>Month position · week ${wom(DAY)+1}</td><td class="r">${x(F.pos)}</td></tr><tr><td>Calendar${F.why?' · '+esc(F.why):' · normal day'}</td><td class="r">${x(F.cal)}</td></tr><tr><td><b>Plan at open</b></td><td class="r"><b>${rs(F.plan)}</b></td></tr><tr><td>So far · actual ${rs(F.act)} vs expected ${rs(F.exp)} (${Math.round(100*F.share)}% of the day)</td><td class="r">${x(F.corr)}</td></tr><tr><td><b>Forecast now</b></td><td class="r"><b>${rs(F.total)}</b></td></tr><tr><td>Next hour (${hlabel(F.nowH+1)}:00)</td><td class="r">${rs(F.next)}</td></tr></table>
-    <p class="note">Holidays are built in (Kerala, Eid, Onam) with a starting factor, replaced by our own once a holiday has passed. Rain and road traffic come later.</p></div>`;
+    ${(()=>{ const B=fcBacktest(); const pc=v=>v==null?'—':v.toFixed(1)+'%'; return `<h3 style="margin:12px 0 4px;font-size:14px">How each method would have done · last ${B.days} days</h3><table><tr><th>Method</th><th class="r">Avg miss at open</th><th class="r">Bias</th></tr>${Object.keys(FC_VARIANTS).map(v=>`<tr${v===B.best?' style="font-weight:700"':''}><td>${v}${v===B.best?' · in use':''}</td><td class="r">${pc(B[v].mape)}</td><td class="r">${B[v].bias==null?'—':(B[v].bias>=0?'+':'')+B[v].bias.toFixed(1)+'%'}</td></tr>`).join('')}<tr><td>With the live correction, by 4 pm</td><td class="r">${pc(B.at4pm)}</td><td></td></tr><tr><td>Next hour, through the day</td><td class="r">${pc(B.nextHour)}</td><td></td></tr></table>`; })()}
+    <p class="note">The method with the smallest miss is picked automatically and re-tested every day. Holidays are built in (Kerala, Eid, Onam) with a starting factor, replaced by our own once a holiday has passed. Rain and road traffic come later.</p></div>`;
   document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove(); fitTables(); }
 /* ---- cash & bank: what should be in the drawer and the bank, against what the owner counted ----
    vm_cash/{day} = {day, pos:'open'|'close', cash, bank, note, by, at}
@@ -1123,13 +1179,16 @@ function dock(){
     :`<div class="tabs main">${dayTabs.map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
   const P=periodPresets(), is=(a,b)=>MODE==='period'&&PER.from===a&&PER.to===b;
   const y=new Date(bizToday()+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y);
-  const on={today:MODE==='day'&&DAY===bizToday(),yday:MODE==='day'&&DAY===yd,week:is(P[0][1],P[0][2]),month:is(P[2][1],P[2][2]),lmonth:is(P[3][1],P[3][2])};
-  $$('#dockRange .chip:not(.fc)').forEach(c=>c.classList.toggle('on',!!on[c.dataset.r]||(c.dataset.r==='pick'&&!Object.values(on).some(Boolean))));
+  const on={today:MODE==='day'&&DAY===bizToday(),week:is(P[0][1],P[0][2]),month:is(P[2][1],P[2][2]),lmonth:is(P[3][1],P[3][2])}; on.range=MODE==='period'&&!on.week&&!on.month&&!on.lmonth; on.pick=MODE==='day'&&!on.today;
+  $$('#dockRange .chip:not(.fc)').forEach(c=>c.classList.toggle('on',!!on[c.dataset.r]));
   const fchip=$('fcChip'); if(fchip) fchip.classList.toggle('on',FC);
   const ft=$('fcTile'); if(ft) ft.onclick=fcSheet; fcRecord(fcToday());
   const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   if(MODE==='period'){ $('dLabel').textContent=PER.label||'Period'; $('dSub').textContent=PER.from?PER.from.slice(5)+' → '+PER.to.slice(5)+(PER.doc&&PER.doc.partial?' · so far':''):''; }
   else { const x=new Date(DAY+'T12:00:00'); $('dLabel').textContent=wd[x.getDay()]+' '+x.getDate()+' '+x.toLocaleString('en',{month:'short'}); $('dSub').textContent=DAY===bizToday()?'live':(INDEX[DAY]&&INDEX[DAY].rev?rs(INDEX[DAY].rev):''); }
+  const tr=$('tRange'), tl=$('tLab'), ts=$('dockTime'); if(tr){ const nowMin=Math.max(0,Math.min(1440,Math.round((Date.now()-dayStartMs(DAY))/60000))); const live=DAY===bizToday(); tr.max=live?1440:1440; if(TCUT==null) tr.value=live?nowMin:1440;
+    const v=TCUT==null?(live?nowMin:1440):TCUT; const hh=String(Math.floor(((v/60)+BH0)%24)).padStart(2,'0'), mm=String(v%60).padStart(2,'0');
+    tl.textContent=TCUT==null?(live?'live · '+hh+':'+mm:'full day'):(live&&v>nowMin?'by '+hh+':'+mm+' ◔':'as of '+hh+':'+mm); ts.classList.toggle('ago',TCUT!=null&&(!live||v<=nowMin)); ts.classList.toggle('ahead',TCUT!=null&&live&&v>nowMin); }
   d.classList.toggle('fold',DOCK_FOLD);
   document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px');
 }
@@ -1140,8 +1199,10 @@ function dockWire(){
     if(r==='today'){ MODE='day'; setDay(bizToday()); render(); }
     else if(r==='yday'){ MODE='day'; const y=new Date(bizToday()+'T12:00:00'); y.setDate(y.getDate()-1); setDay(ymd(y)); render(); }
     else if(r==='pick'){ calendar(); }
+    else if(r==='range'){ const P2=periodPresets(); if(MODE!=='period'||!PER.from){ MODE='period'; loadPeriod(P2[0][1],P2[0][2],P2[0][0]); } else render(); setTimeout(()=>{ const f=$('pFrom'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },600); }
     else { MODE='period'; const p=r==='week'?P[0]:r==='month'?P[2]:P[3]; loadPeriod(p[1],p[2],p[0]); } });
   $('dPrev').onclick=()=>stepDay(-1); $('dNext').onclick=()=>stepDay(1);
+  const tr=$('tRange'); let tj=null; tr.oninput=()=>{ TCUT=+tr.value; clearTimeout(tj); tj=setTimeout(render,60); }; $('tLive').onclick=()=>{ TCUT=null; render(); };
   $('dPick').onclick=()=>{ if(MODE==='period'){ MODE='day'; render(); } else calendar(); };
   $('dockFold').onclick=()=>{ DOCK_FOLD=!DOCK_FOLD; try{ localStorage.setItem('hayat-dock',DOCK_FOLD?'fold':'open'); }catch(e){} dock(); };
   /* swipe the page sideways to step a day */
@@ -1152,6 +1213,7 @@ function dockWire(){
 function render(){
   /* a PC whose clock is behind the shop's (or a browser in another zone) must not show negative ages */
   NOW=Math.max(Date.now(), DOC&&DOC.updatedAt?T(DOC.updatedAt).getTime():0);
+  { const cut=cutTs(); if(cut!=null&&MODE==='day'&&cut<NOW) NOW=cut; }
   const m=$('main'); if(!DOC&&MODE==='day'){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; document.body.classList.remove('period'); dock(); return; }
   const live=DAY===bizToday();
   document.body.classList.toggle('period',MODE==='period');
@@ -1240,7 +1302,7 @@ function healthPill(){ const el=$('pc'); if(!el) return; if(!HEALTH){ el.hidden=
   el.lastElementChild.textContent='shop PC '+(age>12?'silent '+age+' min':bad?'fixing: '+bads:'ok'); el.title=(HEALTH.host||'')+' · '+HEALTH.at+(HEALTH.disk?' · disk free '+HEALTH.disk+' GB':'')+((HEALTH.actions||[]).length?'\n'+HEALTH.actions.join('\n'):''); }
 
 /* the calendar: three months of squares, darker = bigger day */
-function setDay(d){ if(!d||d===DAY) return; DAY=d; CMP=null; WEEK=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===d)) sel.value=d; watchDay(); }
+function setDay(d){ if(!d||d===DAY) return; DAY=d; TCUT=null; CMP=null; WEEK=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===d)) sel.value=d; watchDay(); }
 function stepDay(n){ const list=(DAYS||[]).slice().sort(); const i=list.indexOf(DAY); const d=list[i+n]; if(d) setDay(d); }
 function calendar(){
   const pop=$('calPop'); if(!pop.hidden){ pop.hidden=true; return; }
