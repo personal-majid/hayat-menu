@@ -26,7 +26,7 @@ a{color:inherit}
 .seg{display:inline-flex;gap:4px;background:var(--soft);border-radius:999px;padding:3px} .seg .tab{border:0;background:transparent} body.period .seg [data-mode=period],body:not(.period) .seg [data-mode=day]{background:var(--pri);color:var(--onpri)}
 body.period #prevDay,body.period #nextDay,body.period #calBtn,body.period #day,body.period #live{display:none}
 .nav{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:8px;height:32px;min-width:32px;padding:0 8px;font-size:16px;cursor:pointer} .nav:hover{background:var(--soft2)} .nav.cal{font-size:14px}
-#calPop[hidden]{display:none} #calPop{position:absolute;top:52px;left:16px;z-index:9;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;gap:18px;flex-wrap:wrap;max-width:calc(100vw - 32px)}
+#calPop[hidden]{display:none} #calPop{position:fixed;bottom:calc(var(--dockh,120px) + 8px);top:auto;left:16px;z-index:9;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;gap:18px;flex-wrap:wrap;max-width:calc(100vw - 32px)}
 .cm{min-width:196px} .cm h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)} .cm .g{display:grid;grid-template-columns:repeat(7,26px);gap:3px} .cm .g span{font-size:9px;color:var(--muted);text-align:center}
 .cm .d{height:26px;border-radius:6px;background:var(--soft);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);position:relative} .cm .d.has{background:color-mix(in srgb,var(--s1) calc(var(--w) * 1%),var(--soft))} .cm .d.has.hot{color:#fff} .cm .d.cur{outline:2px solid var(--ink);outline-offset:-2px} .cm .d.none{opacity:.35;cursor:default} .cm .d:hover::after{content:attr(data-t);position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--pri);color:var(--onpri);font-size:11px;padding:2px 6px;border-radius:6px;white-space:nowrap;z-index:2}
 .cm .lg{font-size:10px;color:var(--muted);margin-top:6px}
@@ -74,6 +74,27 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .pill.dine{background:color-mix(in srgb,var(--s1) 18%,transparent)} .pill.counter{background:color-mix(in srgb,var(--s4) 22%,transparent)} .pill.delivery{background:color-mix(in srgb,var(--s3) 18%,transparent)}
 .bars{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;align-items:end;height:90px;margin:4px 0 2px;position:relative}
 .bars.axed,.hx.axed{margin-left:40px}
+/* ---- the dock: everything you touch, at the bottom, within a thumb ---- */
+.top .seg,.top #prevDay,.top #nextDay,.top #day,.top #calBtn{display:none}
+#main{padding-bottom:calc(var(--dockh,120px) + 16px)}
+#dock{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);border-top:1px solid var(--line2);padding:0 0 env(safe-area-inset-bottom,0px);box-shadow:0 -8px 30px rgba(0,0,0,.08)}
+#dock .drow{display:flex;gap:6px;align-items:center;padding:6px 12px;overflow-x:auto;scrollbar-width:none}
+#dock .drow::-webkit-scrollbar{display:none}
+#dock .tabs.main{position:static;background:transparent;backdrop-filter:none;margin:0;padding:0;flex-wrap:nowrap;border:0}
+#dock .tabs.main .n{display:none}
+#dock .chip{flex:0 0 auto;border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+#dock .chip.on{background:var(--pri);color:var(--onpri);border-color:transparent}
+#dock .daybar{justify-content:space-between;border-top:1px solid var(--line);padding:6px 10px}
+#dock .dn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);font-size:20px;cursor:pointer;flex:0 0 auto}
+#dock .dpill{flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:0 10px;font:inherit}
+#dock .dpill b{font-size:15px;white-space:nowrap} #dock .dpill small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dock.fold #dockTabs,#dock.fold #dockRange{display:none}
+#dock.fold #dockFold{transform:rotate(180deg)}
+body.period #dPrev,body.period #dNext{visibility:hidden}
+@media (min-width:900px){ #dock{left:50%;transform:translateX(-50%);max-width:980px;border-radius:16px 16px 0 0;border:1px solid var(--line2);border-bottom:0} }
+.x.sm{width:22px;height:22px;font-size:11px;line-height:1;padding:0;border-radius:6px}
+.bar.fc{background:repeating-linear-gradient(45deg,var(--line2) 0 3px,transparent 3px 6px);border:1px dashed var(--muted);border-bottom:0;opacity:.9}
+.bc{position:relative;height:100%;display:flex;align-items:flex-end}
 #cmpDay{max-width:min(60vw,320px)}
 .card h2 .n{min-width:0;max-width:100%}
 .bars .yg{position:absolute;left:0;right:0;border-top:1px dashed var(--line2);pointer-events:none}
@@ -157,6 +178,18 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
   <a class="tb" href="./#/admin" style="text-decoration:none">Office</a>
 </div>
 <div class="wrap" id="main"><div class="note">Loading…</div></div>
+<div id="dock">
+  <div class="drow" id="dockTabs"></div>
+  <div class="drow range" id="dockRange">
+    <button class="chip" data-r="today">Today</button><button class="chip" data-r="yday">Yesterday</button><button class="chip" data-r="week">Week</button><button class="chip" data-r="month">Month</button><button class="chip" data-r="lmonth">Last month</button><button class="chip" data-r="pick">Pick…</button><span style="flex:0 0 6px"></span><button class="chip fc" id="fcChip" title="show the forecast on the charts and the strip">◔ Forecast</button>
+  </div>
+  <div class="drow daybar">
+    <button class="dn" id="dPrev" title="previous day">‹</button>
+    <button class="dpill" id="dPick"><b id="dLabel">—</b><small id="dSub"></small></button>
+    <button class="dn" id="dNext" title="next day">›</button>
+    <button class="dn" id="dockFold" title="collapse / expand">⌄</button>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -173,7 +206,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v181';
+const BOARD='v183';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -201,7 +234,7 @@ function kpis(){
   /* ordered, not yet paid: on tables, at the counter, out with riders */
   const un=k=>open.filter(r=>r.kind===k).reduce((n,r)=>n+sum(r),0), unreal=open.filter(r=>r.kind!=='staff').reduce((n,r)=>n+sum(r),0);
   return `<div class="kpis">
-    <div class="kpi"><small>Sales today</small><b>${rs(rev)}</b><em class="${d==null?'':d>=0?'up':'dn'}">${d==null?settled.length+' bills':(d>=0?'▲':'▼')+' '+rs(Math.abs(d))+' vs yesterday'}</em></div>
+    <div class="kpi"><small>Sales today</small><b>${rs(rev)}</b><em class="${d==null?'':d>=0?'up':'dn'}">${d==null?settled.length+' bills':(d>=0?'▲':'▼')+' '+rs(Math.abs(d))+' vs yesterday'}</em></div>${fcCard(fcToday())}
     <div class="kpi click" data-tab="bills"><small>Unrealized · expected ${rs(rev+unreal)}</small><b>${rs(unreal)}</b><em class="rows"><span>Delivery <b>${rs(un('delivery'))}</b></span><span>CO <b>${rs(un('counter'))}</b></span><span>Dining <b>${rs(un('dine'))}</b></span></em></div>
     <div class="kpi"><small>Bills</small><b>${settled.length}</b><em>avg ${rs(settled.length?rev/settled.length:0)} · ${open.filter(r=>r.status==='due').length} bill printed, unpaid</em></div>
     <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
@@ -418,9 +451,12 @@ function hspan(...Hs){ let lo=24,hi=-1; Hs.forEach(H=>(H||[]).forEach((v,i)=>{ i
 function hlabel(i){ return String((i+BH0)%24); }
 /* a money axis: dashed lines at round values (₹5K, ₹10K…) behind any bar chart */
 const kfmt=v=>v>=1e5?'₹'+(v/1e5).toFixed(v%1e5?1:0)+'L':v>=1000?'₹'+(v/1000).toFixed(v%1000?1:0)+'K':'₹'+Math.round(v);
-function ygrid(max,fmt){ if(!(max>0)) return ''; const raw=max/4, p=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/p, step=(m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; let out=''; for(let v=step; v<=max*1.001; v+=step){ const pc=100*v/max; out+=`<i class="yg" style="bottom:${pc}%"></i><b class="yl" style="bottom:${pc}%">${(fmt||kfmt)(v)}</b>`; } return out; }
-function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH){ const n=hi-lo+1;
-  return `<div class="bars axed" style="grid-template-columns:repeat(${n},1fr)${height?';height:'+height+'px':''}">`+ygrid(max)+H.slice(lo,hi+1).map((v,j)=>{ const i=lo+j; const bar=`<div class="bar${cls?' '+cls:''}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
+function yscale(max,fmt){ if(!(max>0)) return {top:1,step:1,html:''}; const raw=max/4, p=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/p, step=(m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; const top=Math.ceil(max/step-0.02)*step; let out=''; for(let v=step; v<=top*1.001; v+=step){ const pc=100*v/top; out+=`<i class="yg" style="bottom:${pc}%"></i><b class="yl" style="bottom:${pc}%">${(fmt||kfmt)(v)}</b>`; } return {top,step,html:out}; }
+function ygrid(max,fmt){ return yscale(max,fmt).html; }
+function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH,F){ const n=hi-lo+1; const Y=yscale(max); max=Y.top;
+  return `<div class="bars axed" style="grid-template-columns:repeat(${n},1fr)${height?';height:'+height+'px':''}">`+Y.html+H.slice(lo,hi+1).map((v,j)=>{ const i=lo+j;
+    if(F&&i>=F.nowH&&F.fcH[i]>v){ const bar=`<div class="bc"><div class="bar fc" style="height:${Math.max(2,100*F.fcH[i]/max)}%" data-t="${hlabel(i)}:00 forecast ${rs(F.fcH[i])}${v?' · so far '+rs(v):''}"></div>${v?`<div class="bar" style="position:absolute;left:0;right:0;bottom:0;height:${Math.max(2,100*v/max)}%"></div>`:''}${avgH?`<i class="avgm" style="bottom:${Math.min(100,100*(avgH[i]||0)/max)}%"></i>`:''}</div>`; return bar; }
+    const bar=`<div class="bar${cls?' '+cls:''}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
     return avgH?`<div class="bc">${bar}<i class="avgm" style="bottom:${Math.min(100,100*(avgH[i]||0)/max)}%"></i></div>`:bar; }).join('')+'</div>'; }
 /* the same weekday's hourly average, from the day index (no reads) */
 function weekdayAvg(day){ const dow=new Date(day+'T12:00:00').getDay(); const days=Object.keys(INDEX).filter(d=>d!==day&&INDEX[d].hours&&new Date(d+'T12:00:00').getDay()===dow); if(days.length<2) return null;
@@ -432,8 +468,9 @@ function hourly(){
   const H=hbucket(recs().filter(r=>r.status==='settled'));
   const HY=hbucket(YDOC?Object.values(YDOC.records||{}).filter(r=>r.status==='settled'):[]);
   const wa=DAY.includes('→')?null:weekdayAvg(DAY), dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(DAY.slice(0,10)+'T12:00:00').getDay()];
-  const [lo,hi]=hspan(H,HY,wa?wa.H:[]), max=Math.max(1,...H,...HY,...(wa?wa.H:[]));
-  return `<div class="card"><h2>Sales by hour <span class="n">${YDOC?'grey = yesterday':''}${wa?(YDOC?' · ':'')+'dotted = avg '+dow+' ('+wa.n+')':''}</span></h2>${hbars(H,lo,hi,max,YDOC?HY:null,'y ',null,null,wa?wa.H:null)}${hx(lo,hi)}</div>`;
+  const F=fcToday(); const HF=F?F.fcH:null;
+  const [lo,hi]=hspan(H,HY,wa?wa.H:[],HF||[]), max=Math.max(1,...H,...HY,...(wa?wa.H:[]),...(HF||[]));
+  return `<div class="card"><h2>Sales by hour <span class="n">${YDOC?'grey = yesterday':''}${wa?(YDOC?' · ':'')+'dotted = avg '+dow+' ('+wa.n+')':''}${F?' · hatched = forecast':''}</span></h2>${hbars(H,lo,hi,max,YDOC?HY:null,'y ',null,null,wa?wa.H:null,F)}${hx(lo,hi)}</div>`;
 }
 
 function breakdown(){
@@ -472,6 +509,26 @@ function bills(){
   return `<div class="card wide"><div class="exp"><button data-csv="day">⬇ Day JSON</button><button data-csv="bills">⬇ Bills CSV</button><button data-csv="items">⬇ Items CSV</button><button data-csv="payments">⬇ Payments CSV</button><button data-csv="purchases">⬇ Purchases CSV</button><button data-csv="month">⬇ Month bills CSV</button><button data-csv="days">⬇ Days CSV</button></div><h2>Bills · live <span class="n">${R.filter(r=>r.status!=='settled').length} open · ${R.filter(r=>r.status==='settled').length} settled</span></h2><input class="search" id="q" placeholder="Search KOT, table, waiter, item, remark…" value="${esc(Q)}">${filters}<div class="scroll"><table><tr><th>KOT</th><th>Type</th><th>Table</th><th>Note</th><th>Waiter</th><th>Created</th><th class="m">KOTs</th><th class="m">Bill</th><th>Settled</th><th class="r m">Stay</th><th class="m">Pay</th><th class="r">Total</th><th class="r m">Disc</th><th>Items</th><th class="m">Edits</th></tr>${rows.map(r=>`<tr class="${r.status} rowlink" data-drill="${esc(r.key)}"><td>${esc(r.kot)}</td><td><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span></td><td>${esc(r.table||(r.token?'T'+r.token:''))}</td><td><b>${esc(r.remarks||'')}</b></td><td>${esc(r.waiter||'')}</td><td>${hm(r.createdAt)}</td><td class="m">${(r.kots||[]).map(hm).join(' · ')}</td><td class="m">${hm(r.dueAt)}</td><td>${r.status==='settled'?hm(r.settledAt):'<b>'+esc(r.status)+'</b>'}</td><td class="r m">${mins(r.createdAt,r.settledAt||tsNow())??''}m</td><td class="m">${esc(r.payMode||'')}</td><td class="r">${rs(sum(r))}</td><td class="r m">${discOf(r)?rs(discOf(r)):''}</td><td title="${esc((r.items||[]).map(i=>i.q+'× '+i.n+' '+hm(i.kotAt)).join('\n'))}">${(r.items||[]).map(i=>i.q+'× '+i.n).join(', ').slice(0,70)}${(r.items||[]).map(i=>i.n).join('').length>70?'…':''}</td><td class="m">${(r.edits||[]).map(e=>esc(e.item)+' '+e.from+'→'+e.to+(e.reason?' ('+esc(e.reason)+')':'')).join('; ')}${(r.moves||[]).map(m=>' ⇄ '+esc(m.from)+'→'+esc(m.to)).join('')}</td></tr>`).join('')}</table></div></div>`;
 }
 
+/* an entry that does not belong to this day (saved on the wrong date, later corrected in VMENU):
+   the owner can drop it here. The totals, the day index and the month snapshot follow. */
+async function removeEntry(day,coll,key){
+  const doc=day===bizToday()?DOC:await loadDay(day); if(!doc||!doc[coll]||!doc[coll][key]) return;
+  const e=doc[coll][key]; const what=coll==='purchases'?`supplier bill ${e.billNo?'#'+e.billNo:''} ${rs(e.total)}`:`${payKind(e)} ${e.party||e.remarks||''} ${rs(e.amount)}`;
+  if(!confirm(`Remove ${what} from ${day}?\n\nUse this only for an entry the cashier moved to another day. The shop PC will not bring it back unless VMENU still has it on this day.`)) return;
+  const {fs,db}=FB; const rest=Object.assign({},doc[coll]); delete rest[key];
+  const patch={}; patch[coll+'.'+key]=fs.deleteField();
+  if(coll==='purchases'){ patch.purchaseCount=Object.keys(rest).length; patch.purchaseTotal=Math.round(100*Object.values(rest).reduce((n,x)=>n+(x.total||0),0))/100; }
+  else { const live=Object.values(rest).filter(x=>!x.deleted); patch.paymentCount=live.length; patch.paidOut=Math.round(100*live.filter(x=>x.flow==='out').reduce((n,x)=>n+(x.amount||0),0))/100; patch.paidIn=Math.round(100*live.filter(x=>x.flow==='in').reduce((n,x)=>n+(x.amount||0),0))/100; }
+  try{ await fs.updateDoc(fs.doc(db,'vm_daylog',day),patch); }catch(err){ alert('Could not remove: '+(err.code||err)); return; }
+  const ip={}; if(patch.paidOut!=null) ip['days.'+day+'.paidOut']=patch.paidOut; if(patch.purchaseTotal!=null) ip['days.'+day+'.purchases']=patch.purchaseTotal;
+  try{ if(Object.keys(ip).length) await fs.updateDoc(fs.doc(db,'vm_meta','days'),ip); }catch(e){}
+  const m=day.slice(0,7); try{ await fs.deleteDoc(fs.doc(db,'vm_months',m)); }catch(e){}
+  await IDB.del('day:'+day); await IDB.del('month:'+m); delete CACHE[day]; LASTBUILD=null; CASHV.chain=null;
+  if(INDEX[day]){ if(patch.paidOut!=null) INDEX[day].paidOut=patch.paidOut; if(patch.purchaseTotal!=null) INDEX[day].purchases=patch.purchaseTotal; }
+  if(day!==bizToday()){ delete doc[coll][key]; Object.assign(doc,patch,{[coll]:rest}); if(DAY===day) DOC=doc; }
+  const dr=document.getElementById('drill'); if(dr) dr.remove();
+  if(MODE==='period') loadPeriod(PER.from,PER.to,PER.label,true); else render();
+}
 function payments(){
   let P=Object.values((DOC&&DOC.payments)||{}).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
   if(Q) P=P.filter(p=>JSON.stringify(p).toLowerCase().includes(Q));
@@ -481,7 +538,7 @@ function payments(){
   const parties=Object.entries(byParty).sort((a,b)=>b[1].v-a[1].v); const max=Math.max(1,...parties.map(x=>x[1].v));
   const byMode={}; out.forEach(p=>{ const k=p.mode||'—'; byMode[k]=(byMode[k]||0)+(p.amount||0); });
   return `<div class="card"><h2>Paid out · by party <span class="n">${rs(tot)}</span></h2><div class="mini">${parties.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n}</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')||'<div class="note">Nothing entered at the counter yet.</div>'}</div>${Object.keys(byMode).length?`<p class="note">${Object.entries(byMode).map(([k,v])=>esc(k)+' '+rs(v)).join(' · ')}${inn.length?' · received '+rs(inn.reduce((n,p)=>n+(p.amount||0),0)):''}</p>`:''}</div>`+
-    `<div class="card wide"><h2>Counter entries · live <span class="n">${live.length}${P.length-live.length?' · '+(P.length-live.length)+' deleted':''}</span></h2><input class="search" id="q" placeholder="Search party, remark, amount…" value="${esc(Q)}"><div class="scroll"><table><tr><th>Time</th><th class="m">Kind</th><th>Party</th><th>Remarks</th><th>Mode</th><th class="m">By</th><th class="r">Out</th><th class="r">In</th></tr>${P.map(p=>`<tr${p.deleted?' style="opacity:.5;text-decoration:line-through"':''} title="${esc((p.type||'')+(p.deleted?' · deleted '+p.deleted:''))}"><td>${hm(p.at)}</td><td class="m">${esc(payKind(p))}</td><td>${esc(p.party||'')}</td><td>${esc(p.remarks||'')}</td><td>${esc(p.mode||'')}</td><td class="m">${esc(p.by||'')}</td><td class="r">${p.flow==='out'?rs(p.amount):''}</td><td class="r">${p.flow==='in'?rs(p.amount):''}</td></tr>`).join('')}</table></div></div>`;
+    `<div class="card wide"><h2>Counter entries · live <span class="n">${live.length}${P.length-live.length?' · '+(P.length-live.length)+' deleted':''}</span></h2><input class="search" id="q" placeholder="Search party, remark, amount…" value="${esc(Q)}"><div class="scroll"><table><tr><th>Time</th><th class="m">Kind</th><th>Party</th><th>Remarks</th><th>Mode</th><th class="m">By</th><th class="r">Out</th><th class="r">In</th><th class="m"></th></tr>${P.map(p=>`<tr${p.deleted?' style="opacity:.5;text-decoration:line-through"':''} title="${esc((p.type||'')+(p.deleted?' · deleted '+p.deleted:''))}"><td>${hm(p.at)}</td><td class="m">${esc(payKind(p))}</td><td>${esc(p.party||'')}</td><td>${esc(p.remarks||'')}</td><td>${esc(p.mode||'')}</td><td class="m">${esc(p.by||'')}</td><td class="r">${p.flow==='out'?rs(p.amount):''}</td><td class="r">${p.flow==='in'?rs(p.amount):''}</td><td class="m">${p.deleted?'':`<button class="x sm" data-rm="payments|${esc(p.key)}" title="remove from this day">✕</button>`}</td></tr>`).join('')}</table></div></div>`;
 }
 function purchaseSheet(key){
   const p=((DOC&&DOC.purchases)||{})[key]||((DOC&&DOC.drafts)||{})[key]||(RANGE.doc&&(RANGE.doc.purchases[key])); if(!p) return;
@@ -489,10 +546,11 @@ function purchaseSheet(key){
   const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
   const items=p.items||[], tot=items.reduce((n,i)=>n+(i.total||0),0);
   box.innerHTML=`<div class="sheet"><h2>${key[0]==='d'?'Being entered':'Purchase'} ${esc(p.billNo?'· bill '+p.billNo:'#'+p.id)}<button class="x" id="drillX">✕</button></h2>
-    <p class="sub">${hm(p.at)}${p.supplier?' · '+esc(p.supplier):''}${p.by?' · by '+esc(p.by):''}${p.due?' · due '+esc(p.due):''}${p.remarks?'<br>“'+esc(p.remarks)+'”':''}</p>
+    <p class="sub">${hm(p.at)}${p.supplier?' · '+esc(p.supplier):''}${p.by?' · by '+esc(p.by):''}${p.due?' · due '+esc(p.due):''}${p.remarks?'<br>“'+esc(p.remarks)+'”':''}${key[0]==='d'||!(DOC&&DOC.purchases&&DOC.purchases[key])?'':` · <button class="tab" data-rm="purchases|${esc(key)}" style="padding:2px 8px;font-size:11px">Remove from this day</button>`}</p>
     <table><tr><th>Item</th><th>Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">FOC</th><th class="r">Tax %</th><th class="r">Amount</th></tr>${items.map(i=>`<tr><td>${esc(i.n)}</td><td>${esc(i.cat||'')}</td><td class="r">${i.q??''}</td><td>${esc(i.unit||'')}</td><td class="r">${rs(i.cost||0)}</td><td class="r">${i.foc||''}</td><td class="r">${i.tax||''}</td><td class="r">${rs(i.total||0)}</td></tr>`).join('')}<tr><td colspan=7 class="r"><b>Lines ${rs(tot)}${p.discount?' · discount '+rs(p.discount):''}${p.gst?' · GST '+rs(p.gst):''}${p.delivery?' · delivery '+rs(p.delivery):''}</b></td><td class="r"><b>${rs(p.total||tot)}</b></td></tr></table></div>`;
   document.body.appendChild(box);
   box.onclick=e=>{ if(e.target===box) box.remove(); }; box.ondblclick=()=>box.remove(); $('drillX').onclick=()=>box.remove();
+  $$('[data-rm]',box).forEach(b=>b.onclick=e=>{ e.stopPropagation(); const [c,k]=b.dataset.rm.split('|'); removeEntry(DAY,c,k); });
   { const h=box.querySelector('.sheet h2'); const b=document.createElement('button'); b.className='sh'; b.textContent='📤'; b.title='share on WhatsApp'; b.onclick=e=>{ e.stopPropagation(); const sh=box.querySelector('.sheet'); shareText([ '*'+txt(h).replace('✕','').replace('📤','').trim()+'*', txt(sh.querySelector('.sub')||{innerText:''}), cardText(sh) ].filter(Boolean).join('\n'),''); }; h.insertBefore(b,h.querySelector('.x')); }
   fitTables();
 }
@@ -568,7 +626,8 @@ async function fetchJson(name){ if(!DATA) return null; const ctl=new AbortContro
 const IDB={db:null,
   open(){ if(this.db) return Promise.resolve(this.db); return new Promise(res=>{ try{ const q=indexedDB.open('hayat-owner',1); q.onupgradeneeded=()=>q.result.createObjectStore('days'); q.onsuccess=()=>{ this.db=q.result; res(this.db); }; q.onerror=()=>res(null); }catch(e){ res(null); } }); },
   async get(k){ const db=await this.open(); if(!db) return null; return new Promise(res=>{ try{ const r=db.transaction('days').objectStore('days').get(k); r.onsuccess=()=>res(r.result||null); r.onerror=()=>res(null); }catch(e){ res(null); } }); },
-  async set(k,v){ const db=await this.open(); if(!db) return; try{ db.transaction('days','readwrite').objectStore('days').put(v,k); }catch(e){} } };
+  async set(k,v){ const db=await this.open(); if(!db) return; try{ db.transaction('days','readwrite').objectStore('days').put(v,k); }catch(e){} },
+  async del(k){ const db=await this.open(); if(!db) return; try{ db.transaction('days','readwrite').objectStore('days').delete(k); }catch(e){} } };
 const finished=(d,doc)=>d<bizToday()&&doc&&!(doc.open>0);      /* a past day with nothing open is final */
 async function loadDay(d){ if(CACHE[d]!==undefined) return CACHE[d];
   let doc=null;
@@ -713,7 +772,7 @@ function month(){
     <div class="kpi click" data-tab="mvoid"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill printed ${rs(S.voids.afterBill.v)} (${S.voids.afterBill.n})</em></div>
     <div class="kpi click" data-tab="mpay"><small>Expenses</small><b>${rs(S.expenses||S.paidOut)}</b><em class="rows"><span>Purchases <b>${rs((S.pay||{}).purchase||0)}</b></span><span>Salary <b>${rs((S.pay||{}).salary||0)}</b></span><span>Other <b>${rs((S.pay||{}).expense||0)}</b></span></em></div>
     <div class="kpi"><small>Net</small><b class="${(S.net||0)>=0?'up':'dn'}">${rs(S.net||0)}</b><em>${S.sales?Math.round(100*(S.net||0)/S.sales)+'% margin':''}${(S.pay||{}).receipt?' · received '+rs(S.pay.receipt):''}</em></div></div>`;
-  const days=Object.keys(S.byDay).sort(), maxD=Math.max(1,...days.map(d=>S.byDay[d].rev));
+  const days=Object.keys(S.byDay).sort(), maxD=yscale(Math.max(1,...days.map(d=>S.byDay[d].rev))).top;
   const byDay=`<div class="card wide"><h2>Sales by day</h2><div class="bars axed" style="grid-template-columns:repeat(${days.length},1fr)">${ygrid(maxD)}${days.map(d=>`<div class="bar click" data-day="${d}" style="height:${Math.max(2,100*S.byDay[d].rev/maxD)}%" data-t="${d.slice(5)} ${rs(S.byDay[d].rev)} · ${S.byDay[d].bills} bills"></div>`).join('')}</div><div class="hx axed" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((d,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div></div>`;
   const mini=(title,g,fmt)=>{ const rows=Object.entries(g).sort((a,b)=>(b[1].v??b[1])-(a[1].v??a[1])); const max=Math.max(1,...rows.map(r=>r[1].v??r[1])); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([kk,x])=>`<div class="mrow"><span>${esc(kk)}${x.n!=null?' <small style="color:var(--muted)">'+x.n+'</small>':''}</span><div class="b" style="width:${100*(x.v??x)/max}%"></div><span class="v">${(fmt||rs)(x.v??x)}</span></div>`).join('')||'<div class="note">Nothing.</div>'}</div></div>`; };
   const people=[...new Set([...S.disc.list.map(x=>x.by),...S.staff.list.map(x=>x.who),...S.voids.list.map(x=>x.by),...pay.list.map(x=>x.party).filter(Boolean)])].sort();
@@ -782,6 +841,60 @@ function spendExplorer(sp){
   return `<div class="card wide"><h2>Spend <span class="n">${groups.length} ${SP.group==='cat'?'categories':SP.group==='item'?'items':SP.group==='day'?'days':'weeks'} · ${L.length} lines · ${rs(tot)}</span></h2>${ctl}${groups.map(G=>`<details class="dd"${SP.open[G.k]?' open':''} data-spk="${esc(G.k)}"><summary><span>${esc(G.k)}</span><small>${G.n} lines${SP.group==='item'&&G.unit?' · '+Math.round(G.q*100)/100+' '+esc(G.unit):''} · ${tot?Math.round(100*G.v/tot):0}%</small><b>${rs(G.v)}</b></summary>${sub(G)}</details>`).join('')||'<div class="note">No spend lines in this span.</div>'}</div>`;
 }
 
+
+/* ============================================================
+   FORECAST - what today should do, hour by hour, and how it is going
+   Base: the same weekday's hours over the last 6 weeks (trimmed, recent weeks heavier)
+   × trend (last 4 wks vs the 4 before, damped) × month position (learned) × calendar
+   (Kerala holidays, Eid; learned once we have our own) → corrected live by how the
+   day is actually running. Every number is shown, so a wrong factor is visible.
+   ============================================================ */
+let FC=false; try{ FC=localStorage.getItem('hayat-fc')==='on'; }catch(e){}
+const HOLI={'2026-01-26':['Republic Day',1.2],'2026-03-20':['Eid al-Fitr',1.8],'2026-03-21':['Eid 2nd day',1.5],'2026-04-03':['Good Friday',1.1],'2026-04-14':['Vishu',1.2],'2026-05-01':['May Day',1.15],'2026-05-27':['Bakrid',1.8],'2026-05-28':['Bakrid 2nd day',1.4],'2026-06-26':['Muharram',1.1],'2026-08-15':['Independence Day',1.2],'2026-08-25':['Milad-un-Nabi',1.2],'2026-08-26':['Thiruvonam',1.3],'2026-08-27':['Onam 3rd',1.2],'2026-10-02':['Gandhi Jayanti',1.15],'2026-10-20':['Vijayadashami',1.15],'2026-11-08':['Deepavali',1.1],'2026-12-25':['Christmas',1.3],'2027-01-26':['Republic Day',1.2],'2027-03-10':['Eid al-Fitr',1.8],'2027-03-11':['Eid 2nd day',1.5]};
+const wom=d=>Math.min(3,Math.floor((+d.slice(8,10)-1)/7));          /* week of month 0..3 */
+function fcModel(day){
+  const days=Object.keys(INDEX).filter(d=>d<day&&INDEX[d].hours&&INDEX[d].rev>0).sort(), dow=new Date(day+'T12:00:00').getDay();
+  const same=days.filter(d=>new Date(d+'T12:00:00').getDay()===dow).slice(-6);
+  if(same.length<2) return null;
+  /* hourly profile: per hour, drop the top and bottom when 5+, weight recent weeks more */
+  const prof=Array(24).fill(0);
+  for(let h=0;h<24;h++){ let v=same.map((d,i)=>({v:INDEX[d].hours[h]||0,w:1+i*0.25})); if(v.length>=5){ v=v.slice().sort((a,b)=>a.v-b.v).slice(1,-1); } const W=v.reduce((n,x)=>n+x.w,0); prof[h]=v.reduce((n,x)=>n+x.v*x.w,0)/(W||1); }
+  const base=prof.reduce((a,b)=>a+b,0);
+  const mean=L=>L.length?L.reduce((n,d)=>n+INDEX[d].rev,0)/L.length:0;
+  const last28=days.slice(-28), prev28=days.slice(-56,-28);
+  let trend=1; if(prev28.length>=14&&last28.length>=14){ const r=mean(last28)/mean(prev28); trend=Math.min(1.15,Math.max(0.85,1+(r-1)*0.5)); }
+  let pos=1; const months=new Set(days.map(d=>d.slice(0,7))); if(months.size>=2){ const all=mean(days), bucket=days.filter(d=>wom(d)===wom(day)); if(bucket.length>=5&&all) pos=Math.min(1.1,Math.max(0.9,1+(mean(bucket)/all-1)*0.5)); }
+  let cal=1, why=''; const hol=HOLI[day]; if(hol){ cal=hol[1]; why=hol[0]; const past=Object.keys(HOLI).filter(k=>k<day&&INDEX[k]&&HOLI[k][0]===hol[0]); if(past.length){ const own=past.map(k=>{ const dw=new Date(k+'T12:00:00').getDay(); const s2=days.filter(d=>d<k&&new Date(d+'T12:00:00').getDay()===dw).slice(-6); return s2.length>=2?INDEX[k].rev/mean(s2):null; }).filter(Boolean); if(own.length) cal=own.reduce((a,b)=>a+b,0)/own.length; } }
+  const f=trend*pos*cal; return {prof,base,trend,pos,cal,why,f,n:same.length,plan:base*f};
+}
+/* live: how far the day has run vs its plan, then the rest of the day and the next hour */
+function fcLive(day,H,nowH,frac){
+  const M=fcModel(day); if(!M) return null;
+  const P=M.prof.map(v=>v*M.f);
+  let exp=0, act=0; for(let h=0;h<nowH;h++){ exp+=P[h]; act+=H[h]||0; } exp+=P[nowH]*frac; act+=(H[nowH]||0);
+  const share=M.plan?Math.min(1,exp/M.plan):0; let corr=1; if(exp>0&&share>0.08){ corr=1+((act/exp)-1)*Math.min(1,share*2.5); corr=Math.min(1.6,Math.max(0.6,corr)); }
+  const rest=P.map((v,h)=>h<nowH?0:h===nowH?Math.max(0,v*(1-frac)*corr):v*corr);
+  const fcH=P.map((v,h)=>h<nowH?(H[h]||0):h===nowH?(H[h]||0)+rest[h]:rest[h]);
+  const e2=P[nowH-1]+P[nowH-2]||0, a2=(H[nowH-1]||0)+(H[nowH-2]||0); const mom=e2>0?Math.min(1.3,Math.max(0.7,1+((a2/e2)-1)*0.3)):1;
+  const next=P[nowH+1]!=null?P[nowH+1]*corr*mom:0;
+  const total=act+rest.reduce((a,b)=>a+b,0);
+  return Object.assign(M,{P,fcH,rest,total,next,corr,share,act,exp,nowH});
+}
+function fcNow(){ const d=new Date(NOW); const h=(d.getHours()-BH0+24)%24; return {nowH:h,frac:d.getMinutes()/60}; }
+function fcToday(){ if(!FC||DAY!==bizToday()||!DOC) return null; const {nowH,frac}=fcNow(); return fcLive(DAY,hbucket(recs().filter(r=>r.status==='settled')),nowH,frac); }
+function fcDay(day){ if(!FC) return null; const M=fcModel(day); return M?M.plan:null; }
+/* keep what was said, to score it later: vm_forecast/{day}.at[h] = {total,next} */
+let FC_SAVED={};
+function fcRecord(F){ if(!F||!FB||!FB.fs||FB.role!=='office') return; const h=F.nowH; const k=DAY+':'+h; if(FC_SAVED[k]) return; FC_SAVED[k]=1;
+  try{ FB.fs.setDoc(FB.fs.doc(FB.db,'vm_forecast',DAY),{day:DAY,plan:Math.round(F.plan),f:{trend:F.trend,pos:F.pos,cal:F.cal},at:{[h]:{total:Math.round(F.total),next:Math.round(F.next),corr:F.corr,ts:tsNow()}}},{merge:true}).catch(()=>{}); }catch(e){} }
+function fcCard(F){ if(!F) return ''; const pct=F.total?Math.round(100*F.act/F.total):0, dev=F.exp?Math.round(100*(F.act/F.exp-1)):null;
+  return `<div class="kpi click" id="fcTile" title="tap for how it is worked out"><small>Forecast today ${F.why?'· '+esc(F.why):''}</small><b>${rs(F.total)}</b><em class="rows"><span>Next hour <b>${rs(F.next)}</b></span><span>Done <b>${pct}%</b></span><span>vs plan <b class="${dev==null?'':dev>=0?'up':'dn'}">${dev==null?'—':(dev>=0?'+':'')+dev+'%'}</b></span></em></div>`; }
+function fcSheet(){ const F=fcToday(); if(!F) return; const old=document.getElementById('drill'); if(old) old.remove();
+  const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill'; const x=v=>'× '+v.toFixed(2);
+  box.innerHTML=`<div class="sheet"><h2>Forecast · ${esc(DAY)} <button class="x" id="drillX">✕</button></h2><p class="sub">Each link in the chain, so a wrong one is visible.</p>
+    <table><tr><td>Base · same weekday, last ${F.n} wks (trimmed, recent heavier)</td><td class="r">${rs(F.base)}</td></tr><tr><td>Trend · last 4 wks vs the 4 before, damped</td><td class="r">${x(F.trend)}</td></tr><tr><td>Month position · week ${wom(DAY)+1}</td><td class="r">${x(F.pos)}</td></tr><tr><td>Calendar${F.why?' · '+esc(F.why):' · normal day'}</td><td class="r">${x(F.cal)}</td></tr><tr><td><b>Plan at open</b></td><td class="r"><b>${rs(F.plan)}</b></td></tr><tr><td>So far · actual ${rs(F.act)} vs expected ${rs(F.exp)} (${Math.round(100*F.share)}% of the day)</td><td class="r">${x(F.corr)}</td></tr><tr><td><b>Forecast now</b></td><td class="r"><b>${rs(F.total)}</b></td></tr><tr><td>Next hour (${hlabel(F.nowH+1)}:00)</td><td class="r">${rs(F.next)}</td></tr></table>
+    <p class="note">Holidays are built in (Kerala, Eid, Onam) with a starting factor, replaced by our own once a holiday has passed. Rain and road traffic come later.</p></div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove(); fitTables(); }
 /* ---- cash & bank: what should be in the drawer and the bank, against what the owner counted ----
    vm_cash/{day} = {day, pos:'open'|'close', cash, bank, note, by, at}
    A count anchors the chain: from there, every day's expected = previous + money in - money out,
@@ -846,8 +959,15 @@ function cashPeriod(){
   const C=CASHV.chain, R=C.rows.filter(r=>!r.open), last=R[R.length-1];
   const inC=R.reduce((n,r)=>n+r.inCash,0), outC=R.reduce((n,r)=>n+r.outCash,0), inB=R.reduce((n,r)=>n+r.inBank,0), outB=R.reduce((n,r)=>n+r.outBank,0), counted=R.filter(r=>r.countCash!=null), short=counted.reduce((n,r)=>n+r.diffCash,0);
   const k=(lbl,v,sub)=>`<div class="kpi"><small>${lbl}</small><b>${rs(v)}</b><em>${sub||''}</em></div>`;
+  const first=R[0], countedB=R.filter(r=>r.countBank!=null), shortB=countedB.reduce((n,r)=>n+r.diffBank,0), lastC=counted[counted.length-1], lastB=countedB[countedB.length-1];
+  const closeRow=(lbl,open,inn,out,exp,c,diff)=>`<tr><td>${lbl}</td><td class="r">${rs(open)}</td><td class="r">${rs(inn)}</td><td class="r">${rs(out)}</td><td class="r"><b>${rs(exp)}</b></td><td class="r">${c?rs(c.v)+' <small>'+c.d.slice(5)+'</small>':'<span class="m">not counted</span>'}</td><td class="r">${c?dc(diff):''}</td></tr>`;
+  const close=first&&last?`<h3 style="margin:10px 0 4px;font-size:14px">Close of ${esc(PER.label)}</h3><div class="scroll"><table><tr><th></th><th class="r">Opening</th><th class="r">In</th><th class="r">Out</th><th class="r">Should be</th><th class="r">Counted</th><th class="r">Diff</th></tr>
+    ${closeRow('Cash in hand',first.openCash,inC,outC,last.expCash,lastC?{v:lastC.countCash,d:lastC.d}:null,lastC?lastC.diffCash:null)}
+    ${closeRow('Bank (card / UPI)',first.openBank,inB,outB,last.expBank,lastB?{v:lastB.countBank,d:lastB.d}:null,lastB?lastB.diffBank:null)}
+    <tr><td><b>Total money</b></td><td class="r">${rs(first.openCash+first.openBank)}</td><td class="r">${rs(inC+inB)}</td><td class="r">${rs(outC+outB)}</td><td class="r"><b>${rs(last.expCash+last.expBank)}</b></td><td class="r">${lastC&&lastB?rs(lastC.countCash+lastB.countBank):''}</td><td class="r">${lastC&&lastB?dc(lastC.diffCash+lastB.diffBank):''}</td></tr></table></div>
+    <p class="note">Counted = the last count in this span (${lastC?lastC.d:'none'}). To close a month, count cash and bank on its last day — that becomes next month's opening.</p>`:'';
   return `<div class="card wide"><h2>Cash & bank <span class="n">${C.anchor?'anchored on '+C.anchor:'<b>no count yet</b>'} · <button class="tab" id="cashEnter">Enter count</button></span></h2>
-    <div class="kpis">${k('Cash in',inC,'sales + receipts')}${k('Cash paid out',outC,'purchases, salary, expenses')}${last?k('Expected in drawer',last.expCash,'at the end of '+last.d.slice(5)):''}${k('To the bank',inB-outB,'card/UPI '+rs(inB)+' − bank payouts '+rs(outB))}${last?k('Credit outstanding',last.credit,'credit bills − receipts, approx.'):''}${last&&last.payable?k('Owed to suppliers',last.payable,'credit purchases in this span'):''}<div class="kpi"><small>Short / over</small>${counted.length?dc(short):'<b>—</b>'}<em>${counted.length} counts in this span</em></div></div>
+    <div class="kpis">${k('Cash in',inC,'sales + receipts')}${k('Cash paid out',outC,'purchases, salary, expenses')}${last?k('Expected in drawer',last.expCash,'at the end of '+last.d.slice(5)):''}${k('To the bank',inB-outB,'card/UPI '+rs(inB)+' − bank payouts '+rs(outB))}${last?k('Credit outstanding',last.credit,'credit bills − receipts, approx.'):''}${last&&last.payable?k('Owed to suppliers',last.payable,'credit purchases in this span'):''}<div class="kpi"><small>Cash short / over</small>${counted.length?dc(short):'<b>—</b>'}<em>${counted.length} counts</em></div><div class="kpi"><small>Bank short / over</small>${countedB.length?dc(shortB):'<b>—</b>'}<em>${countedB.length} counts</em></div></div>${close}
     ${cashTable(C)}<p class="note">Tap a day to count it. Expected carries forward from the last count; a count resets the chain.</p></div>`;
 }
 function cashSheet(day){
@@ -915,7 +1035,7 @@ function period(){
   const d=(a,b)=>b?Math.round(100*(a-b)/b):null, dd=(a,b)=>{ const x=d(a,b); return x==null?'':` <span class="d ${x>=0?'up':'dn'}">${x>=0?'+':''}${x}%</span>`; };
   const pay=S.pay||{purchase:0,salary:0,expense:0,receipt:0,byParty:{},list:[]}, exp=S.expenses??S.paidOut, net=S.net??(S.sales-exp);
   const k=`<div class="kpis">
-    <div class="kpi"><small>Sales</small><b>${rs(S.sales)}</b><em>${S.days} days · ${S.bills} bills${dd(S.sales,prev.rev)} vs previous ${prev.n} days</em></div>
+    <div class="kpi"><small>Sales</small><b>${rs(S.sales)}</b><em>${S.days} days · ${S.bills} bills${dd(S.sales,prev.rev)} vs previous ${prev.n} days</em></div>${(()=>{ if(!FC||!S.partial) return ''; const F=fcToday(); const today=F?F.total:(INDEX[bizToday()]||{}).rev||0; let rest=0,n=0; const end=PER.to>=bizToday()?ymd(new Date(+PER.from.slice(0,4),+PER.from.slice(5,7),0,12)):PER.to; for(let d=ymd(new Date(new Date(bizToday()+'T12:00:00').getTime()+864e5)); d<=end; d=ymd(new Date(new Date(d+'T12:00:00').getTime()+864e5))){ const pl=fcDay(d); if(pl){ rest+=pl; n++; } } const soFar=S.sales-((S.byDay[bizToday()]||{}).rev||0); return `<div class="kpi"><small>Forecast · ${esc(PER.label)} end</small><b>${rs(soFar+today+rest)}</b><em>so far ${rs(soFar)} + today ${rs(today)} + ${n} days ${rs(rest)}</em></div>`; })()}
     <div class="kpi"><small>Avg / day</small><b>${rs(S.avgDay)}</b><em>prev ${rs(prev.n?prev.rev/prev.n:0)}${dd(S.avgDay,prev.n?prev.rev/prev.n:0)}</em></div>
     <div class="kpi"><small>Avg bill</small><b>${rs(S.bills?S.sales/S.bills:0)}</b><em>${Math.round(S.bills/Math.max(1,S.days))} bills/day${dd(S.bills,prev.bills)}</em></div>
     <div class="kpi click" data-ptab="money"><small>Expenses</small><b>${rs(exp)}</b><em class="rows"><span>Goods <b>${rs(pay.purchase)}</b></span><span>Salary <b>${rs(pay.salary)}</b></span><span>Other <b>${rs(pay.expense)}</b></span></em></div>
@@ -923,8 +1043,8 @@ function period(){
     <div class="kpi click" data-ptab="money"><small>Discounts</small><b>${rs(S.disc.total)}</b><em>${S.disc.list.length} bills · ${S.sales?(100*S.disc.total/(S.sales+S.disc.total)).toFixed(1):0}% of gross</em></div>
     <div class="kpi click" data-ptab="people"><small>Staff food</small><b>${rs(S.staff.menu)}</b><em>${S.staff.list.length} bills · paid ${rs(S.staff.total)}</em></div>
     <div class="kpi click" data-ptab="voids"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill ${rs(S.voids.afterBill.v)}</em></div></div>`;
-  const tabs=`<div class="tabs main">${[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['cash','Cash'],['voids','Voids']].map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}<span class="n" style="align-self:center;margin-left:auto">${esc(PER.label)}${S.partial?' · so far':''}</span></div>`;
-  const days=Object.keys(S.byDay).sort(), maxD=Math.max(1,...days.map(x=>S.byDay[x].rev));
+  const tabs='';
+  const days=Object.keys(S.byDay).sort(), maxD=yscale(Math.max(1,...days.map(x=>S.byDay[x].rev))).top;
   const byDay=`<div class="card wide"><h2>Sales by day <span class="n">click a day to open it</span></h2><div class="bars axed" style="grid-template-columns:repeat(${days.length},1fr)">${ygrid(maxD)}${days.map(x=>`<div class="bar click" data-day="${x}" style="height:${Math.max(2,100*S.byDay[x].rev/maxD)}%" data-t="${x.slice(5)} ${rs(S.byDay[x].rev)} · ${S.byDay[x].bills} bills"></div>`).join('')}</div><div class="hx axed" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((x,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+x.slice(8)+'</span>').join('')}</div></div>`;
   const mini=(title,g,fmt)=>{ const rows=Object.entries(g).sort((a,b)=>(b[1].v??b[1])-(a[1].v??a[1])); const max=Math.max(1,...rows.map(r=>r[1].v??r[1])); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([kk,x])=>`<div class="mrow"><span>${esc(kk)}${x.n!=null?' <small style="color:var(--muted)">'+x.n+'</small>':''}</span><div class="b" style="width:${100*(x.v??x)/max}%"></div><span class="v">${(fmt||rs)(x.v??x)}</span></div>`).join('')||'<div class="note">Nothing.</div>'}</div></div>`; };
   const sve=`<div class="card"><h2>Sales vs expenses</h2><div class="mini">${[['Sales',S.sales],['Goods',pay.purchase],['Salary',pay.salary],['Other',pay.expense],['Net',net]].map(([kk,v])=>`<div class="mrow"><span>${kk}</span><div class="b" style="width:${100*Math.abs(v)/Math.max(1,S.sales)}%${kk==='Net'?';background:'+((v>=0)?'var(--s3)':'var(--s8)'):kk==='Sales'?'':';background:var(--s2)'}"></div><span class="v">${rs(v)}</span></div>`).join('')}</div></div>`;
@@ -959,7 +1079,7 @@ function trends(){
   if(days.length<2) return '<div class="card wide"><div class="note">Trends need the day index. On the shop PC run <b>daylog-backfill-all.bat</b> once.</div></div>';
   const step=days.length>16?2:1, cols=`grid-template-columns:repeat(${days.length},1fr)`;
   const axis=`<div class="hx axed" style="${cols}">${days.map((d,i)=>i%step?'<span></span>':'<span>'+d.slice(8)+'</span>').join('')}</div>`;
-  const series=(title,f,fmt,unit)=>{ const vals=days.map(d=>+f(INDEX[d]||{})||0), have=vals.filter(Boolean); const max=Math.max(1,...vals);
+  const series=(title,f,fmt,unit)=>{ const vals=days.map(d=>+f(INDEX[d]||{})||0), have=vals.filter(Boolean); const max=yscale(Math.max(1,...vals)).top;
     if(!have.length) return '';
     return `<div class="card wide"><h2>${title} <span class="n">avg ${fmt(have.reduce((a,b)=>a+b,0)/have.length)} · best ${fmt(Math.max(...have))}</span></h2><div class="bars axed" style="${cols}">${ygrid(max,unit==='n'?(v=>Math.round(v)):kfmt)}${vals.map((v,i)=>`<div class="bar click${days[i]===DAY?' cur':''}" data-day="${days[i]}" style="height:${Math.max(2,100*v/max)}%" data-t="${days[i].slice(5)} ${fmt(v)}"></div>`).join('')}</div>${axis}</div>`; };
   const closeKeys=[...new Set(days.flatMap(d=>Object.keys((INDEX[d]||{}).close||{})))];
@@ -993,15 +1113,50 @@ function waiters(){
   return `<div class="card"><h2>Waiters</h2><table><tr><th>Name</th><th class="r">Bills</th><th class="r m">Open</th><th class="r">Sales</th><th class="r">Avg bill</th><th class="r m">Order→bill</th><th class="r m">Add‑on KOT %</th><th class="r">Edits</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r">${w.bills}</td><td class="r m">${w.open}</td><td class="r">${rs(w.v)}</td><td class="r">${w.bills?rs(w.v/w.bills):'—'}</td><td class="r m">${avg(w.d)??'—'}m</td><td class="r m">${w.k.length?Math.round(100*w.k.filter(x=>x>1).length/w.k.length):0}%</td><td class="r">${w.edits}</td></tr>`).join('')}</table></div>`;
 }
 
+/* the dock at the bottom: the mode's tabs, the range chips, the day pill. Collapsible; swipe the page to change day. */
+let DOCK_FOLD=false; try{ DOCK_FOLD=localStorage.getItem('hayat-dock')==='fold'; }catch(e){}
+function dock(){
+  const d=$('dock'); if(!d) return;
+  const dayTabs=[['floor','Live'],['sales','Sales'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']], perTabs=[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['cash','Cash'],['voids','Voids']];
+  $('dockTabs').innerHTML=MODE==='period'
+    ?`<div class="tabs main">${perTabs.map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`
+    :`<div class="tabs main">${dayTabs.map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  const P=periodPresets(), is=(a,b)=>MODE==='period'&&PER.from===a&&PER.to===b;
+  const y=new Date(bizToday()+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y);
+  const on={today:MODE==='day'&&DAY===bizToday(),yday:MODE==='day'&&DAY===yd,week:is(P[0][1],P[0][2]),month:is(P[2][1],P[2][2]),lmonth:is(P[3][1],P[3][2])};
+  $$('#dockRange .chip:not(.fc)').forEach(c=>c.classList.toggle('on',!!on[c.dataset.r]||(c.dataset.r==='pick'&&!Object.values(on).some(Boolean))));
+  const fchip=$('fcChip'); if(fchip) fchip.classList.toggle('on',FC);
+  const ft=$('fcTile'); if(ft) ft.onclick=fcSheet; fcRecord(fcToday());
+  const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  if(MODE==='period'){ $('dLabel').textContent=PER.label||'Period'; $('dSub').textContent=PER.from?PER.from.slice(5)+' → '+PER.to.slice(5)+(PER.doc&&PER.doc.partial?' · so far':''):''; }
+  else { const x=new Date(DAY+'T12:00:00'); $('dLabel').textContent=wd[x.getDay()]+' '+x.getDate()+' '+x.toLocaleString('en',{month:'short'}); $('dSub').textContent=DAY===bizToday()?'live':(INDEX[DAY]&&INDEX[DAY].rev?rs(INDEX[DAY].rev):''); }
+  d.classList.toggle('fold',DOCK_FOLD);
+  document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px');
+}
+function dockWire(){
+  document.body.appendChild($('calPop'));   /* out of the blurred top bar, which would pin a fixed box to itself */
+  $('fcChip').onclick=()=>{ FC=!FC; try{ localStorage.setItem('hayat-fc',FC?'on':'off'); }catch(e){} render(); };
+  $$('#dockRange .chip:not(.fc)').forEach(c=>c.onclick=()=>{ const r=c.dataset.r, P=periodPresets();
+    if(r==='today'){ MODE='day'; setDay(bizToday()); render(); }
+    else if(r==='yday'){ MODE='day'; const y=new Date(bizToday()+'T12:00:00'); y.setDate(y.getDate()-1); setDay(ymd(y)); render(); }
+    else if(r==='pick'){ calendar(); }
+    else { MODE='period'; const p=r==='week'?P[0]:r==='month'?P[2]:P[3]; loadPeriod(p[1],p[2],p[0]); } });
+  $('dPrev').onclick=()=>stepDay(-1); $('dNext').onclick=()=>stepDay(1);
+  $('dPick').onclick=()=>{ if(MODE==='period'){ MODE='day'; render(); } else calendar(); };
+  $('dockFold').onclick=()=>{ DOCK_FOLD=!DOCK_FOLD; try{ localStorage.setItem('hayat-dock',DOCK_FOLD?'fold':'open'); }catch(e){} dock(); };
+  /* swipe the page sideways to step a day */
+  let sx=null, sy=null; const m=$('main');
+  m.addEventListener('touchstart',e=>{ const t=e.touches[0]; sx=t.clientX; sy=t.clientY; },{passive:true});
+  m.addEventListener('touchend',e=>{ if(sx==null) return; const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy; sx=null; if(MODE!=='day'||Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)) return; if(e.target.closest('.scroll,.kpis,.bars,.tabs,table')) return; stepDay(dx<0?1:-1); },{passive:true});
+}
 function render(){
   /* a PC whose clock is behind the shop's (or a browser in another zone) must not show negative ages */
   NOW=Math.max(Date.now(), DOC&&DOC.updatedAt?T(DOC.updatedAt).getTime():0);
-  const m=$('main'); if(!DOC&&MODE==='day'){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; return; }
+  const m=$('main'); if(!DOC&&MODE==='day'){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; document.body.classList.remove('period'); dock(); return; }
   const live=DAY===bizToday();
   document.body.classList.toggle('period',MODE==='period');
   if(MODE==='period'){ m.innerHTML=period()+`<div class="note">board ${BOARD}</div>`; }
   else m.innerHTML=kpis()+
-    `<div class="tabs main">${[['floor','Live'],['sales','Sales'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']].map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`+
     (TAB==='sales'?`<div class="grid">${hourly()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
@@ -1010,7 +1165,7 @@ function render(){
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
-  addShare(); fitTables();
+  dock(); addShare(); fitTables();
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
   $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
@@ -1023,7 +1178,8 @@ function render(){
   const kt=$('ktime'); if(kt) kt.onclick=e=>{ e.preventDefault(); kitchenSheet(); };
   const re=$('rcpEdit'); if(re) re.onclick=e=>{ e.preventDefault(); recipeSheet(PER.V?itemsOf(PER.V.records):(PER.doc&&PER.doc.items)); };
   $$('[data-pur]').forEach(t=>t.onclick=()=>purchaseSheet(t.dataset.pur));
-  const ce=$('cashEnter'); if(ce) ce.onclick=()=>cashSheet(MODE==='period'?PER.to:DAY); $$('[data-cashday]').forEach(tr=>tr.onclick=()=>cashSheet(tr.dataset.cashday));
+  const ce=$('cashEnter'); if(ce) ce.onclick=()=>cashSheet(MODE==='period'?PER.to:DAY);
+  $$('[data-rm]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const [c,k]=b.dataset.rm.split('|'); removeEntry(DAY,c,k); }); $$('[data-cashday]').forEach(tr=>tr.onclick=()=>cashSheet(tr.dataset.cashday));
   const mp=$('monPick'); if(mp) mp.onchange=()=>loadMonth(mp.value); const mr=$('monRefresh'); if(mr) mr.onclick=()=>loadMonth(MON.key,true); const mper=$('monPerson'); if(mper) mper.onchange=()=>{ MON.person=mper.value; render(); };
   $$('[data-mdrill]').forEach(tr=>tr.onclick=async()=>{ const [d,key]=tr.dataset.mdrill.split('|'); const rk=key.split('/')[1]; const doc=d===bizToday()?DOC:await loadDay(d); const r=doc&&doc.records[rk]; if(!r) return; const keep=RANGE.doc; RANGE.doc={records:{[key]:Object.assign({},r,{key})},purchases:{}}; drill(key); RANGE.doc=keep; });
   $$('[data-bf]').forEach(sel=>sel.onchange=()=>{ BF[sel.dataset.bf]=sel.value; render(); }); const bc=document.querySelector('[data-bfclear]'); if(bc) bc.onclick=()=>{ BF={kind:'',status:'',waiter:'',section:'',sort:BF.sort}; render(); };
@@ -1100,7 +1256,7 @@ function calendar(){
   $$('[data-pick]',pop).forEach(c=>c.onclick=()=>{ pop.hidden=true; setDay(c.dataset.pick); });
 }
 let rzT=null; window.addEventListener('resize',()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{ if(DOC) render(); },250); });
-document.addEventListener('click',e=>{ const pop=$('calPop'); if(pop&&!pop.hidden&&!pop.contains(e.target)&&e.target.id!=='calBtn') pop.hidden=true; });
+document.addEventListener('click',e=>{ const pop=$('calPop'); if(pop&&!pop.hidden&&!pop.contains(e.target)&&e.target.id!=='calBtn'&&!e.target.closest('[data-r="pick"],#dPick')) pop.hidden=true; });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const pop=$('calPop'); if(pop) pop.hidden=true; } if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if(e.key==='ArrowLeft') stepDay(-1); if(e.key==='ArrowRight') stepDay(1); });
 
 async function days(){
@@ -1119,7 +1275,7 @@ async function days(){
   sel.innerHTML=out.map(d=>{ const x=INDEX[d]; return `<option value="${d}"${d===DAY?' selected':''}>${d===bizToday()?'Today · ':''}${d}${x&&x.rev?' · '+rs(x.rev):''}</option>`; }).join('');
   if(err){ $('live').className='live bad'; $('live').lastElementChild.textContent='days: '+err; }
   sel.onchange=()=>setDay(sel.value);
-  $('prevDay').onclick=()=>stepDay(-1); $('nextDay').onclick=()=>stepDay(1); $('calBtn').onclick=calendar;
+  $('prevDay').onclick=()=>stepDay(-1); $('nextDay').onclick=()=>stepDay(1); $('calBtn').onclick=calendar; dockWire();
 }
 
 async function go(){
