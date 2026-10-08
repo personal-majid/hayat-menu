@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hayat · Owner</title>
 <link rel="icon" href="assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap">
 <script src="config.js"></script>
 <script src="hayat-auth.js"></script>
 <style>
@@ -18,7 +19,7 @@
   --good:#008300; --warn:#eda100; --bad:#e34948; }
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ color-scheme:dark; --bg:#171512; --card:#211e1a; --line:rgba(245,240,228,.12); --line2:rgba(245,240,228,.26); --ink:#F5F0E4; --muted:#B5AC9A; --pri:#F5F0E4; --onpri:#1B1A17; --soft:rgba(245,240,228,.05); --soft2:rgba(245,240,228,.09);
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s7:#9085e9; --s8:#e66767; } }
-*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Manrope","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Outfit","Manrope","Segoe UI",system-ui,sans-serif}
 a{color:inherit}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .top h1{font:700 18px "Cormorant Garamond",Georgia,serif;margin:0;letter-spacing:.02em}
@@ -38,14 +39,14 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .kpi small{display:block;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
 .kpi.click{cursor:pointer} .kpi.click:hover{border-color:var(--line2)}
 .kpi em.rows{display:grid;gap:1px} .kpi em.rows span{display:flex;justify-content:space-between} .kpi em.rows b{font-size:12px;font-weight:600;display:inline;margin:0}
-.kpi b{display:block;font-size:24px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi b{display:block;font-size:27px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .kpi em{font-style:normal;font-size:12px;color:var(--muted)}
 .kpi em.up{color:var(--good)} .kpi em.dn{color:var(--bad)}
 .grid{display:grid;grid-template-columns:1fr;gap:12px}
 @media (min-width:900px){.grid{grid-template-columns:1fr 1fr}} @media (min-width:1300px){.grid{grid-template-columns:1fr 1fr 1fr}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
 .card.wide{grid-column:1/-1}
-.card h2{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.card h2{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
 .card h2 .n{margin-left:auto;font-weight:700;color:var(--ink);letter-spacing:0;text-transform:none;font-size:12px}
 .alerts{display:grid;gap:6px}
 .al{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;border-left:3px solid var(--warn);background:var(--soft)}
@@ -54,7 +55,7 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .tbl.click{cursor:pointer} .tbl.click:hover{border-color:var(--line2)}
 .tbl{border:1px solid var(--line);border-radius:10px;padding:8px;min-height:74px;background:var(--soft);position:relative}
 .tbl b{display:block;font-size:14px} .tbl small{display:block;font-size:11px;color:var(--muted);line-height:1.35}
-.tbl .tk{font-size:11px;letter-spacing:.04em;color:var(--muted);font-weight:700} .tbl b.amt{font-size:20px;line-height:1.15;font-variant-numeric:tabular-nums;margin:1px 0 2px}
+.tbl .tk{font-size:12px;letter-spacing:.04em;color:var(--muted);font-weight:700} .tbl b.amt{font-size:22px;line-height:1.15;font-variant-numeric:tabular-nums;margin:1px 0 2px}
 /* open orders: newest first, the amount leads, the edge and the clock colour with age (green → amber → red over 40 min) */
 .olist{display:grid;gap:6px;margin-top:8px}
 .oo{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--soft);border-left:4px solid hsl(var(--h) 60% 42%);cursor:pointer}
@@ -68,7 +69,19 @@ select,button.tb{font:inherit;padding:6px 10px;border:1px solid var(--line);bord
 .tbl.late{background:color-mix(in srgb,var(--s8) 14%,var(--card));border-color:color-mix(in srgb,var(--s8) 55%,transparent)}
 .tbl .age{float:right;margin:-2px -2px 0 6px;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--muted)}
 .tbl.late .age,.tbl.due .age{color:var(--ink)}
-.sechead{grid-column:1/-1;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:6px 0 -2px}
+.sechead{grid-column:1/-1;font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:6px 0 -2px}
+/* an empty section folds to one line; open it to see the free tables */
+.secfold{grid-column:1/-1} .secfold summary{list-style:none;cursor:pointer;font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:6px 0;display:flex;gap:8px;align-items:center} .secfold summary::after{content:'▸';margin-left:auto} .secfold[open] summary::after{content:'▾'} .secfold .floor{margin-top:4px}
+/* an hour, tapped: today against the days that matter */
+.hsel{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.hsel b{font-size:15px}
+/* the heat-map: days x hours, colour = how that hour did against its normal */
+.heat{display:grid;gap:2px;font-size:10px;font-variant-numeric:tabular-nums}
+.heat .hr{display:grid;grid-template-columns:52px repeat(var(--n),1fr);gap:2px;align-items:center}
+.heat .hr>span:first-child{color:var(--muted);font-weight:700;white-space:nowrap}
+.heat .c{height:20px;border-radius:3px;background:color-mix(in srgb,var(--pri) calc(var(--p) * 1%),var(--soft));display:grid;place-items:center;color:var(--ink);font-size:9px}
+.heat .c.slow{outline:2px solid var(--s8,#c0882c);outline-offset:-2px} .heat .c.none{background:transparent}
+.heat .hx{grid-template-columns:52px repeat(var(--n),1fr)}
 .kit{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .kcol{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .kcol h3{margin:0 0 6px;font-size:13px;display:flex;justify-content:space-between}
@@ -82,6 +95,11 @@ tr.open td{background:color-mix(in srgb,var(--s1) 8%,transparent)} tr.due td{bac
 .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--soft2)}
 .pill.dine{background:color-mix(in srgb,var(--s1) 18%,transparent)} .pill.counter{background:color-mix(in srgb,var(--s4) 22%,transparent)} .pill.delivery{background:color-mix(in srgb,var(--s3) 18%,transparent)}
 .bars{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;align-items:end;height:90px;margin:4px 0 2px;position:relative}
+.rpbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .rpbar input[type=range]{flex:1;min-width:140px;accent-color:var(--pri);height:30px} .rpbar b{font-variant-numeric:tabular-nums;min-width:48px}
+.bars .grp{display:grid;gap:1px;align-items:end;height:100%;position:relative;z-index:1} .bars .grp .bar{position:static}
+.sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:8px 0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px} .chips .chip{border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer} .chips .chip.on{background:var(--pri);color:var(--onpri);border-color:transparent} .chips .chip small{font-weight:500;opacity:.8}
+.ovs{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)} .ovs label{display:inline-flex;gap:5px;align-items:center;cursor:pointer} .ovs input{accent-color:var(--pri)}
 .bars.axed,.hx.axed{margin-left:40px}
 /* ---- the dock: everything you touch, at the bottom, within a thumb ---- */
 .top .seg,.top #prevDay,.top #nextDay,.top #day,.top #calBtn{display:none}
@@ -199,11 +217,6 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
   <div class="drow range" id="dockRange">
     <button class="chip" data-r="today">Today</button><button class="chip fc" id="fcChip" title="forecast on the strip and the charts">◔ Forecast</button><button class="chip" data-r="week">Week</button><button class="chip" data-r="month">Month</button><button class="chip" data-r="lmonth">Last month</button><button class="chip" data-r="pick">Pick a day…</button><button class="chip" data-r="range">Range…</button>
   </div>
-  <div class="drow tslide" id="dockTime">
-    <button class="dn sm" id="tLive" title="back to live">⏺</button>
-    <input type="range" id="tRange" min="0" max="1440" step="15" value="1440" aria-label="time of day">
-    <b id="tLab">live</b>
-  </div>
   <div class="drow daybar">
     <button class="dn" id="dPrev" title="previous day">‹</button>
     <button class="dpill" id="dPick"><b id="dLabel">—</b><small id="dSub"></small></button>
@@ -227,7 +240,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v187';
+const BOARD='v189';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -235,8 +248,9 @@ const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
    (a bill settled later is open again); after now the forecast carries the strip. */
 let TCUT=null;
 const dayStartMs=d=>new Date(d+'T00:00:00').getTime()+BH0*3600e3;
-function cutTs(){ return TCUT==null?null:dayStartMs(DAY)+TCUT*60000; }
-function recs(){ const all=Object.values((DOC&&DOC.records)||{}); const cut=cutTs(); if(cut==null||MODE!=='day'||cut>=Date.now()) return all;
+function cutTs(day){ return TCUT==null?null:dayStartMs(day||DAY)+TCUT*60000; }
+const tcutLabel=()=>{ const v=TCUT==null?0:TCUT; return String(Math.floor(((v/60)+BH0)%24)).padStart(2,'0')+':'+String(v%60).padStart(2,'0'); };
+function recs(){ const all=Object.values((DOC&&DOC.records)||{}); const cut=cutTs((DOC&&DOC.day&&!String(DOC.day).includes('→'))?DOC.day:DAY); if(cut==null||MODE!=='day'||cut>=Date.now()) return all;
   const ts=s=>s?T(s).getTime():null; const out=[];
   all.forEach(r=>{ const c=ts(r.createdAt); if(c!=null&&c>cut) return; const st=ts(r.settledAt);
     if(r.status==='settled'&&st!=null&&st>cut){ const x=Object.assign({},r,{status:(r.dueAt&&ts(r.dueAt)<=cut)?'due':'open',settledAt:null,foodReady:0}); x.items=(r.items||[]).filter(i=>!i.kotAt||ts(i.kotAt)<=cut); out.push(x); return; }
@@ -414,12 +428,14 @@ function floor(){
   open.forEach(r=>{ if(!tables.some(t=>t.name===r.table)) (secs[r.section||'?']=secs[r.section||'?']||[]).push({name:r.table,chairs:r.chairs,section:r.section,ghost:true}); });
   const counter=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='dine'&&!(r.kindRaw==='dine'&&r.table));
   return `<div class="card wide"><h2>Tables <span class="n">${open.length} busy · ${counter.length} counter / delivery</span></h2><div class="floor">`+
-    Object.keys(secs).sort().map(sec=>`<div class="sechead">${esc(sec)}</div>`+secs[sec].sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true})).map(t=>{
+    Object.keys(secs).sort().map(sec=>{ const busyN=secs[sec].filter(t=>byT[String(t.name)]).length; const tiles=secs[sec].sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true})).map(t=>{
       const r=byT[String(t.name)]; if(!r){ const H=tableHistory(t.name), done=H.filter(x=>x.status==='settled'); const tt=done.length?done.map(x=>hm(x.createdAt)+'–'+hm(x.settledAt)+' '+rs(sum(x))+(x.waiter?' · '+x.waiter:'')).join('\n'):'free all day';
         return `<div class="tbl click" data-table="${esc(t.name)}" title="${esc(tt)}"><b>${esc(t.name)}</b><small>${t.chairs?t.chairs+' chairs':''}</small>${done.length?`<small>${done.length} turn${done.length>1?'s':''} · ${rs(done.reduce((n,x)=>n+sum(x),0))}</small>`:''}</div>`; }
       const age=mins(r.createdAt,tsNow()); const cls=r.status==='due'?'due':age>75?'late':'on';
       return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><small class="tk">${esc(t.name)}${r.pax?' · '+r.pax+' pax':''}</small><b class="amt">${rs(sum(r))}</b><small>${esc(r.waiter||'')}${r.kotCount>1?' · '+r.kotCount+' KOT':''}</small><small>${r.status==='due'?'BILL PRINTED':(()=>{ const L=(r.items||[]).map(i=>lineState(i,r)); const c=L.filter(x=>x==='cooking').length, l=L.filter(x=>x==='late').length; return l?'<b>'+l+' late</b>'+(c?' · '+c+' cooking':''):c?c+' cooking':'served'; })()}</small></div>`;
-    }).join('')).join('')+
+    }).join('');
+      return busyN?`<div class="sechead">${esc(sec)} <span style="font-weight:600;letter-spacing:0;text-transform:none">· ${busyN} of ${secs[sec].length} busy</span></div>`+tiles
+                  :`<details class="secfold"><summary>${esc(sec)} <span style="font-weight:600;letter-spacing:0;text-transform:none">· all ${secs[sec].length} free</span></summary><div class="floor">${tiles}</div></details>`; }).join('')+
     (counter.length?`<div class="sechead">Counter &amp; delivery</div>`+counter.map(r=>{ const age=mins(r.createdAt,tsNow()); return `<div class="tbl click ${r.status==='due'&&r.kind!=='delivery'?'due':age>(r.kind==='delivery'?90:20)?'late':'on'}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><small class="tk">${r.kind==='delivery'?'🛵':r.kind==='staff'?'👤':'🎟'} ${esc(r.token||r.kot)}</small><b class="amt">${rs(sum(r))}</b>${r.remarks?`<small>“${esc(r.remarks)}”</small>`:''}<small>${r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt):r.status==='due'?'billed · with rider':'cooking'):esc(r.kind)}${r.rider?' · '+esc(r.rider):''}</small><small>${(r.items||[]).length} items</small></div>`; }).join(''):'')+
   '</div></div>';
 }
@@ -489,7 +505,7 @@ function ygrid(max,fmt){ return yscale(max,fmt).html; }
 function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH,F){ const n=hi-lo+1; const Y=yscale(max); max=Y.top;
   return `<div class="bars axed" style="grid-template-columns:repeat(${n},1fr)${height?';height:'+height+'px':''}">`+Y.html+H.slice(lo,hi+1).map((v,j)=>{ const i=lo+j;
     if(F&&i>=F.nowH&&F.fcH[i]>v){ const bar=`<div class="bc"><div class="bar fc" style="height:${Math.max(2,100*F.fcH[i]/max)}%" data-t="${hlabel(i)}:00 forecast ${rs(F.fcH[i])}${v?' · so far '+rs(v):''}"></div>${v?`<div class="bar" style="position:absolute;left:0;right:0;bottom:0;height:${Math.max(2,100*v/max)}%"></div>`:''}${avgH?`<i class="avgm" style="bottom:${Math.min(100,100*(avgH[i]||0)/max)}%"></i>`:''}</div>`; return bar; }
-    const bar=`<div class="bar${cls?' '+cls:''}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
+    const bar=`<div class="bar${cls?' '+cls:''}${HSEL===i?' cur':''}" data-h="${i}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
     return avgH?`<div class="bc">${bar}<i class="avgm" style="bottom:${Math.min(100,100*(avgH[i]||0)/max)}%"></i></div>`:bar; }).join('')+'</div>'; }
 /* the same weekday's hourly average, from the day index (no reads) */
 function weekdayAvg(day){ const dow=new Date(day+'T12:00:00').getDay(); const days=Object.keys(INDEX).filter(d=>d!==day&&INDEX[d].hours&&new Date(d+'T12:00:00').getDay()===dow); if(days.length<2) return null;
@@ -503,9 +519,11 @@ function hourly(){
   const span=String((DOC&&DOC.day)||DAY).includes('→'); let nd=0; if(span){ nd=(PER.doc&&PER.doc.days)||new Set(recs().map(r=>r.day)).size||1; H=H.map(v=>v/nd); }
   const HY=hbucket(YDOC?Object.values(YDOC.records||{}).filter(r=>r.status==='settled'):[]);
   const wa=span?null:weekdayAvg(DAY), dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(DAY.slice(0,10)+'T12:00:00').getDay()];
-  const F=fcToday(); const HF=F?F.fcH:null;
-  const [lo,hi]=hspan(H,HY,wa?wa.H:[],HF||[]), max=Math.max(1,...H,...HY,...(wa?wa.H:[]),...(HF||[]));
-  return `<div class="card"><h2>Sales by hour <span class="n">${span?'avg per day · '+nd+' days':''}${YDOC?'grey = yesterday':''}${wa?(YDOC?' · ':'')+'dotted = avg '+dow+' ('+wa.n+')':''}${F?' · hatched = forecast':''}</span></h2>${hbars(H,lo,hi,max,YDOC?HY:null,'y ',null,null,wa?wa.H:null,F)}${hx(lo,hi)}</div>`;
+  const F=OV.fc?fcToday():null; const HF=F?F.fcH:null; const showY=OV.y&&YDOC&&!span, showA=OV.avg&&wa;
+  /* the scale follows only what is drawn, so a big yesterday never shrinks today */
+  const [lo,hi]=hspan(H,showY?HY:[],showA?wa.H:[],HF||[]), max=Math.max(1,...H,...(showY?HY:[]),...(showA?wa.H:[]),...(HF||[]));
+  const ov=span?'':`<div class="ovs">${[['y','yesterday',!!YDOC],['avg','avg '+dow+(wa?' ('+wa.n+')':''),!!wa],['fc','forecast',DAY===bizToday()&&FC]].filter(o=>o[2]).map(o=>`<label><input type="checkbox" data-ov="${o[0]}"${OV[o[0]]?' checked':''}> ${o[1]}</label>`).join('')}</div>`;
+  return `<div class="card hourcard"><h2>Sales by hour <span class="n">${span?'avg per day · '+nd+' days':'tap an hour'}</span></h2>${hbars(H,lo,hi,max,showY?HY:null,'y ',null,span?null:150,showA?wa.H:null,F)}${hx(lo,hi)}${ov}${span?'':hourCompare(H)}</div>`;
 }
 
 function breakdown(){
@@ -523,6 +541,78 @@ function items(g){
   return `<div class="card wide"><h2>Item‑wise <span class="n">${rows.length} items · ${rs(tot)}</span></h2><input class="search" id="q" placeholder="Search item or category…" value="${esc(Q)}"><div class="scroll"><table><tr><th>#</th><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th class="r m">Bills</th><th class="r">Sales</th><th class="r">Share</th></tr>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.n)}</td><td class="m">${esc(r.cat||'')}</td><td class="r">${r.q}</td><td class="r m">${r.bills}</td><td class="r">${rs(r.v)}</td><td class="r">${tot?Math.round(100*r.v/tot):0}%</td></tr>`).join('')}</table></div></div>`;
 }
 
+let HSEL=null;   /* a tapped hour on the hour chart */
+let OV={y:true,avg:true,fc:true}; try{ OV=Object.assign(OV,JSON.parse(localStorage.getItem('hayat-ov')||'{}')); }catch(e){}
+function hourCompare(H){
+  if(HSEL==null) return '';
+  const i=HSEL, y=new Date(DAY+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y); const w=new Date(DAY+'T12:00:00'); w.setDate(w.getDate()-7); const wd=ymd(w);
+  const wa=weekdayAvg(DAY), dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(DAY+'T12:00:00').getDay()];
+  const rows=[['Today',H[i]||0,H],['Yesterday',INDEX[yd]&&INDEX[yd].hours?INDEX[yd].hours[i]:null,INDEX[yd]&&INDEX[yd].hours],['Last '+dow,INDEX[wd]&&INDEX[wd].hours?INDEX[wd].hours[i]:null,INDEX[wd]&&INDEX[wd].hours],['Avg '+dow+(wa?' ('+wa.n+')':''),wa?wa.H[i]:null,wa?wa.H:null]];
+  const cum=(A)=>A?A.slice(0,i+1).reduce((a,b)=>a+(b||0),0):null;
+  const t=rows[0][1], tc=cum(H), mx=Math.max(1,...rows.map(r=>r[1]||0));
+  const d=(a,b)=>b?` <span class="d ${a>=b?'up':'dn'}">${a>=b?'+':''}${Math.round(100*(a-b)/b)}%</span>`:'';
+  return `<div class="hsel"><b>${hlabel(i)}:00 – ${hlabel(i+1)}:00</b> <span class="n" style="margin-left:6px">tap another bar · <a href="#" id="hselX">close</a></span>
+    <div class="mini" style="margin-top:6px">${rows.map(([k,v,A])=>`<div class="mrow"><span>${esc(k)}</span><div class="b" style="width:${v!=null?100*v/mx:0}%${k==='Today'?'':';background:var(--line2)'}"></div><span class="v">${v==null?'—':rs(v)}${k!=='Today'&&v?d(t,v):''}<br><small style="color:var(--muted)">till ${hlabel(i+1)}:00 ${cum(A)==null?'—':rs(cum(A))}${k!=='Today'&&cum(A)?d(tc,cum(A)):''}</small></span></div>`).join('')}</div></div>`;
+}
+/* ============================================================
+   REPLAY - scrub or play the day, beside the days that looked like it
+   ============================================================ */
+let RP={days:[],view:'hours',speed:5,playing:false,timer:null,docs:{},floorDay:null,auto:true};
+function cumTill(H,m){ /* sales of an hours[] array up to minute m of the business day */ if(!H) return null; const h=Math.floor(m/60), f=(m%60)/60; let t=0; for(let i=0;i<h&&i<24;i++) t+=H[i]||0; if(h<24) t+=(H[h]||0)*f; return t; }
+function similarDays(n){
+  /* nearest past days: same money till now, same shape of the hours so far, same weekday preferred */
+  const live=DAY===bizToday(); const nowMin=TCUT!=null?TCUT:(live?Math.max(0,Math.min(1440,Math.round((Date.now()-dayStartMs(DAY))/60000))):1440);
+  const H=hbucket(recs().filter(r=>r.status==='settled')); const mine=cumTill(H,nowMin); const h=Math.min(24,Math.ceil(nowMin/60)); if(!mine||h<2) return [];
+  const dow=new Date(DAY+'T12:00:00').getDay(), shapeA=H.slice(0,h), sA=shapeA.reduce((a,b)=>a+b,0)||1;
+  return Object.keys(INDEX).filter(d=>d!==DAY&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).map(d=>{ const B=INDEX[d].hours, cum=cumTill(B,nowMin); const shapeB=B.slice(0,h), sB=shapeB.reduce((a,b)=>a+b,0)||1;
+      const shape=shapeA.reduce((n,v,i)=>n+Math.abs(v/sA-(shapeB[i]||0)/sB),0)/2; const money=Math.abs(cum-mine)/Math.max(mine,cum,1);
+      return {d,cum,total:INDEX[d].rev,score:money+0.6*shape+(new Date(d+'T12:00:00').getDay()===dow?0:0.12)}; })
+    .sort((a,b)=>a.score-b.score).slice(0,n||3);
+}
+function replay(){
+  const live=DAY===bizToday(); const nowMin=Math.max(0,Math.min(1440,Math.round((Date.now()-dayStartMs(DAY))/60000)));
+  const v=TCUT!=null?TCUT:(live?nowMin:1440), lab=String(Math.floor(((v/60)+BH0)%24)).padStart(2,'0')+':'+String(v%60).padStart(2,'0'), wd=d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
+  if(RP.auto&&!RP.days.length){ RP.days=similarDays(3).map(x=>x.d); }
+  const sim=similarDays(3);
+  const H=hbucket(recs().filter(r=>r.status==='settled')), mine=cumTill(H,v);
+  const series=[{d:DAY,H,name:'Today'}].concat(RP.days.filter(d=>INDEX[d]&&INDEX[d].hours).map(d=>({d,H:INDEX[d].hours,name:wd(d)+' '+d.slice(5)})));
+  const recent=Object.keys(INDEX).filter(d=>d!==DAY&&INDEX[d].rev>0).sort().reverse().slice(0,21);
+  const chip=(d,extra)=>`<button class="chip${RP.days.includes(d)?' on':''}" data-rpd="${d}">${wd(d)} ${d.slice(5)}${extra?' <small>'+extra+'</small>':''}</button>`;
+  /* the scrubber */
+  const ctl=`<div class="card wide"><h2>Replay <span class="n">${TCUT==null?(live?'live':'full day'):'as of '+lab}</span></h2>
+    <div class="rpbar"><button class="tab" id="rpPlay">${RP.playing?'⏸':'▶'}</button><input type="range" id="rpRange" min="0" max="1440" step="5" value="${v}"><b id="rpLab">${lab}</b><select class="tb sm" id="rpSpeed">${[1,5,15,30,60].map(x=>`<option value="${x}"${RP.speed===x?' selected':''}>${x} min/s</option>`).join('')}</select><button class="tab" id="rpLive">⏺ live</button></div>
+    <div class="kpis" style="margin-top:8px"><div class="kpi"><small>Sales by ${lab}</small><b>${rs(mine||0)}</b><em>${recs().filter(r=>r.status==='settled').length} bills · ${recs().filter(r=>r.status!=='settled').length} open</em></div>${series.slice(1).map(x=>{ const c=cumTill(x.H,v); const d=mine&&c?Math.round(100*(mine-c)/c):null; return `<div class="kpi"><small>${esc(x.name)} by ${lab}</small><b>${rs(c)}</b><em>${d!=null?`<span class="d ${d>=0?'up':'dn'}">today ${d>=0?'+':''}${d}%</span> · `:''}ended ${rs(INDEX[x.d].rev)}</em></div>`; }).join('')}</div></div>`;
+  /* who to compare with */
+  const pick=`<div class="card wide"><h2>Compare with <span class="n">${RP.days.length} chosen · tap to add or remove</span></h2>
+    <div class="sec">Similar days · same money and shape till ${lab}</div><div class="chips">${sim.map(x=>chip(x.d,rs(x.cum)+' → '+rs(x.total))).join('')||'<span class="note">Needs a couple of hours of today first.</span>'}</div>
+    <div class="sec">Recent</div><div class="chips">${recent.map(d=>chip(d,rs(INDEX[d].rev))).join('')}</div>
+    <div class="tabs" style="margin-top:8px"><button class="tab${RP.view==='hours'?' on':''}" data-rpv="hours">Hour chart</button><button class="tab${RP.view==='tables'?' on':''}" data-rpv="tables">Tables as of ${lab}</button>${RP.days.length?'<button class="tab" id="rpClear">Clear</button>':''}</div></div>`;
+  let body='';
+  if(RP.view==='hours'){
+    const [lo,hi]=hspan(...series.map(x=>x.H)); const n=hi-lo+1; const Y=yscale(Math.max(1,...series.flatMap(x=>x.H.slice(lo,hi+1)))); const cols=['var(--pri)','var(--s8,#c0882c)','var(--sea,#1f4d4a)','var(--s3,#2e6b3a)','var(--line2)'];
+    body=`<div class="card wide"><h2>Sales by hour <span class="n">${series.map((x,i)=>`<i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${cols[i]};margin:0 3px 0 8px;vertical-align:-1px"></i>${esc(x.name)}`).join('')}</span></h2>
+      <div class="bars axed" style="grid-template-columns:repeat(${n},1fr);height:170px">${Y.html}${Array.from({length:n},(_,j)=>{ const i=lo+j; return `<div class="grp" style="grid-template-columns:repeat(${series.length},1fr)">${series.map((x,k)=>`<div class="bar" style="height:${Math.max(2,100*(x.H[i]||0)/Y.top)}%;background:${cols[k]}${i*60>=v?';opacity:.35':''}" data-t="${esc(x.name)} ${hlabel(i)}:00 ${rs(x.H[i]||0)}"></div>`).join('')}</div>`; }).join('')}</div>${hx(lo,hi)}
+      <div class="scroll"><table style="margin-top:8px"><tr><th>Till</th>${series.map(x=>`<th class="r">${esc(x.name)}</th>`).join('')}</tr>${[12,14,16,18,20,22,24].filter(h=>h>lo).map(h=>`<tr><td>${hlabel(h)}:00</td>${series.map(x=>`<td class="r">${rs(cumTill(x.H,Math.min(h,24)*60))}</td>`).join('')}</tr>`).join('')}<tr><td><b>Full day</b></td>${series.map(x=>`<td class="r"><b>${x.d===DAY&&live?'—':rs(x.d===DAY?x.H.reduce((a,b)=>a+b,0):INDEX[x.d].rev)}</b></td>`).join('')}</tr></table></div>
+      <p class="note">Faded bars are after ${lab}. Drag the slider or press ▶ to walk the day.</p></div>`;
+  } else {
+    const fd=RP.floorDay&&(RP.floorDay===DAY||RP.days.includes(RP.floorDay))?RP.floorDay:DAY;
+    const doc=fd===DAY?DOC:RP.docs[fd];
+    if(fd!==DAY&&!doc){ loadDay(fd).then(d=>{ RP.docs[fd]=d||{records:{},day:fd}; render(); }); }
+    body=`<div class="card wide"><div class="tabs">${[DAY].concat(RP.days).map(d=>`<button class="tab${fd===d?' on':''}" data-rpf="${d}">${d===DAY?'Today':wd(d)+' '+d.slice(5)}</button>`).join('')}</div></div>`+(doc?withDoc(doc,()=>unrealized()+floor()):'<div class="card wide"><div class="note">Loading that day…</div></div>');
+  }
+  return ctl+pick+body;
+}
+function rpWire(){
+  const r=$('rpRange'); if(!r) return; let tj=null;
+  r.oninput=()=>{ TCUT=+r.value; $('rpLab').textContent=tcutLabel(); clearTimeout(tj); tj=setTimeout(render,80); };
+  $('rpLive').onclick=()=>{ rpStop(); TCUT=null; render(); };
+  $('rpSpeed').onchange=e=>{ RP.speed=+e.target.value; };
+  $('rpPlay').onclick=()=>{ if(RP.playing){ rpStop(); render(); return; } if(TCUT==null) TCUT=Math.max(0,Math.min(+r.value,1435)); RP.playing=true; RP.timer=setInterval(()=>{ const live=DAY===bizToday(); const end=live?Math.round((Date.now()-dayStartMs(DAY))/60000):1440; TCUT=Math.min(end,TCUT+RP.speed); if(TCUT>=end){ rpStop(); } render(); },1000); render(); };
+  $$('[data-rpd]').forEach(b=>b.onclick=()=>{ const d=b.dataset.rpd; RP.auto=false; const i=RP.days.indexOf(d); if(i>=0) RP.days.splice(i,1); else if(RP.days.length<4) RP.days.push(d); render(); });
+  $$('[data-rpv]').forEach(b=>b.onclick=()=>{ RP.view=b.dataset.rpv; render(); }); $$('[data-rpf]').forEach(b=>b.onclick=()=>{ RP.floorDay=b.dataset.rpf; render(); });
+  const rc=$('rpClear'); if(rc) rc.onclick=()=>{ RP.days=[]; RP.auto=false; render(); };
+}
+function rpStop(){ RP.playing=false; if(RP.timer){ clearInterval(RP.timer); RP.timer=null; } }
 let BF={kind:'',status:'',waiter:'',section:'',sort:'time'};
 function bills(){
   const all=recs();
@@ -1117,7 +1207,7 @@ function period(){
   const voidBy={}; Object.entries(S.voids.by).forEach(([kk,x])=>voidBy[kk]={n:x.n,v:x.v});
   const V=PER.V, W=fn=>V?withDoc(V,fn):'';
   let body='';
-  if(PTAB==='overview') body=byDay+sve+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+trends();
+  if(PTAB==='overview') body=byDay+sve+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+trends();
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard;
   else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
@@ -1129,6 +1219,29 @@ function period(){
   else if(PTAB==='cash') body=cashPeriod();
   else body=mini('Voids · by person',voidBy)+voidCard;
   return bar+k+tabs+`<div class="grid">${body}</div>`;
+}
+/* ---- analysis: which hours and which days run slow, against their own normal ---- */
+function normalHour(day,h){ /* typical value of this weekday-hour: median of the last 8 same weekdays before `day` */
+  const dow=new Date(day+'T12:00:00').getDay(); const v=Object.keys(INDEX).filter(d=>d<day&&INDEX[d].hours&&new Date(d+'T12:00:00').getDay()===dow).sort().slice(-8).map(d=>INDEX[d].hours[h]||0).sort((a,b)=>a-b);
+  if(v.length<3) return null; const m=v.length; return m%2?v[(m-1)/2]:(v[m/2-1]+v[m/2])/2; }
+function slowSlots(from,to){
+  const days=Object.keys(INDEX).filter(d=>d>=from&&d<=to&&INDEX[d].hours).sort(); if(!days.length) return '';
+  let lo=24,hi=-1; days.forEach(d=>INDEX[d].hours.forEach((v,i)=>{ if(v>0){ lo=Math.min(lo,i); hi=Math.max(hi,i); } })); if(hi<0) return ''; const n=hi-lo+1;
+  const wd=['Su','Mo','Tu','We','Th','Fr','Sa']; const slow=[];
+  const rows=days.map(d=>{ const H=INDEX[d].hours; const cells=[]; for(let h=lo;h<=hi;h++){ const nm=normalHour(d,h), v=H[h]||0; const r=nm?v/nm:null; const p=nm?Math.round(Math.min(100,60*r)):0; const isSlow=nm&&nm>500&&r<0.55; if(isSlow) slow.push({d,h,v,nm,r}); cells.push(`<div class="c${nm==null?' none':''}${isSlow?' slow':''}" style="--p:${p}" title="${d} ${hlabel(h)}:00 ${rs(v)}${nm?' · normal '+rs(nm)+' · '+Math.round(100*r)+'%':''}">${nm&&r<0.55?Math.round(100*r)+'%':''}</div>`); }
+    return `<div class="hr"><span>${wd[new Date(d+'T12:00:00').getDay()]} ${d.slice(8)}</span>${cells.join('')}</div>`; });
+  const byHour={}; slow.forEach(x=>{ byHour[x.h]=(byHour[x.h]||0)+1; }); const worst=Object.entries(byHour).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  return `<div class="card wide"><h2>Slow hours <span class="n">colour = against that weekday-hour's normal (median of 8) · boxed = under 55%</span></h2>
+    <div class="heat" style="--n:${n}"><div class="hr hx"><span></span>${Array.from({length:n},(_,j)=>`<span style="text-align:center;color:var(--muted)">${hlabel(lo+j)}</span>`).join('')}</div>${rows.join('')}</div>
+    <p class="note">${slow.length?`${slow.length} slow slots in this span.${worst.length?' Most often at '+worst.map(([h,c])=>hlabel(+h)+':00 ('+c+'×)').join(', ')+'.':''} Tap a cell's tooltip for the numbers.`:'No hour ran under 55% of its normal.'}</p></div>`;
+}
+function womMatrix(){
+  const days=Object.keys(INDEX).filter(d=>INDEX[d].rev>0).sort(); if(days.length<21) return '';
+  const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], g={}; const all=days.reduce((n,d)=>n+INDEX[d].rev,0)/days.length;
+  days.forEach(d=>{ const k=wom(d)+'|'+new Date(d+'T12:00:00').getDay(); (g[k]=g[k]||[]).push(INDEX[d].rev); });
+  const cell=(w,dw)=>{ const L=g[w+'|'+dw]; if(!L||!L.length) return '<td class="r m">—</td>'; const m=L.reduce((a,b)=>a+b,0)/L.length, r=m/all; return `<td class="r" style="background:color-mix(in srgb,var(--pri) ${Math.round(Math.max(0,Math.min(60,(r-0.6)*100)))}%,transparent)" title="${L.length} days · avg ${rs(m)}">${Math.round(100*r)}%<br><small style="color:var(--muted)">${L.length}d</small></td>`; };
+  const rowAvg=w=>{ const L=days.filter(d=>wom(d)===w).map(d=>INDEX[d].rev); return L.length?Math.round(100*(L.reduce((a,b)=>a+b,0)/L.length)/all)+'%':'—'; };
+  return `<div class="card wide"><h2>Week of month × weekday <span class="n">avg day as % of the overall average · ${days.length} days</span></h2><div class="scroll"><table><tr><th>Week</th>${[1,2,3,4,5,6,0].map(dw=>`<th class="r">${wd[dw]}</th>`).join('')}<th class="r">All</th></tr>${[0,1,2,3].map(w=>`<tr><td>${['1–7','8–14','15–21','22–end'][w]}</td>${[1,2,3,4,5,6,0].map(dw=>cell(w,dw)).join('')}<td class="r"><b>${rowAvg(w)}</b></td></tr>`).join('')}</table></div><p class="note">Your hunch — the second half of week 2 and the start of week 3 run slower — shows up here as pale cells. Cells with few days are weak evidence.</p></div>`;
 }
 function trends(){
   const days=Object.keys(INDEX).sort().slice(-30);
@@ -1173,7 +1286,7 @@ function waiters(){
 let DOCK_FOLD=false; try{ DOCK_FOLD=localStorage.getItem('hayat-dock')==='fold'; }catch(e){}
 function dock(){
   const d=$('dock'); if(!d) return;
-  const dayTabs=[['floor','Live'],['sales','Sales'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']], perTabs=[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['cash','Cash'],['voids','Voids']];
+  const dayTabs=[['floor','Live'],['sales','Sales'],['replay','Replay'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']], perTabs=[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['cash','Cash'],['voids','Voids']];
   $('dockTabs').innerHTML=MODE==='period'
     ?`<div class="tabs main">${perTabs.map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`
     :`<div class="tabs main">${dayTabs.map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
@@ -1185,10 +1298,7 @@ function dock(){
   const ft=$('fcTile'); if(ft) ft.onclick=fcSheet; fcRecord(fcToday());
   const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   if(MODE==='period'){ $('dLabel').textContent=PER.label||'Period'; $('dSub').textContent=PER.from?PER.from.slice(5)+' → '+PER.to.slice(5)+(PER.doc&&PER.doc.partial?' · so far':''):''; }
-  else { const x=new Date(DAY+'T12:00:00'); $('dLabel').textContent=wd[x.getDay()]+' '+x.getDate()+' '+x.toLocaleString('en',{month:'short'}); $('dSub').textContent=DAY===bizToday()?'live':(INDEX[DAY]&&INDEX[DAY].rev?rs(INDEX[DAY].rev):''); }
-  const tr=$('tRange'), tl=$('tLab'), ts=$('dockTime'); if(tr){ const nowMin=Math.max(0,Math.min(1440,Math.round((Date.now()-dayStartMs(DAY))/60000))); const live=DAY===bizToday(); tr.max=live?1440:1440; if(TCUT==null) tr.value=live?nowMin:1440;
-    const v=TCUT==null?(live?nowMin:1440):TCUT; const hh=String(Math.floor(((v/60)+BH0)%24)).padStart(2,'0'), mm=String(v%60).padStart(2,'0');
-    tl.textContent=TCUT==null?(live?'live · '+hh+':'+mm:'full day'):(live&&v>nowMin?'by '+hh+':'+mm+' ◔':'as of '+hh+':'+mm); ts.classList.toggle('ago',TCUT!=null&&(!live||v<=nowMin)); ts.classList.toggle('ahead',TCUT!=null&&live&&v>nowMin); }
+  else { const x=new Date(DAY+'T12:00:00'); $('dLabel').textContent=wd[x.getDay()]+' '+x.getDate()+' '+x.toLocaleString('en',{month:'short'}); $('dSub').textContent=TCUT!=null?'as of '+tcutLabel()+' ⏪':(DAY===bizToday()?'live':(INDEX[DAY]&&INDEX[DAY].rev?rs(INDEX[DAY].rev):'')); }
   d.classList.toggle('fold',DOCK_FOLD);
   document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px');
 }
@@ -1202,7 +1312,6 @@ function dockWire(){
     else if(r==='range'){ const P2=periodPresets(); if(MODE!=='period'||!PER.from){ MODE='period'; loadPeriod(P2[0][1],P2[0][2],P2[0][0]); } else render(); setTimeout(()=>{ const f=$('pFrom'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },600); }
     else { MODE='period'; const p=r==='week'?P[0]:r==='month'?P[2]:P[3]; loadPeriod(p[1],p[2],p[0]); } });
   $('dPrev').onclick=()=>stepDay(-1); $('dNext').onclick=()=>stepDay(1);
-  const tr=$('tRange'); let tj=null; tr.oninput=()=>{ TCUT=+tr.value; clearTimeout(tj); tj=setTimeout(render,60); }; $('tLive').onclick=()=>{ TCUT=null; render(); };
   $('dPick').onclick=()=>{ if(MODE==='period'){ MODE='day'; render(); } else calendar(); };
   $('dockFold').onclick=()=>{ DOCK_FOLD=!DOCK_FOLD; try{ localStorage.setItem('hayat-dock',DOCK_FOLD?'fold':'open'); }catch(e){} dock(); };
   /* swipe the page sideways to step a day */
@@ -1224,10 +1333,11 @@ function render(){
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:
+     TAB==='replay'?`<div class="grid">${replay()}</div>`:
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
-  dock(); addShare(); fitTables();
+  dock(); addShare(); fitTables(); rpWire();
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
   $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
@@ -1236,6 +1346,7 @@ function render(){
   $$('[data-sp]').forEach(sel=>sel.onchange=()=>{ SP[sel.dataset.sp]=sel.value; render(); }); const spq=$('spq'); if(spq){ spq.oninput=()=>{ SP.q=spq.value; const pos=spq.selectionStart; render(); const q2=$('spq'); if(q2){ q2.focus(); q2.setSelectionRange(pos,pos); } }; }
   $$('details[data-spk]').forEach(d=>d.ontoggle=()=>{ SP.open[d.dataset.spk]=d.open; });
   $$('[data-drill]').forEach(tr=>tr.onclick=()=>drill(tr.dataset.drill));
+  $$('.hourcard [data-h]').forEach(b=>b.onclick=()=>{ HSEL=+b.dataset.h; render(); }); $$('[data-ov]').forEach(c=>c.onchange=()=>{ OV[c.dataset.ov]=c.checked; try{ localStorage.setItem('hayat-ov',JSON.stringify(OV)); }catch(e){} render(); }); const hx2=$('hselX'); if(hx2) hx2.onclick=e=>{ e.preventDefault(); HSEL=null; render(); };
   $$('[data-table]').forEach(t=>t.onclick=()=>tableSheet(t.dataset.table));
   const kt=$('ktime'); if(kt) kt.onclick=e=>{ e.preventDefault(); kitchenSheet(); };
   const re=$('rcpEdit'); if(re) re.onclick=e=>{ e.preventDefault(); recipeSheet(PER.V?itemsOf(PER.V.records):(PER.doc&&PER.doc.items)); };
@@ -1302,7 +1413,7 @@ function healthPill(){ const el=$('pc'); if(!el) return; if(!HEALTH){ el.hidden=
   el.lastElementChild.textContent='shop PC '+(age>12?'silent '+age+' min':bad?'fixing: '+bads:'ok'); el.title=(HEALTH.host||'')+' · '+HEALTH.at+(HEALTH.disk?' · disk free '+HEALTH.disk+' GB':'')+((HEALTH.actions||[]).length?'\n'+HEALTH.actions.join('\n'):''); }
 
 /* the calendar: three months of squares, darker = bigger day */
-function setDay(d){ if(!d||d===DAY) return; DAY=d; TCUT=null; CMP=null; WEEK=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===d)) sel.value=d; watchDay(); }
+function setDay(d){ if(!d||d===DAY) return; rpStop(); RP.days=[]; RP.auto=true; RP.docs={}; DAY=d; TCUT=null; CMP=null; WEEK=null; const sel=$('day'); if(sel&&[...sel.options].some(o=>o.value===d)) sel.value=d; watchDay(); }
 function stepDay(n){ const list=(DAYS||[]).slice().sort(); const i=list.indexOf(DAY); const d=list[i+n]; if(d) setDay(d); }
 function calendar(){
   const pop=$('calPop'); if(!pop.hidden){ pop.hidden=true; return; }
