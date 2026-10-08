@@ -151,6 +151,15 @@ service cloud.firestore {
 
       /* the customer may only cancel, and only before it moves */
       allow update: if isOffice()
+        /* the counter: a captain or a waiter rings up a sale and
+           may move it along, but may never touch who it is for
+           once it is down, and may never mark it paid. The keys
+           named here are the whole of what the counter screen
+           writes; everything else about an order stays office. */
+        || (
+          hasRole(['captain','waiter'])
+          && touching().hasOnly(['status','at','log','lines','total','notes','note','editedAt'])
+        )
         || (
           signedIn() && resource.data.riderUid == mine()
           && touching().hasOnly(['status','rLat','rLng','rAt','at','log','notes'])
@@ -208,7 +217,19 @@ service cloud.firestore {
              get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.code
         && request.resource.data.role ==
              get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.role;
-      allow update, delete: if false;
+      /* Re-signing in on a shared tablet - the next shift, or the
+         same person after a wrong tap. It is the same test as
+         creating the record: the code and the role must match the
+         crew entry being claimed, so this is not a way to edit
+         your own role, only a way to replace it with one you can
+         prove. */
+      allow update: if signedIn() && uid == mine()
+        && exists(/databases/$(database)/documents/crew/$(request.resource.data.crew))
+        && request.resource.data.code ==
+             get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.code
+        && request.resource.data.role ==
+             get(/databases/$(database)/documents/crew/$(request.resource.data.crew)).data.role;
+      allow delete: if false;
     }
 
     /* ---- the busy bars the crowd robot reads -----------------

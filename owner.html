@@ -120,6 +120,7 @@ body.period #dockTime{display:none}
 #dock .chip.on{background:var(--pri);color:var(--onpri);border-color:transparent}
 #dock .daybar{justify-content:space-between;border-top:1px solid var(--line);padding:6px 10px}
 #dock .dn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);font-size:20px;cursor:pointer;flex:0 0 auto}
+#dock .dn.dplay{width:auto;padding:0 12px;font-size:14px;font-weight:800;white-space:nowrap;background:var(--pri);color:var(--onpri);border-color:transparent} #dock .dn.dplay[hidden]{display:none}
 #dock .dpill{flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:0 10px;font:inherit}
 #dock .dpill b{font-size:15px;white-space:nowrap} #dock .dpill small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #dock.fold #dockTabs,#dock.fold #dockSheet,#dock.fold #dockTime{display:none}
@@ -238,6 +239,7 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
 .rrbtns .rpb{flex:1 1 200px;height:auto;min-height:52px;padding:8px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;font-size:17px}
 .rrbtns a.rpb{flex:1 1 140px;min-height:48px} .rrbtns .rpb small{font-size:11px;font-weight:600;opacity:.75} .rrbtns .rpb:disabled{opacity:.45}
 .rrbar{height:8px;border-radius:99px;background:var(--soft2);overflow:hidden;margin:8px 0 4px} .rrbar i{display:block;height:100%;width:0;background:var(--pri);transition:width .15s}
+.rronce{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:600;margin:2px 0 6px;cursor:pointer} .rronce input{width:18px;height:18px;margin-top:1px;accent-color:var(--pri)} .rronce small{display:block;font-weight:500;color:var(--muted)}
 .rrprev{display:block;width:100%;max-width:360px;margin:8px auto 0;border-radius:12px;border:1px solid var(--line2)}
 .rprow .chip{border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;cursor:pointer} .rprow .chip.on{background:var(--pri);color:var(--onpri);border-color:transparent}
 #rpCustom{width:58px;font:inherit;padding:5px 6px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:inherit}
@@ -319,6 +321,10 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
 .ptchain{display:grid;grid-template-columns:1fr auto;gap:0 12px;margin-top:8px}
 .ptchain span,.ptchain b{padding:9px 0;border-bottom:1px solid var(--line)} .ptchain span small{display:block;color:var(--muted);font-size:12px} .ptchain b{text-align:right;font-size:16px}
 .ptchain b.dn{color:#8C3A1E} .ptchain b.up{color:#1F4D4A} .ptchain .t{border-bottom:0;font-size:18px;font-weight:800}
+
+.ptlseg{display:inline-flex;gap:3px;background:var(--soft);border-radius:999px;padding:3px;margin:4px 0 6px} .ptlseg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:800;color:var(--muted);border-radius:999px;padding:7px 12px;cursor:pointer;min-height:36px} .ptlseg button.on{background:var(--pri);color:var(--onpri)}
+svg.ptl{height:260px} .ptleg{margin-top:8px} .ptleg .chip i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+@media (max-width:640px){ svg.ptl{height:220px} }
 </style>
 </head>
 <body>
@@ -349,6 +355,7 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
     <button class="dn" id="dPrev" title="previous day">‹</button>
     <button class="dpill" id="dPick"><b id="dLabel">—</b><small id="dSub"></small></button>
     <button class="dn" id="dNext" title="next day">›</button>
+    <button class="dn dplay" id="dReplay" title="play the whole day">▶ Replay</button>
     <button class="dn" id="dockFold" title="collapse / expand">⌄</button>
   </div>
   <nav class="drow" id="dockTabs"></nav>
@@ -369,7 +376,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v195';
+const BOARD='v201';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -707,7 +714,7 @@ function lgCardWire(){ $$('[data-lgrev]').forEach(b=>b.onclick=()=>{ const [d,h]
 const PT_WK=d=>{ const n=+d.slice(8,10); return n<=7?'W1':n<=14?'W2':n<=21?'W3':n<=28?'W4':'W5'; };
 const PT_WKN={All:'All weeks',W1:'Week 1 (1–7)',W2:'Week 2 (8–14)',W3:'Week 3 (15–21)',W4:'Week 4 (22–28)',W5:'29th – 31st'};
 const PT_DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], PT_ORDER=[1,2,3,4,5,6,0];
-let PT={dow:null,week:null,method:'median',back:12,fday:null};
+let PT={dow:null,week:null,method:'median',back:12,fday:null,lines:'each',hl:null};
 function ptStat(vals){ const v=vals.filter(x=>x!=null).slice().sort((a,b)=>a-b), n=v.length; if(!n) return null;
   if(PT.method==='median') return n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2;
   const cut=n>=5?Math.floor(n*0.15)||1:0, w=v.slice(cut,n-cut); return w.reduce((a,b)=>a+b,0)/w.length; }
@@ -733,6 +740,31 @@ function ptAccuracy(){ if(PT_ACC&&PT_ACC.k===Object.keys(INDEX).length+'|'+PT.me
   const days=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0&&!HOLI[d]).sort().slice(-56); const by={}; let e=0,n=0;
   days.forEach(d=>{ const a=nrev(d), f1=ptForecast(d,true), f0=ptForecast(d,false); if(!f1||!f0) return; const k=PT_WK(d); const x=by[k]=by[k]||{w:0,o:0,n:0}; x.w+=Math.abs(f1.total-a)/a; x.o+=Math.abs(f0.total-a)/a; x.n++; e+=Math.abs(f1.total-a)/a; n++; });
   return PT_ACC={k:Object.keys(INDEX).length+'|'+PT.method+'|'+PT.back,by,mape:n?e/n:null,n}; }
+
+/* lines: every day of the selection as its own line (middle in bold), or the weeks of the month side by side */
+const PT_WC={W1:'#1F4D4A',W2:'#C0882C',W3:'#8C3A1E',W4:'#5E4B8B',W5:'#8b8178'};
+function ptLines(D,pr,lo,hi){
+  const dow=PT.dow, dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow]; let series=[];
+  if(PT.lines==='weeks'){ ['W1','W2','W3','W4','W5'].forEach(w=>{ const L=ptDays(dow,w); if(L.length) series.push({k:w,name:{W1:'1st',W2:'2nd',W3:'3rd',W4:'4th',W5:'29th+'}[w]+' '+dn+'s',sub:L.length+' days · '+kfmt(ptStat(L.map(nrev))),H:ptProfile(L).P,col:PT_WC[w],w:3.5}); }); }
+  else { D.forEach(d=>series.push({k:d,name:(+d.slice(8))+' '+new Date(d+'T12:00:00').toLocaleString('en',{month:'short'}),sub:kfmt(nrev(d))+(INDEX[d].big>0?' ⚑':''),H:INDEX[d].hours,col:PT_WC[PT_WK(d)],w:1.6,faint:true}));
+    if(pr) series.push({k:'mid',name:'Middle',sub:PT.method==='median'?'median':'trimmed',H:pr.P,col:'#241811',w:4.5}); }
+  if(!series.length) return '';
+  const nar=window.innerWidth<640, W=nar?420:1000,Hh=nar?260:300,pl=nar?44:56,pb=26,pt=12,iw=W-pl-12,ih=Hh-pb-pt, n=hi-lo; const Y=yscale(Math.max(1,...series.flatMap(x=>x.H.slice(lo,hi+1))));
+  const X=h=>pl+iw*(n?(h-lo)/n:0.5), Yp=v=>pt+ih*(1-v/Y.top);
+  let g=''; for(let v=Y.step; v<=Y.top*1.001; v+=Y.step) g+=`<line x1="${pl}" x2="${W-12}" y1="${Yp(v)}" y2="${Yp(v)}" class="gl"/><text x="${pl-8}" y="${Yp(v)+4}" text-anchor="end" class="gt">${kfmt(v)}</text>`;
+  for(let h=lo;h<=hi;h++) if((h-lo)%(n>12?2:1)===0) g+=`<text x="${X(h)}" y="${Hh-6}" text-anchor="middle" class="gt">${hlabel(h)}</text>`;
+  const hl=PT.hl&&series.some(x=>x.k===PT.hl)?PT.hl:null;
+  const path=x=>Array.from({length:n+1},(_,j)=>lo+j).map((h,j)=>`${j?'L':'M'}${X(h).toFixed(1)},${Yp(x.H[h]||0).toFixed(1)}`).join(' ');
+  const lines=series.map(x=>{ const on=hl===x.k, dim=hl&&!on; return `<path d="${path(x)}" class="ln" style="stroke:${x.col};stroke-width:${on?5:x.w};opacity:${dim?0.15:x.faint?0.55:1}"/>`; });
+  /* draw the highlighted line last so it sits on top */
+  const order=series.map((x,i)=>i).sort((a,b)=>(series[a].k===hl)-(series[b].k===hl));
+  const svgL=order.map(i=>lines[i]).join('');
+  return `<div class="card wide ptcard"><h2>${PT.lines==='weeks'?`${dn} by week of the month`:`Every ${dn} · ${esc(PT_WKN[PT.week])}`} <span class="n">tap a name to pick out its line</span></h2>
+    <div class="seg ptlseg"><button class="${PT.lines==='each'?'on':''}" data-ptl="each">Each day</button><button class="${PT.lines==='weeks'?'on':''}" data-ptl="weeks">1st vs 2nd vs 3rd vs 4th</button></div>
+    <svg class="race ptl" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${g}${svgL}</svg>
+    <div class="chips ptleg">${series.map(x=>`<button class="chip${hl===x.k?' on':''}" data-pth="${x.k}"><i style="background:${x.col}"></i>${esc(x.name)} <small>${esc(x.sub)}</small></button>`).join('')}</div>
+    ${PT.lines==='each'?'<p class="note">Line colour = week of the month (1st teal · 2nd gold · 3rd rust · 4th purple · 29th+ grey). Bold = the middle.</p>':''}</div>`;
+}
 function patterns(){
   if(PT.dow==null) PT.dow=new Date(DAY+'T12:00:00').getDay(); if(!PT.week) PT.week='All'; if(!PT.fday) PT.fday=DAY<bizToday()?bizToday():DAY;
   const wkSel=PT.week, dowName=PT_DN[PT.dow];
@@ -787,7 +819,7 @@ function patterns(){
   const ctl=`<div class="card wide ptctl"><div class="seg">${['All','W1','W2','W3','W4','W5'].map(w=>`<button class="${wkSel===w?'on':''}" data-ptw="${w}">${w==='All'?'All':w==='W5'?'29+':w}</button>`).join('')}</div>
     <div class="seg">${[['median','Median'],['trim','Trimmed']].map(m=>`<button class="${PT.method===m[0]?'on':''}" data-ptm="${m[0]}">${m[1]}</button>`).join('')}</div>
     <div class="seg">${[8,12,26].map(n=>`<button class="${PT.back===n?'on':''}" data-ptb="${n}">${n}w</button>`).join('')}</div></div>`;
-  return `<div class="grid ptgrid">${heat}${prof}${wcard}${used}${fc}${ctl}</div>`;
+  return `<div class="grid ptgrid">${heat}${prof}${ptLines(D,pr,lo,hi)}${wcard}${used}${fc}${ctl}</div>`;
 }
 function ptWire(){
   $$('[data-ptd]').forEach(b=>b.onclick=()=>{ PT.dow=+b.dataset.ptd; render(); });
@@ -795,6 +827,8 @@ function ptWire(){
   $$('[data-ptm]').forEach(b=>b.onclick=()=>{ PT.method=b.dataset.ptm; PT_ACC=null; render(); });
   $$('[data-ptb]').forEach(b=>b.onclick=()=>{ PT.back=+b.dataset.ptb; PT_ACC=null; render(); });
   $$('[data-ptf]').forEach(b=>b.onclick=()=>{ PT.fday=b.dataset.ptf; render(); });
+  $$('[data-ptl]').forEach(b=>b.onclick=()=>{ PT.lines=b.dataset.ptl; PT.hl=null; render(); });
+  $$('[data-pth]').forEach(b=>b.onclick=()=>{ PT.hl=PT.hl===b.dataset.pth?null:b.dataset.pth; render(); });
   $$('[data-ptgo]').forEach(b=>b.onclick=()=>{ TAB='sales'; setDay(b.dataset.ptgo); });
 }
 
@@ -942,7 +976,7 @@ function rpTick(){
 }
 /* running total: one line per day, solid up to the clock, ghost after (where that day ended up) */
 function rpRace(L,C,v){
-  const [x0,x1]=rpSpan(), W=1000, Hh=320, padL=58, padB=26, padT=14, iw=W-padL-10, ih=Hh-padB-padT;
+  const [x0,x1]=rpSpan(), nar=window.innerWidth<640, W=nar?420:1000, Hh=nar?280:320, padL=nar?46:58, padB=26, padT=14, iw=W-padL-10, ih=Hh-padB-padT;
   const Y=yscale(Math.max(1,...C.map(c=>c.total))); const X=m=>padL+iw*(Math.max(x0,Math.min(x1,m))-x0)/(x1-x0), Yp=s=>padT+ih*(1-s/Y.top);
   let g=''; for(let s=Y.step; s<=Y.top*1.001; s+=Y.step) g+=`<line x1="${padL}" x2="${W-10}" y1="${Yp(s)}" y2="${Yp(s)}" class="gl"/><text x="${padL-8}" y="${Yp(s)+4}" text-anchor="end" class="gt">${kfmt(s)}</text>`;
   for(let m=Math.ceil(x0/60)*60; m<=x1; m+=120) g+=`<text x="${X(m)}" y="${Hh-6}" text-anchor="middle" class="gt">${hlabel(m/60)}</text>`;
@@ -1005,12 +1039,14 @@ function rpStop(){ RP.playing=false; if(RP.timer){ clearInterval(RP.timer); RP.t
    The GIF is built offline frame by frame, so it does not need the
    phone to keep up in real time.
    ============================================================ */
-const REC={busy:false,cancel:false,url:null,file:null};
+const REC={busy:false,cancel:false,url:null,file:null,once:true};
 const recFonts=()=>Promise.all(['800 72px Outfit','700 30px Outfit','600 22px Outfit','700 40px "Cormorant Garamond"'].map(f=>document.fonts&&document.fonts.load?document.fonts.load(f).catch(()=>{}):0));
 let REC_LOGO=null;
 function recLogo(){ if(REC_LOGO) return Promise.resolve(REC_LOGO); return new Promise(ok=>{ const im=new Image(); im.onload=()=>{ REC_LOGO=im; ok(im); }; im.onerror=()=>ok(null); im.src='assets/logo.png'; }); }
 /* RP_COLS[0] is a CSS variable (ink); the canvas is always the light paper */
 const recCol=c=>/^var\(/.test(c)?'#1B1A17':c;
+/* MP4 that WhatsApp plays = H.264. Safari and every iPhone browser record H.264 when asked for plain video/mp4; Chrome only when avc1 is named */
+const recH264=t=>/avc1|h264/.test(t)||(t==='video/mp4'&&(/iP(hone|ad|od)/.test(navigator.userAgent)||/^((?!chrome|chromium|android|edg).)*safari/i.test(navigator.userAgent)));
 function recVideoType(){ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream) return '';
   return ['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1','video/mp4;codecs=h264','video/mp4','video/webm;codecs=vp9','video/webm'].find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } })||''; }
 
@@ -1064,49 +1100,80 @@ function recRound(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(
 function recPlan(){ const L=rpList(), C=L.map(d=>rpCurve(d)); if(C.some(c=>!c)) return null;
   const span=rpSpan(), e=Math.min(rpEnd(),span[1]), a=span[0]; return {L,C,span,a,e}; }
 
+/* how many minutes of the day each frame moves: the speed chips, never more than `max` frames */
+function recSteps(P,fps,max){ const step=Math.max(RP.speed/fps,(P.e-P.a)/max), mins=[]; for(let m=P.a; m<P.e; m+=step) mins.push(m); mins.push(P.e); return mins; }
+
+/* GIF: 640x800, up to 12 frames a second (at most 200), each frame stores ONLY the pixels that changed.
+   The final totals stay on screen for 6 s as six still frames - some apps cap one long frame - and
+   "Play once" stops it there instead of jumping back to the start. */
 async function recGif(P,onProg){
   const {GIFEncoder,quantize,applyPalette}=await import('./assets/gifenc.esm.js');
-  const W=540, H=Math.round(W*1.25), cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d',{willReadFrequently:true});
-  const logo=await recLogo(); await recFonts();
-  /* 10 frames a second; the speed chips decide how many minutes each second covers; never more than 240 frames */
-  const step=Math.max(RP.speed/10,(P.e-P.a)/160), mins=[]; for(let m=P.a; m<P.e; m+=step) mins.push(m); mins.push(P.e);
-  /* one palette for the whole GIF, taken from a few frames across the day */
-  const sample=[0,.5,1].map(f=>{ recDraw(ctx,W,H,P.a+(P.e-P.a)*f,P.L,P.C,P.span,logo); return ctx.getImageData(0,0,W,H).data; });
+  const W=640, H=800, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d',{willReadFrequently:true});
+  const logo=await recLogo(); await recFonts(); const mins=recSteps(P,12,200), once=REC.once!==false;
+  const sample=[0,.25,.5,.75,1].map(f=>{ recDraw(ctx,W,H,P.a+(P.e-P.a)*f,P.L,P.C,P.span,logo); return ctx.getImageData(0,0,W,H).data; });
   const all=new Uint8ClampedArray(sample.reduce((n,x)=>n+x.length,0)); let o=0; sample.forEach(x=>{ all.set(x,o); o+=x.length; });
-  const pal=quantize(all,256); const gif=GIFEncoder();
+  const pal=quantize(all,255); while(pal.length<255) pal.push([0,0,0]); const P255=pal.slice(0,255); pal.push([255,0,255]); const TR=255;   /* slot 255 = "unchanged" */
+  const gif=GIFEncoder(); let prev=null;
   for(let i=0;i<mins.length;i++){ if(REC.cancel) throw new Error('cancelled');
-    recDraw(ctx,W,H,mins[i],P.L,P.C,P.span,logo); const px=ctx.getImageData(0,0,W,H).data;
-    gif.writeFrame(applyPalette(px,pal),W,H,{palette:i?undefined:pal,delay:i===mins.length-1?3000:i===0?700:100});
-    onProg((i+1)/mins.length); if(i%3===2) await new Promise(r=>setTimeout(r,0)); }
+    recDraw(ctx,W,H,mins[i],P.L,P.C,P.span,logo); const idx=applyPalette(ctx.getImageData(0,0,W,H).data,P255);
+    let out=idx; if(prev){ out=new Uint8Array(idx.length); for(let k=0;k<idx.length;k++) out[k]=idx[k]===prev[k]?TR:idx[k]; }
+    gif.writeFrame(out,W,H,{palette:i?undefined:pal,repeat:once?-1:0,delay:i===0?800:83,transparent:!!prev,transparentIndex:TR,dispose:1});
+    prev=idx; onProg((i+1)/mins.length); if(i%3===2) await new Promise(r=>setTimeout(r,0)); }
+  /* hold the final numbers: six fully transparent (tiny) frames of 1 s each */
+  const still=new Uint8Array(W*H).fill(TR); for(let k=0;k<6;k++) gif.writeFrame(still,W,H,{delay:1000,transparent:true,transparentIndex:TR,dispose:1});
   gif.finish(); return new Blob([gif.bytes()],{type:'image/gif'});
 }
 
-async function recVideo(P,type,onProg){
+/* MP4 the way WhatsApp wants it: H.264, built frame by frame (no waiting in real time), small.
+   WebCodecs where the browser has it (Chrome, Edge, Safari / iPhone 16.4+); else the browser's own recorder if that gives H.264 */
+const REC_AVC=['avc1.42001f','avc1.4d401f','avc1.640028'];
+async function recWC(){ if(!window.VideoEncoder||!window.VideoFrame) return null;
+  for(const codec of REC_AVC){ const cfg={codec,width:720,height:900,bitrate:280000,framerate:15,avc:{format:'avc'}};
+    try{ const r=await VideoEncoder.isConfigSupported(cfg); if(r&&r.supported) return cfg; }catch(e){} } return null; }
+async function recVideo(P,how,onProg){
+  if(how!=='wc') return recVideoRT(P,how,onProg);
+  const cfg=await recWC(); const {Muxer,ArrayBufferTarget}=await import('./assets/mp4-muxer.esm.js');
+  const W=720, H=900, fps=15, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
+  const logo=await recLogo(); await recFonts();
+  const mux=new Muxer({target:new ArrayBufferTarget(),video:{codec:'avc',width:W,height:H,frameRate:fps},fastStart:'in-memory'});
+  let err=null; const enc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>{ err=e; }}); enc.configure(cfg);
+  /* the day plays in 6-30 s at the chosen speed, with a short hold at the start and 2.5 s on the final totals */
+  const secs=Math.max(6,Math.min(30,(P.e-P.a)/RP.speed)), n=Math.round(secs*fps), hold0=Math.round(.7*fps), hold1=Math.round(5*fps), total=hold0+n+hold1;
+  for(let i=0;i<total;i++){ if(REC.cancel||err) break;
+    const f=Math.max(0,Math.min(1,(i-hold0)/n)); recDraw(ctx,W,H,P.a+(P.e-P.a)*f,P.L,P.C,P.span,logo);
+    const fr=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)}); enc.encode(fr,{keyFrame:i%(fps*2)===0}); fr.close();
+    onProg((i+1)/total); if(enc.encodeQueueSize>6||i%4===3) await new Promise(r=>setTimeout(r,0)); }
+  if(REC.cancel){ try{ enc.close(); }catch(e){} throw new Error('cancelled'); }
+  await enc.flush(); enc.close(); if(err) throw err; mux.finalize();
+  return new Blob([mux.target.buffer],{type:'video/mp4'});
+}
+async function recVideoRT(P,type,onProg){
   const W=720, H=900, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
   const logo=await recLogo(); await recFonts(); recDraw(ctx,W,H,P.a,P.L,P.C,P.span,logo);
-  const stream=cv.captureStream(30), mr=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:4e6}), parts=[];
+  const stream=cv.captureStream(30), mr=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:6e5}), parts=[];
   mr.ondataavailable=e=>{ if(e.data&&e.data.size) parts.push(e.data); };
   const done=new Promise(r=>mr.onstop=r);
-  /* real time: the speed chips are minutes of the day per second, kept between 6 and 60 seconds */
-  const secs=Math.max(6,Math.min(60,(P.e-P.a)/RP.speed)), hold=2500, intro=700; mr.start(250); const t0=performance.now();
+  const secs=Math.max(6,Math.min(30,(P.e-P.a)/RP.speed)), hold=5000, intro=700; mr.start(250); const t0=performance.now();
   await new Promise(res=>{ const tick=()=>{ if(REC.cancel){ res(); return; } const t=performance.now()-t0, f=Math.max(0,Math.min(1,(t-intro)/(secs*1000)));
       recDraw(ctx,W,H,P.a+(P.e-P.a)*f,P.L,P.C,P.span,logo); onProg(Math.min(1,t/(intro+secs*1000+hold)));
       if(t>=intro+secs*1000+hold){ res(); return; } requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
   mr.stop(); stream.getTracks().forEach(t=>t.stop()); await done; if(REC.cancel) throw new Error('cancelled');
-  return new Blob(parts,{type:type.split(';')[0]});
+  return new Blob(parts,{type:'video/mp4'});
 }
 
 /* the sheet: pick GIF or video, watch it build, then share / save */
-function recOpen(){ rpStop(); rpTick(); let el=$('rpRecSheet'); if(!el){ el=document.createElement('div'); el.id='rpRecSheet'; document.body.appendChild(el); }
-  const vt=recVideoType(), P=recPlan(); el.hidden=false;
-  const mins=P?Math.round(P.e-P.a):0, gifSec=P?Math.round(Math.min(160,Math.ceil((P.e-P.a)/Math.max(RP.speed/10,(P.e-P.a)/160)))/10+3.7):0, vidSec=P?Math.round(Math.max(6,Math.min(60,mins/RP.speed))+3.2):0;
+async function recOpen(){ rpStop(); rpTick(); let el=$('rpRecSheet'); if(!el){ el=document.createElement('div'); el.id='rpRecSheet'; document.body.appendChild(el); }
+  const P=recPlan(), wc=await recWC(), rt=recVideoType(), vt=wc?'wc':(recH264(rt)?rt:''), h264=!!vt; el.hidden=false;
+  const mins=P?Math.round(P.e-P.a):0, gifSec=P?Math.round(Math.min(200,Math.ceil((P.e-P.a)/Math.max(RP.speed/12,(P.e-P.a)/200)))/12+6.8):0, vidSec=P?Math.round(Math.max(6,Math.min(30,mins/RP.speed))+5.7):0;
   el.innerHTML=`<div class="rrbox"><div class="rrhead"><b>Save this replay</b><button class="rpx" id="rrX" title="close">✕</button></div>
     ${P?`<div class="note">${P.L.length>1?P.L.length+' days':'1 day'} · ${rpClock(P.a)} → ${rpClock(P.e)} · speed ${RP.speed} min / sec</div>
-    <div class="rrbtns"><button class="rpb play rrgo" data-rrk="gif">GIF <small>~${gifSec}s · works on every phone</small></button>
-      ${vt?`<button class="rpb rrgo" data-rrk="vid">${/mp4/.test(vt)?'MP4':'Video'} <small>~${vidSec}s · smoother, for WhatsApp / Instagram</small></button>`:''}</div>
+    <div class="rrbtns">${vt?`<button class="rpb play rrgo" data-rrk="vid">Video for WhatsApp <small>~${vidSec}s · MP4 · plays in WhatsApp, Instagram, Photos</small></button>`:''}
+      <button class="rpb${vt?'':' play'} rrgo" data-rrk="gif">GIF <small>~${gifSec}s · for web pages &amp; email · WhatsApp may show it still</small></button></div>
+    <label class="rronce"><input type="checkbox" id="rrOnce"${REC.once?' checked':''}><span>GIF plays once and stops on the final totals<small>untick to loop — the totals still stay 6 s before it restarts</small></span></label>
+    ${vt?'':'<div class="note">This browser cannot make a WhatsApp video, so only the GIF is offered. On iPhone, update iOS; on a PC use Chrome or Edge.</div>'}
     <div id="rrProg" hidden><div class="rrbar"><i id="rrBar"></i></div><span class="note" id="rrMsg">Drawing…</span> <button class="chip" id="rrStop">Stop</button></div>
     <div id="rrOut"></div>`:'<div class="note">Days are still loading — try again in a moment.</div>'}</div>`;
-  $('rrX').onclick=recClose;
+  $('rrX').onclick=recClose; const ro=$('rrOnce'); if(ro) ro.onchange=()=>{ REC.once=ro.checked; };
   $$('[data-rrk]').forEach(b=>b.onclick=()=>recRun(b.dataset.rrk,vt));
 }
 function recClose(){ REC.cancel=true; const el=$('rpRecSheet'); if(el) el.hidden=true; if(REC.url){ URL.revokeObjectURL(REC.url); REC.url=null; } }
@@ -1122,7 +1189,7 @@ async function recRun(kind,vt){
     const canShare=navigator.canShare&&navigator.canShare({files:[REC.file]});
     $('rrOut').innerHTML=`${kind==='gif'?`<img class="rrprev" src="${REC.url}" alt="replay">`:`<video class="rrprev" src="${REC.url}" controls playsinline muted loop autoplay></video>`}
       <div class="rrbtns">${canShare?`<button class="rpb play" id="rrShare">Share / Save</button>`:''}<a class="rpb" id="rrDl" href="${REC.url}" download="${name}">Download</a></div>
-      <div class="note">${(blob.size/1048576).toFixed(1)} MB · ${kind==='gif'?'on iPhone: Share → Save Image, or press and hold the picture':'on iPhone: Share → Save Video'}</div>`;
+      <div class="note">${(blob.size/1048576).toFixed(1)} MB · ${kind==='gif'?'for WhatsApp use “Video for WhatsApp” instead — WhatsApp often turns GIFs into a still picture':'Share → WhatsApp sends it straight to a chat or your Status · Save Video keeps it in Photos'}</div>`;
     const sh=$('rrShare'); if(sh) sh.onclick=()=>navigator.share({files:[REC.file],title:'Hayat replay'}).catch(()=>{});
   }catch(e){ $('rrOut').innerHTML=`<div class="note">${e.message==='cancelled'?'Stopped.':'Could not make it: '+esc(e.message||e)}</div>`; }
   finally{ REC.busy=false; $('rrProg').hidden=true; $$('[data-rrk]').forEach(b=>b.disabled=false); }
@@ -1885,6 +1952,7 @@ function dock(){
   $$('#dockTabs [data-ptab],#dockMore [data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; sh.hidden=true; render(); });
   $$('#dockMore [data-tab],#dockMore [data-ptab],#dockMore #rpOpen').forEach(b=>b.addEventListener('click',()=>{ sh.hidden=true; }));
   const ro=$('rpOpen'); if(ro) ro.onclick=openReplay;
+  const rb=$('dReplay'); if(rb){ rb.hidden=MODE==='period'; rb.onclick=openReplay; }
   const P=periodPresets(), is=(a,b)=>MODE==='period'&&PER.from===a&&PER.to===b;
   const y=new Date(bizToday()+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y);
   const on={today:MODE==='day'&&DAY===bizToday(),week:is(P[0][1],P[0][2]),month:is(P[2][1],P[2][2]),lmonth:is(P[3][1],P[3][2])}; on.range=MODE==='period'&&!on.week&&!on.month&&!on.lmonth; on.pick=MODE==='day'&&!on.today;

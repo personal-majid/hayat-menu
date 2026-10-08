@@ -114,6 +114,14 @@ looked broken. It has never been run; treat the strict rules as
 unverified.
 
 ## Traps that have already cost time
+- **More than one Claude thread works on this folder.** On 7 Oct a
+  thread wrote its own `shop.js` + `firestore.rules` over Majid's
+  folder and silently erased another thread's counter (#/admin/pos)
+  and staff-login work; it was restored by a 3-way merge on 8 Oct.
+  Before writing ANY file to the PC: stage the PC copy first, and if
+  it differs from the version you started from, merge — never
+  overwrite. `git fetch` the SHIP snapshots too: they show what the
+  other threads shipped.
 - `index.html` declares `let L` for the language code. That shadows
   `window.L` for every later script, so Leaflet must be reached as
   `window.L`. A bare `L.map` is a string.
