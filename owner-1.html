@@ -122,7 +122,7 @@ body.period #dockTime{display:none}
 #dock .dn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);font-size:20px;cursor:pointer;flex:0 0 auto}
 #dock .dpill{flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:0 10px;font:inherit}
 #dock .dpill b{font-size:15px;white-space:nowrap} #dock .dpill small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#dock.fold #dockTabs,#dock.fold #dockSheet,#dock.fold #dockTime{display:none}
+#dock.fold #dockTabs,#dock.fold #dockRange,#dock.fold #dockTime{display:none}
 #dock.fold #dockFold{transform:rotate(180deg)}
 body.period #dPrev,body.period #dNext{visibility:hidden}
 @media (min-width:900px){ #dock{left:50%;transform:translateX(-50%);max-width:980px;border-radius:16px 16px 0 0;border:1px solid var(--line2);border-bottom:0} }
@@ -280,45 +280,6 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
 .lgbtn.on{background:#8b8178;color:#fff;border-color:transparent}
 .lgbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0 10px} .lgbar small{color:var(--muted);flex:1 1 200px}
 .lgtag{font-size:11px;font-weight:800;color:#fff;background:#8b8178;border-radius:999px;padding:1px 7px;margin-left:4px}
-
-/* dock v195: sheet (go to + period) above, day bar, five big tabs at the thumb */
-#dockSheet{border-bottom:1px solid var(--line);padding:4px 0 8px;max-height:52vh;overflow:auto}
-#dockSheet[hidden]{display:none}
-#dock .dsh{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-#dockMore .tab{font-size:14px;padding:9px 14px}
-#dock #dockRange .chip{font-size:14px;padding:9px 14px}
-#dockTabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;padding:2px 6px 4px;border-top:1px solid var(--line)}
-.dtab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;border-radius:12px;cursor:pointer;padding:4px 2px}
-.dtab span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.dtab.on{color:var(--pri);background:color-mix(in srgb,var(--pri) 9%,transparent)}
-.dtab.on svg{stroke-width:2.4}
-/* patterns */
-.ptgrid .ptctl{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;position:sticky;bottom:calc(var(--dockh,120px) + 8px);z-index:6;box-shadow:0 -6px 24px rgba(36,24,17,.12);padding:10px 12px!important;grid-column:1/-1}
-.ptctl .seg{display:inline-flex;gap:3px;background:var(--soft);border-radius:999px;padding:3px}
-.ptctl .seg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:800;color:var(--muted);border-radius:999px;padding:6px 10px;cursor:pointer;min-height:36px;flex:1 1 auto}
-.ptctl .seg:first-child{flex:1 1 100%;display:flex}
-.ptctl .seg button.on{background:var(--pri);color:var(--onpri)}
-.hmg{display:grid;grid-template-columns:38px repeat(7,minmax(0,1fr));gap:3px;margin-top:3px}
-.hmg .hh{font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center}
-.hm{font-style:normal;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
-.hm.z{background:var(--soft);color:var(--muted)} .hm.on{outline:2px solid var(--text);outline-offset:-2px}
-.hmd{border:0;background:transparent;font:inherit;font-size:12px;font-weight:800;color:var(--muted);border-radius:8px;min-height:36px;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1}
-.hmd small{font-size:10px;font-weight:600;opacity:.8} .hmd.on{background:var(--pri);color:var(--onpri)}
-.hmg.tot b{font-size:12px;text-align:center}
-.hmkey{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:12px;color:var(--muted)} .hmkey i{width:18px;height:10px;border-radius:3px}
-.ptbars{height:190px} .ptbars .band{position:absolute;left:0;right:0;background:rgba(192,136,44,.33);border-radius:4px;z-index:1}
-.bar.pm{background:#1F4D4A;width:56%!important;margin:0 auto;z-index:2} .bar.fcp{background:repeating-linear-gradient(135deg,#1F4D4A 0 3px,rgba(31,77,74,.35) 3px 6px);width:56%!important;margin:0 auto;z-index:2}
-.actm{position:absolute;left:6%;right:6%;border-top:4px solid var(--text);border-radius:2px;z-index:3;pointer-events:none}
-.ptkey{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px} .ptkey i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px} .ptkey .k1{background:#1F4D4A} .ptkey .k2{background:rgba(192,136,44,.35)}
-.ptw{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;border:0;border-radius:12px;background:transparent;font:inherit;font-size:14px;cursor:pointer;padding:0 8px;color:inherit}
-.ptw.on{background:var(--soft)} .ptw .nm{width:92px;text-align:left;font-weight:700;display:flex;flex-direction:column;line-height:1.15} .ptw .nm small{font-weight:500;color:var(--muted);font-size:12px} .ptw .tr{flex:1;height:12px;background:var(--soft);border-radius:6px;overflow:hidden;position:relative} .ptw .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
-.ptw b{width:46px;text-align:right} .ptw small{width:52px;text-align:right;color:var(--muted)}
-.chip.lg{background:color-mix(in srgb,#8b8178 18%,transparent)!important}
-.pthero{background:#241811;color:#FBF6EC;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
-.pthero small{color:#E3B963;font-weight:700;font-size:13px} .pthero b{font-size:38px;font-weight:800;line-height:1.1} .pthero em{font-style:normal;color:#E9DCC8;font-size:14px}
-.ptchain{display:grid;grid-template-columns:1fr auto;gap:0 12px;margin-top:8px}
-.ptchain span,.ptchain b{padding:9px 0;border-bottom:1px solid var(--line)} .ptchain span small{display:block;color:var(--muted);font-size:12px} .ptchain b{text-align:right;font-size:16px}
-.ptchain b.dn{color:#8C3A1E} .ptchain b.up{color:#1F4D4A} .ptchain .t{border-bottom:0;font-size:18px;font-weight:800}
 </style>
 </head>
 <body>
@@ -337,13 +298,9 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
 </div>
 <div class="wrap" id="main"><div class="note">Loading…</div></div>
 <div id="dock">
-  <div id="dockSheet" hidden>
-    <div class="dsh"><b>Go to</b><button class="dn sm" id="dockSheetX" aria-label="close">✕</button></div>
-    <div class="drow" id="dockMore"></div>
-    <div class="dsh"><b>Period</b></div>
-    <div class="drow range" id="dockRange">
+  <div class="drow" id="dockTabs"></div>
+  <div class="drow range" id="dockRange">
     <button class="chip" data-r="today">Today</button><button class="chip fc" id="fcChip" title="forecast on the strip and the charts">◔ Forecast</button><button class="chip" data-r="week">Week</button><button class="chip" data-r="month">Month</button><button class="chip" data-r="lmonth">Last month</button><button class="chip" data-r="pick">Pick a day…</button><button class="chip" data-r="range">Range…</button>
-  </div>
   </div>
   <div class="drow daybar">
     <button class="dn" id="dPrev" title="previous day">‹</button>
@@ -351,7 +308,6 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
     <button class="dn" id="dNext" title="next day">›</button>
     <button class="dn" id="dockFold" title="collapse / expand">⌄</button>
   </div>
-  <nav class="drow" id="dockTabs"></nav>
 </div>
 
 <script>
@@ -369,7 +325,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v195';
+const BOARD='v194';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -699,104 +655,6 @@ function lgCard(){ const M=Object.entries(LARGE).filter(([k,x])=>x&&x.large).sor
 function lgCardWire(){ $$('[data-lgrev]').forEach(b=>b.onclick=()=>{ const [d,h]=b.dataset.lgrev.split('|'); lgReview(d,+h); });
   $$('[data-lgun]').forEach(b=>b.onclick=async()=>{ const k=b.dataset.lgun, x=LARGE[k]; if(!x) return; x.large=false; applyLarge(); render(); try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','large_orders'),{b:{[k]:x}},{merge:true}); }catch(e){} });
   lgWire(document,lgFind); $$('[data-lgno]').forEach(b=>b.onclick=()=>{ const r=lgFind(b.dataset.lgno); if(r) lgNo(r); }); }
-
-/* ============================================================
-   PATTERNS - normal business by hour (large orders out), by weekday and
-   week of the month, and a forecast you can read step by step.
-   ============================================================ */
-const PT_WK=d=>{ const n=+d.slice(8,10); return n<=7?'W1':n<=14?'W2':n<=21?'W3':n<=28?'W4':'W5'; };
-const PT_WKN={All:'All weeks',W1:'Week 1 (1–7)',W2:'Week 2 (8–14)',W3:'Week 3 (15–21)',W4:'Week 4 (22–28)',W5:'29th – 31st'};
-const PT_DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], PT_ORDER=[1,2,3,4,5,6,0];
-let PT={dow:null,week:null,method:'median',back:12,fday:null};
-function ptStat(vals){ const v=vals.filter(x=>x!=null).slice().sort((a,b)=>a-b), n=v.length; if(!n) return null;
-  if(PT.method==='median') return n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2;
-  const cut=n>=5?Math.floor(n*0.15)||1:0, w=v.slice(cut,n-cut); return w.reduce((a,b)=>a+b,0)/w.length; }
-const ptQ=(vals,q)=>{ const v=vals.slice().sort((a,b)=>a-b); if(!v.length) return 0; const i=(v.length-1)*q, lo=Math.floor(i), hi=Math.ceil(i); return v[lo]+(v[hi]-v[lo])*(i-lo); };
-/* the days behind an average: past days with hours, last N weeks, that weekday, that week of month, no holiday */
-function ptDays(dow,week,before){ const end=before||bizToday(); const from=new Date(end+'T12:00:00'); from.setDate(from.getDate()-7*PT.back); const f=ymd(from);
-  return Object.keys(INDEX).filter(d=>d<end&&d>=f&&INDEX[d].hours&&nrev(d)>0&&!HOLI[d]&&(dow==null||new Date(d+'T12:00:00').getDay()===dow)&&(!week||week==='All'||PT_WK(d)===week)).sort().reverse(); }
-function ptProfile(days){ const P=Array(24).fill(0), L=Array(24).fill(0), U=Array(24).fill(0);
-  for(let h=0;h<24;h++){ const v=days.map(d=>INDEX[d].hours[h]||0); P[h]=ptStat(v)||0; L[h]=ptQ(v,0.25); U[h]=ptQ(v,0.75); } return {P,L,U}; }
-/* week-of-month factor for a weekday: that week's typical day vs all weeks, pulled toward 1 when it rests on few days */
-function ptWeekFactor(dow,week,before){ const all=ptDays(dow,'All',before), sel=all.filter(d=>PT_WK(d)===week); if(all.length<3||!sel.length) return {f:1,n:sel.length};
-  const a=ptStat(all.map(nrev)), s=ptStat(sel.map(nrev)); if(!a) return {f:1,n:sel.length}; const r=s/a, n=sel.length; return {f:1+(r-1)*n/(n+2),raw:r,n}; }
-/* the readable forecast: normal weekday x week of month x trend x holiday */
-function ptForecast(day,useWeek){ const dow=new Date(day+'T12:00:00').getDay(); const base=ptDays(dow,'All',day); if(base.length<3) return null;
-  const B=ptStat(base.map(nrev)); const wk=PT_WK(day), W=useWeek===false?{f:1,n:0}:ptWeekFactor(dow,wk,day);
-  const all=Object.keys(INDEX).filter(d=>d<day&&nrev(d)>0&&!HOLI[d]).sort(), l28=all.slice(-28), p28=all.slice(-56,-28), mean=L=>L.length?L.reduce((n,d)=>n+nrev(d),0)/L.length:0;
-  let tr=p28.length>=14&&mean(p28)?mean(l28)/mean(p28):1; tr=Math.max(0.9,Math.min(1.1,1+(tr-1)*0.5));
-  const hol=HOLI[day]; const hf=hol?hol[1]:1;
-  const total=B*W.f*tr*hf; const prof=ptProfile(ptDays(dow,wk,day).length>=3?ptDays(dow,wk,day):base); const ps=prof.P.reduce((a,b)=>a+b,0)||1;
-  return {day,dow,wk,base:B,n:base.length,W,tr,hol,hf,total,H:prof.P.map(v=>v*total/ps),L:prof.L.map(v=>v*total/ps),U:prof.U.map(v=>v*total/ps)}; }
-let PT_ACC=null;
-function ptAccuracy(){ if(PT_ACC&&PT_ACC.k===Object.keys(INDEX).length+'|'+PT.method+'|'+PT.back) return PT_ACC;
-  const days=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0&&!HOLI[d]).sort().slice(-56); const by={}; let e=0,n=0;
-  days.forEach(d=>{ const a=nrev(d), f1=ptForecast(d,true), f0=ptForecast(d,false); if(!f1||!f0) return; const k=PT_WK(d); const x=by[k]=by[k]||{w:0,o:0,n:0}; x.w+=Math.abs(f1.total-a)/a; x.o+=Math.abs(f0.total-a)/a; x.n++; e+=Math.abs(f1.total-a)/a; n++; });
-  return PT_ACC={k:Object.keys(INDEX).length+'|'+PT.method+'|'+PT.back,by,mape:n?e/n:null,n}; }
-function patterns(){
-  if(PT.dow==null) PT.dow=new Date(DAY+'T12:00:00').getDay(); if(!PT.week) PT.week='All'; if(!PT.fday) PT.fday=DAY<bizToday()?bizToday():DAY;
-  const wkSel=PT.week, dowName=PT_DN[PT.dow];
-  /* heat map: every weekday under the chosen week of month */
-  const per={}; PT_ORDER.forEach(w=>{ const D=ptDays(w,wkSel); per[w]={D,P:D.length?ptProfile(D).P:null}; });
-  const [lo,hi]=hspan(...PT_ORDER.map(w=>per[w].P||[]));
-  const hmax=Math.max(1,...PT_ORDER.flatMap(w=>per[w].P?per[w].P.slice(lo,hi+1):[]));
-  const stops=['#F6EBD6','#EDD3A6','#DDB06A','#C0882C','#8A5E16'];
-  const cell=(v,on)=>{ if(v==null) return `<i class="hm z${on?' on':''}">—</i>`; const k=Math.min(4,Math.floor(v/hmax*5)); return `<i class="hm${on?' on':''}" style="background:${stops[k]};color:${k>=3?'#fff':'#241811'}" title="${rs(v)}">${(v/1000).toFixed(1)}</i>`; };
-  const heat=`<div class="card wide ptcard"><h2>Hour × weekday <span class="n">${esc(PT_WKN[wkSel])} · ₹K per hour · tap a day</span></h2>
-    <div class="hmg"><span></span>${PT_ORDER.map(w=>`<button class="hmd${PT.dow===w?' on':''}" data-ptd="${w}">${PT_DN[w].slice(0,2)}<small>${per[w].D.length}</small></button>`).join('')}</div>
-    ${Array.from({length:hi-lo+1},(_,j)=>lo+j).map(h=>`<div class="hmg"><span class="hh">${hlabel(h)}</span>${PT_ORDER.map(w=>cell(per[w].P?per[w].P[h]:null,PT.dow===w)).join('')}</div>`).join('')}
-    <div class="hmg tot"><span class="hh">Day</span>${PT_ORDER.map(w=>`<b>${per[w].D.length?kfmt(ptStat(per[w].D.map(nrev))):'—'}</b>`).join('')}</div>
-    <div class="hmkey"><span>low</span>${stops.map(c=>`<i style="background:${c}"></i>`).join('')}<span>high</span><span class="n">small number = days used</span></div></div>`;
-  /* the chosen weekday: middle and usual range per hour */
-  const D=per[PT.dow].D, pr=D.length?ptProfile(D):null;
-  let prof='';
-  if(pr){ const Y=yscale(Math.max(1,...pr.U.slice(lo,hi+1))); const n=hi-lo+1;
-    prof=`<div class="card wide ptcard"><h2>${dowName} · ${esc(PT_WKN[wkSel])} <span class="n">middle + usual range (25–75%) · ${D.length} days</span></h2>
-      <div class="bars axed ptbars" style="grid-template-columns:repeat(${n},1fr)">${Y.html}${Array.from({length:n},(_,j)=>{ const h=lo+j; return `<div class="bc"><i class="band" style="bottom:${100*pr.L[h]/Y.top}%;height:${Math.max(1,100*(pr.U[h]-pr.L[h])/Y.top)}%"></i><div class="bar pm" style="height:${Math.max(2,100*pr.P[h]/Y.top)}%" data-t="${hlabel(h)}:00 middle ${rs(pr.P[h])} · usual ${rs(pr.L[h])}–${rs(pr.U[h])}"></div></div>`; }).join('')}</div>${hx(lo,hi)}
-      <div class="ptkey"><span><i class="k1"></i>middle (${PT.method==='median'?'median':'trimmed avg'})</span><span><i class="k2"></i>usual range</span></div></div>`; }
-  else prof=`<div class="card wide"><div class="note">No ${dowName} in ${esc(PT_WKN[wkSel])} in the last ${PT.back} weeks. Try All weeks or 26 weeks.</div></div>`;
-  /* week of the month for that weekday */
-  const allD=ptDays(PT.dow,'All'), allS=allD.length?ptStat(allD.map(nrev)):0;
-  const wrows=['W1','W2','W3','W4','W5'].map(w=>{ const L=allD.filter(d=>PT_WK(d)===w); const s=L.length?ptStat(L.map(nrev)):null; const p=s&&allS?s/allS:null;
-    const nm={W1:['Week 1','1–7'],W2:['Week 2','8–14'],W3:['Week 3','15–21'],W4:['Week 4','22–28'],W5:['Month end','29–31']}[w];
-    return `<button class="ptw${wkSel===w?' on':''}" data-ptw="${w}"><span class="nm">${nm[0]}<small>${nm[1]}</small></span><span class="tr"><i style="width:${p?Math.max(4,Math.min(100,(p-0.7)/0.6*100)):0}%;background:${p&&p>=1?'#1F4D4A':'#8C3A1E'}"></i></span><b>${p?Math.round(p*100)+'%':'—'}</b><small>${L.length} days</small></button>`; }).join('');
-  const wcard=`<div class="card ptcard"><h2>Week of the month <span class="n">${dowName}s vs their usual · tap to filter</span></h2>${wrows}</div>`;
-  /* days used */
-  const used=`<div class="card ptcard"><h2>Days in this average <span class="n">⚑ = large order taken out · holidays left out</span></h2><div class="chips">${D.map(d=>`<button class="chip${INDEX[d].big>0?' lg':''}" data-ptgo="${d}">${(+d.slice(8))} ${new Date(d+'T12:00:00').toLocaleString('en',{month:'short'})}${INDEX[d].big>0?' ⚑':''} <small>${kfmt(nrev(d))}</small></button>`).join('')||'<span class="note">none</span>'}</div></div>`;
-  /* forecast */
-  const fdays=[]; for(let i=0;i<7;i++){ const x=new Date(bizToday()+'T12:00:00'); x.setDate(x.getDate()+i); fdays.push(ymd(x)); }
-  const F=ptForecast(PT.fday,true), A=ptAccuracy();
-  let fc='';
-  if(F){ const live=PT.fday===bizToday(); const act=live&&DOC?hbucket(recs().filter(r=>r.status==='settled'&&normal(r))):null; const n=hi-lo+1; const Y=yscale(Math.max(1,...F.U.slice(lo,hi+1),...(act?act.slice(lo,hi+1):[])));
-    const miss=A.mape||0.1, lowT=F.total*(1-miss), hiT=F.total*(1+miss);
-    const wb=A.by[F.wk];
-    fc=`<div class="card wide ptfc"><div class="pthero"><small>Forecast · ${esc(rpName(PT.fday))} · ${esc(PT_WKN[F.wk])}</small><b>${rs(F.total)}</b><em>usually ${rs(lowT)} – ${rs(hiT)} · ±${Math.round(miss*100)}% typical miss</em></div>
-      <div class="chips" style="margin:10px 0 4px">${fdays.map(d=>`<button class="chip${PT.fday===d?' on':''}" data-ptf="${d}">${d===bizToday()?'Today':PT_DN[new Date(d+'T12:00:00').getDay()]+' '+(+d.slice(8))}</button>`).join('')}</div>
-      <div class="ptchain">
-        <span>Normal ${PT_DN[F.dow]} <small>${PT.method==='median'?'median':'trimmed avg'} of ${F.n} · large orders out</small></span><b>${rs(F.base)}</b>
-        <span>${esc(PT_WKN[F.wk])} <small>${F.W.n} days${F.W.raw?' · ran '+Math.round(F.W.raw*100)+'%, pulled toward 100%':''}</small></span><b class="${F.W.f<1?'dn':'up'}">× ${F.W.f.toFixed(2)}</b>
-        <span>Recent trend <small>last 28 days vs 28 before, halved</small></span><b class="${F.tr<1?'dn':'up'}">× ${F.tr.toFixed(2)}</b>
-        <span>Holiday / event <small>${F.hol?esc(F.hol[0]):'none'}</small></span><b>× ${F.hf.toFixed(2)}</b>
-        <span class="t">Forecast</span><b class="t">${rs(F.total)}</b></div>
-      <h2 style="margin-top:14px">By hour <span class="n">hatched = forecast · band = usual range${act?' · dark line = actual so far':''}</span></h2>
-      <div class="bars axed ptbars" style="grid-template-columns:repeat(${n},1fr)">${Y.html}${Array.from({length:n},(_,j)=>{ const h=lo+j; return `<div class="bc"><i class="band" style="bottom:${100*F.L[h]/Y.top}%;height:${Math.max(1,100*(F.U[h]-F.L[h])/Y.top)}%"></i><div class="bar fcp" style="height:${Math.max(2,100*F.H[h]/Y.top)}%" data-t="${hlabel(h)}:00 forecast ${rs(F.H[h])} · usual ${rs(F.L[h])}–${rs(F.U[h])}${act&&act[h]?' · actual '+rs(act[h]):''}"></div>${act&&act[h]?`<i class="actm" style="bottom:${Math.min(100,100*act[h]/Y.top)}%"></i>`:''}</div>`; }).join('')}</div>${hx(lo,hi)}
-      <h2 style="margin-top:14px">How good is it <span class="n">last ${A.n} days, each forecast from the days before it</span></h2>
-      <div class="scroll"><table><tr><th>Week of month</th><th class="r">miss with week</th><th class="r">without</th><th class="r">days</th></tr>${['W1','W2','W3','W4','W5'].map(w=>{ const x=A.by[w]; return `<tr${w===F.wk?' class="cur"':''}><td>${esc(PT_WKN[w])}</td><td class="r"><b>${x?Math.round(100*x.w/x.n)+'%':'—'}</b></td><td class="r">${x?Math.round(100*x.o/x.n)+'%':'—'}</td><td class="r">${x?x.n:0}</td></tr>`; }).join('')}</table></div>
-      ${wb&&wb.o>wb.w?`<p class="note">Counting the week of the month cuts the miss in ${esc(PT_WKN[F.wk])} from ${Math.round(100*wb.o/wb.n)}% to ${Math.round(100*wb.w/wb.n)}%.</p>`:''}</div>`; }
-  else fc=`<div class="card wide"><div class="note">Not enough past days to forecast ${esc(rpName(PT.fday))} yet.</div></div>`;
-  const ctl=`<div class="card wide ptctl"><div class="seg">${['All','W1','W2','W3','W4','W5'].map(w=>`<button class="${wkSel===w?'on':''}" data-ptw="${w}">${w==='All'?'All':w==='W5'?'29+':w}</button>`).join('')}</div>
-    <div class="seg">${[['median','Median'],['trim','Trimmed']].map(m=>`<button class="${PT.method===m[0]?'on':''}" data-ptm="${m[0]}">${m[1]}</button>`).join('')}</div>
-    <div class="seg">${[8,12,26].map(n=>`<button class="${PT.back===n?'on':''}" data-ptb="${n}">${n}w</button>`).join('')}</div></div>`;
-  return `<div class="grid ptgrid">${heat}${prof}${wcard}${used}${fc}${ctl}</div>`;
-}
-function ptWire(){
-  $$('[data-ptd]').forEach(b=>b.onclick=()=>{ PT.dow=+b.dataset.ptd; render(); });
-  $$('[data-ptw]').forEach(b=>b.onclick=()=>{ PT.week=PT.week===b.dataset.ptw&&b.classList.contains('ptw')?'All':b.dataset.ptw; render(); });
-  $$('[data-ptm]').forEach(b=>b.onclick=()=>{ PT.method=b.dataset.ptm; PT_ACC=null; render(); });
-  $$('[data-ptb]').forEach(b=>b.onclick=()=>{ PT.back=+b.dataset.ptb; PT_ACC=null; render(); });
-  $$('[data-ptf]').forEach(b=>b.onclick=()=>{ PT.fday=b.dataset.ptf; render(); });
-  $$('[data-ptgo]').forEach(b=>b.onclick=()=>{ TAB='sales'; setDay(b.dataset.ptgo); });
-}
 
 function hourly(){
   const SR=recs().filter(r=>r.status==='settled'); let H=hbucket(SR.filter(r=>normal(r))); let HL=hbucket(SR.filter(r=>isLarge(r)));
@@ -1870,20 +1728,12 @@ function waiters(){
 
 /* the dock at the bottom: the mode's tabs, the range chips, the day pill. Collapsible; swipe the page to change day. */
 let DOCK_FOLD=false; try{ DOCK_FOLD=localStorage.getItem('hayat-dock')==='fold'; }catch(e){}
-function dockH(){ const d=$('dock'); if(d) document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px'); const b=$('dockMoreBtn'); if(b) b.setAttribute('aria-expanded',String(!$('dockSheet').hidden)); }
 function dock(){
   const d=$('dock'); if(!d) return;
-  const IC={live:'<path d="M3 12h4l2-6 4 12 2-6h6"/>',sales:'<path d="M5 20V10M12 20V4M19 20v-7"/>',patterns:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',similar:'<path d="M4 17l5-5 4 3 7-8"/><path d="M4 12l5-3 4 2 7-5" opacity=".45"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',over:'<path d="M4 19h16M6 15l4-5 4 3 4-6"/>',people:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.4"/>',items:'<path d="M5 6h14M5 12h14M5 18h9"/>',money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>'};
-  const svg=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
-  const prim=MODE==='period'?[['overview','Overview','over'],['people','People','people'],['items','Items','items'],['money','Money','money']]:[['floor','Live','live'],['sales','Sales','sales'],['patterns','Patterns','patterns'],['similar','Similar','similar']];
-  const sec=MODE==='period'?[['cash','Cash'],['voids','Voids']]:[['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']];
-  const cur=MODE==='period'?PTAB:TAB, attr=MODE==='period'?'data-ptab':'data-tab', inSec=sec.find(t=>t[0]===cur);
-  $('dockTabs').innerHTML=prim.map(t=>`<button class="dtab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${svg(t[2])}<span>${t[1]}</span></button>`).join('')+`<button class="dtab${inSec?' on':''}" id="dockMoreBtn" aria-expanded="${!$('dockSheet').hidden}">${svg('more')}<span>${inSec?inSec[1]:'More'}</span></button>`;
-  $('dockMore').innerHTML=(MODE==='period'?'':`<button class="tab rpgo" id="rpOpen">▶ Replay</button>`)+sec.map(t=>`<button class="tab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${t[1]}</button>`).join('');
-  const sh=$('dockSheet'); $('dockMoreBtn').onclick=()=>{ sh.hidden=!sh.hidden; dockH(); };
-  $$('#dockTabs [data-tab],#dockMore [data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; sh.hidden=true; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
-  $$('#dockTabs [data-ptab],#dockMore [data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; sh.hidden=true; render(); });
-  $$('#dockMore [data-tab],#dockMore [data-ptab],#dockMore #rpOpen').forEach(b=>b.addEventListener('click',()=>{ sh.hidden=true; }));
+  const dayTabs=[['floor','Live'],['sales','Sales'],['similar','Similar'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']], perTabs=[['overview','Overview'],['people','People'],['items','Items'],['money','Money'],['cash','Cash'],['voids','Voids']];
+  $('dockTabs').innerHTML=MODE==='period'
+    ?`<div class="tabs main">${perTabs.map(t=>`<button class="tab${PTAB===t[0]?' on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`
+    :`<div class="tabs main"><button class="tab rpgo" id="rpOpen" title="play the whole day, beside other days">▶ Replay</button>${dayTabs.map(t=>`<button class="tab${TAB===t[0]?' on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
   const ro=$('rpOpen'); if(ro) ro.onclick=openReplay;
   const P=periodPresets(), is=(a,b)=>MODE==='period'&&PER.from===a&&PER.to===b;
   const y=new Date(bizToday()+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y);
@@ -1907,10 +1757,7 @@ function dockWire(){
     else if(r==='range'){ const P2=periodPresets(); if(MODE!=='period'||!PER.from){ MODE='period'; loadPeriod(P2[0][1],P2[0][2],P2[0][0]); } else render(); setTimeout(()=>{ const f=$('pFrom'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },600); }
     else { MODE='period'; const p=r==='week'?P[0]:r==='month'?P[2]:P[3]; loadPeriod(p[1],p[2],p[0]); } });
   $('dPrev').onclick=()=>stepDay(-1); $('dNext').onclick=()=>stepDay(1);
-  $('dPick').onclick=()=>{ const sh=$('dockSheet'); sh.hidden=!sh.hidden; dockH(); };
-  $('dockSheetX').onclick=()=>{ $('dockSheet').hidden=true; dockH(); };
-  $$('#dockRange .chip').forEach(c=>c.addEventListener('click',()=>{ $('dockSheet').hidden=true; dockH(); },true));
-  document.addEventListener('click',e=>{ const sh=$('dockSheet'); if(sh&&!sh.hidden&&!e.target.closest('#dock')){ sh.hidden=true; dockH(); } });
+  $('dPick').onclick=()=>{ if(MODE==='period'){ MODE='day'; render(); } else calendar(); };
   $('dockFold').onclick=()=>{ DOCK_FOLD=!DOCK_FOLD; try{ localStorage.setItem('hayat-dock',DOCK_FOLD?'fold':'open'); }catch(e){} dock(); };
   /* swipe the page sideways to step a day */
   let sx=null, sy=null; const m=$('main');
@@ -1930,14 +1777,13 @@ function render(){
      TAB==='floor'?`<div class="grid">${live?alerts():''}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
-     TAB==='patterns'?patterns():
      TAB==='similar'?`<div class="grid">${similar()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
   dock(); addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
-  simWire(); lgCardWire(); ptWire();
+  simWire(); lgCardWire();
   $$('[data-rpgo]').forEach(a=>a.onclick=e=>{ e.preventDefault(); openReplay(); });
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
