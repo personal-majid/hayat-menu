@@ -340,6 +340,21 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
 .labday{margin-top:10px;background:var(--soft);border-radius:12px;padding:10px 12px} .labdayp{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0;font-size:13px}
 .labhow summary{cursor:pointer;font-weight:700} .simtags{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 5px} .simtags span{font-size:11px;font-weight:700;background:var(--soft);color:var(--muted);border-radius:999px;padding:2px 8px}
 @media (max-width:640px){ .labrow{grid-template-columns:26px minmax(0,1fr) 52px;grid-template-areas:"rk nm b" "rk tr tr" "rk sm sm"} .labrow .nm{font-size:14px} }
+
+/* spends day by day */
+.spbars{height:190px;margin-top:24px} .spg{cursor:pointer;position:relative} .spdup{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#fff;background:#A63A26;border-radius:999px;padding:0 5px;z-index:3;white-space:nowrap} .spdup.s{position:static;transform:none;display:inline-block}
+.spp{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;background:var(--soft);color:var(--muted)} .spp.bad{background:color-mix(in srgb,#A63A26 16%,transparent);color:#A63A26} .spp.warn{background:color-mix(in srgb,#C0882C 18%,transparent);color:#8A5E16} .spp.good{background:color-mix(in srgb,#2E7D4F 16%,transparent);color:#2E7D4F}
+.spdg{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px} .spdh{margin-bottom:4px}
+.spdi{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px} .spdi small{color:var(--muted)} .spdi .tab{flex:0 0 auto}
+.sph{margin:14px 0 2px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.simany{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px} .simany label{font-weight:700;font-size:13px} .simany input{font:inherit;padding:6px 8px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:inherit}
+.simt .tag.mine{color:var(--pri);border-color:var(--pri)}
+.shhow{font-size:14px;color:var(--muted);margin:2px 0 10px;max-width:60ch}
+.shrow{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)} .shrow .l{font-weight:700;font-size:14px;display:flex;flex-direction:column} .shrow .l small,.shrow b small{font-weight:500;color:var(--muted);font-size:12px;display:block}
+.shrow b{text-align:right;font-size:17px} .shb{height:14px;background:var(--soft);border-radius:7px;position:relative;overflow:hidden;display:block} .shb i{position:absolute;top:0;bottom:0;left:0;border-radius:7px} .shb i.rg{background:rgba(192,136,44,.28);z-index:0} .shb i:not(.rg){z-index:1} .shb i.md{width:4px;background:#8A5E16;border-radius:2px}
+.shmore{margin-top:8px} .shmore summary{cursor:pointer;font-weight:700;color:var(--muted)}
+@media (max-width:640px){ .shrow{grid-template-columns:1fr auto} .shrow .shb{grid-column:1/-1;order:3} }
 </style>
 </head>
 <body>
@@ -391,7 +406,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v202';
+const BOARD='v204';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -407,14 +422,15 @@ function recs(){ const all=Object.values((DOC&&DOC.records)||{}); const cut=cutT
     if(r.status==='settled'&&st!=null&&st>cut){ const x=Object.assign({},r,{status:(r.dueAt&&ts(r.dueAt)<=cut)?'due':'open',settledAt:null,foodReady:0}); x.items=(r.items||[]).filter(i=>!i.kotAt||ts(i.kotAt)<=cut); out.push(x); return; }
     out.push(r); });
   return out; }
-/* a CASHIER bill this small is staff food, not a customer: shown, counted, never alerted or averaged */
+/* staff food: only when the ticket remark names a staff member or says staff */
 const STAFF_MAX=300;
 const ORDER_WORDS=/^(co|c\/o|c\.o|dm|dmu|hd|h\.d|cnt|cntr|counter|parcel|take ?away|ta|pack\w*|deliver\w*|home ?del\w*|zomato|swiggy|online)\b/i;
 const staffNames=()=>new Set(Object.values((FLOOR&&FLOOR.staff)||{}).map(n=>String(n).trim().toUpperCase()).filter(Boolean));
 /* the ticket remark says who ate: "tan", "viva", "SOHAIL ALF" - staff food, in any section */
 const isStaff=r=>{ const rem=String(r.remarks||'').trim(); const w=rem.split(/\s+/)[0]||'';
   if(rem&&!ORDER_WORDS.test(rem)){ if(staffNames().has(w.toUpperCase())) return true; if(/^[a-z]{2,14}$/i.test(rem)&&sum(r)<=STAFF_MAX) return true; if(/\bstaff\b/i.test(rem)) return true; }
-  return /cashier/i.test(r.waiter||'')&&sum(r)<=200&&!rem; };
+  /* a cashier bill is a counter sale to a customer - only the remark makes it staff food */
+  return false; };
 function prep(doc){ if(doc&&doc.records) Object.values(doc.records).forEach(r=>{ if(!r.kindRaw) r.kindRaw=r.kind; r.kind=isStaff(r)?'staff':r.kindRaw; }); return doc; }
 
 function kpis(){
@@ -1034,6 +1050,80 @@ function labWire(){
   $$('[data-labgo]').forEach(b=>b.onclick=e=>{ e.preventDefault(); TAB='lab'; render(); });
 }
 
+/* ============================================================
+   SPENDS · day by day - bills and paid-out per day, tap a day for its entries,
+   and a duplicate finder: an entry VMENU first saved on one day and the cashier
+   later moved shows on both days until the old copy is removed.
+   ============================================================ */
+let SPD={key:'',busy:false,docs:{},dups:null,prog:0};
+function spDays(from,to){ const out=[]; for(let d=from; d<=to; d=addDays(d,1)) out.push(d); return out; }
+function spDaily(){
+  const D=spDays(PER.from,PER.to).filter(d=>d<=bizToday()), B=D.map(d=>(INDEX[d]&&INDEX[d].purchases)||0), P=D.map(d=>(INDEX[d]&&INDEX[d].paidOut)||0);
+  const Y=yscale(Math.max(1,...B,...P)); const dupDays=new Set(); (SPD.dups||[]).forEach(g=>g.items.forEach(x=>dupDays.add(x.day)));
+  const tb=B.reduce((a,b)=>a+b,0), tp=P.reduce((a,b)=>a+b,0);
+  return `<div class="card wide"><h2>Spends · day by day <span class="n">bills ${rs(tb)} · paid out ${rs(tp)} · tap a day</span></h2>
+    <div class="bars axed spbars" style="grid-template-columns:repeat(${D.length},1fr)">${Y.html}${D.map((d,i)=>`<div class="grp spg" data-spd="${d}" style="grid-template-columns:1fr 1fr">${dupDays.has(d)?'<b class="spdup" title="possible duplicate">2×</b>':''}<div class="bar" style="height:${B[i]?Math.max(2,100*B[i]/Y.top):0}%;background:#C0882C" data-t="${d} · supplier bills ${rs(B[i])}"></div><div class="bar" style="height:${P[i]?Math.max(2,100*P[i]/Y.top):0}%;background:#8C3A1E" data-t="${d} · paid out ${rs(P[i])}"></div></div>`).join('')}</div>
+    <div class="hx axed" style="grid-template-columns:repeat(${D.length},1fr)">${D.map((d,i)=>`<span>${D.length>16&&i%Math.ceil(D.length/12)?'':(+d.slice(8))}</span>`).join('')}</div>
+    <div class="ptkey"><span><i style="background:#C0882C"></i>supplier bills</span><span><i style="background:#8C3A1E"></i>paid out (cash / bank)</span>${dupDays.size?'<span><b class="spdup s">2×</b> possible duplicate</span>':''}</div></div>`;
+}
+/* every day of the span and a week either side, read once (cached days cost nothing) */
+async function spScan(){
+  const key=PER.from+'|'+PER.to; if(SPD.busy||SPD.key===key) return; SPD.busy=true; SPD.key=key; SPD.dups=null; SPD.prog=0; render();
+  const D=spDays(addDays(PER.from,-7),addDays(PER.to,7)>bizToday()?bizToday():addDays(PER.to,7)).filter(d=>INDEX[d]&&((INDEX[d].purchases||0)+(INDEX[d].paidOut||0))>0);
+  for(let i=0;i<D.length;i++){ const d=D[i]; if(!SPD.docs[d]) SPD.docs[d]=d===bizToday()?DOC:await loadDay(d); SPD.prog=(i+1)/D.length; if(i%5===4&&MODE==='period'&&PTAB==='money'){ const el=$('spProg'); if(el) el.textContent=Math.round(100*SPD.prog)+'%'; } }
+  SPD.dups=spFind(D); SPD.busy=false; if(MODE==='period'&&PTAB==='money') render();
+}
+function spFind(D){
+  const groups={}; const add=(sig,lvl,x)=>{ (groups[sig]=groups[sig]||{lvl,items:[]}).items.push(x); };
+  const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').trim(), r0=v=>Math.round(+v||0);
+  D.forEach(day=>{ const doc=SPD.docs[day]; if(!doc) return;
+    Object.entries(doc.purchases||{}).forEach(([k,p])=>{ const x={day,coll:'purchases',key:k,e:p,amt:+p.total||0,what:(p.supplier||'—')+(p.billNo?' · bill '+p.billNo:''),at:p.at};
+      if(p.id!=null) add('pk|'+p.id,'certain',x);   /* VMENU's own purchase id: the same bill */
+      if(p.billNo) add('pb|'+norm(p.supplier)+'|'+norm(p.billNo)+'|'+r0(p.total),'very likely',x);
+      const it=(p.items||[]).map(i=>norm(i.n)+'×'+(+i.q||0)).sort().join(','); if(it&&r0(p.total)>=200) add('pi|'+norm(p.supplier)+'|'+r0(p.total)+'|'+it,'possible',x); });
+    Object.entries(doc.payments||{}).forEach(([k,p])=>{ if(p.deleted) return; const x={day,coll:'payments',key:k,e:p,amt:+p.amount||0,what:payKind(p)+' · '+(p.party||p.remarks||'—'),at:p.at};
+      if(p.id!=null) add('yk|'+p.id,'certain',x);   /* VMENU's transaction id */
+      if(r0(p.amount)>=100) add('yp|'+norm(p.party)+'|'+r0(p.amount)+'|'+norm(p.remarks)+'|'+norm(payKind(p)),'possible',x); }); });
+  /* a group counts when its copies sit on different days, close together */
+  const seen=new Set(), out=[]; const rank={'certain':0,'very likely':1,'possible':2};
+  Object.values(groups).sort((a,b)=>rank[a.lvl]-rank[b.lvl]).forEach(g=>{ const days=[...new Set(g.items.map(x=>x.day))]; if(days.length<2) return;
+    const span=(new Date(days.sort().slice(-1)[0])-new Date(days[0]))/864e5; if(g.lvl!=='certain'&&span>10) return;
+    /* the same amount to the same person on 3+ days is a routine (daily wages), not a moved entry */
+    if(g.lvl!=='certain'&&days.length>=3) return;
+    const id=g.items.map(x=>x.day+'/'+x.coll+'/'+x.key).sort().join('&'); if(seen.has(id)) return; seen.add(id);
+    /* the copy whose own date is its day is the one VMENU holds; the other is the stale one */
+    g.items.forEach(x=>{ x.own=x.at&&String(x.at).slice(0,10)===x.day; });
+    const owns=g.items.filter(x=>x.own); g.keep=owns.length===1?owns[0]:null; g.extra=g.items.reduce((n,x)=>n+x.amt,0)-Math.max(...g.items.map(x=>x.amt));
+    if(g.items.some(x=>x.day>=PER.from&&x.day<=PER.to)) out.push(g); });
+  return out;
+}
+function spDupCard(){
+  if(SPD.busy) return `<div class="card wide"><h2>Duplicate check</h2><div class="note">Reading every day of the span… <b id="spProg">${Math.round(100*SPD.prog)}%</b></div></div>`;
+  if(!SPD.dups) return '';
+  if(!SPD.dups.length) return `<div class="card wide"><h2>Duplicate check <span class="n">✓ nothing found</span></h2><div class="note">No supplier bill or payment shows on two days in this span (checked a week either side too).</div></div>`;
+  const tot=SPD.dups.reduce((n,g)=>n+g.extra,0);
+  return `<div class="card wide spdupcard"><h2>Possible duplicates <span class="n">${SPD.dups.length} · up to ${rs(tot)} counted twice</span></h2>
+    ${SPD.dups.map(g=>`<div class="spdg"><div class="spdh"><span class="spp ${g.lvl==='certain'?'bad':g.lvl==='very likely'?'warn':''}">${g.lvl}</span> <b>${esc(g.items[0].what)}</b> · ${rs(g.items[0].amt)}</div>
+      ${g.items.map(x=>`<div class="spdi"><span><b>${esc(rpName(x.day))}</b> <small>${x.at?'entry time '+esc(String(x.at).slice(0,16)):''}</small>${g.keep===x?' <span class="spp good">keep · VMENU date</span>':g.keep?' <span class="spp bad">likely the old copy</span>':''}</span>
+        <button class="tab" data-sprm="${x.day}|${x.coll}|${esc(x.key)}">Remove from ${x.day.slice(8)} ${new Date(x.day+'T12:00:00').toLocaleString('en',{month:'short'})}</button></div>`).join('')}</div>`).join('')}
+    <p class="note">Removing only takes the copy off that day in this app. If VMENU still has it on that day, the shop PC brings it back on the next sync.</p></div>`;
+}
+async function spDaySheet(d){ const old=$('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  box.innerHTML=`<div class="sheet"><h2>${esc(rpName(d))} · spends<button class="x" id="drillX">✕</button></h2><div class="note">Loading…</div></div>`; document.body.appendChild(box);
+  box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  const doc=SPD.docs[d]||(d===bizToday()?DOC:await loadDay(d)); SPD.docs[d]=doc; if(!document.body.contains(box)) return;
+  const dupKeys=new Map(); (SPD.dups||[]).forEach(g=>g.items.forEach(x=>{ if(x.day===d) dupKeys.set(x.coll+'|'+x.key,g.items.filter(y=>y.day!==d).map(y=>y.day)); }));
+  const P=Object.entries((doc&&doc.purchases)||{}).sort((a,b)=>String(a[1].at||'').localeCompare(String(b[1].at||''))), Y=Object.entries((doc&&doc.payments)||{}).filter(([k,p])=>!p.deleted).sort((a,b)=>String(a[1].at||'').localeCompare(String(b[1].at||'')));
+  const tb=P.reduce((n,[k,p])=>n+(+p.total||0),0), out=Y.filter(([k,p])=>p.flow==='out'), tp=out.reduce((n,[k,p])=>n+(+p.amount||0),0);
+  const dupTag=(c,k)=>{ const o=dupKeys.get(c+'|'+k); return o?` <span class="spp bad">also on ${o.map(x=>(+x.slice(8))+' '+new Date(x+'T12:00:00').toLocaleString('en',{month:'short'})).join(', ')}</span>`:''; };
+  box.querySelector('.sheet').innerHTML=`<h2>${esc(rpName(d))} · spends<button class="x" id="drillX">✕</button></h2>
+    <div class="kpis"><div class="kpi"><small>Supplier bills</small><b>${rs(tb)}</b><em>${P.length} bills</em></div><div class="kpi"><small>Paid out</small><b>${rs(tp)}</b><em>${out.length} entries</em></div></div>
+    <h3 class="sph">Supplier bills</h3>${P.map(([k,p])=>`<div class="spdi"><span>${hm(p.at)} · <b>${esc(p.supplier||'—')}</b>${p.billNo?' · bill '+esc(p.billNo):''} · <b>${rs(p.total)}</b>${dupTag('purchases',k)}<br><small>${esc((p.items||[]).slice(0,5).map(i=>i.q+'× '+i.n).join(', '))}${(p.items||[]).length>5?' …':''}${p.by?' · by '+esc(p.by):''}</small></span><button class="tab" data-sprm="${d}|purchases|${esc(k)}">Remove</button></div>`).join('')||'<div class="note">None.</div>'}
+    <h3 class="sph">Paid out and received</h3>${Y.map(([k,p])=>`<div class="spdi"><span>${hm(p.at)} · <b>${esc(payKind(p))}</b> · ${esc(p.party||'')}${p.remarks?' · “'+esc(p.remarks)+'”':''} · <b class="${p.flow==='out'?'dn':'up'}">${p.flow==='out'?'−':'+'}${rs(p.amount)}</b>${p.mode?' · '+esc(p.mode):''}${dupTag('payments',k)}</span><button class="tab" data-sprm="${d}|payments|${esc(k)}">Remove</button></div>`).join('')||'<div class="note">None.</div>'}`;
+  $('drillX').onclick=()=>box.remove(); spRmWire(box); }
+function spRmWire(root){ $$('[data-sprm]',root).forEach(b=>b.onclick=async e=>{ e.stopPropagation(); const [d,c,k]=b.dataset.sprm.split('|'); await removeEntry(d,c,k); delete SPD.docs[d]; SPD.key=''; }); }
+function spWire(){ $$('[data-spd]').forEach(b=>b.onclick=()=>spDaySheet(b.dataset.spd)); spRmWire(document); if(MODE==='period'&&PTAB==='money'&&SPD.key!==PER.from+'|'+PER.to&&!SPD.busy) setTimeout(spScan,0); }
+
 function hourly(){
   const SR=recs().filter(r=>r.status==='settled'); let H=hbucket(SR.filter(r=>normal(r))); let HL=hbucket(SR.filter(r=>isLarge(r)));
   /* a span of days: the chart shows an average day, not the pile of all of them */
@@ -1136,7 +1226,7 @@ function rpPaint(){
   s.innerHTML=`<div class="rphead"><button class="rpx" id="rpClose" title="close">✕</button><div><b>Replay</b><small>${L.length>1?L.length+' days on one clock':'one day'}</small></div><span class="sp"></span><div class="rpbig" id="rpClockBig">${rpClock(v)}</div></div>
     <div class="rpdays">${days}</div>
     ${RP.adding?rpPicker():''}
-    <div class="rpviews">${[['race','Running total'],['hours','By hour'],['tables','Tables'],['bills','Bills']].concat(rpWide()?[['both','Hours + tables']]:[]).map(x=>`<button class="tab${RP.view===x[0]?' on':''}" data-rpv="${x[0]}">${x[1]}</button>`).join('')}</div>
+    <div class="rpviews">${[['race','Running total'],['hours','By hour'],['tables','Tables'],['orders','KOTs & bills'],['bills','Bills paid']].concat(rpWide()?[['both','Hours + tables']]:[]).map(x=>`<button class="tab${RP.view===x[0]?' on':''}" data-rpv="${x[0]}">${x[1]}</button>`).join('')}</div>
     <div id="rpBody"></div>
     <div class="rpctl">
       <div class="rprow"><button class="rpb" id="rpStart" title="to the start">⏮</button><button class="rpb play" id="rpPlay">${RP.playing?'⏸':'▶'}</button><button class="rpb" id="rpHour" title="+1 hour">+1h</button><button class="rpb rprec" id="rpRec" title="save as GIF or video">⏺ Save</button>
@@ -1171,9 +1261,11 @@ function rpTick(){
   if(RP.view==='race') body=rpRace(L,C,v);
   else if(RP.view==='hours') body=rpHourBars(L,C,v);
   else if(RP.view==='bills') body=rpFeed(L,C,v);
-  else if(RP.view==='both') body=`<div class="rpboth"><div>${rpHourBars(L,C,v)}${cards}</div><div>${rpTables(L,v,false)}</div></div>`;
-  else body=rpTables(L,v,rpWide());
-  b.innerHTML=RP.view==='both'?body:RP.view==='tables'?cards+body:body+cards;
+  else if(RP.view==='both') body=`<div class="rpboth"><div>${rpHourBars(L,C,v)}${cards}</div><div>${rpTables(L,v,false,'floor')}</div></div>`;
+  else if(RP.view==='orders') body=rpTables(L,v,rpWide(),'orders');
+  else body=rpTables(L,v,rpWide(),'floor');
+  /* the money boxes stay on top where lists grow underneath them */
+  b.innerHTML=RP.view==='both'?body:['tables','orders','bills'].includes(RP.view)?cards+body:body+cards;
   $$('[data-rpf]',b).forEach(x=>x.onclick=()=>{ RP.floorDay=x.dataset.rpf; rpTick(); });
 }
 /* running total: one line per day, solid up to the clock, ghost after (where that day ended up) */
@@ -1202,8 +1294,8 @@ function rpFeed(L,C,v){
     return `<div class="card"><h2 style="color:${RP_COLS[k]}">${esc(rpName(d))}</h2>${got.map((p,i)=>`<div class="fr${v-p[0]<=10?' new':''}"><span>${rpClock(p[0])}</span><b>${rs(p[1])}</b></div>`).join('')||'<div class="note">No bills yet</div>'}</div>`; }).join('')}</div>`;
 }
 /* the floor of one day as it stood at the clock */
-function rpTables(L,v,two){
-  const one=(d,k)=>{ const doc=rpDoc(d); return doc?`<div class="grid rpfl" style="--c:${RP_COLS[k]}">${asOf(doc,v,()=>unrealized()+floor())}</div>`:'<div class="card wide"><div class="note">Loading that day…</div></div>'; };
+function rpTables(L,v,two,part){
+  const one=(d,k)=>{ const doc=rpDoc(d); return doc?`<div class="grid rpfl" style="--c:${RP_COLS[k]}">${asOf(doc,v,()=>part==='orders'?unrealized():floor())}</div>`:'<div class="card wide"><div class="note">Loading that day…</div></div>'; };
   const tabs=(list,fd)=>`<div class="card wide"><div class="tabs">${list.map(d=>{ const k=L.indexOf(d); return `<button class="tab${fd===d?' on':''}" data-rpf="${d}" style="${fd===d?'background:'+RP_COLS[k]+';color:#fff':''}">${esc(rpName(d))}</button>`; }).join('')}</div></div>`;
   /* laptop: the first day beside one other, each as it stood at the clock */
   if(two&&L.length>1){ const others=L.slice(1), fd=others.includes(RP.floorDay)?RP.floorDay:others[0];
@@ -1400,7 +1492,7 @@ async function recRun(kind,vt){
    SIMILAR - days whose business so far matches this one, hour by hour,
    and hours that matched (with the hour before) - and what came next.
    ============================================================ */
-let SIM={tol:0.10,filter:'all',hour:null,pick:[],open:null,touched:false};
+let SIM={tol:0.10,filter:'all',hour:null,pick:[],open:null,touched:false,extra:[]};
 function simBase(){ const live=DAY===bizToday(); const R=Object.values((DOC&&DOC.records)||{}).filter(r=>r.status==='settled'&&normal(r,DAY));
   /* a shop PC clock ahead of this phone must not leave its latest bills out of "so far" */
   const last=R.reduce((m,r)=>r.settledAt?Math.max(m,(T(r.settledAt).getTime()-dayStartMs(DAY))/60000):m,0); const nowMin=live?Math.min(1440,Math.max(rpNowMin(),Math.ceil(last))):1440;
@@ -1415,7 +1507,7 @@ function simDays(){
   /* hours compared with one hour of slack: a rush at 1pm one day and at 2pm another still count as alike */
   const sm3=H=>H.map((v,i)=>((H[i-1]||0)+2*(v||0)+(H[i+1]||0))/4);
   const As=sm3(A), cumA=[]; { let c=0; for(let i=0;i<24;i++){ c+=A[i]||0; cumA.push(c); } }
-  const rows=Object.keys(INDEX).filter(d=>d!==DAY&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0&&keep(d)).map(d=>{
+  const mk=d=>{
     const B=INDEX[d].hours, sofar=cumTill(B,nowMin), md=(sofar-mine)/mine, Bs=sm3(B);
     const tl=Math.max(tol,0.2);   /* one hour on its own swings ±30%: judge hours at ±20% at least */
     const cells=[]; let within=0, ce=0, cn=0, cb=0; for(let i=0;i<hc;i++){ const a=A[i]||0, b=B[i]||0; cb+=b; if(a>=floor||b>=floor){ ce+=Math.abs(cb-cumA[i]); cn++; }
@@ -1423,8 +1515,10 @@ function simDays(){
       const e=Math.min(...[i-1,i,i+1].filter(j=>j>=0&&j<24).map(j=>Math.abs((Bs[j]||0)-As[i])))/Math.max(As[i],floor); cells.push({i,a,b,e,k:e<=tl?'g':e<=tl*2?'a':'r'}); if(a>=floor&&e<=tl) within++; }
     /* match = half the money so far, half the running total hour by hour */
     const ms=Math.max(0,1-Math.abs(md)/0.5), hs=cn?Math.max(0,1-(ce/cn)/(0.3*mine)):0, match=Math.round(100*(0.5*ms+0.5*hs))+(new Date(d+'T12:00:00').getDay()===dow?2:0);
-    return {d,sofar,md,end:INDEX[d].rev,rest:nrev(d)-sofar,cells,within,n:hrs.length,match:Math.min(100,match),tags:dayTags(d).L,close:Math.abs(md)<=tol&&hs>=0.75}; })
-    .sort((a,b)=>b.match-a.match).slice(0,8);
+    return {d,sofar,md,end:INDEX[d].rev,rest:nrev(d)-sofar,cells,within,n:hrs.length,match:Math.min(100,match),tags:dayTags(d).L,close:Math.abs(md)<=tol&&hs>=0.75}; };
+  const rows=Object.keys(INDEX).filter(d=>d!==DAY&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0&&keep(d)).map(mk).sort((a,b)=>b.match-a.match).slice(0,8);
+  /* days you picked from the calendar, whatever their match */
+  SIM.extra.filter(d=>d!==DAY&&INDEX[d]&&INDEX[d].hours&&!rows.some(r=>r.d===d)).forEach(d=>{ const r=mk(d); r.mine=true; rows.push(r); });
   return {S,rows};
 }
 /* hours like this one at the same clock: this hour and the one before both within the tolerance */
@@ -1444,22 +1538,28 @@ function similar(){
   const head=`<div class="card wide simhead"><h2>Similar days <span class="n">${live?'till '+rpClock(S.nowMin):'whole day'} · sales ${rs(S.mine)}</span></h2>
     <div class="chips">${tolC}<span style="width:8px"></span>${fC}</div>
     ${live&&ends.length?`<div class="simfin"><small>Days like this finished at</small><b>${rs(ends[0])}${ends.length>1?' – '+rs(ends[ends.length-1]):''}</b><em>middle ${rs(med)} · from ${ref.length} ${close.length?'close':'nearest'} day${ref.length>1?'s':''}${!close.length&&rows[0]&&rows[0].match<60?' · weak match, treat as rough':''}</em></div>`:''}
+    <div class="simany"><label for="simDate">Compare with any day</label><input type="date" id="simDate" max="${bizToday()}">${SIM.extra.map(d=>`<button class="chip on" data-simx="${d}">${esc(rpName(d))} ×</button>`).join('')}</div>
     <button class="simgo" id="simGo"${SIM.pick.length?'':' disabled'}>▶ Simulate today + ${SIM.pick.length} day${SIM.pick.length===1?'':'s'}</button></div>`;
   const list=`<div class="card wide"><h2>Best matches <span class="n">match = half money so far, half running total by hour · green hour = within ±${Math.round(Math.max(SIM.tol,0.2)*100)}%, one hour of slack</span></h2>${rows.map(r=>{ const on=SIM.pick.includes(r.d), up=r.md>=0;
       return `<div class="simrow${r.close?' close':''}"><label class="simck"><input type="checkbox" data-simp="${r.d}"${on?' checked':''}></label>
         <div class="simm"><b>${r.match}%</b><small>match</small></div>
-        <div class="simi"><div class="simt"><b>${esc(rpName(r.d))}</b>${r.close?'<span class="tag">close</span>':''}</div>
+        <div class="simi"><div class="simt"><b>${esc(rpName(r.d))}</b>${r.close?'<span class="tag">close</span>':''}${r.mine?'<span class="tag mine">your pick</span>':''}</div>
           <div class="simn">so far ${rs(r.sofar)} <span class="d ${up?'up':'dn'}">${up?'+':''}${Math.round(100*r.md)}%</span>${r.n?` · ${r.within}/${r.n} hours close (±1 h)`:''}${live?` · then +${rs(r.rest)} → ended ${rs(r.end)}`:` · ended ${rs(r.end)}`}</div>
           ${r.tags.length?`<div class="simtags">${r.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}<div class="simstrip">${r.cells.filter(c=>c.k!=='z'||c.i>=Math.min(...r.cells.filter(x=>x.k!=='z').map(x=>x.i))).map(c=>`<i class="${c.k}" data-simh="${c.i}" title="${hlabel(c.i)}:00 · today ${rs(c.a)} · ${rs(c.b)}">${hlabel(c.i)}</i>`).join('')}</div></div>
         <button class="simx" data-simo="${r.d}" title="hour by hour">${SIM.open===r.d?'▴':'▾'}</button></div>${SIM.open===r.d?simDetail(r,S):''}`; }).join('')||'<div class="note">No day within reach. Try ±20% or Any day.</div>'}</div>`;
   /* similar hours */
   const done=[]; for(let i=0;i<S.hc;i++) if((S.A[i]||0)>0) done.push(i); const h=SIM.hour!=null&&done.includes(SIM.hour)?SIM.hour:done[done.length-1];
   const hrs=h!=null?simHours(h):[]; const nx=hrs.map(x=>x.n).sort((a,b)=>a-b);
-  const hours=h==null?'':`<div class="card wide"><h2>Similar hours <span class="n">this hour and the one before within ±${Math.round(SIM.tol*100)}% · what came next</span></h2>
+  const nm=nx.length?nx[Math.floor(nx.length/2)]:0, top=Math.max(1,S.A[h]||0,nx.length?nx[nx.length-1]:0,h+1<S.hc?S.A[h+1]||0:0);
+  const bar=(v,c)=>`<span class="shb"><i style="width:${Math.max(2,100*v/top)}%;background:${c}"></i></span>`;
+  const hours=h==null?'':`<div class="card wide shcard"><h2>What usually comes next?</h2>
+    <p class="shhow">Pick an hour. We look for past days where <b>that hour and the hour before</b> sold about the same as today, then show what their <b>next hour</b> sold.</p>
     <div class="chips">${done.map(i=>`<button class="chip${i===h?' on':''}" data-simh="${i}">${hlabel(i)}:00</button>`).join('')}</div>
-    <div class="simfin" style="margin-top:10px"><small>Today ${hlabel(h)}–${hlabel(h+1)}</small><b>${rs(S.A[h])}</b><em>hour before ${h>0?rs(S.A[h-1]):'—'}${h+1<S.hc?' · next hour was '+rs(S.A[h+1]):''}</em></div>
-    ${hrs.length?`<div class="simfin"><small>${hlabel(h+1)}–${hlabel(h+2)} on those days</small><b>${rs(nx[0])} – ${rs(nx[nx.length-1])}</b><em>middle ${rs(nx[Math.floor(nx.length/2)])} · ${hrs.length} matching day${hrs.length>1?'s':''}</em></div>
-    <div class="scroll"><table><tr><th>Day</th><th class="r">${hlabel(h-1)}:00</th><th class="r">${hlabel(h)}:00</th><th class="r">next ${hlabel(h+1)}:00</th><th></th></tr>${hrs.map(x=>`<tr><td>${esc(rpName(x.d))}</td><td class="r">${rs(x.p)}</td><td class="r"><b>${rs(x.h)}</b></td><td class="r">${rs(x.n)}</td><td><input type="checkbox" data-simp="${x.d}"${SIM.pick.includes(x.d)?' checked':''}></td></tr>`).join('')}</table></div>`:'<div class="note">No past day had this hour and the one before within the band.</div>'}</div>`;
+    <div class="shrow"><span class="l">Today ${hlabel(h)}–${hlabel(h+1)}</span>${bar(S.A[h]||0,'var(--pri)')}<b>${rs(S.A[h])}</b></div>
+    ${hrs.length?`<div class="shrow"><span class="l">Next hour ${hlabel(h+1)}–${hlabel(h+2)}<small>on ${hrs.length} day${hrs.length>1?'s':''} that started like this</small></span><span class="shb"><i class="rg" style="left:${Math.min(97,100*nx[0]/top)}%;width:${Math.max(3,100*(nx[nx.length-1]-nx[0])/top)}%"></i><i style="width:${Math.max(2,100*nm/top)}%;background:#C0882C"></i></span><b>usually ${rs(nm)}<small>${rs(nx[0])} – ${rs(nx[nx.length-1])}</small></b></div>
+      ${h+1<S.hc?`<div class="shrow"><span class="l">Today it actually made</span>${bar(S.A[h+1]||0,'#2E7D4F')}<b>${rs(S.A[h+1])}</b></div>`:''}
+      <details class="shmore"><summary>See the ${hrs.length} day${hrs.length>1?'s':''}</summary><div class="scroll"><table><tr><th>Day</th><th class="r">Hour before</th><th class="r">This hour</th><th class="r">Next hour</th><th>Simulate</th></tr>${hrs.map(x=>`<tr><td>${esc(rpName(x.d))}</td><td class="r">${rs(x.p)}</td><td class="r"><b>${rs(x.h)}</b></td><td class="r">${rs(x.n)}</td><td><input type="checkbox" data-simp="${x.d}"${SIM.pick.includes(x.d)?' checked':''}></td></tr>`).join('')}</table></div></details>`
+    :`<div class="note">No past day started ${hlabel(h)}:00 the same way. Try ±20% at the top.</div>`}</div>`;
   return head+list+hours;
 }
 function simDetail(r,S){
@@ -1468,6 +1568,8 @@ function simDetail(r,S){
 }
 function simWire(){
   $$('[data-simt]').forEach(b=>b.onclick=()=>{ SIM.tol=+b.dataset.simt; render(); });
+  const sd=$('simDate'); if(sd) sd.onchange=()=>{ const d=sd.value; if(d&&d!==DAY&&!SIM.extra.includes(d)){ if(!INDEX[d]||!INDEX[d].hours){ sd.value=''; alert('No sales recorded on '+d+'.'); return; } SIM.extra.push(d); SIM.touched=true; SIM.pick=SIM.pick.filter(x=>x!==d); if(SIM.pick.length>=4) SIM.pick.shift(); SIM.pick.push(d); render(); } };
+  $$('[data-simx]').forEach(b=>b.onclick=()=>{ const d=b.dataset.simx; SIM.extra=SIM.extra.filter(x=>x!==d); SIM.pick=SIM.pick.filter(x=>x!==d); render(); });
   $$('[data-simf]').forEach(b=>b.onclick=()=>{ SIM.filter=b.dataset.simf; SIM.pick=[]; SIM.touched=false; render(); });
   $$('[data-simp]').forEach(c=>c.onchange=()=>{ const d=c.dataset.simp; SIM.touched=true; SIM.pick=SIM.pick.filter(x=>x!==d); if(c.checked){ if(SIM.pick.length>=4) SIM.pick.shift(); SIM.pick.push(d); } render(); });
   $$('[data-simo]').forEach(b=>b.onclick=()=>{ SIM.open=SIM.open===b.dataset.simo?null:b.dataset.simo; render(); });
@@ -2078,7 +2180,7 @@ function period(){
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
     const dayKeys=Object.keys(sp.byDay).sort().reverse();
     const dayCard=`<div class="card wide"><h2>Spend · day by day <span class="n">tap a day to open it</span></h2>${dayKeys.map(dk=>{ const L=sp.byDay[dk]; const t=L.reduce((n,x)=>n+x.v,0); return `<details class="dd"><summary><span>${dk}</span><small>${L.length} lines</small><b>${rs(t)}</b></summary><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th><th class="m">By</th></tr>${L.sort((a,b)=>b.v-a.v).map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${x.q}</td><td>${esc(x.unit)}</td><td class="r">${rs(x.cost)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="m">${esc(x.by)}</td></tr>`).join('')}</table></details>`; }).join('')||'<div class="note">No purchase lines in this span.</div>'}</div>`;
-    body=sve+mini('Spend · by category',sp.byCat)+spendExplorer(sp)+mini('Discounts · by person',S.disc.by)+discCard+(pay.list.some(x=>x.kind==='expense'||x.kind==='salary')?payCard:''); }
+    body=spDaily()+spDupCard()+sve+mini('Spend · by category',sp.byCat)+spendExplorer(sp)+mini('Discounts · by person',S.disc.by)+discCard+(pay.list.some(x=>x.kind==='expense'||x.kind==='salary')?payCard:''); }
   else if(PTAB==='cash') body=cashPeriod();
   else body=mini('Voids · by person',voidBy)+voidCard;
   return bar+k+tabs+`<div class="grid">${body}</div>`;
@@ -2216,7 +2318,7 @@ function render(){
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
   dock(); addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
-  simWire(); lgCardWire(); ptWire(); labWire();
+  simWire(); lgCardWire(); ptWire(); labWire(); spWire();
   $$('[data-rpgo]').forEach(a=>a.onclick=e=>{ e.preventDefault(); openReplay(); });
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
