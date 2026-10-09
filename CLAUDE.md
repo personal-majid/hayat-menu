@@ -69,6 +69,17 @@ Other counter facts:
   till; Place becomes Update bill.
 - Updating an open bill sends the kitchen **only the delta**
   (`posDelta`), not the whole meal again.
+- **Workflow (v205).** Send KOT is guarded: it says why it is off
+  ("No changes", "Pick a table"). Every line keeps `at`/`by`/`rounds`;
+  every KOT goes in `o.kots` (kind kot|cancel) and every edit in
+  `o.edits`. Removing a sent item needs a reason and prints a CANCEL
+  ticket. Bill = preview then Print bill (`dueAt`, `dueCount`), then
+  Settle. F2 / "Open bills" = full-screen board (`posBoard`).
+- **Kitchens** live in `settings/print.kitchens` (name, printer IP,
+  copies, cancel tickets on/off, categories, items, default). Printers
+  are mirrored to the old main/front keys for older print agents.
+  The KDS maps dishes by name separately. `tests/pos-flow.test.js`
+  is the end-to-end simulation (40 checks).
 - **KOT chips**, one per kitchen the items reach, from the existing
   `kotStation()` main/front split. Preselected from `autoKot()`.
   Nothing prints that is not lit. `printJob(o, kind, auto, only)`
@@ -77,6 +88,63 @@ Other counter facts:
   marked `source:"counter"` with `mode` and `token`. There is no
   second database: the KDS, the print agent, the riders and the day
   ledger all read `orders`.
+
+## Owner forecast - tuned Oct 2026 (v208)
+Tuned by replaying every hour of 1 Sep - 9 Oct with the app's own code
+(sandbox: /home/claude/fsim, model.py mirrors fcModel0/fcLive to within Rs 0.50).
+Day-total miss 12.1% -> 8.8% on 25 Sep-9 Oct, 9.9% -> 7.4% on unseen days.
+- Base: same weekday, last 6 weeks, weighted x0.7 per week back, trimmed.
+- Spike guard (fcHours): a past hour over 2x its weekday-hour median is cut to 2x.
+- Growth: last 28 days vs the 28 before, full weight, capped +-15%.
+- Salary days 1st-4th: lift learned from past months. A holiday and a salary
+  day do not stack (the bigger counts) - 2 Oct 2026 overshot by 23% when stacked.
+- Live: rest of the day moves by a QUARTER of today's pace (share*0.25).
+  Full pace overshot badly (8 Oct: app said Rs 1.10L at 16:51, day ended 81K).
+- Week-of-month, busy/slump hours, last-3-hours pace, Prophet: tested, no gain.
+- PRE-BOOKINGS: any bill over Rs 4,000 counts as a pre-booking (isLarge, PRE)
+  unless LARGE says large:false ("Not a pre-booking"). Past days are scanned
+  once by preScan() into settings/large_orders (s = days checked). Expected
+  pre-bookings: vm_prebook/{day}.e; the forecast adds max(entered, billed).
+- v209: Tomorrow tile (tmCard, fcModel of the next day + its pre-bookings,
+  +-25% range). fcModel0 only learns from FINISHED days (d<bizToday).
+  Replay screen shows "Forecast made at hh:mm" (fcAt): next hour, next 2 hours,
+  day close, each against what really happened. 5-method replay (A old, B v208,
+  C clean history, D similar days, E mix): B/C/D/E all ~9%, none clearly better,
+  so B stays. Patterns page rewritten in plain words; its own ptForecast card is
+  gone - "Next 7 days" uses fcModel, so there is one forecast in the app.
+- v210: month TURN (29th-4th) replaces salary 1st-4th (+14%/+17% vs a normal
+  same weekday, Jul-Oct); mid-month (8th-21st) dip learned and counted at half;
+  a dip multiplies with a holiday, only boosts use max(). Hour shape smoothed
+  0.1 to each neighbour. Replay: day 8.8->8.0%, unseen 7.4->5.8%, 2-4pm at 2pm
+  25->22.5%. Hour-by-hour method switching (B/C/D) won on tuning days only and
+  lost on unseen days - not used. Floor: even knowing the day total exactly,
+  the next-2-hours miss is ~25% (bills land when paid).
+
+## Money tab - expenses (v211)
+`expDaily(pay,P)`: money paid OUT day by day for the chosen period, split goods
+(paid to suppliers) / salary / other, one stacked bar per day, a day list with
+every entry. Majid: supplier bills duplicate the item-wise purchases, so the old
+"supplier bills vs paid out" chart (spDaily) is no longer shown. payKind also reads
+the remarks for salary/wages. Days with a possible duplicate entry carry "2x".
+
+## Cash tab (v212)
+Built on the existing chain (vm_cash/{day}_{open|close}, cashChain). The TOTAL
+(cash + bank) is what is judged - customers pay cash for someone's GPay and back,
+so a cash/bank split difference is not a loss. "Money with us" card: total now,
+corrections (every actual entered, with short/over), Set opening balance (any
+date, start of day) and Enter actual. Day table: opening, + cash, + card/UPI,
+- paid out, = should be, actual, difference (short red / over green / within
+Rs 100 = matches). Split bills use the record's cash/card/credit fields.
+
+## Replay - Floor view (v213)
+Isometric canvas (isoPlan/isoPeople/isoDraw, RP.view 'iso'). People come from the
+bills only: a dine group walks in at createdAt, sits at a table of its section
+(bills often have table=null, so a free table of that section is assigned), a
+waiter walks over at every KOT and at dueAt, the group leaves at settledAt.
+Counter customers queue at the counter, riders pick up at dispatchAt/dueAt.
+pax is never entered: group = bill / Rs 350 (1-6). rpTick does NOT rebuild the
+canvas each tick (no flicker); requestAnimationFrame interpolates the clock.
+Phones: canvas is >= 760px wide inside a sideways scroller. CCTV: declined for now.
 
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which

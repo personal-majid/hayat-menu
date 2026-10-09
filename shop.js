@@ -4018,6 +4018,15 @@ function catOfDish(id){
   return hit;
 }
 function kotStation(line){
+  /* kitchens set up in Printing: an item listed there, then its category, then the default kitchen */
+  var ks = STORE.printSettings().kitchens;
+  if(ks && ks.length){
+    var kc = catOfDish(line.id);
+    var hit = ks.filter(function(k){ return (k.items || []).indexOf(line.id) >= 0; })[0]
+           || ks.filter(function(k){ return (k.cats || []).indexOf(kc) >= 0; })[0]
+           || ks.filter(function(k){ return k.dflt; })[0] || ks[0];
+    return hit.key;
+  }
   var cid = catOfDish(line.id), main = kotMainCats();
   var set = (STORE.printSettings().stations || {})[cid];
   if(set === "main" || set === "front") return set;
@@ -4028,10 +4037,12 @@ function kotStation(line){
   return "front";
 }
 function kotTickets(o){
-  var by = { main:[], front:[] };
-  (o.lines || []).forEach(function(l){ by[kotStation(l)].push(l); });
-  var order = (C().kot || {}).order || ["main","front"];
-  return order.filter(function(k){ return by[k].length; }).map(function(k){ return { station:k, lines:by[k] }; });
+  var by = {};
+  (o.lines || []).forEach(function(l){ if(l.q > 0){ var st = kotStation(l); (by[st] = by[st] || []).push(l); } });
+  var ks = STORE.printSettings().kitchens;
+  var order = (ks && ks.length) ? ks.map(function(k){ return k.key; }) : ((C().kot || {}).order || ["main","front"]);
+  Object.keys(by).forEach(function(k){ if(order.indexOf(k) < 0) order.push(k); });
+  return order.filter(function(k){ return by[k] && by[k].length; }).map(function(k){ return { station:k, name:kitchenName(k), lines:by[k] }; });
 }
 function printJob(o, kind, auto, only){
   var r = o.riderId ? STORE.rider(o.riderId) : null;
@@ -4039,14 +4050,19 @@ function printJob(o, kind, auto, only){
     order: Object.assign({}, o, { rider: r ? r.name : "" }),
     tickets: kind === "kot"
       ? kotTickets(o).filter(function(t){ return !only || only.indexOf(t.station) >= 0; })
+          /* a cancel ticket goes only to kitchens that want one */
+          .filter(function(t){ if(!o.kotCancel) return true; var k = posKitchens().filter(function(z){ return z.key === t.station; })[0]; return !k || k.cancel !== false; })
+          .map(function(t){ return Object.assign(t, { round: o.kotRound || null, cancel: !!o.kotCancel, reason: o.kotReason || "", reprint: !!o.kotReprint,
+              where: o.token ? "Token " + o.token : "", table: o.table || "", mode: o.mode || "" }); })
       : [],
     money: money(o), offLabel: discountLabel(o), reviewUrl: reviewUrl() };
   var ps = STORE.printSettings();
   if(ps.mode === "agent" && STORE.live()){
     /* the shop PC prints it; nothing opens here */
     var stations = kind === "kot" ? job.tickets.map(function(t){ return t.station; }) : ["bill"];
+    if(kind === "kot" && !stations.length) return;
     STORE.sendPrint(JSON.parse(JSON.stringify(job))).then(function(){
-      shopToast((kind === "kot" ? "KOT" : "Bill") + " sent to " + stations.join(" + ") + " printer" + (stations.length > 1 ? "s" : "") + ".");
+      shopToast((kind === "kot" ? (o.kotCancel ? "Cancel ticket" : "KOT") : "Bill") + " sent to " + stations.map(function(k){ return kind === "kot" ? kitchenName(k) : k; }).join(" + ") + " printer" + (stations.length > 1 ? "s" : "") + ".");
     }).catch(function(e){ shopToast("Could not send to the printer: " + (e && e.message || e)); });
     return;
   }
@@ -5652,7 +5668,7 @@ function viewPrintAdmin(main){
 }
 
 function paintPrintAdmin(main){
-  printWatch();
+  printWatch(); posStyle();
   var ps = STORE.printSettings(), st = agentState(), a = STORE.printAgent() || {};
   var mode = ps.mode === "agent" ? "agent" : "browser";
   var cats = (window.MENU || []);
@@ -5681,9 +5697,7 @@ function paintPrintAdmin(main){
         : '') +
 
       '<h3 class="mini">Printers</h3>' +
-      prow("main",  "Kitchen · main",  "mandi, alfaham, breads, meals") +
-      prow("front", "Kitchen · front", "shawaya, shawarma, fish, gravies, salads, juices") +
-      prow("bill",  "Counter · bills", "the customer's bill; blank = same as main") +
+      prow("bill",  "Counter · bills", "the customer's bill; blank = same as the first kitchen") +
       ((a.found || []).length
         ? '<div class="found"><span class="ulbl">Found on the shop network</span>' + a.found.map(function(ip){
             var used = ["main","front","bill"].filter(function(k){ return (ps[k] || "").split(":")[0] === ip; });
@@ -5710,16 +5724,32 @@ function paintPrintAdmin(main){
       '<input class="fld" data-pkey="address" placeholder="Address on the bill" value="' + esc(ps.address || C().address || "") + '">' +
       '<input class="fld" data-pkey="phone" placeholder="Phone on the bill" value="' + esc(ps.phone || String(C().whatsapp || "").replace(/^91/, "")) + '">' +
 
-      '<h3 class="mini">Which kitchen cooks what</h3>' +
-      '<div class="lines">' + cats.map(function(c){
-        var cur = kotStation({ id: (c.items && c.items[0] || {}).id, name: c.name });
-        var set = (ps.stations || {})[c.id] || cur;
-        return '<div class="line"><div class="ln"><b>' + esc(label(c.name)) + '</b><small>' + (c.items || []).length + ' dishes</small></div>' +
-          '<div class="segs">' +
-            '<button class="seg' + (set === "main" ? " on" : "") + '" data-pst="' + esc(c.id) + '|main">Main</button>' +
-            '<button class="seg' + (set === "front" ? " on" : "") + '" data-pst="' + esc(c.id) + '|front">Front</button>' +
-          '</div></div>';
-      }).join("") + '</div>' +
+      '<h3 class="mini">Kitchens &amp; KOT printers</h3>' +
+      (function(){
+        var K = posKitchens(), custom = !!(ps.kitchens && ps.kitchens.length);
+        var rows = K.map(function(k, i){
+          var ok = (a.printers || {})[k.key];
+          return '<div class="kitrow">' +
+            '<span class="pdot2 ' + (!k.printer ? "" : ok === "ok" ? "ok" : ok ? "bad" : "") + '"></span>' +
+            '<input class="fld" data-kn="' + i + '" value="' + esc(k.name) + '" placeholder="Kitchen name"' + (custom ? '' : ' disabled') + '>' +
+            '<input class="fld" data-kp="' + i + '" value="' + esc(k.printer || "") + '" placeholder="192.168.1.50  or  win:POS-80">' +
+            '<div class="segs">' + [1,2,3].map(function(n){ return '<button class="seg' + ((+k.copies || 1) === n ? " on" : "") + '" data-kc="' + i + '|' + n + '">' + n + '×</button>'; }).join("") + '</div>' +
+            '<label class="kchk"><input type="checkbox" data-kx="' + i + '"' + (k.cancel !== false ? ' checked' : '') + '> cancel tickets</label>' +
+            (custom ? '<label class="kchk"><input type="radio" name="kdef" data-kd="' + i + '"' + (k.dflt ? ' checked' : '') + '> default</label>' +
+                      (K.length > 1 ? '<button class="linky" data-kr="' + i + '">Remove</button>' : '') : '') +
+          '</div>';
+        }).join("");
+        var catRows = cats.map(function(c){
+          var cur = kotStation({ id: (c.items && c.items[0] || {}).id, name: c.name });
+          var set = custom ? (K.filter(function(k){ return (k.cats || []).indexOf(c.id) >= 0; })[0] || {}).key || cur : ((ps.stations || {})[c.id] || cur);
+          return '<div class="line"><div class="ln"><b>' + esc(label(c.name)) + '</b><small>' + (c.items || []).length + ' dishes</small></div>' +
+            '<div class="segs">' + K.map(function(k){ return '<button class="seg' + (set === k.key ? " on" : "") + '" data-kcat="' + esc(c.id) + '|' + esc(k.key) + '">' + esc(k.name) + '</button>'; }).join("") + '</div></div>';
+        }).join("");
+        return '<div class="kitlist">' + rows + '</div>' +
+          '<div class="rowbtns"><button class="shopbtn ghost" id="kAdd">+ Add a kitchen</button></div>' +
+          '<p class="shopnote left">Each kitchen gets its own KOT, printed at its printer and shown on its kitchen screen. Taking off an item that was already sent prints a CANCEL ticket at that kitchen, unless you untick it.</p>' +
+          '<h3 class="mini">Which kitchen cooks what</h3><div class="lines">' + catRows + '</div>';
+      })() +
 
       '<div class="rowbtns">' +
         '<button class="shopbtn ghost" id="ptest">Print a test ticket</button>' +
@@ -5749,14 +5779,29 @@ function paintPrintAdmin(main){
       STORE.savePrintSettings(patch); paintPrintAdmin(main);
     };
   });
-  main.querySelectorAll("[data-pst]").forEach(function(b){
-    b.onclick = function(){
-      var p = b.dataset.pst.split("|");
-      var stations = Object.assign({}, STORE.printSettings().stations || {});
-      stations[p[0]] = p[1];
-      STORE.savePrintSettings({ stations: stations }); paintPrintAdmin(main);
-    };
-  });
+  /* kitchens: the first change turns the two built-in ones into an editable list,
+     with today's category split written into it so nothing moves */
+  function kitList(){
+    var cur = STORE.printSettings();
+    if(cur.kitchens && cur.kitchens.length) return JSON.parse(JSON.stringify(cur.kitchens));
+    var K = posKitchens().map(function(k){ return Object.assign({}, k, { cats: [] }); });
+    cats.forEach(function(c){ var st = kotStation({ id: (c.items && c.items[0] || {}).id, name: c.name }); var hit = K.filter(function(k){ return k.key === st; })[0] || K[0]; hit.cats.push(c.id); });
+    K[0].dflt = true; return K;
+  }
+  function kitSave(K){
+    var patch = { kitchens: K };
+    /* the printers also under their old keys, so an older print agent keeps working */
+    K.forEach(function(k){ if(k.key === "main" || k.key === "front"){ patch[k.key] = k.printer || ""; patch["copies_" + k.key] = +k.copies || 1; } });
+    STORE.savePrintSettings(patch); paintPrintAdmin(main);
+  }
+  main.querySelectorAll("[data-kn]").forEach(function(n){ n.onchange = function(){ var K = kitList(); K[+n.dataset.kn].name = n.value.trim() || K[+n.dataset.kn].name; kitSave(K); }; });
+  main.querySelectorAll("[data-kp]").forEach(function(n){ n.onchange = function(){ var K = kitList(); K[+n.dataset.kp].printer = n.value.trim(); kitSave(K); shopToast("Saved."); }; });
+  main.querySelectorAll("[data-kc]").forEach(function(b){ b.onclick = function(){ var p = b.dataset.kc.split("|"), K = kitList(); K[+p[0]].copies = +p[1]; kitSave(K); }; });
+  main.querySelectorAll("[data-kx]").forEach(function(c){ c.onchange = function(){ var K = kitList(); K[+c.dataset.kx].cancel = c.checked; kitSave(K); }; });
+  main.querySelectorAll("[data-kd]").forEach(function(c){ c.onchange = function(){ var K = kitList(); K.forEach(function(k, i){ k.dflt = i === +c.dataset.kd; }); kitSave(K); }; });
+  main.querySelectorAll("[data-kr]").forEach(function(b){ b.onclick = function(){ var K = kitList(), i = +b.dataset.kr, gone = K[i]; K.splice(i, 1); (gone.cats || []).forEach(function(c){ (K[0].cats = K[0].cats || []).push(c); }); if(!K.some(function(k){ return k.dflt; })) K[0].dflt = true; kitSave(K); }; });
+  main.querySelectorAll("[data-kcat]").forEach(function(b){ b.onclick = function(){ var p = b.dataset.kcat.split("|"), K = kitList(); K.forEach(function(k){ k.cats = (k.cats || []).filter(function(c){ return c !== p[0]; }); }); var t = K.filter(function(k){ return k.key === p[1]; })[0]; if(t) t.cats.push(p[0]); kitSave(K); }; });
+  var kadd = el("kAdd"); if(kadd) kadd.onclick = function(){ var K = kitList(), n = 1; while(K.some(function(k){ return k.key === "k" + n; })) n++; K.push({ key: "k" + n, name: "Kitchen " + (K.length + 1), printer: "", copies: 1, cancel: true, cats: [] }); kitSave(K); };
   main.querySelectorAll("[data-use]").forEach(function(b){
     b.onclick = function(){ var p = b.dataset.use.split("|"), patch = {}; patch[p[1]] = p[0]; STORE.savePrintSettings(patch); paintPrintAdmin(main); };
   });
@@ -8960,6 +9005,253 @@ function posTileHtml(r){
   '</button>';
 }
 
+/* ============================================================
+   POS WORKFLOW - the way VMENU keeps a bill, on the web counter.
+
+   Every line remembers when it first went to the kitchen and by
+   whom (at, by) and every round after it (rounds: [{n,q,at,by}]).
+   o.kots is the history of tickets: {n, kind:"kot"|"cancel", at,
+   by, lines, reason}. o.edits is every change after a KOT:
+   {at, by, item, from, to, reason, void}. o.dueAt / o.dueCount is
+   the bill being printed, as VMENU's "due". Nothing is rewritten:
+   an item taken off after it was cooked leaves an edit and prints
+   a CANCEL ticket at the kitchen that cooked it.
+   ============================================================ */
+function posWho(){ var m = STORE.me && STORE.me(); return (m && m.name) || myVoice() || ""; }
+/* the kitchens, as set in Printing; until then the two the shop always had */
+function posKitchens(){
+  var ps = STORE.printSettings();
+  if(ps.kitchens && ps.kitchens.length) return ps.kitchens;
+  return [{ key:"main",  name:"Main kitchen", printer: ps.main  || "", copies: +(ps.copies_main  || 1), cancel: true },
+          { key:"front", name:"Front",        printer: ps.front || "", copies: +(ps.copies_front || 1), cancel: true }];
+}
+function kitchenName(k){
+  var x = posKitchens().filter(function(z){ return z.key === k; })[0];
+  return x ? x.name : (k === "main" ? "Main kitchen" : k === "front" ? "Front" : k);
+}
+/* what was taken off since the bill was reopened */
+function posVoids(now, base){
+  var cur = {};
+  (now || []).forEach(function(l){ cur[l.k] = (cur[l.k] || 0) + l.q; });
+  var out = [];
+  (base || []).forEach(function(l){
+    var q = cur[l.k] || 0;
+    if(q < l.q) out.push({ k: l.k, id: l.id, name: l.name, label: l.label || "", price: l.price, from: l.q, to: q, d: l.q - q });
+  });
+  return out;
+}
+function posKotCount(o){ return o.kotN || ((o.kots || []).filter(function(k){ return k.kind === "kot"; }).length) || ((o.lines || []).length ? 1 : 0); }
+/* one bill line per dish, whatever rounds it came in */
+function posMerged(o){
+  var by = {}, out = [];
+  (o.lines || []).forEach(function(l){
+    if(!(l.q > 0)) return;
+    var k = l.k || (l.id + "|" + (l.label || ""));
+    if(!by[k]){ by[k] = Object.assign({}, l, { q: 0 }); out.push(by[k]); }
+    by[k].q += l.q;
+  });
+  return out;
+}
+/* write a change to an open bill: new rounds, voids, the history, then the tickets */
+function posCommit(id, lines, adds, voids, reason, picked, note){
+  var o = STORE.order(id); if(!o) return null;
+  var now = Date.now(), who = posWho();
+  var n = posKotCount(o) + (adds.length ? 1 : 0);
+  var prev = {};
+  (o.lines || []).forEach(function(l){ prev[l.k || (l.id + "|" + (l.label || ""))] = l; });
+  var out = lines.filter(function(l){ return l.q > 0; }).map(function(l){
+    var p = prev[l.k];
+    var x = Object.assign({}, p || {}, { k: l.k, id: l.id, name: l.name, label: l.label || "", price: l.price, q: l.q });
+    x.rounds = (p && p.rounds) ? p.rounds.slice() : (p ? [{ n: 1, q: p.q, at: p.at || o.at, by: p.by || o.by || "" }] : []);
+    if(!p){ x.at = now; x.by = who; }
+    return x;
+  });
+  adds.forEach(function(a){ var x = out.filter(function(l){ return l.k === a.k; })[0]; if(x) x.rounds.push({ n: n, q: a.q, at: now, by: who }); });
+  voids.forEach(function(v){ var x = out.filter(function(l){ return l.k === v.k; })[0]; if(x) x.rounds.push({ n: "void", q: -v.d, at: now, by: who, reason: reason }); });
+  var kots = (o.kots || []).slice(), edits = (o.edits || []).slice();
+  if(!kots.length && (o.lines || []).length) kots.push({ n: 1, kind: "kot", at: o.at, by: o.by || "", lines: (o.lines || []).map(function(l){ return { k: l.k, name: l.name, label: l.label || "", q: l.q, station: kotStation(l) }; }) });
+  if(adds.length) kots.push({ n: n, kind: "kot", at: now, by: who, lines: adds.map(function(a){ return { k: a.k, name: a.name, label: a.label || "", q: a.q, station: kotStation(a) }; }) });
+  if(voids.length){
+    kots.push({ n: n, kind: "cancel", at: now, by: who, reason: reason, lines: voids.map(function(v){ return { k: v.k, name: v.name, label: v.label, q: v.d, station: kotStation(v) }; }) });
+    voids.forEach(function(v){ edits.push({ at: now, by: who, item: v.name, label: v.label, from: v.from, to: v.to, reason: reason, void: v.to === 0 }); });
+  }
+  var patch = { lines: out, kots: kots, edits: edits, kotN: n };
+  if(note != null) patch.note = note;
+  STORE.edit(id, patch);
+  var o2 = STORE.order(id);
+  if(adds.length && picked && picked.length)
+    printJob(Object.assign({}, o2, { lines: adds, kotRound: n }), "kot", false, picked);
+  if(voids.length)
+    printJob(Object.assign({}, o2, { lines: voids.map(function(v){ return Object.assign({}, v, { q: v.d }); }), kotRound: n, kotCancel: true, kotReason: reason }), "kot", false, null);
+  return o2;
+}
+/* a whole bill called off: every cooked item gets a CANCEL ticket */
+function posCancelBill(id, reason){
+  var o = STORE.order(id); if(!o) return;
+  var now = Date.now(), who = posWho(), live = posMerged(o);
+  var kots = (o.kots || []).slice(), edits = (o.edits || []).slice();
+  if(live.length){
+    kots.push({ n: posKotCount(o), kind: "cancel", at: now, by: who, reason: reason, lines: live.map(function(l){ return { k: l.k, name: l.name, label: l.label || "", q: l.q, station: kotStation(l) }; }) });
+    live.forEach(function(l){ edits.push({ at: now, by: who, item: l.name, label: l.label || "", from: l.q, to: 0, reason: reason, void: true, bill: true }); });
+    STORE.edit(id, { kots: kots, edits: edits });
+    printJob(Object.assign({}, STORE.order(id), { lines: live, kotRound: posKotCount(o), kotCancel: true, kotReason: reason }), "kot", false, null);
+  }
+  STORE.cancel(id, "office", reason);
+}
+var POS_REASONS = ["Customer changed mind", "Wrong entry", "Out of stock", "Taking too long", "Complimentary", "Staff food"];
+/* why something cooked is coming off - a reason is required, as in VMENU */
+function posReasonSheet(title, rows, cb){
+  var old = el("posReason"); if(old) old.remove();
+  var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "posReason";
+  box.innerHTML = '<div class="panel small posrs">' +
+    '<div class="shead"><div><b>' + esc(title) + '</b><small>A cancel ticket prints at the kitchen that has it.</small></div></div>' +
+    '<div class="posrsl">' + rows.map(function(r){ return '<div class="posrsrow"><span>' + esc(r.name) + (r.label ? ' <small>' + esc(r.label) + '</small>' : '') + '</span><b>' + (r.to != null ? r.from + ' → ' + r.to : '−' + r.q) + '</b></div>'; }).join("") + '</div>' +
+    '<div class="posrsc">' + POS_REASONS.map(function(t){ return '<button class="pkchip" data-rsn="' + esc(t) + '">' + esc(t) + '</button>'; }).join("") + '</div>' +
+    '<input class="fld" id="posRsnTxt" placeholder="Or type the reason" autocomplete="off">' +
+    '<div class="posbar"><button class="posbtn ghost" id="posRsnX">Back</button><button class="posbtn" id="posRsnGo" disabled>Confirm &amp; print cancel</button></div></div>';
+  document.body.appendChild(box);
+  var pick = "", txt = el("posRsnTxt"), go = el("posRsnGo");
+  function ready(){ go.disabled = !(pick || txt.value.trim()); }
+  box.querySelectorAll("[data-rsn]").forEach(function(b){ b.onclick = function(){ pick = b.dataset.rsn; box.querySelectorAll("[data-rsn]").forEach(function(x){ x.classList.toggle("on", x === b); }); ready(); }; });
+  txt.oninput = ready;
+  el("posRsnX").onclick = function(){ box.remove(); };
+  go.onclick = function(){ var r = txt.value.trim() || pick; if(!r) return; box.remove(); cb(r); };
+  txt.focus();
+}
+/* the due bill, on screen first: print it from here, then take the money */
+function posBillSheet(id, after){
+  var o = STORE.order(id); if(!o) return;
+  var old = el("posBill"); if(old) old.remove();
+  var m = money(o), L = posMerged(o);
+  var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "posBill";
+  var who = o.token ? "Token " + o.token : o.table ? "Table " + o.table : (o.name || o.id);
+  box.innerHTML = '<div class="panel small posbillp">' +
+    '<div class="posreceipt">' +
+      '<div class="prh"><b>HAYAT</b><small>Fish &amp; Mandi Restaurant</small></div>' +
+      '<div class="prr"><span><b>' + esc(who) + '</b> · ' + esc(posWhereFrom(o)) + '</span><span>' + esc(when(Date.now())) + '</span></div>' +
+      '<div class="prr small"><span>' + posKotCount(o) + ' KOT' + (posKotCount(o) > 1 ? 's' : '') + (o.by ? ' · ' + esc(o.by) : '') + '</span><span>' + (o.dueCount ? 'printed ' + o.dueCount + '×' : 'not printed yet') + '</span></div>' +
+      '<hr>' + L.map(function(l){ return '<div class="pri"><span class="q">' + l.q + '×</span><span class="n">' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</span><span class="a">' + rupee(l.q * l.price) + '</span></div>'; }).join("") +
+      '<hr>' + (m.off ? '<div class="prr"><span>Subtotal</span><span>' + rupee(m.sub) + '</span></div><div class="prr"><span>' + esc(discountLabel(o) || "Discount") + '</span><span>− ' + rupee(m.off) + '</span></div>' : '') +
+      (m.charge ? '<div class="prr"><span>Charges</span><span>' + rupee(m.charge) + '</span></div>' : '') +
+      '<div class="prt"><span>TOTAL</span><span>' + rupee(m.total) + '</span></div>' +
+      (o.paid ? '<div class="prpaid">PAID · ' + esc(payWord(o)) + '</div>' : '') +
+    '</div>' +
+    '<div class="posbar"><button class="posbtn ghost" id="pbX">Close</button><button class="posbtn ghost" id="pbPrint">Print bill</button>' +
+      (o.paid ? '' : '<button class="posbtn" id="pbPay">Settle ' + rupee(m.total) + '</button>') + '</div></div>';
+  document.body.appendChild(box);
+  box.onclick = function(e){ if(e.target === box) box.remove(); };
+  el("pbX").onclick = function(){ box.remove(); };
+  el("pbPrint").onclick = function(){
+    var cur = STORE.order(id);
+    STORE.edit(id, { dueAt: Date.now(), dueCount: (cur.dueCount || 0) + 1 });
+    printJob(Object.assign({}, STORE.order(id), { lines: posMerged(STORE.order(id)) }), "bill", true);
+    shopToast("Bill printed · " + rupee(money(STORE.order(id)).total));
+    box.remove(); posBillSheet(id, after);
+  };
+  var pay = el("pbPay"); if(pay) pay.onclick = function(){ box.remove(); posSettle(id, after); };
+}
+/* take the money; a counter or table bill that is paid is done */
+function posSettle(id, after){
+  settleSheet(id, function(){
+    var o = STORE.order(id);
+    if(o && o.paid && o.mode !== "delivery" && o.status !== "delivered") STORE.setStatus(id, "delivered");
+    if(after) after();
+  });
+}
+/* everything that happened to a bill, in order */
+function posHistory(id){
+  var o = STORE.order(id); if(!o) return;
+  var ev = [];
+  (o.kots || []).forEach(function(k){ ev.push({ at: k.at, t: (k.kind === "cancel" ? "CANCEL ticket" : "KOT #" + k.n) + (k.by ? " · " + k.by : ""), d: (k.lines || []).map(function(l){ return l.q + "× " + l.name + (l.label ? " (" + l.label + ")" : "") + " → " + kitchenName(l.station); }).join(", ") + (k.reason ? " · “" + k.reason + "”" : ""), c: k.kind }); });
+  (o.edits || []).forEach(function(e){ ev.push({ at: e.at, t: (e.void ? "Voided" : "Changed") + " · " + e.item + (e.by ? " · " + e.by : ""), d: e.from + " → " + e.to + (e.reason ? " · “" + e.reason + "”" : ""), c: "edit" }); });
+  (o.moves || []).forEach(function(mv){ ev.push({ at: mv.at, t: "Table moved · " + mv.from + " → " + mv.to, d: mv.by || "", c: "move" }); });
+  if(o.dueAt) ev.push({ at: o.dueAt, t: "Bill printed" + (o.dueCount > 1 ? " (" + o.dueCount + "×)" : ""), d: "", c: "due" });
+  if(o.paidAt) ev.push({ at: o.paidAt, t: "Paid · " + payWord(o), d: o.paidBy || "", c: "paid" });
+  if(o.status === "cancelled") ev.push({ at: (o.log || []).slice(-1)[0] ? (o.log || []).slice(-1)[0].at : Date.now(), t: "Bill cancelled", d: o.cancelWhy || "", c: "cancel" });
+  ev.sort(function(a, b){ return (a.at || 0) - (b.at || 0); });
+  var old = el("posHist"); if(old) old.remove();
+  var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "posHist";
+  box.innerHTML = '<div class="panel small"><div class="shead"><div><b>History · ' + esc(o.token ? "Token " + o.token : o.table ? "Table " + o.table : o.id) + '</b><small>opened ' + esc(when(o.at)) + '</small></div></div>' +
+    '<div class="poshist">' + ev.map(function(e){ return '<div class="phe ' + e.c + '"><span class="pht">' + esc(when(e.at)) + '</span><div><b>' + esc(e.t) + '</b>' + (e.d ? '<small>' + esc(e.d) + '</small>' : '') + '</div></div>'; }).join("") + '</div>' +
+    '<div class="posbar"><button class="posbtn ghost" id="phX">Close</button></div></div>';
+  document.body.appendChild(box);
+  box.onclick = function(e){ if(e.target === box) box.remove(); };
+  el("phX").onclick = function(){ box.remove(); };
+}
+/* ---- the open bills, full screen ----------------------------- */
+var POSB = { f: "all", q: "" };
+function posBoard(onOpen){
+  var old = el("posBoard"); if(old) old.remove();
+  var box = document.createElement("div"); box.id = "posBoard"; box.className = "posboard";
+  document.body.appendChild(box);
+  function age(o){ return Math.max(0, Math.round((Date.now() - (o.at || Date.now())) / 60000)); }
+  function draw(){
+    if(!document.body.contains(box)) return;
+    var all = posOpenBills();
+    var F = [["all","All"],["dinein","Tables"],["takeaway","Takeaway"],["delivery","Delivery"],["web","Website / phone"],["due","Bill printed"]];
+    var rows = all.filter(function(o){
+      var f = POSB.f;
+      if(f === "dinein" && !(o.mode === "dinein" || o.table)) return false;
+      if(f === "takeaway" && !(o.source === "counter" && (o.mode || "takeaway") === "takeaway")) return false;
+      if(f === "delivery" && o.mode !== "delivery" && o.type !== "delivery") return false;
+      if(f === "web" && o.source === "counter") return false;
+      if(f === "due" && !o.dueAt) return false;
+      if(POSB.q){ var s = (String(o.token || "") + " " + (o.table || "") + " " + (o.name || "") + " " + (o.phone || "") + " " + (o.lines || []).map(function(l){ return l.name; }).join(" ")).toLowerCase(); if(s.indexOf(POSB.q.toLowerCase()) < 0) return false; }
+      return true;
+    });
+    var tot = rows.reduce(function(n, o){ return n + (money(o).total || 0); }, 0);
+    box.innerHTML = '<div class="pbhead"><div><b>Open bills</b><small>' + rows.length + ' · ' + rupee(tot) + ' to collect</small></div>' +
+        '<input class="fld" id="pbFind" placeholder="Token, table, name, dish…" value="' + esc(POSB.q) + '" autocomplete="off">' +
+        '<button class="posbtn ghost" id="pbClose">Close ✕</button></div>' +
+      '<div class="pbfil">' + F.map(function(x){ var n = x[0] === "all" ? all.length : null; return '<button class="pkchip' + (POSB.f === x[0] ? ' on' : '') + '" data-pbf="' + x[0] + '">' + x[1] + (n != null ? ' <small>' + n + '</small>' : '') + '</button>'; }).join("") + '</div>' +
+      '<div class="pbgrid">' + (rows.length ? rows.map(function(o){
+          var a = age(o), m = money(o), who = o.token ? "#" + o.token : o.table ? "T" + o.table : (o.name || prettyPhone(o.phone) || o.id);
+          var items = posMerged(o);
+          return '<div class="pbcard ' + (a < 20 ? 'g' : a < 40 ? 'a' : 'r') + '">' +
+            '<div class="pbtop"><span class="pbwho">' + esc(who) + '</span><span class="pbage">' + a + '′</span></div>' +
+            '<div class="pbwhere">' + esc(posWhereFrom(o)) + (o.table && o.token ? ' · T' + esc(o.table) : '') + (o.by ? ' · ' + esc(o.by) : '') + '</div>' +
+            '<div class="pbamt">' + rupee(m.total) + '</div>' +
+            '<div class="pbitems">' + items.slice(0, 4).map(function(l){ return l.q + '× ' + esc(l.name); }).join('<br>') + (items.length > 4 ? '<br>+' + (items.length - 4) + ' more' : '') + '</div>' +
+            '<div class="pbtags"><span>' + posKotCount(o) + ' KOT' + (posKotCount(o) > 1 ? 's' : '') + '</span>' + (o.dueAt ? '<span class="due">Bill ' + (o.dueCount > 1 ? o.dueCount + '×' : 'printed') + '</span>' : '') + (o.paid ? '<span class="paid">Paid</span>' : '') + ((o.edits || []).length ? '<span class="ed">' + o.edits.length + ' change' + (o.edits.length > 1 ? 's' : '') + '</span>' : '') + '</div>' +
+            '<div class="pbacts"><button class="posbtn" data-pba="open|' + esc(o.id) + '">Open</button><button class="posbtn ghost" data-pba="bill|' + esc(o.id) + '">Bill</button><button class="posbtn ghost" data-pba="pay|' + esc(o.id) + '"' + (o.paid ? ' disabled' : '') + '>Settle</button></div>' +
+            '<div class="pbmore"><button class="linky" data-pba="kot|' + esc(o.id) + '">Reprint KOT</button><button class="linky" data-pba="move|' + esc(o.id) + '">Move table</button><button class="linky" data-pba="hist|' + esc(o.id) + '">History</button><button class="linky bad" data-pba="cancel|' + esc(o.id) + '">Cancel bill</button></div>' +
+          '</div>'; }).join("") : '<p class="posnone">No open bills' + (POSB.f !== "all" || POSB.q ? ' here.' : '. Everything is paid ✓') + '</p>') + '</div>';
+    el("pbClose").onclick = function(){ box.remove(); };
+    var f = el("pbFind"); f.oninput = function(){ POSB.q = f.value; var p = f.selectionStart; draw(); var n = el("pbFind"); n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} };
+    box.querySelectorAll("[data-pbf]").forEach(function(b){ b.onclick = function(){ POSB.f = b.dataset.pbf; draw(); }; });
+    box.querySelectorAll("[data-pba]").forEach(function(b){ b.onclick = function(){
+      var p = b.dataset.pba.split("|"), act = p[0], id = p.slice(1).join("|"), o = STORE.order(id); if(!o){ draw(); return; }
+      if(act === "open"){ box.remove(); if(onOpen) onOpen(id); }
+      else if(act === "bill") posBillSheet(id, draw);
+      else if(act === "pay") posSettle(id, draw);
+      else if(act === "hist") posHistory(id);
+      else if(act === "kot"){ printJob(Object.assign({}, o, { lines: posMerged(o), kotRound: posKotCount(o), kotReprint: true }), "kot", false, null); shopToast("KOT reprinted."); }
+      else if(act === "move"){ posMoveSheet(id, draw); }
+      else if(act === "cancel"){ posReasonSheet("Cancel the whole bill?", posMerged(o).map(function(l){ return { name: l.name, label: l.label, q: l.q }; }), function(r){ posCancelBill(id, r); shopToast("Bill cancelled · cancel tickets printed."); draw(); }); }
+    }; });
+  }
+  POSB.draw = draw;
+  draw();
+  return box;
+}
+function posMoveSheet(id, after){
+  var o = STORE.order(id); if(!o) return;
+  var old = el("posMove"); if(old) old.remove();
+  var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "posMove";
+  box.innerHTML = '<div class="panel small"><div class="shead"><div><b>Move ' + esc(o.token ? "token " + o.token : "bill") + '</b><small>now ' + esc(o.table ? "table " + o.table : posWhereFrom(o)) + '</small></div></div>' +
+    '<input class="fld big" id="pmT" inputmode="numeric" placeholder="New table" autocomplete="off">' +
+    '<div class="posbar"><button class="posbtn ghost" id="pmX">Back</button><button class="posbtn" id="pmGo">Move</button></div></div>';
+  document.body.appendChild(box);
+  var t = el("pmT"); t.focus();
+  el("pmX").onclick = function(){ box.remove(); };
+  el("pmGo").onclick = function(){
+    var to = t.value.trim(); if(!to){ t.focus(); return; }
+    var mv = (o.moves || []).concat([{ from: o.table || posWhereFrom(o), to: to, at: Date.now(), by: posWho() }]);
+    STORE.edit(id, { table: to, addr: "Table " + to, mode: "dinein", moves: mv });
+    box.remove(); shopToast("Moved to table " + to + "."); if(after) after();
+  };
+}
+
 function viewPos(main){
   gateRoles(main, ["office", "captain", "waiter"], function(){ paintPos(main); });
 }
@@ -9009,8 +9301,10 @@ function paintPos(main){
           '<div class="poskot" id="posKot"></div>' +
           '<div class="posbar">' +
             '<button class="posbtn ghost" id="posUndo">Undo last</button>' +
-            '<button class="posbtn" id="posGo">Place</button>' +
+            '<button class="posbtn" id="posGo">Send KOT</button>' +
           '</div>' +
+          '<div class="posgowhy" id="posGoWhy"></div>' +
+          '<div class="posacts" id="posActs"></div>' +
           '<details class="poswho" id="posWhoBox"><summary>Who it is for</summary>' +
             '<div id="posWho"></div>' +
           '</details>' +
@@ -9137,7 +9431,7 @@ function paintPos(main){
   function drawOpen(){
     var box = el("posOpen"), live = posOpenBills();
     if(!live.length){ box.innerHTML = ""; return; }
-    box.innerHTML =
+    box.innerHTML = '<button class="posbtn ghost posboardbtn" id="posBoardBtn">⤢ Open bills · ' + live.length + ' · ' + rupee(live.reduce(function(n, o){ return n + (money(o).total || 0); }, 0)) + '</button>' +
       '<details class="posopenbox"' + (POS.editing ? ' open' : '') + '>' +
         '<summary>' + live.length + ' open ' + (live.length === 1 ? 'bill' : 'bills') + '</summary>' +
         '<div class="posopenlist">' + live.map(function(o){
@@ -9159,6 +9453,7 @@ function paintPos(main){
     box.querySelectorAll("[data-resume]").forEach(function(b){
       b.onclick = function(){ resume(b.dataset.resume); };
     });
+    var bb = el("posBoardBtn"); if(bb) bb.onclick = function(){ posBoard(function(id){ resume(id); }); };
   }
 
   /* Pulling an open bill back onto the till. Its lines become
@@ -9170,10 +9465,11 @@ function paintPos(main){
     if(POS.lines.length && !POS.editing &&
        !confirm("The ticket has items on it. Replace them with bill " +
                 (o.token ? "#" + o.token : id) + "?")) return;
-    POS = posFresh();
+    var last = POS.last;
+    POS = posFresh(); POS.last = last;
     POS.editing = id;
-    POS.lines = (o.lines || []).map(function(l){
-      return { k: l.id + "|" + (l.label || ""), id: l.id, name: l.name,
+    POS.lines = posMerged(o).map(function(l){
+      return { k: l.k || (l.id + "|" + (l.label || "")), id: l.id, name: l.name,
                label: l.label || "", price: l.price, q: l.q };
     });
     POS.base  = POS.lines.map(function(l){ return Object.assign({}, l); });
@@ -9187,8 +9483,8 @@ function paintPos(main){
   }
 
   function stopEditing(){
-    var keepMode = POS.mode;
-    POS = posFresh(); POS.mode = keepMode;
+    var keepMode = POS.mode, last = POS.last;
+    POS = posFresh(); POS.mode = keepMode; POS.last = last;
     drawOpen(); drawWho(); drawTicket(); drawToken(); drawKot();
     find.value = ""; el("posClear").hidden = true;
     drawWhat(); drawGrid(); find.focus();
@@ -9211,7 +9507,7 @@ function paintPos(main){
        send it. Either way nothing prints that is not lit. */
     keys.forEach(function(k){ if(POS.kot[k] == null) POS.kot[k] = autoKot(); });
 
-    var names = { main:"Main kitchen", front:"Front" };
+    var names = {}; keys.forEach(function(k){ names[k] = kitchenName(k); });
     box.innerHTML =
       '<span class="pkl">Kitchen ticket</span>' +
       keys.map(function(k){
@@ -9273,11 +9569,70 @@ function paintPos(main){
         b.onclick = function(){ posBump(b.dataset.more, 1); drawTicket(); drawKot(); };
       });
     }
+    if(POS.editing){
+      /* what is already cooking says so; what comes off is shown struck until it is sent */
+      var src = STORE.order(POS.editing), byK = {};
+      if(src) (src.lines || []).forEach(function(l){ var k = l.k || (l.id + "|" + (l.label || "")); (byK[k] = byK[k] || []).push(l); });
+      var baseQ = {}; (POS.base || []).forEach(function(l){ baseQ[l.k] = l.q; });
+      box.querySelectorAll(".posline").forEach(function(row, i){
+        var l = POS.lines[i]; if(!l) return; var had = baseQ[l.k] || 0, meta = [];
+        (byK[l.k] || []).forEach(function(x){ (x.rounds && x.rounds.length ? x.rounds : [{ n: 1, q: x.q, at: x.at || src.at }]).forEach(function(r){ if(r.n !== "void") meta.push("KOT " + r.n + " · " + r.q + "× " + when(r.at)); }); });
+        var tag = l.q > had ? '<i class="pnew">+' + (l.q - had) + ' new</i>' : l.q < had ? '<i class="pvoid">−' + (had - l.q) + ' to cancel</i>' : '';
+        if(meta.length || tag) row.insertAdjacentHTML("beforeend", '<div class="pmeta">' + esc(meta.join(" · ")) + tag + '</div>');
+      });
+      posVoids(POS.lines, POS.base).filter(function(v){ return v.to === 0; }).forEach(function(v){
+        box.insertAdjacentHTML("beforeend", '<div class="posline gone"><span class="ptn"><b>' + esc(v.name) + '</b>' + (v.label ? '<small>' + esc(v.label) + '</small>' : '') + '</span><span class="ptq"><i class="pvoid">−' + v.d + ' to cancel</i><button class="pq" data-back="' + esc(v.k) + '">↩</button></span><span class="ptp">' + rupee(0) + '</span></div>');
+      });
+      box.querySelectorAll("[data-back]").forEach(function(b){
+        b.onclick = function(){ var v = (POS.base || []).filter(function(x){ return x.k === b.dataset.back; })[0]; if(v){ posAdd(v.id, v.label || "", v.price, v.q); } drawTicket(); drawKot(); };
+      });
+    }
     var n = POS.lines.reduce(function(a, l){ return a + l.q; }, 0);
     el("posTotal").innerHTML = '<span>' + n + (n === 1 ? ' item' : ' items') + '</span>' +
                                '<b>' + rupee(posSub()) + '</b>';
-    var go = el("posGo");
-    if(go) go.textContent = POS.editing ? "Update bill" : "Place";
+    drawGo(); drawActs();
+  }
+
+  /* the big button says exactly what it will do, and why it cannot yet */
+  function goState(){
+    if(POS.editing){
+      var o = STORE.order(POS.editing), adds = posDelta(POS.lines, POS.base), voids = posVoids(POS.lines, POS.base);
+      var noteCh = o && (POS.note || "") !== (o.note || "");
+      if(adds.length && voids.length) return { t: "Send KOT #" + (posKotCount(o) + 1) + " + cancel", ok: true };
+      if(adds.length) return { t: "Send KOT #" + (posKotCount(o) + 1), ok: true };
+      if(voids.length) return { t: "Cancel " + voids.reduce(function(n, v){ return n + v.d; }, 0) + " item" + (voids.reduce(function(n, v){ return n + v.d; }, 0) > 1 ? "s" : ""), ok: true };
+      if(noteCh) return { t: "Save note", ok: true };
+      return { t: "No changes", ok: false, why: "Add or take off items, or use Bill / Settle below." };
+    }
+    if(!POS.lines.length) return { t: "Send KOT", ok: false, why: "Add what they ordered first." };
+    if(POS.mode === "dinein" && !String(POS.table).trim()) return { t: "Send KOT", ok: false, why: "Which table? Open “Who it is for”." };
+    if(POS.mode === "delivery" && (!digitsOnly(POS.phone) || !String(POS.addr).trim())) return { t: "Send KOT", ok: false, why: "Delivery needs a phone number and an address." };
+    return { t: "Send KOT", ok: true };
+  }
+  function drawGo(){
+    var g = goState(), go = el("posGo"), why = el("posGoWhy");
+    if(go){ go.textContent = g.t; go.classList.toggle("off", !g.ok); }
+    if(why) why.textContent = g.ok ? "" : (g.why || "");
+  }
+  /* what can be done to the bill on the till, or to the one just sent */
+  function drawActs(){
+    var box = el("posActs"); if(!box) return;
+    var id = POS.editing || (POS.last && STORE.order(POS.last) && !STORE.order(POS.last).paid ? POS.last : null);
+    if(!id){ box.innerHTML = ""; return; }
+    var o = STORE.order(id); if(!o){ box.innerHTML = ""; return; }
+    box.innerHTML = (POS.editing ? '' : '<span class="palast">Last: <b>' + esc(o.token ? "Token " + o.token : o.table ? "Table " + o.table : o.id) + '</b> · ' + rupee(money(o).total) + '</span>') +
+      '<button class="posbtn ghost" data-pact="bill">🧾 Bill</button>' +
+      (o.paid ? '<span class="papaid">Paid ✓</span>' : '<button class="posbtn ghost" data-pact="pay">Settle</button>') +
+      '<button class="posbtn ghost" data-pact="hist">History</button>' +
+      (POS.editing ? '<button class="posbtn ghost bad" data-pact="cancel">Cancel bill</button>' : '<button class="posbtn ghost" data-pact="open">Open</button>');
+    box.querySelectorAll("[data-pact]").forEach(function(b){ b.onclick = function(){
+      var a = b.dataset.pact;
+      if(a === "bill") posBillSheet(id, function(){ drawOpen(); drawActs(); });
+      else if(a === "pay") posSettle(id, function(){ if(POS.editing === id && STORE.order(id) && STORE.order(id).status === "delivered") stopEditing(); else { drawOpen(); drawActs(); } });
+      else if(a === "hist") posHistory(id);
+      else if(a === "open") resume(id);
+      else if(a === "cancel"){ var cur = STORE.order(id); posReasonSheet("Cancel the whole bill?", posMerged(cur).map(function(l){ return { name: l.name, label: l.label, q: l.q }; }), function(r){ posCancelBill(id, r); shopToast("Bill cancelled · cancel tickets printed."); stopEditing(); }); }
+    }; });
   }
 
   /* ---- who it is for --------------------------------------
@@ -9308,7 +9663,7 @@ function paintPos(main){
     [["poTable","table"],["poPhone","phone"],["poName","name"],
      ["poAddr","addr"],["poNote","note"]].forEach(function(p){
       var n = el(p[0]); if(!n) return;
-      n.oninput = function(){ POS[p[1]] = n.value; };
+      n.oninput = function(){ POS[p[1]] = n.value; drawGo(); };
     });
     el("posMode").querySelectorAll("[data-mode]").forEach(function(b){
       b.classList.toggle("on", b.dataset.mode === m);
@@ -9335,7 +9690,7 @@ function paintPos(main){
   });
 
   el("posMode").querySelectorAll("[data-mode]").forEach(function(b){
-    b.onclick = function(){ POS.mode = b.dataset.mode; drawWho(); drawToken(); };
+    b.onclick = function(){ POS.mode = b.dataset.mode; drawWho(); drawToken(); drawGo(); };
   });
 
   el("posClear").onclick = function(){
@@ -9368,28 +9723,30 @@ function paintPos(main){
   };
 
   el("posGo").onclick = function(){
-    if(!POS.lines.length){ shopToast("Add what they ordered first."); find.focus(); return; }
+    var gs = goState();
+    if(!POS.editing && !POS.lines.length){ shopToast("Add what they ordered first."); find.focus(); return; }
 
-    /* ---- updating an open bill ----------------------------
-       Only the additions reach the kitchen. The bill itself is
-       rewritten whole, which is what the total has to follow. */
+    /* ---- changing an open bill ------------------------------
+       Additions go out as the next KOT round; anything already
+       sent that comes off needs a reason and prints a cancel
+       ticket. Every change is kept on the bill. */
     if(POS.editing){
       var id = POS.editing, was = STORE.order(id);
       if(!was){ shopToast("That bill is gone."); stopEditing(); return; }
-      var added = posDelta(POS.lines, POS.base);
-      /* lines, total, note and the stamp - the only keys the
-         rules let a captain or a waiter touch on an order */
-      STORE.edit(id, { lines: POS.lines.slice(), note: POS.note || "" });
-      var now = STORE.order(id);
+      if(!gs.ok){ shopToast(gs.why || "No changes."); return; }
+      var added = posDelta(POS.lines, POS.base), voids = posVoids(POS.lines, POS.base);
       var picked = kotChosen();
-      if(added.length && picked && picked.length){
-        printJob(Object.assign({}, now, { lines: added }), "kot", false, picked);
-      }
-      shopToast(added.length
-        ? ("Bill " + (now.token ? "#" + now.token : id) + " updated \u00b7 " +
-           added.reduce(function(n,l){ return n + l.q; }, 0) + " added \u00b7 " + rupee(now.total))
-        : ("Bill " + (now.token ? "#" + now.token : id) + " updated \u00b7 " + rupee(now.total)));
-      stopEditing();
+      var finish = function(reason){
+        var now = posCommit(id, POS.lines, added, voids, reason, picked, POS.note || "");
+        if(!now){ shopToast("Could not save."); return; }
+        var bits = [];
+        if(added.length) bits.push("KOT #" + now.kotN + " · " + added.reduce(function(n,l){ return n + l.q; }, 0) + " added");
+        if(voids.length) bits.push(voids.reduce(function(n,v){ return n + v.d; }, 0) + " cancelled");
+        shopToast("Bill " + (now.token ? "#" + now.token : id) + " · " + (bits.join(" · ") || "saved") + " · " + rupee(now.total));
+        POS.last = id; stopEditing();
+      };
+      if(voids.length) posReasonSheet("Take these off?", voids, finish);
+      else finish(null);
       return;
     }
 
@@ -9412,7 +9769,7 @@ function paintPos(main){
            : POS.mode === "dinein"   ? ("Table " + String(POS.table).trim())
            : ("Takeaway \u00b7 token " + token),
       note:  POS.note || "",
-      lines: POS.lines.slice(),
+      lines: POS.lines.map(function(l){ var at0 = Date.now(), by0 = posWho(); return Object.assign({}, l, { at: at0, by: by0, rounds: [{ n: 1, q: l.q, at: at0, by: by0 }] }); }),
       total: posSub(),
       source: "counter",
       mode:  POS.mode,
@@ -9421,6 +9778,8 @@ function paintPos(main){
       byRole:(STORE.me() && STORE.me().role) || ""
     };
     if(POS.mode === "dinein") o.table = String(POS.table).trim();
+    o.kotN = 1;
+    o.kots = [{ n: 1, kind: "kot", at: Date.now(), by: o.by, lines: o.lines.map(function(l){ return { k: l.k, name: l.name, label: l.label || "", q: l.q, station: kotStation(l) }; }) }];
 
     var nid = STORE.place(o);
     if(!nid){ shopToast("Something went wrong."); return; }
@@ -9429,19 +9788,22 @@ function paintPos(main){
     if(placed && phoneKey(placed.phone)) STORE.rememberCustomer(placed);
 
     var want = kotChosen();
-    if(placed && placed.lines.length && want && want.length) printJob(placed, "kot", true, want);
+    if(placed && placed.lines.length && want && want.length) printJob(Object.assign({}, placed, { kotRound: 1 }), "kot", true, want);
 
     var keepMode = POS.mode;
-    POS = posFresh(); POS.mode = keepMode;
+    POS = posFresh(); POS.mode = keepMode; POS.last = nid;
     drawOpen(); drawWho(); drawTicket(); drawToken(); drawKot();
     find.value = ""; el("posClear").hidden = true;
     drawWhat(); drawGrid(); find.focus();
-    shopToast("Token " + token + " \u00b7 " + rupee(o.total) + " \u00b7 on the board.");
+    shopToast("KOT #1 sent \u00b7 token " + token + " \u00b7 " + rupee(o.total) + ". Bill it from the bar below or from Open bills.");
   };
 
   /* a cloud update: the open list and the next token move on
      their own, the half-built ticket in front of somebody does not */
-  window.__posRefresh = function(){ drawOpen(); drawTicket(); drawToken(); drawKot(); };
+  window.__posRefresh = function(){ drawOpen(); drawTicket(); drawToken(); drawKot(); if(el("posBoard") && POSB.draw) POSB.draw(); };
+  /* F2 = every open bill, full screen */
+  if(!window.__posF2){ window.__posF2 = true; document.addEventListener("keydown", function(e){ if(e.key === "F2" && el("posWrap")){ e.preventDefault(); posBoard(function(id){ var r = el("posOpen"); if(window.__posResume) window.__posResume(id); }); } }); }
+  window.__posResume = resume;
 
   drawTabs(); drawWhat(); drawGrid(); drawWho();
   drawOpen(); drawTicket(); drawToken(); drawKot();
@@ -9599,7 +9961,41 @@ function posStyle(){
   "@media(max-width:980px){.poscols{grid-template-columns:1fr}.posright{position:static}" +
     ".posgrid{grid-template-columns:repeat(auto-fill,minmax(124px,1fr))}" +
     ".posbartabs{overflow-x:auto;scrollbar-width:none}" +
-    ".posbartabs::-webkit-scrollbar{display:none}}";
+    ".posbartabs::-webkit-scrollbar{display:none}}" +
+  /* the workflow: go button state, actions, rounds, voids, board, bill, history */
+  ".posbtn.off{opacity:.45}" +
+  ".kitlist{display:flex;flex-direction:column;gap:8px} .kitrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--line,#ddd);border-radius:12px;padding:8px 10px} .kitrow .fld{flex:1 1 160px;margin:0} .kchk{display:flex;align-items:center;gap:5px;font-size:13px}" +
+  ".posgowhy{font-size:13px;color:var(--warn,#a8701a);min-height:0;margin:4px 2px 0}" +
+  ".posacts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}" +
+  ".posacts .posbtn{flex:0 0 auto;padding:8px 12px;font-size:14px}" +
+  ".posbtn.bad{color:#b4452f;border-color:#b4452f}" +
+  ".palast{font-size:13px;flex:1 1 100%;color:var(--muted)} .papaid{font-weight:800;color:#2e7d4f}" +
+  ".pmeta{grid-column:1/-1;font-size:11.5px;color:var(--muted);margin-top:2px}" +
+  ".pnew{font-style:normal;font-weight:800;color:#2e7d4f;margin-left:6px} .pvoid{font-style:normal;font-weight:800;color:#b4452f;margin-left:6px}" +
+  ".posline.gone .ptn{text-decoration:line-through;opacity:.6}" +
+  ".posboardbtn{width:100%;margin-bottom:6px;font-weight:800}" +
+  ".posboard{position:fixed;inset:0;z-index:940;background:var(--bg,#fff);overflow:auto;padding:14px 18px 40px}" +
+  ".pbhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:0;background:var(--bg,#fff);padding:6px 0 10px;z-index:2}" +
+  ".pbhead>div{flex:1 1 200px} .pbhead b{font-size:24px;display:block} .pbhead small{color:var(--muted)} .pbhead .fld{flex:1 1 260px;max-width:420px;margin:0}" +
+  ".pbfil{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}" +
+  ".pbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}" +
+  ".pbcard{border:2px solid var(--line,#ddd);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;background:var(--card,#fff)}" +
+  ".pbcard.g{border-color:#2e7d4f} .pbcard.a{border-color:#c0882c} .pbcard.r{border-color:#b4452f}" +
+  ".pbtop{display:flex;justify-content:space-between;align-items:baseline} .pbwho{font-size:28px;font-weight:900} .pbage{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}" +
+  ".pbcard.g .pbage{color:#2e7d4f} .pbcard.a .pbage{color:#a8701a} .pbcard.r .pbage{color:#b4452f}" +
+  ".pbwhere{font-size:13px;color:var(--muted)} .pbamt{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}" +
+  ".pbitems{font-size:13.5px;line-height:1.45}" +
+  ".pbtags{display:flex;flex-wrap:wrap;gap:4px} .pbtags span{font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--soft,#f2ede4)} .pbtags .due{background:#f3dfb5} .pbtags .paid{background:#cfe8d8} .pbtags .ed{background:#f2d3cc}" +
+  ".pbacts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px} .pbacts .posbtn{padding:10px 6px;font-size:14px}" +
+  ".pbmore{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px} .linky.bad{color:#b4452f}" +
+  ".posbillp{max-width:420px} .posreceipt{background:#fff;color:#111;border:1px dashed #999;border-radius:6px;padding:14px 16px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px}" +
+  ".prh{text-align:center;margin-bottom:6px} .prh b{display:block;font-size:20px;letter-spacing:.08em} .prh small{font-size:11px;letter-spacing:.12em;text-transform:uppercase}" +
+  ".prr{display:flex;justify-content:space-between;gap:8px} .prr.small{font-size:11.5px;color:#555}" +
+  ".pri{display:grid;grid-template-columns:30px 1fr auto;gap:6px;padding:2px 0} .pri small{display:block;font-size:11px;color:#555} .pri .a{text-align:right}" +
+  ".prt{display:flex;justify-content:space-between;font-size:20px;font-weight:900;margin-top:4px} .prpaid{text-align:center;background:#111;color:#fff;font-weight:900;padding:4px;margin-top:6px}" +
+  ".posrs .posrsl{margin:6px 0 8px} .posrsrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line,#ddd)} .posrsc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}" +
+  ".poshist{display:flex;flex-direction:column;gap:2px;max-height:60vh;overflow:auto} .phe{display:grid;grid-template-columns:58px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid var(--line,#ddd)} .phe small{display:block;color:var(--muted);font-size:12px} .pht{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}" +
+  ".phe.cancel b,.phe.edit b{color:#b4452f} .phe.kot b{color:#1f4d4a} .phe.paid b{color:#2e7d4f}";
   document.head.appendChild(s);
 }
 

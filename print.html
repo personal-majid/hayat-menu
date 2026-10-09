@@ -30,6 +30,7 @@
   .kot .it small{ display:block; font-size:12px; font-weight:600; opacity:.85 }
   .kot .meta{ font-size:12px; margin:2px 0 }
   .kot .note{ font-size:14px; font-weight:800; border:1px solid #000; padding:5px 7px; margin-top:8px }
+  .kot.cx .station{ background:#000; color:#fff } .kot.cx .it{ text-decoration:line-through }
   .bill .it{ display:flex; gap:6px; padding:3px 0 }
   .bill .it .n{ flex:1 } .bill .it .q{ min-width:26px } .bill .it .a{ min-width:56px; text-align:right; font-variant-numeric:tabular-nums }
   .bill .it small{ display:block; font-size:10.5px; opacity:.8 }
@@ -64,14 +65,19 @@
   var sheets = [];
   if(kind === "kot"){
     (job.tickets || []).forEach(function(t){
-      sheets.push('<div class="sheet kot">' +
-        '<div class="station">KOT · ' + esc(t.station.toUpperCase()) + '</div>' +
-        '<div class="big">' + esc(o.id) + '</div>' +
-        '<div class="row meta"><span>' + esc(o.kind === "ticket" ? "PHONE" : "DELIVERY") + '</span><span>' + esc(when(job.at)) + '</span></div>' +
+      var head = t.cancel ? "CANCEL · " : t.reprint ? "REPRINT · " : "KOT" + (t.round ? " #" + t.round : "") + " · ";
+      var who = o.source === "counter" ? (o.table ? "TABLE " + o.table : (o.mode === "delivery" ? "DELIVERY" : "TOKEN " + (o.token || ""))) : o.id;
+      var where = o.source === "counter" ? (o.mode === "dinein" ? "DINE-IN" : o.mode === "delivery" ? "DELIVERY" : "TAKEAWAY") + (o.token && o.table ? " · #" + o.token : "") : (o.kind === "ticket" ? "PHONE" : "DELIVERY");
+      sheets.push('<div class="sheet kot' + (t.cancel ? ' cx' : '') + '">' +
+        '<div class="station">' + esc(head + String(t.name || t.station).toUpperCase()) + '</div>' +
+        '<div class="big">' + esc(who) + '</div>' +
+        '<div class="row meta"><span>' + esc(where) + '</span><span>' + esc(when(job.at)) + '</span></div>' +
+        (t.cancel && t.reason ? '<div class="note">REMOVE · ' + esc(t.reason) + '</div>' : '') +
+        (o.by ? '<div class="row meta"><span>by ' + esc(o.by) + '</span><span></span></div>' : '') +
         '<div class="row meta"><span>' + esc(o.name || "") + '</span><span>' + esc(o.rider ? "Rider: " + o.rider : "") + '</span></div>' +
         (o.wantAt ? '<div class="row meta"><span>FOR</span><span>' + esc(when(o.wantAt)) + '</span></div>' : '') +
         '<hr>' +
-        t.lines.map(function(l){ return '<div class="it"><span class="q">' + l.q + ' ×</span><span>' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + (l.note ? '<small><b>\u270E ' + esc(l.note) + '</b></small>' : '') + '</span></div>'; }).join("") +
+        t.lines.map(function(l){ return '<div class="it"><span class="q">' + (t.cancel ? '−' : '') + l.q + ' ×</span><span>' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + (l.note ? '<small><b>\u270E ' + esc(l.note) + '</b></small>' : '') + '</span></div>'; }).join("") +
         (o.note ? '<div class="note">' + esc(o.note) + '</div>' : '') +
         '<div class="foot">' + (job.tickets.length > 1 ? esc("Ticket " + (job.tickets.indexOf(t) + 1) + " of " + job.tickets.length + " · ") : "") + esc(t.lines.reduce(function(n,l){ return n + l.q; }, 0) + " items") + '</div>' +
       '</div>');

@@ -27,6 +27,9 @@ local-service/logs/
 local-service/.venv/
 local-service/discover_report.txt
 
+# sales data pulled for the forecast simulation: business data, never on the public site
+sample-data/
+
 # day logs and probes hold customer names, phones, addresses: never in git
 local-service/daylog/
 local-service/*.bak

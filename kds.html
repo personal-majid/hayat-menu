@@ -30,6 +30,8 @@ main{padding:12px 14px 40px}
 .tk .age{font:700 26px "Jost",sans-serif;font-variant-numeric:tabular-nums}
 .tk.g{border-color:var(--good)} .tk.g .age{color:var(--good)} .tk.a{border-color:var(--warn)} .tk.a .age{color:var(--warn)}
 .tk.r{border-color:var(--bad);animation:pulse 1.2s ease-in-out infinite} .tk.r .age{color:var(--bad)}
+.tk.cx{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--card))} .tk.cx .it li{text-decoration:line-through} .tag.cx{background:var(--bad);color:#fff}
+#popk{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:50;background:var(--good);color:#fff;border-radius:16px;padding:14px 26px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 10px 40px rgba(0,0,0,.4);cursor:pointer;max-width:92vw} #popk[hidden]{display:none} #popk.cx{background:var(--bad)} #popk b{font:800 28px Jost,sans-serif} #popk span{font:700 22px Jost,sans-serif} #popk small{font-size:15px;opacity:.95}
 @keyframes pulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--bad) 25%,transparent)}} @media (prefers-reduced-motion:reduce){ .tk.r{animation:none} }
 .tags{display:flex;gap:6px;flex-wrap:wrap;padding:6px 12px 0} .tag{font-size:13px;font-weight:600;border-radius:6px;padding:2px 8px;background:var(--line)}
 .tag.par{background:color-mix(in srgb,var(--par) 30%,transparent);color:var(--ink)} .tag.add{background:color-mix(in srgb,var(--warn) 30%,transparent)}
@@ -91,18 +93,28 @@ function station(n){ n=String(n||'').toUpperCase();
   if(/JUICE|MOJITO|LIME|AVILMILK|SHAKE|SCOOP|SCOTCH|FRUIT SALAD|TENDER|CHICCKU/.test(n)) return ['juice'];
   if(/TEA|COFFE|MILK|BOOST/.test(n)) return ['tea'];
   return []; }
-function tms(v){ if(!v) return null; if(typeof v==='object'){ if(v.toMillis) return v.toMillis(); if(v.seconds!=null) return v.seconds*1000; }
+function tms(v){ if(!v) return null; if(typeof v==='number') return v; if(typeof v==='object'){ if(v.toMillis) return v.toMillis(); if(v.seconds!=null) return v.seconds*1000; }
   let s=String(v); if(!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s+='+05:30'; const t=Date.parse(s); return isNaN(t)?null:t; }
+/* a new ticket says so across the whole screen for a few seconds */
+let POPT=null; function pop(k){ const b=document.getElementById('popk')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'popk'})); const o=k.o, where=o.type==='Parcel'?'#'+(o.token||o.kot||''):'Table '+(o.table||'');
+  b.className=k.cancel?'cx':''; b.innerHTML='<b>'+(k.cancel?'✕ CANCEL':'NEW KOT')+'</b><span>'+where+'</span><small>'+k.items.map(i=>i.q+'× '+i.n).slice(0,4).join(' · ')+'</small>'; b.hidden=false; clearTimeout(POPT); POPT=setTimeout(()=>{ b.hidden=true; },6000); b.onclick=()=>{ b.hidden=true; }; }
 const hm=ms=>new Date(ms+5.5*3600e3).toISOString().slice(11,16);
 
-let OPEN=[], DONE={}, META=null, FB=null, seen=new Set(), first=true, strike=new Set(JSON.parse(sessionStorage.getItem('kds-x')||'[]'));
+let WEB=[], OPEN=[], DONE={}, META=null, FB=null, seen=new Set(), first=true, strike=new Set(JSON.parse(sessionStorage.getItem('kds-x')||'[]'));
+/* the web counter: each KOT round, and each CANCEL ticket, as its own card */
+function webOpen(){ const out=[], now=Date.now();
+  for(const o of WEB){ if(!o.kots||!o.kots.length) continue; const gone=o.status==='delivered'||o.status==='cancelled';
+    const items=[]; o.kots.forEach(k=>{ if(gone&&!(k.kind==='cancel'&&now-(k.at||0)<45*60000)) return; (k.lines||[]).forEach(l=>items.push({n:l.name+(l.label?' ('+l.label+')':''),q:l.q,t:k.at,cancel:k.kind==='cancel',reason:k.reason||'',round:k.n})); });
+    if(!items.length) continue;
+    out.push({invoiceId:'w'+o.id,orderAt:o.at,items,table:o.table||'',section:o.mode==='dinein'?'':'',type:o.mode==='dinein'?'':'Parcel',token:o.token,taker:o.by||'',web:true}); }
+  return out; }
 function tickets(){ const mine=new Set(stations()), out=[];
-  for(const o of OPEN){ const base=tms(o.orderAt), groups={};
+  for(const o of OPEN.concat(webOpen())){ const base=tms(o.orderAt), groups={};
     for(const it of o.items||[]){ const st=station(it.n).filter(s=>mine.has(s)); if(!st.length) continue;
-      const t=tms(it.t)||base; const k=String(Math.round((t||0)/60000)); (groups[k]=groups[k]||{t,items:[],st:new Set()}).items.push(it); st.forEach(s=>groups[k].st.add(s)); }
+      const t=tms(it.t)||base; const k=String(Math.round((t||0)/60000))+(it.cancel?'c':''); (groups[k]=groups[k]||{t,items:[],st:new Set(),cancel:!!it.cancel,reason:it.reason||'',round:it.round}).items.push(it); st.forEach(s=>groups[k].st.add(s)); }
     const ks=Object.keys(groups).sort(); ks.forEach((k,idx)=>{ const g=groups[k], id=ST.screen+'_'+o.invoiceId+'_'+k;
       const mg={}; g.items.forEach(it=>{ const n=String(it.n).trim(); (mg[n]=mg[n]||{n,q:0}).q+=(+it.q||1); }); g.items=Object.values(mg);
-      if(DONE[id]) return; out.push({id,inv:o.invoiceId,round:k,addon:idx>0||(g.t&&base&&g.t-base>60000),t:g.t,items:g.items,st:[...g.st],o}); }); }
+      if(DONE[id]) return; out.push({id,inv:o.invoiceId,round:k,addon:!g.cancel&&(idx>0||(g.t&&base&&g.t-base>60000)),t:g.t,items:g.items,st:[...g.st],o,cancel:g.cancel,reason:g.reason,kotN:g.round}); }); }
   return out.sort((a,b)=>(a.t||0)-(b.t||0)); }
 function render(){ const now=Date.now(), T=tickets();
   $('stName').textContent=SCREENS[ST.screen].n; $('count').textContent=T.length+' open';
@@ -111,10 +123,10 @@ function render(){ const now=Date.now(), T=tickets();
   if(!T.length){ $('main').innerHTML='<div class="empty">No orders for '+SCREENS[ST.screen].n+' right now ✓</div>'+recentHtml(); bindRecent(); return; }
   let fresh=0;
   $('main').innerHTML='<div class="grid">'+T.map(k=>{ const age=k.t?Math.max(0,(now-k.t)/60000):0, prep=Math.max(...k.st.map(s=>PREP[s]||5)), c=age<prep?'g':age<prep+5?'a':'r', o=k.o;
-      if(!seen.has(k.id)){ seen.add(k.id); if(!first) fresh++; }
+      if(!seen.has(k.id)){ seen.add(k.id); if(!first){ fresh++; pop(k); } }
       const par=o.type==='Parcel', where=par?'🛍️ #'+(o.token||o.kot||''):(SEC[o.section]||o.section||'')+' '+(o.table||'');
-      return '<div class="tk '+c+'"><div class="hd"><span class="tb">'+where+'<small>'+(o.taker||'')+'</small></span><span class="age">'+Math.floor(age)+'′</span></div>'
-        +'<div class="tags">'+(par?'<span class="tag par">Parcel · pack it</span>':'')+(k.addon?'<span class="tag add">+ Add-on</span>':'')+'<span class="tag">KOT '+(k.t?hm(k.t):'')+'</span></div>'
+      return '<div class="tk '+(k.cancel?'cx':c)+'"><div class="hd"><span class="tb">'+where+'<small>'+(o.taker||'')+'</small></span><span class="age">'+Math.floor(age)+'′</span></div>'
+        +'<div class="tags">'+(k.cancel?'<span class="tag cx">✕ CANCEL'+(k.reason?' · '+k.reason:'')+'</span>':'')+(par?'<span class="tag par">Parcel · pack it</span>':'')+(k.addon?'<span class="tag add">+ Add-on</span>':'')+'<span class="tag">KOT'+(k.kotN&&!k.cancel?' #'+k.kotN:'')+' '+(k.t?hm(k.t):'')+'</span>'+(o.web?'<span class="tag">counter</span>':'')+'</div>'
         +'<ul class="it">'+k.items.map((it,i)=>{ const x=strike.has(k.id+'#'+i); return '<li class="'+(x?'x':'')+'" data-s="'+k.id+'#'+i+'"><span class="q">'+(it.q||1)+'×</span><span>'+it.n+'</span></li>'; }).join('')+'</ul>'
         +'<div class="ft"><span>target '+Math.round(prep)+' min</span><button class="done" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">✓ Done</button></div></div>'; }).join('')+'</div>'+recentHtml();
   $('main').querySelectorAll('li[data-s]').forEach(li=>li.onclick=()=>{ const s=li.dataset.s; strike.has(s)?strike.delete(s):strike.add(s); sessionStorage.setItem('kds-x',JSON.stringify([...strike])); li.classList.toggle('x'); });
@@ -152,7 +164,8 @@ setInterval(cleanBar,30000);
   const go=async()=>{ const fs=ctx.fs, db=ctx.db; FB={fs,db};
     const fail=e=>stop(e&&e.code==='permission-denied'?'<b>Not allowed.</b> This sign-in is not kitchen or office, or the latest firestore.rules are not published yet.':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
     fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ META=d.exists()?d.data():null; feed(); },fail);
-    fs.onSnapshot(fs.collection(db,'vm_open'),snap=>{ OPEN=snap.docs.map(d=>d.data()); const live=new Set(OPEN.map(o=>String(o.invoiceId)));
+    fs.onSnapshot(fs.query(fs.collection(db,'orders'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ WEB=snap.docs.map(d=>Object.assign({id:d.id},d.data())).filter(o=>o.source==='counter'||(o.kots&&o.kots.length)); render(); },()=>{});
+    fs.onSnapshot(fs.collection(db,'vm_open'),snap=>{ OPEN=snap.docs.map(d=>d.data()); const live=new Set(OPEN.map(o=>String(o.invoiceId)).concat(WEB.map(o=>'w'+o.id)));
       Object.keys(DONE).forEach(id=>{ if(!live.has(id.split('_')[1])) delete DONE[id]; }); render(); },fail);
     const since=new Date(Date.now()-12*3600e3);
     fs.onSnapshot(fs.query(fs.collection(db,'kds'),fs.where('doneAt','>=',since)),snap=>{ snap.docs.forEach(d=>{ DONE[d.id]=d.data(); }); render(); },fail);

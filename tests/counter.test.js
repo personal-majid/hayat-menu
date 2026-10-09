@@ -232,8 +232,8 @@ function check(name, cond, extra) {
 
   check('resuming loads its lines back onto the till',
         await page.locator('.posline').count() > 0);
-  check('the button becomes Update bill',
-        (await page.locator('#posGo').innerText()).trim() === 'Update bill',
+  check('the button says nothing has changed yet (No changes)',
+        (await page.locator('#posGo').innerText()).trim() === 'No changes',
         await page.locator('#posGo').innerText());
   check('the token panel says it is an edit',
         /editing/i.test(await page.locator('#posToken').innerText()),
@@ -272,7 +272,7 @@ function check(name, cond, extra) {
   check('the kitchen ticket carries ONLY what was added',
         upd.job && upd.job.kind === 'kot' && upd.job.qty === 1, JSON.stringify(upd.job));
   check('the till returns to a new bill after updating',
-        (await page.locator('#posGo').innerText()).trim() === 'Place' &&
+        (await page.locator('#posGo').innerText()).trim() === 'Send KOT' &&
         await page.locator('.posline').count() === 0);
 
   // ================= the KOT chips =================

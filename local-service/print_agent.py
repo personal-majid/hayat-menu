@@ -71,13 +71,30 @@ def load_settings(db):
     return SETTINGS
 
 
+def kitchens() -> list:
+    """Kitchens set up in Printing: [{key, name, printer, copies, cancel}]."""
+    ks = SETTINGS.get("kitchens") or []
+    return [k for k in ks if isinstance(k, dict) and k.get("key")]
+
+
 def printers(cfg=None) -> dict:
     out = {}
     for k in ("main", "front", "bill"):
         v = str(SETTINGS.get(k) or "").strip()
         if v:
             out[k] = v
+    for k in kitchens():
+        v = str(k.get("printer") or "").strip()
+        if v:
+            out[k["key"]] = v
     return out
+
+
+def copies_for(key: str) -> int:
+    for k in kitchens():
+        if k.get("key") == key:
+            return int(k.get("copies") or 1)
+    return int(SETTINGS.get("copies_" + key) or 1)
 
 
 def paper_px(cfg=None) -> int:
@@ -225,10 +242,22 @@ def when(ts) -> str:
 def draw_kot(job: dict, ticket: dict, idx: int, total: int, width: int):
     o = job.get("order", {})
     s = Sheet(width)
-    s.text("KOT  ·  " + str(ticket.get("station", "")).upper(), 40, True, "center", gap=10, invert=True)
-    s.text(str(o.get("id", "")), 46, True, "center", gap=4)
-    s.row("PHONE" if o.get("kind") == "ticket" else "DELIVERY", when(job.get("at")), 22)
-    s.row(str(o.get("name") or ""), ("Rider: " + o["rider"]) if o.get("rider") else "", 22)
+    name = str(ticket.get("name") or ticket.get("station", "")).upper()
+    head = ("CANCEL" if ticket.get("cancel") else "REPRINT" if ticket.get("reprint")
+            else "KOT" + (f" #{ticket['round']}" if ticket.get("round") else ""))
+    s.text(head + "  ·  " + name, 40, True, "center", gap=10, invert=True)
+    if o.get("source") == "counter":
+        who = ("TABLE " + str(o.get("table"))) if o.get("table") else ("DELIVERY" if o.get("mode") == "delivery" else "TOKEN " + str(o.get("token", "")))
+        mode = {"dinein": "DINE-IN", "delivery": "DELIVERY"}.get(o.get("mode"), "TAKEAWAY")
+        s.text(who, 46, True, "center", gap=4)
+        s.row(mode + ((" · #" + str(o["token"])) if o.get("token") and o.get("table") else ""), when(job.get("at")), 22)
+        s.row("by " + str(o.get("by") or ""), "", 22)
+    else:
+        s.text(str(o.get("id", "")), 46, True, "center", gap=4)
+        s.row("PHONE" if o.get("kind") == "ticket" else "DELIVERY", when(job.get("at")), 22)
+        s.row(str(o.get("name") or ""), ("Rider: " + o["rider"]) if o.get("rider") else "", 22)
+    if ticket.get("cancel") and ticket.get("reason"):
+        s.box("REMOVE · " + str(ticket["reason"]), 26)
     if o.get("wantAt"):
         s.row("FOR", when(o["wantAt"]), 26, True)
     s.rule()
@@ -236,7 +265,7 @@ def draw_kot(job: dict, ticket: dict, idx: int, total: int, width: int):
     for l in ticket.get("lines", []):
         q = int(l.get("q", 1) or 1)
         n += q
-        s.text(f"{q} ×  {l.get('name', '')}", 34, True, gap=0)
+        s.text(f"{'-' if ticket.get('cancel') else ''}{q} ×  {l.get('name', '')}", 34, True, gap=0)
         if l.get("label"):
             s.text(str(l["label"]), 22, False, x=54, gap=2)
         s.space(8)
@@ -388,7 +417,7 @@ def print_job(job: dict, cfg, prn: dict) -> dict:
             res[key] = "no printer set for " + key
             continue
         try:
-            copies = int(SETTINGS.get("copies_" + key) or 1)
+            copies = copies_for(key)
             payload = escpos_raster(img)
             for _ in range(max(1, copies)):
                 send(target, payload)
