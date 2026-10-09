@@ -172,6 +172,16 @@ and "last synced" (doc.updatedAt).
 - rs() prints negatives as "−₹12,951". Cash tile: "Cash paid out"; expected
   in drawer shows "—" until an opening balance is set on the Cash tab.
 
+## Service sim video for WhatsApp (v216)
+WhatsApp needs H.264 MP4 with the index (moov) at the front. Chrome's
+MediaRecorder gave WebM / VP9 / fragmented MP4 at 1080p 8 Mbps, so it failed.
+recStart() now builds 1280x720 20 fps ~1.2 Mbps frame by frame with WebCodecs
+VideoEncoder (avc1.42001f / 4d401f / 640028) + assets/mp4-muxer.esm.js
+(fastStart in-memory), same as the owner replay. Then "↗ Share to WhatsApp"
+(navigator.share files) + Download. Old browsers fall back to real-time
+MediaRecorder and say when the file is not H.264. Playwright's Chromium has no
+H.264 encoder: t-simrec.mjs with VP9=1 swaps RV.mux='vp9' to test the path.
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules

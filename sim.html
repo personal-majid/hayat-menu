@@ -1302,34 +1302,69 @@ function recFrame(ctx,img,t,W,H){
     ctx.textAlign='left'; ctx.font=(k==='ready'?'600 ':'400 ')+'17px Jost,Arial,sans-serif'; ctx.fillStyle=k==='ready'?STC.ready:mu; ctx.fillText(STN[k],x+30,y); x+=ctx.measureText(STN[k]).width+52; });
   ctx.fillStyle=mu; ctx.font='400 17px Jost,Arial,sans-serif'; ctx.fillText('number = minutes since they sat down',x,y);
 }
+/* WhatsApp only takes H.264 MP4. Chrome's own recorder gives WebM (or VP9 inside .mp4), so build the
+   video frame by frame with WebCodecs + mp4-muxer (Chrome, Edge, Safari/iPhone 16.4+). 1280x720, ~1.2 Mbps. */
+const REC_AVC=['avc1.42001f','avc1.4d401f','avc1.640028'], RV={W:1280,H:720,fps:20,mux:'avc'};   /* mux: tests swap in vp9 (test browser has no H.264 encoder) */
+async function recWC(){ if(!window.VideoEncoder||!window.VideoFrame) return null;
+  for(const codec of REC_AVC){ const cfg={codec,width:RV.W,height:RV.H,bitrate:1200000,framerate:RV.fps,avc:{format:'avc'}};
+    try{ const r=await VideoEncoder.isConfigSupported(cfg); if(r&&r.supported) return cfg; }catch(e){} } return null; }
+const recH264=t=>!!t&&(/avc1|h264/.test(t)||(t==='video/mp4'&&(/iP(hone|ad|od)/.test(navigator.userAgent)||/^((?!chrome|chromium|android|edg).)*safari/i.test(navigator.userAgent))));
+function recDone(blob,ext){ const out=$('rRecOut'), url=URL.createObjectURL(blob); if(REC.url) URL.revokeObjectURL(REC.url); REC.url=url;
+  const name='Hayat_Rush_'+dname(+S.rday).replace(/ /g,'_')+'_'+REC.win+'_'+rPlanName().replace(/[^A-Za-z0-9]+/g,'_')+'.'+ext;
+  const file=new File([blob],name,{type:blob.type}); let canShare=false; try{ canShare=!!(navigator.canShare&&navigator.canShare({files:[file]})); }catch(e){}
+  const wa=ext==='mp4'&&REC.h264;
+  out.innerHTML='<video controls playsinline muted src="'+url+'"></video><div class="recbar">'+(canShare?'<button class="dl" id="rRecShare" type="button">↗ Share to WhatsApp</button>':'')+'<a class="dl" href="'+url+'" download="'+name+'">⬇ Download video</a><span class="note">'+name+' · '+fm(blob.size/1048576,1)+' MB · '+(wa?'MP4 (H.264) · plays in WhatsApp':'not H.264 · WhatsApp may refuse it; use Chrome / Edge on PC or a newer phone')+'</span></div>';
+  const sh=$('rRecShare'); if(sh) sh.onclick=()=>navigator.share({files:[file],title:'Hayat service replay'}).catch(()=>{});
+  if(!canShare){ const l=out.querySelector('a.dl'); try{ l.click(); }catch(e){} }
+  rFull(false); setTimeout(()=>{ try{ out.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} },120); }
+function recUI(on,f){ $('rRec').textContent=on?'■ Stop · '+Math.round(100*(f||0))+'%':'● Record'; $('rRec').classList.toggle('on',!!on); const bar=$('rRecBar'); if(bar) bar.style.width=(100*(f||0))+'%'; }
 async function recStart(){
-  const type=recType(), out=$('rRecOut');
-  out.hidden=false;
-  if(!type||!HTMLCanvasElement.prototype.captureStream){ out.innerHTML='<div class="note">This browser cannot record video. Use Chrome or Edge on a computer, or Safari 14.1+.</div>'; return; }
+  const out=$('rRecOut'); out.hidden=false;
+  const cfg=await recWC(), rt=window.MediaRecorder&&HTMLCanvasElement.prototype.captureStream?['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } }):null;
+  if(!cfg&&!rt){ out.innerHTML='<div class="note">This browser cannot record video. Use Chrome or Edge on a computer, or Safari 16.4+.</div>'; return; }
   let img; try{ img=await recBg(); }catch(e){ out.innerHTML='<div class="note">Could not draw the floor plan: '+e.message+'</div>'; return; }
   rStop();
   const w=rWin(), win=w.k, a=w.a, b=w.b, lv=$('rRecLen').value, secs=Math.max(5,lv==='play'?(b-a)/(+$('rSpd').value):+lv);
   const W=1920,H=1080, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d');
-  out.innerHTML='<div class="recprog"><div id="rRecBar"></div></div><div class="note" id="rRecMsg">Recording '+hm(a)+'–'+hm(b)+' into a '+dur(secs)+' video. Keep this tab open.</div>'; out.appendChild(cv);
-  const stream=cv.captureStream(30), chunks=[]; let mr;
-  try{ mr=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:8e6}); }catch(e){ mr=new MediaRecorder(stream); }
+  const sm=document.createElement('canvas'); sm.width=RV.W; sm.height=RV.H; const sx=sm.getContext('2d'); sx.imageSmoothingQuality='high';
+  out.innerHTML='<div class="recprog"><div id="rRecBar"></div></div><div class="note" id="rRecMsg">Making a '+dur(secs)+' WhatsApp video of '+hm(a)+'–'+hm(b)+'…</div>'; out.appendChild(sm);
+  Object.assign(REC,{on:true,cancel:false,mr:null,a,b,win,h264:!!cfg||recH264(rt)}); recUI(true,0);
+  if(cfg){ /* frame by frame: no waiting in real time */
+    try{
+      const {Muxer,ArrayBufferTarget}=await import('./assets/mp4-muxer.esm.js');
+      const mux=new Muxer({target:new ArrayBufferTarget(),video:{codec:RV.mux,width:RV.W,height:RV.H,frameRate:RV.fps},fastStart:'in-memory'});
+      let err=null; const enc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>{ err=e; }}); enc.configure(cfg);
+      const n=Math.round(secs*RV.fps), hold=Math.round(2*RV.fps), total=n+hold;
+      for(let i=0;i<total;i++){ if(REC.cancel||err) break;
+        const f=Math.min(1,i/n), t=a+f*(b-a); recFrame(ctx,img,t,W,H); sx.drawImage(cv,0,0,RV.W,RV.H);
+        const fr=new VideoFrame(sm,{timestamp:Math.round(i*1e6/RV.fps),duration:Math.round(1e6/RV.fps)}); enc.encode(fr,{keyFrame:i%(RV.fps*2)===0}); fr.close();
+        recUI(true,(i+1)/total); if(enc.encodeQueueSize>6||i%4===3) await new Promise(r=>setTimeout(r,0)); }
+      if(err) throw err;
+      await enc.flush(); enc.close(); mux.finalize();
+      const stopped=REC.cancel; REC.on=false; recUI(false); RS.t=b; rDraw(true);
+      if(stopped&&!mux.target.buffer){ out.innerHTML='<div class="note">Stopped.</div>'; return; }
+      recDone(new Blob([mux.target.buffer],{type:'video/mp4'}),'mp4');
+    }catch(e){ REC.on=false; recUI(false); rDraw(true); out.innerHTML='<div class="note">Could not make the video: '+String(e&&e.message||e).replace(/[<>&]/g,'')+'</div>'; }
+    return;
+  }
+  /* older browsers: record in real time */
+  const stream=sm.captureStream(30), chunks=[]; let mr;
+  try{ mr=new MediaRecorder(stream,{mimeType:rt,videoBitsPerSecond:1.5e6}); }catch(e){ mr=new MediaRecorder(stream); }
   mr.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
-  Object.assign(REC,{on:true,mr,chunks,a,b,type,win});
-  $('rRec').textContent='■ Stop'; $('rRec').classList.add('on');
-  mr.onstop=()=>{ rFull(false); setTimeout(()=>{ try{ $('rRecOut').scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} },120); const real=(mr.mimeType||type||'video/webm'), ext=/mp4/.test(real)?'mp4':'webm', blob=new Blob(chunks,{type:real.split(';')[0]}), url=URL.createObjectURL(blob);
-    const name='Hayat_Rush_'+dname(+S.rday).replace(/ /g,'_')+'_'+win+'_'+rPlanName().replace(/[^A-Za-z0-9]+/g,'_')+'.'+ext;
-    out.innerHTML='<video controls playsinline src="'+url+'"></video><div class="recbar"><a class="dl" href="'+url+'" download="'+name+'">⬇ Download video</a><span class="note">'+name+' · '+fm(blob.size/1048576,1)+' MB'+(ext==='webm'?' · WebM plays in Chrome, VLC and WhatsApp desktop':'')+'</span></div>';
-    const l=out.querySelector('a.dl'); try{ l.click(); }catch(e){} };
+  REC.mr=mr;
+  mr.onstop=()=>{ const real=(mr.mimeType||rt||'video/webm'), ext=/mp4/.test(real)?'mp4':'webm'; stream.getTracks().forEach(t=>t.stop()); recDone(new Blob(chunks,{type:real.split(';')[0]}),ext); };
   mr.start(1000);
   const t0=performance.now();
   const loop=now=>{ if(!REC.on) return; const f=Math.min(1,(now-t0)/1000/secs), t=a+f*(b-a);
-    recFrame(ctx,img,t,W,H); const bar=$('rRecBar'); if(bar) bar.style.width=(f*100)+'%'; $('rRec').textContent='■ Stop · '+Math.round(f*100)+'%';
+    recFrame(ctx,img,t,W,H); sx.drawImage(cv,0,0,RV.W,RV.H); recUI(true,f);
     RS.t=t; rDraw(false);
     if(f>=1){ recStop(false); return; } REC.raf=requestAnimationFrame(loop); };
-  recFrame(ctx,img,a,W,H); REC.raf=requestAnimationFrame(loop);
+  recFrame(ctx,img,a,W,H); sx.drawImage(cv,0,0,RV.W,RV.H); REC.raf=requestAnimationFrame(loop);
 }
-function recStop(cancel){ if(!REC.on) return; REC.on=false; cancelAnimationFrame(REC.raf); $('rRec').textContent='● Record'; $('rRec').classList.remove('on');
-  try{ REC.mr.stop(); }catch(e){} if(cancel) { const m=$('rRecMsg'); if(m) m.textContent='Stopped early. Saving what was recorded…'; } rDraw(true); }
+function recStop(cancel){ if(!REC.on) return;
+  if(!REC.mr||REC.mr.state==='inactive'){ REC.cancel=true; const m=$('rRecMsg'); if(m) m.textContent='Stopping… saving what is made so far'; return; }
+  REC.on=false; cancelAnimationFrame(REC.raf); recUI(false);
+  try{ REC.mr.stop(); }catch(e){} REC.mr=null; if(cancel) { const m=$('rRecMsg'); if(m) m.textContent='Stopped early. Saving what was recorded…'; } rDraw(true); }
 function rKey(){ const staff=$('rStaff').checked, col={waiter:css('--accent'),captain:css('--order'),runner:css('--run'),busser:css('--bill')};
   $('rLegend').innerHTML=['ready','order','cook','onway','eat','clear'].map(k=>'<span class="kc'+(k==='ready'?' hot':'')+'" style="--c:'+STC[k]+'"><i>'+STI[k]+'</i><span class="kl">'+STN[k]+'</span></span>').join('')
     +'<span class="knote">· number = minutes since they sat down · no mark = empty table</span>'
