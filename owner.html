@@ -315,6 +315,15 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
 .cashbtn{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px} .cash3{margin:12px 0 2px;font-size:14px}
 .cok{color:#2E7D4F;font-weight:700} .cbad{color:#fff;background:#B3462B;border-radius:6px;padding:2px 7px;font-weight:700;white-space:nowrap} .cover{color:#fff;background:#2E7D4F;border-radius:6px;padding:2px 7px;font-weight:700;white-space:nowrap}
 .cashtab tr.rbad td:first-child{box-shadow:inset 4px 0 0 #B3462B} .cashtab tr.rover td:first-child{box-shadow:inset 4px 0 0 #2E7D4F} .cashtab tr.rok td:first-child{box-shadow:inset 4px 0 0 rgba(46,125,79,.4)} .cashtab tr.rbad{background:rgba(179,70,43,.07)}
+.rline{height:300px} .rline path{vector-effect:non-scaling-stroke} .rline .rlnow{fill:none;stroke:var(--pri);stroke-width:2.6;stroke-linejoin:round} .rline .rldot{fill:var(--pri)}
+.rline .rlfc{fill:none;stroke:#C0882C;stroke-width:2.4;stroke-dasharray:7 5} .rline .rlband{fill:rgba(192,136,44,.18);stroke:none}
+.rline .rly{fill:none;stroke:#8b8178;stroke-width:1.6;opacity:.7} .rline .rlwa{fill:none;stroke:#1F4D4A;stroke-width:1.6;stroke-dasharray:2 4;opacity:.8}
+.rlkey{flex-wrap:wrap} .rlkey i{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.rlkey .k-now{background:var(--pri)} .rlkey .k-fc{background:repeating-linear-gradient(90deg,#C0882C 0 6px,transparent 6px 9px)} .rlkey .k-band{height:10px;background:rgba(192,136,44,.25)} .rlkey .k-y{background:#8b8178} .rlkey .k-wa{background:repeating-linear-gradient(90deg,#1F4D4A 0 2px,transparent 2px 5px)}
+@media (max-width:640px){ .rline{height:240px} }
+.scn{display:flex;gap:3px;background:var(--soft);border-radius:999px;padding:3px;margin-top:8px;width:max-content;max-width:100%}
+.scn button{border:0;background:transparent;font:inherit;font-size:12px;font-weight:800;color:var(--muted);border-radius:999px;padding:5px 9px;cursor:pointer}
+.scn button.on{background:var(--pri);color:var(--onpri)} .scnbar{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;margin:-4px 0 14px} .scnbar>small{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)} .scnbar .scn{margin:0} .scnwhy{font-size:12px;color:var(--muted);flex:1 1 160px} .kpi.fcoff b{color:var(--muted)}
 .pttop{display:grid;gap:8px} .ptq{font-weight:800;font-size:15px}
 .ptans .ptbig{display:flex;flex-wrap:wrap;gap:10px 24px;margin:6px 0 4px} .ptans .ptbig span{display:grid;gap:2px} .ptans .ptbig small{color:var(--muted);font-size:12px} .ptans .ptbig b{font-size:24px;font-weight:800}
 .ptans .ptsay{margin:6px 0 0;font-size:15px;line-height:1.5}
@@ -418,7 +427,7 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
 (function(){
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const rs=n=>'₹'+Math.round(+n||0).toLocaleString('en-IN');
+const rs=n=>{ const v=Math.round(+n||0); return (v<0?'−':'')+'₹'+Math.abs(v).toLocaleString('en-IN'); };
 const hm=t=>t?t.slice(11,16):'';
 const T=s=>s?new Date(s.replace(' ','T')):null;
 const mins=(a,b)=>a&&b?Math.round((T(b)-T(a))/60000):null;
@@ -429,7 +438,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v214';
+const BOARD='v215';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -469,14 +478,15 @@ function kpis(){
   /* ordered, not yet paid: on tables, at the counter, out with riders */
   const un=k=>open.filter(r=>r.kind===k).reduce((n,r)=>n+sum(r),0), unreal=open.filter(r=>r.kind!=='staff').reduce((n,r)=>n+sum(r),0);
   return `<div class="kpis">
-    <div class="kpi"><small>Sales today</small><b>${rs(rev)}</b><em class="${d==null?'':d>=0?'up':'dn'}">${d==null?settled.length+' bills':(d>=0?'▲':'▼')+' '+rs(Math.abs(d))+' vs yesterday'}</em></div>${fcCard(fcToday())}${tmCard()}
+    <div class="kpi"><small>Sales today</small><b>${rs(rev)}</b><em class="${d==null?'':d>=0?'up':'dn'}">${d==null?settled.length+' bills':(d>=0?'▲':'▼')+' '+rs(Math.abs(d))+' vs yesterday'}</em></div>
     <div class="kpi click" data-tab="bills"><small>Unrealized · expected ${rs(rev+unreal)}</small><b>${rs(unreal)}</b><em class="rows"><span>Delivery <b>${rs(un('delivery'))}</b></span><span>CO <b>${rs(un('counter'))}</b></span><span>Dining <b>${rs(un('dine'))}</b></span></em></div>
+    ${DAY!==bizToday()?'':FC?fcCard(fcToday())+tmCard():`<div class="kpi click fcoff" id="fcOnTile" title="show the forecast"><small>Forecast</small><b>◔ Show</b><em>today, tomorrow · pessimistic / neutral / optimistic</em></div>`}
     <div class="kpi"><small>Bills</small><b>${settled.length}</b><em>avg ${rs(settled.length?rev/settled.length:0)} · ${open.filter(r=>r.status==='due').length} bill printed, unpaid</em></div>
     <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
     <div class="kpi click" data-tab="buy" title="open purchases & payments"><small>Paid out</small><b>${rs(DOC.paidOut||0)}</b><em>${DOC.paymentCount||0} entries${DOC.draftTotal?' · <b>'+rs(DOC.draftTotal)+' being entered</b>':''}${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
-  </div>`;
+  </div>${DAY===bizToday()&&FC?scnBar():''}`;
 }
 function avg(xs){ return xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null; }
 
@@ -1180,6 +1190,38 @@ async function spDaySheet(d){ const old=$('drill'); if(old) old.remove(); const 
 function spRmWire(root){ $$('[data-sprm]',root).forEach(b=>b.onclick=async e=>{ e.stopPropagation(); const [d,c,k]=b.dataset.sprm.split('|'); await removeEntry(d,c,k); delete SPD.docs[d]; SPD.key=''; }); }
 function spWire(){ expWire(); $$('[data-spd]').forEach(b=>b.onclick=()=>spDaySheet(b.dataset.spd)); spRmWire(document); if(MODE==='period'&&PTAB==='money'&&SPD.key!==PER.from+'|'+PER.to&&!SPD.busy) setTimeout(spScan,0); }
 
+/* RUNNING TOTAL - the day as one line, like a share price: today's sales bill by bill, the forecast for the rest
+   of the day with its likely range shaded, yesterday and a normal same weekday faint behind. Pre-bookings left out. */
+function runLine(){
+  if(MODE!=='day'||!DOC||String(DOC.day||'').includes('→')) return '';
+  const st=dayStartMs(DAY), mn=ts=>ts?(T(ts).getTime()-st)/60000:null, live=DAY===bizToday();
+  const B=recs().filter(r=>r.status==='settled'&&normal(r)).map(r=>[mn(r.settledAt),r.total||0]).filter(p=>p[0]!=null&&p[0]>=0&&p[0]<=1440).sort((a,b)=>a[0]-b[0]);
+  const nowMin=live?Math.max(0,Math.min(1440,(Date.now()-st)/60000)):1440;
+  const cum=H=>{ const o=[[0,0]]; let t=0; for(let h=0;h<24;h++){ t+=H[h]||0; o.push([(h+1)*60,t]); } return o; };
+  const Y0=YDOC?cum(hbucket(Object.values(YDOC.records||{}).filter(r=>r.status==='settled'&&normal(r,YDOC.day)))):null, wa=weekdayAvg(DAY), WA=wa?cum(wa.H):null;
+  const F=live?fcToday(true):null; let fc=null;
+  if(F){ const b=fcBand(F.nowH), act=B.reduce((n,p)=>n+p[1],0), rs0=F.rest.reduce((a,c)=>a+c,0), gap=Math.max(0,F.act-act)+(preToday().add||0), mk=m=>{ const o=[[nowMin,act]]; let t=act+gap; for(let h=F.nowH;h<24;h++){ t+=(F.rest[h]||0)*m; o.push([(h+1)*60,t]); } return o; };   /* gap: open bills + pre-bookings, so the line ends where the Forecast tile says */
+    const mP=rs0>0?Math.max(0,(F.total*(1-b)-F.act)/rs0):1, mO=rs0>0?(F.total*(1+b)-F.act)/rs0:1, m0=FC_SCN==='pess'?mP:FC_SCN==='opt'?mO:1;
+    fc={mid:mk(m0),lo:mk(mP),hi:mk(mO)}; }
+  /* span: from the first sale (or 11:00) to the last hour with sales or forecast */
+  const used=[...B.map(p=>p[0]),...(Y0?[]:[]),...(fc?fc.mid.filter((p,i,a)=>i===0||p[1]>a[i-1][1]+1).map(p=>p[0]):[])];
+  const x0=Math.min(6*60,...(B.length?[Math.floor(B[0][0]/60)*60]:[])), x1=Math.max(...used.concat([20*60]).map(v=>Math.ceil(v/60)*60),Math.min(1440,21*60));
+  const tops=[B.reduce((n,p)=>n+p[1],0),...(fc?[fc.hi[fc.hi.length-1][1]]:[]),...(Y0?[Y0[Y0.length-1][1]]:[]),...(WA?[WA[WA.length-1][1]]:[])];
+  const Ys=yscale(Math.max(1,...tops)); const nar=window.innerWidth<640, W=nar?420:1000, Hh=nar?240:300, pl=nar?46:58, pr=12, pt=12, pb=26, iw=W-pl-pr, ih=Hh-pt-pb;
+  const X=m=>pl+iw*(Math.max(x0,Math.min(x1,m))-x0)/(x1-x0), Yp=v=>pt+ih*(1-Math.min(v,Ys.top)/Ys.top);
+  const path=pts=>pts.filter(p=>p[0]>=x0-60&&p[0]<=x1+60).map((p,i)=>`${i?'L':'M'}${X(p[0]).toFixed(1)},${Yp(p[1]).toFixed(1)}`).join(' ');
+  let g=''; for(let v=Ys.step; v<=Ys.top*1.001; v+=Ys.step) g+=`<line x1="${pl}" x2="${W-pr}" y1="${Yp(v)}" y2="${Yp(v)}" class="gl"/><text x="${pl-8}" y="${Yp(v)+4}" text-anchor="end" class="gt">${kfmt(v)}</text>`;
+  for(let m=Math.ceil(x0/60)*60; m<=x1; m+=nar?180:120) g+=`<text x="${X(m)}" y="${Hh-6}" text-anchor="middle" class="gt">${hlabel(m/60)}</text>`;
+  /* today: a step for every bill */
+  let d=`M${X(x0)},${Yp(0)}`, t=0; B.forEach(p=>{ d+=` L${X(p[0]).toFixed(1)},${Yp(t).toFixed(1)}`; t+=p[1]; d+=` L${X(p[0]).toFixed(1)},${Yp(t).toFixed(1)}`; }); const endX=live?nowMin:Math.max(B.length?B[B.length-1][0]:x0,x0); d+=` L${X(endX)},${Yp(t)}`;
+  const band=fc?`<path d="${path(fc.hi)} ${path(fc.lo.slice().reverse()).replace(/^M/,'L')} Z" class="rlband"/>`:'';
+  const svg=`<svg class="race rline" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${g}${band}${WA?`<path d="${path(WA)}" class="rlwa"/>`:''}${Y0?`<path d="${path(Y0)}" class="rly"/>`:''}${fc?`<path d="${path(fc.mid)}" class="rlfc"/>`:''}<path d="${d}" class="rlnow"/><circle cx="${X(endX)}" cy="${Yp(t)}" r="5" class="rldot"/></svg>`;
+  const yAt=(c,m)=>{ if(!c) return null; for(let i=1;i<c.length;i++) if(c[i][0]>=m){ const a=c[i-1], b2=c[i], f=(m-a[0])/(b2[0]-a[0]||1); return a[1]+(b2[1]-a[1])*f; } return c[c.length-1][1]; };
+  const yNow=yAt(Y0,endX), wNow=yAt(WA,endX), pc=v=>v?`<b class="${t>=v?'up':'dn'}">${t>=v?'+':''}${Math.round(100*(t/v-1))}%</b>`:'';
+  return `<div class="card wide rlcard"><h2>Running total <span class="n">${live?'so far':'the whole day'} · like a share price</span></h2>${svg}
+    <div class="ptkey rlkey"><span><i class="k-now"></i>today ${rs(t)}</span>${fc?`<span><i class="k-fc"></i>forecast ${rs(fc.mid[fc.mid.length-1][1])}${FC_SCN!=='neut'?' ('+FC_SCN_N[FC_SCN].toLowerCase()+')':''}</span><span><i class="k-band"></i>likely ${kfmt(fc.lo[fc.lo.length-1][1])}–${kfmt(fc.hi[fc.hi.length-1][1])}</span>`:''}${Y0?`<span><i class="k-y"></i>yesterday by now ${rs(yNow)} ${pc(yNow)}</span>`:''}${WA?`<span><i class="k-wa"></i>normal ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(DAY+'T12:00:00').getDay()]} by now ${rs(wNow)} ${pc(wNow)}</span>`:''}</div>
+    </div>`;
+}
 function hourly(){
   const SR=recs().filter(r=>r.status==='settled'); let H=hbucket(SR.filter(r=>normal(r))); let HL=hbucket(SR.filter(r=>isLarge(r)));
   /* a span of days: the chart shows an average day, not the pile of all of them */
@@ -1195,7 +1237,7 @@ function hourly(){
   /* the axis = the highest real hour of this day (large orders and the forecast never stretch it; they are capped with ▲) */
   const max=Math.max(1,top||Math.max(0,...(HF||[])));
   const nl=SR.filter(r=>isLarge(r)).length, lgNote=nl?`<div class="note" style="margin:4px 0 0">⚑ ${nl} large order${nl>1?'s':''} ${rs(SR.filter(r=>isLarge(r)).reduce((n,r)=>n+sum(r),0))} shown as grey caps · not in averages</div>`:'';
-  const ov=span?'':`<div class="ovs">${[['y','yesterday',!!YDOC],['avg','avg '+dow+(wa?' ('+wa.n+')':''),!!wa],['fc','forecast',DAY===bizToday()&&FC]].filter(o=>o[2]).map(o=>`<label><input type="checkbox" data-ov="${o[0]}"${OV[o[0]]?' checked':''}> ${o[1]}</label>`).join('')}${U?`<span class="unkey"><i></i>open now ${rs(U.v)}</span>`:''}</div>`;
+  const ov=span?'':`<div class="ovs">${[['y','yesterday',!!YDOC],['avg','avg '+dow+(wa?' ('+wa.n+')':''),!!wa],['fc','forecast',DAY===bizToday()]].filter(o=>o[2]).map(o=>`<label><input type="checkbox" data-ov="${o[0]}"${OV[o[0]]?' checked':''}> ${o[1]}</label>`).join('')}${U?`<span class="unkey"><i></i>open now ${rs(U.v)}</span>`:''}</div>`;
   return `<div class="card hourcard"><h2>Sales by hour <span class="n">${span?'avg per day · '+nd+' days':'tap an hour · <a href="#" data-rpgo>▶ replay the day</a>'}</span></h2>${hbars(H,lo,hi,max,showY?HY:null,'y ',null,span?180:210,showA?wa.H:null,F,U,HL)}${hx(lo,hi)}${ov}${lgNote}${span?'':lgStrip()}${span?'':hourCompare(H)}</div>`;
 }
 
@@ -2212,8 +2254,15 @@ function fcBacktest(){
   out.best=FC_BEST; out.at4pm=n4?100*e4/n4:null; out.nextHour=nh?100*eh/nh:null; out.days=days.length;
   FC_BT=out; return out;
 }
+const FC_BAND={6:.25,7:.25,8:.247,9:.19,10:.177,11:.164,12:.161,13:.149,14:.138,15:.136,16:.129,17:.121,18:.099};
+const fcBand=h=>h<6?.25:h>18?.09:FC_BAND[h];
+let FC_SCN='neut'; try{ FC_SCN=localStorage.getItem('hayat-fc-scn')||'neut'; }catch(e){}
+const FC_SCN_N={pess:'Pessimistic',neut:'Neutral',opt:'Optimistic'};
+function fcAdj(F){ if(!F||FC_SCN==='neut') return F; const b=fcBand(F.nowH), target=F.total*(FC_SCN==='pess'?1-b:1+b), restSum=F.rest.reduce((a,c)=>a+c,0);
+  const m=restSum>0?Math.max(0,(target-F.act)/restSum):1, rest=F.rest.map(v=>v*m);
+  return Object.assign({},F,{rest,fcH:F.fcH.map((v,h)=>h<F.nowH?v:h===F.nowH?v-F.rest[h]+rest[h]:rest[h]),next:F.next*m,total:F.act+restSum*m,scn:FC_SCN}); }
 function fcNow(){ const d=new Date(NOW); const h=(d.getHours()-BH0+24)%24; return {nowH:h,frac:d.getMinutes()/60}; }
-function fcToday(){ if(!FC||DAY!==bizToday()||!DOC) return null; if(!FC_BT) fcBacktest(); const {nowH,frac}=fcNow(); const open=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff'&&normal(r)).reduce((n,r)=>n+sum(r),0); return fcLive(DAY,hbucket(recs().filter(r=>r.status==='settled'&&normal(r))),nowH,frac,open); }
+function fcToday(neutral){ if(DAY!==bizToday()||!DOC) return null; if(!FC_BT) fcBacktest(); const {nowH,frac}=fcNow(); const open=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff'&&normal(r)).reduce((n,r)=>n+sum(r),0); const F0=fcLive(DAY,hbucket(recs().filter(r=>r.status==='settled'&&normal(r))),nowH,frac,open);  return neutral?F0:fcAdj(F0); }
 /* the forecast exactly as the app would have shown it at minute v of day d (replay slider).
    Only bills settled before v count; bills over Rs 4,000 / marked large are pre-bookings and stay out. */
 function fcAt(d,v){ const doc=d===DAY?DOC:(RP.docs[d]||null); if(!doc||!doc.records) return null; if(!FC_BT) fcBacktest();
@@ -2258,12 +2307,14 @@ function preSheet(day){ day=day||bizToday(); const old=$('preSheet'); if(old) ol
     try{ await FB.fs.setDoc(ref,{day,e:n}); }catch(err){ alert('Could not save: '+(err.code||err)); } }); }
 /* tomorrow: the plan for the next day, its likely range (80% of days fall inside, from the Oct 2026 replay) and its busiest hours */
 function tmCard(){ if(!FC||DAY!==bizToday()) return ''; const t=tomorrow(); if(!FC_BT) fcBacktest(); const M=fcModel(t); if(!M) return '';
-  const P=M.prof.map(v=>v*M.f), pre=preFor(t).add, plan=M.plan+pre, band=0.25;
+  const P=M.prof.map(v=>v*M.f), pre=preFor(t).add, band=0.25, plan=M.plan*(FC_SCN==='pess'?1-band:FC_SCN==='opt'?1+band:1)+pre;
   const pk=(a,b)=>{ let m=a; for(let h=a;h<=b;h++) if(P[h]>P[m]) m=h; return hlabel(m)+':00'; }, top=['lunch '+pk(6,11),'dinner '+pk(12,20)];   /* 11:00-16:59 and 17:00-01:59 */
-  return `<div class="kpi click" id="tmTile" title="tap to add a pre-booking for tomorrow"><small>Tomorrow · ${esc(rpName(t))}${M.pay>1?' · salary day':''}${M.why?' · '+esc(M.why):''}</small><b>${rs(plan)}</b><em class="rows"><span>Likely <b>${kfmt(plan-M.plan*band)}–${kfmt(plan+M.plan*band)}</b></span><span>Busiest <b>${top.join(', ')}</b></span><span>Pre-bookings <b>${pre?rs(pre):'—'}</b></span></em><button class="preadd" id="tmPre" type="button">+ Pre-booking</button></div>`; }
+  return `<div class="kpi click" id="tmTile" title="tap to add a pre-booking for tomorrow"><small>Tomorrow${FC_SCN!=='neut'?' · '+FC_SCN_N[FC_SCN].toLowerCase():''} · ${esc(rpName(t))}${M.pay>1?' · salary day':''}${M.why?' · '+esc(M.why):''}</small><b>${rs(plan)}</b><em class="rows"><span>Likely <b>${kfmt(M.plan*(1-band)+pre)}–${kfmt(M.plan*(1+band)+pre)}</b></span><span>Busiest <b>${top.join(', ')}</b></span><span>Pre-bookings <b>${pre?rs(pre):'—'}</b></span></em><button class="preadd" id="tmPre" type="button">+ Pre-booking</button></div>`; }
 function fcCard(F){ if(!F) return ''; const PB=preToday(); const total=F.total+PB.add, pct=total?Math.round(100*(F.act+PB.billed)/total):0, dev=F.exp?Math.round(100*(F.act/F.exp-1)):null;
   const cut=cutTs(); let by=''; if(cut!=null&&cut>Date.now()&&TCUT!=null){ const h=Math.min(23,Math.floor(TCUT/60)), fr=(TCUT%60)/60; let v=0; for(let i=0;i<h;i++) v+=F.fcH[i]||0; v+=(F.fcH[h]||0)*fr; const hh=String(Math.floor((h+BH0)%24)).padStart(2,'0'), mm=String(TCUT%60).padStart(2,'0'); by=`<span>By ${hh}:${mm} <b>${rs(v)}</b></span>`; }
-  return `<div class="kpi click" id="fcTile" title="tap for how it is worked out"><small>Forecast today ${F.why?'· '+esc(F.why):''}</small><b>${rs(total)}</b><em class="rows">${by}<span>Next hour <b>${rs(F.next)}</b></span><span>Pre-bookings <b>${PB.add?rs(PB.add):'—'}</b></span><span>Done <b>${pct}%</b></span><span>vs plan <b class="${dev==null?'':dev>=0?'up':'dn'}">${dev==null?'—':(dev>=0?'+':'')+dev+'%'}</b></span></em><button class="preadd" id="preAdd" type="button">+ Pre-booking</button></div>`; }
+  return `<div class="kpi click" id="fcTile" title="tap for how it is worked out"><small>Forecast today${F.scn?' · '+FC_SCN_N[F.scn].toLowerCase():''} ${F.why?'· '+esc(F.why):''}</small><b>${rs(total)}</b><em class="rows">${by}<span>Next hour <b>${rs(F.next)}</b></span><span>Pre-bookings <b>${PB.add?rs(PB.add):'—'}</b></span><span>Done <b>${pct}%</b></span><span>vs plan <b class="${dev==null?'':dev>=0?'up':'dn'}">${dev==null?'—':(dev>=0?'+':'')+dev+'%'}</b></span></em>
+    </div>`; }
+function scnBar(){ return `<div class="scnbar"><small>Forecast outlook</small><div class="scn">${['pess','neut','opt'].map(k=>`<button type="button" class="${FC_SCN===k?'on':''}" data-scn="${k}">${FC_SCN_N[k]}</button>`).join('')}</div><span class="scnwhy">${FC_SCN==='pess'?'slow day — lower end of the likely range':FC_SCN==='opt'?'busy day — upper end of the likely range':'middle of the likely range'}</span><button class="preadd" id="preAdd" type="button">+ Pre-booking</button><button class="preadd" id="fcHide" type="button" title="hide the forecast">Hide forecast</button></div>`; }
 function fcSheet(){ const F=fcToday(); if(!F) return; const old=document.getElementById('drill'); if(old) old.remove();
   const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill'; const x=v=>'× '+v.toFixed(2); const QQ=r=>r==null?'—':(r>=1?'+':'')+Math.round(100*(r-1))+'%'; const nb=t=>{ for(let h=F.nowH+1;h<24;h++) if(F.busy[h]===t) return h; return Math.min(23,F.nowH+1); };
   box.innerHTML=`<div class="sheet"><h2>Forecast · ${esc(DAY)} <button class="x" id="drillX">✕</button></h2><p class="sub">Each link in the chain, so a wrong one is visible.</p>
@@ -2314,8 +2365,8 @@ function cashCard(day){
   const C=CASHV.chain, row=C.rows.filter(r=>!r.open).find(r=>r.d===day), t=(row&&row.t)||tenderOf(DOC), live=day===bizToday();
   const anchorTxt=C.anchor?`since the count on ${C.anchor} (${C.aPos==='open'?'start':'end'} of day)`:'<b>no count yet</b> — enter cash & bank once and every day after is carried forward';
   const k=(lbl,v,sub,cls)=>`<div class="kpi"><small>${lbl}</small><b class="${cls||''}">${rs(v)}</b><em>${sub||''}</em></div>`;
-  const kp=`<div class="kpis">${k('Cash sales',t.cash,t.bills+' bills'+(t.multi?' · '+t.multi+' split':''))}${k('Card / UPI',t.card,'to the bank')}${k('Credit',t.credit,'not yet received')}${k('Cash in · out',t.inCash-t.outCash,'in '+rs(t.inCash)+' · out '+rs(t.outCash))}
-    ${row?k('Expected in drawer',row.expCash,'opening '+rs(row.openCash)+' + cash in − paid out'):''}${row?k('Expected in bank',row.expBank,'opening '+rs(row.openBank)+' + card − bank payouts'):''}
+  const kp=`<div class="kpis">${k('Cash sales',t.cash,t.bills+' bills'+(t.multi?' · '+t.multi+' split':''))}${k('Card / UPI',t.card,'to the bank')}${k('Credit',t.credit,'not yet received')}${k('Cash paid out',t.outCash,t.inCash?'cash received '+rs(t.inCash):'purchases, salary, expenses in cash')}
+    ${row&&C.anchor?k('Expected in drawer',row.expCash,'opening '+rs(row.openCash)+' + cash in − paid out'):row?'<div class="kpi"><small>Expected in drawer</small><b>—</b><em>set an opening balance on the Cash tab first</em></div>':''}${row&&C.anchor?k('Expected in bank',row.expBank,'opening '+rs(row.openBank)+' + card − bank payouts'):''}
     ${row&&(row.countCash!=null||row.countBank!=null)?`<div class="kpi"><small>Counted</small><b>${row.countCash!=null?rs(row.countCash):'—'}</b><em>bank ${row.countBank!=null?rs(row.countBank):'—'}</em></div><div class="kpi"><small>Short / over</small>${row.countCash!=null?dc(row.diffCash):'<b>—</b>'}<em>cash · bank ${row.countBank!=null?dc(row.diffBank):'—'}</em></div>`:''}</div>`;
   const btn=`<button class="tab" id="cashEnter">${row&&row.countCash!=null?'Edit count':'Enter count'}</button>`;
   return `<div class="card wide"><h2>Cash & bank <span class="n">${anchorTxt} · ${btn}</span></h2>${kp}
@@ -2549,7 +2600,10 @@ function dock(){
   const on={today:MODE==='day'&&DAY===bizToday(),week:is(P[0][1],P[0][2]),month:is(P[2][1],P[2][2]),lmonth:is(P[3][1],P[3][2])}; on.range=MODE==='period'&&!on.week&&!on.month&&!on.lmonth; on.pick=MODE==='day'&&!on.today;
   $$('#dockRange .chip:not(.fc)').forEach(c=>c.classList.toggle('on',!!on[c.dataset.r]));
   const fchip=$('fcChip'); if(fchip) fchip.classList.toggle('on',FC);
-  const ft=$('fcTile'); if(ft) ft.onclick=fcSheet; const pa=$('preAdd'); if(pa) pa.onclick=e=>{ e.stopPropagation(); preSheet(); }; const tt=$('tmTile'); if(tt) tt.onclick=()=>preSheet(tomorrow()); fcRecord(fcToday());
+  const ft=$('fcTile'); if(ft) ft.onclick=fcSheet;
+  $$('[data-scn]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); FC_SCN=b.dataset.scn; try{ localStorage.setItem('hayat-fc-scn',FC_SCN); }catch(x){} render(); });
+  const fo=$('fcOnTile'); if(fo) fo.onclick=()=>{ FC=true; try{ localStorage.setItem('hayat-fc','on'); }catch(x){} render(); };
+  const fh=$('fcHide'); if(fh) fh.onclick=e=>{ e.stopPropagation(); FC=false; try{ localStorage.setItem('hayat-fc','off'); }catch(x){} render(); }; const pa=$('preAdd'); if(pa) pa.onclick=e=>{ e.stopPropagation(); preSheet(); }; const tt=$('tmTile'); if(tt) tt.onclick=()=>preSheet(tomorrow()); fcRecord(fcToday(true));
   const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   if(MODE==='period'){ $('dLabel').textContent=PER.label||'Period'; $('dSub').textContent=PER.from?PER.from.slice(5)+' → '+PER.to.slice(5)+(PER.doc&&PER.doc.partial?' · so far':''):''; }
   else { const x=new Date(DAY+'T12:00:00'); $('dLabel').textContent=wd[x.getDay()]+' '+x.getDate()+' '+x.toLocaleString('en',{month:'short'}); $('dSub').textContent=TCUT!=null?'as of '+tcutLabel()+' ⏪':(DAY===bizToday()?'live':(INDEX[DAY]&&INDEX[DAY].rev?rs(INDEX[DAY].rev):'')); }
@@ -2585,7 +2639,7 @@ function render(){
   document.body.classList.toggle('period',MODE==='period');
   if(MODE==='period'){ m.innerHTML=period()+`<div class="note">board ${BOARD}</div>`; }
   else m.innerHTML=kpis()+
-    (TAB==='sales'?`<div class="grid">${hourly()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
+    (TAB==='sales'?`<div class="grid">${hourly()}${runLine()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:

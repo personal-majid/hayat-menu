@@ -156,6 +156,22 @@ past days are cached in IndexedDB under 'dl:'+day (old empty vm_bills copies
 are ignored). Live tab: today's vm_daylog doc gives settled bills, open tables
 and "last synced" (doc.updatedAt).
 
+## Owner Today tiles + outlook + running total (v215)
+- KPI order: Sales today, Unrealized (2nd, Majid), then Forecast + Tomorrow.
+- Forecast/Tomorrow tiles are optional: "◔ Show" tile / "Hide forecast"
+  (localStorage 'hayat-fc'). Hiding only hides the boxes; charts (Sales by
+  hour overlay, Running total) always keep the forecast. fcToday() is no
+  longer gated by FC.
+- Outlook bar under the tiles (only when shown): Pessimistic / Neutral /
+  Optimistic (FC_SCN, 'hayat-fc-scn'). fcAdj() moves the rest of the day so
+  the total = total x (1 -/+ FC_BAND[hour]) and never below what is sold.
+  Tomorrow uses +/-25%. The saved forecast log (fcRecord) is always neutral.
+- runLine(): Sales tab "Running total", a step per settled bill, dashed
+  forecast to day end (starts with open bills + pre-bookings so it ends at
+  the tile's number), shaded likely range, yesterday + usual-weekday lines.
+- rs() prints negatives as "−₹12,951". Cash tile: "Cash paid out"; expected
+  in drawer shows "—" until an opening balance is set on the Cash tab.
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules
