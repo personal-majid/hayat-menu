@@ -1425,11 +1425,21 @@ function vmcOpen(){ if(VMC.db) return Promise.resolve(VMC.db);
     r.onupgradeneeded=()=>r.result.createObjectStore('days'); r.onsuccess=()=>{ VMC.db=r.result; ok(VMC.db); }; r.onerror=()=>no(r.error); }catch(e){ no(e); } }); }
 function vmcGet(ds){ return vmcOpen().then(db=>new Promise(ok=>{ const q=db.transaction('days').objectStore('days').get(ds); q.onsuccess=()=>ok(q.result||null); q.onerror=()=>ok(null); })).catch(()=>null); }
 function vmcSet(ds,docs){ return vmcOpen().then(db=>new Promise(ok=>{ const t=db.transaction('days','readwrite'); t.objectStore('days').put(docs,ds); t.oncomplete=()=>ok(true); t.onerror=()=>ok(false); })).catch(()=>false); }
-async function vmLoadDay(ds){ const key='hayat-vm-'+ds, today=ds>=bizToday(); let docs=null;
-  if(!today){ docs=await vmcGet(ds);
-    if(!docs){ try{ docs=JSON.parse(localStorage.getItem(key)||'null'); if(docs){ await vmcSet(ds,docs); localStorage.removeItem(key); } }catch(e){} } }
-  if(!docs){ const {db,fs}=LV.fb, snap=await fs.getDocs(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',ds))); docs=snap.docs.map(d=>slim(d.data()));
-    if(!today) await vmcSet(ds,docs); }
+/* Oct 2026: the old "Hayat VMENU Sync" (vm_bills / vm_days / vm_open) stopped; the "Hayat Day Log"
+   task writes vm_daylog/{day} every minute and vm_meta/days lists every day. Read those.
+   Majid: only dine-in - staff food, counter and delivery bills are left out. */
+const dlT=v=>v?String(v).replace(' ','T'):null, dlMin=(a,b)=>{ const x=tms(dlT(a)), y=tms(dlT(b)); return x!=null&&y!=null?Math.round((y-x)/6000)/10:null; };
+function dl2bill(r,day){ const o=r.createdAt||(r.kots&&r.kots[0]), o2s=dlMin(o,r.settledAt);
+  return {type:'Dine-in',orderAt:dlT(o),settledAt:dlT(r.settledAt),dueAt:dlT(r.dueAt),day,pax:r.pax||0,section:r.section||null,table:r.table||null,
+    items:(r.items||[]).map(i=>({n:i.n,q:i.q})),orderToSettle:o2s,dueToSettle:dlMin(r.dueAt,r.settledAt),total:r.total||0,kotCount:r.kotCount||((r.kots||[]).length)||1,
+    taker:r.waiter||null,outlier:o2s!=null&&o2s>240,status:r.status,kot:r.kot,token:r.token}; }
+const dlDine=r=>r&&r.kind==='dine';
+function dlBills(doc,day){ return Object.values((doc&&doc.records)||{}).filter(r=>dlDine(r)&&r.status==='settled').map(r=>dl2bill(r,day)); }
+function dlOpen(doc,day){ return Object.values((doc&&doc.records)||{}).filter(r=>dlDine(r)&&(r.status==='open'||r.status==='due')).map(r=>dl2bill(r,day)); }
+async function vmLoadDay(ds){ const key='hayat-dl-'+ds, today=ds>=bizToday(); let docs=null;
+  if(!today) docs=await vmcGet('dl:'+ds);   /* a new key: copies cached from the old, empty vm_bills are not used */
+  if(!docs){ const {db,fs}=LV.fb, snap=await fs.getDoc(fs.doc(db,'vm_daylog',ds)); docs=snap.exists()?dlBills(snap.data(),ds):[];
+    if(!today&&docs.length) await vmcSet('dl:'+ds,docs); }
   return vmSetDay(ds,docs); }
 
 async function lvConnect(){
@@ -1453,13 +1463,12 @@ async function lvConnect(){
   return LV.ready; }
 async function lvWatch(){ const {db,fs}=LV.fb, fail=e=>{ LV.state=(e&&e.code==='permission-denied')?'denied':'error'; LV.why=(e&&(e.code||e.message))||''; lvRender(); };
   /* one read first, so a wrong account fails fast and clearly */
-  const m=await fs.getDoc(fs.doc(db,'vm_meta','sync')).catch(e=>{ fail(e); throw e; });
-  LV.meta=m.exists()?m.data():null; LV.state='live';
-  fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ LV.meta=d.exists()?d.data():null; lvRender(); },fail);
-  fs.onSnapshot(fs.collection(db,'vm_open'),q=>{ LV.open=q.docs.map(d=>d.data()); lvRender(); },fail);
+  const m=await fs.getDoc(fs.doc(db,'vm_meta','days')).catch(e=>{ fail(e); throw e; });
+  const dd=(m.exists()&&m.data().days)||{}; LV.dayRev=dd; LV.days=Object.keys(dd).filter(k=>(dd[k].rev||0)>0||(dd[k].bills||0)>0).sort().reverse().slice(0,120); LV.state='live'; rDayOptions();
   const today=bizToday();
-  fs.onSnapshot(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',today)),q=>{ LV.today=q.docs.map(d=>slim(d.data())); LV.todayN=vmSetDay(today,LV.today); lvRender(); rDayOptions(); },fail);
-  fs.getDocs(fs.query(fs.collection(db,'vm_days'),fs.orderBy(fs.documentId(),'desc'),fs.limit(45))).then(q=>{ LV.days=q.docs.map(d=>d.id); rDayOptions(); }).catch(()=>{});
+  fs.onSnapshot(fs.doc(db,'vm_daylog',today),d=>{ const doc=d.exists()?d.data():null;
+    LV.meta=doc?{lastRunAt:dlT(doc.updatedAt),lastOkAt:dlT(doc.updatedAt)}:LV.meta;
+    LV.today=dlBills(doc,today); LV.open=dlOpen(doc,today); LV.todayN=vmSetDay(today,LV.today); lvRender(); rDayOptions(); },fail);
   clearInterval(LV.t); LV.t=setInterval(()=>{ if(S.tab==='live') lvRender(); },30000); }
 function lvOpen(){ lvRender(); lvConnect().then(()=>lvRender()); }
 
@@ -1522,7 +1531,7 @@ function rDayOptions(){ const d=$('rDay'); if(!d) return; const cur=d.value, pdf
   if(LV.todayN) real.add(bizToday());
   let h='';
   if(real.size) h+='<optgroup label="Real days · from the shop">'+[...real].sort().reverse().map(ds=>{ const n=VMKEY[ds], c=n?BILLS.filter(b=>b.d===n).length:null;
-    return '<option value="vm:'+ds+'">'+(n?dname(n):(()=>{ const [y,m,dd]=ds.split('-').map(Number); return WD[new Date(y,m-1,dd).getDay()]+' '+dd+' '+MON[m-1]; })())+(ds===bizToday()?' · today, live':'')+(c!=null?' · '+c+' bills':'')+'</option>'; }).join('')+'</optgroup>';
+    const rv=LV.dayRev&&LV.dayRev[ds]; return '<option value="vm:'+ds+'">'+(n?dname(n):(()=>{ const [y,m,dd]=ds.split('-').map(Number); return WD[new Date(y,m-1,dd).getDay()]+' '+dd+' '+MON[m-1]; })())+(ds===bizToday()?' · today, live':'')+(c!=null?' · '+c+' dine-in bills':rv&&rv.rev?' · day sales ₹'+Math.round(rv.rev).toLocaleString('en-IN'):'')+'</option>'; }).join('')+'</optgroup>';
   h+='<optgroup label="Sample · from the bill PDF">'+pdf.map(x=>'<option value="'+x+'">'+dname(x)+' · '+BILLS.filter(b=>b.d===x).length+' bills'+(x===24?' (part)':'')+'</option>').join('')+'</optgroup>';
   d.innerHTML=h; const want=S.rvm?'vm:'+S.rvm:String(S.rday); d.value=[...d.options].some(o=>o.value===want)?want:(cur&&[...d.options].some(o=>o.value===cur)?cur:String(S.rday)); }
 async function rPickDay(v){ const d=$('rDay');

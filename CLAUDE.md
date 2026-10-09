@@ -146,6 +146,16 @@ pax is never entered: group = bill / Rs 350 (1-6). rpTick does NOT rebuild the
 canvas each tick (no flicker); requestAnimationFrame interpolates the clock.
 Phones: canvas is >= 760px wide inside a sideways scroller. CCTV: declined for now.
 
+## Service sim (sim.html) - data source (v214)
+The old "Hayat VMENU Sync" task (vmenu_sync.py -> vm_bills / vm_days / vm_open)
+stopped, so the sim showed only today with 0 bills. The sim now reads what the
+"Hayat Day Log" task writes: vm_meta/days (every day, newest first, up to 120)
+and vm_daylog/{day}. Only dine-in bills (kind 'dine'); staff food, counter and
+delivery are left out (Majid). dl2bill() maps a day record to the old bill shape;
+past days are cached in IndexedDB under 'dl:'+day (old empty vm_bills copies
+are ignored). Live tab: today's vm_daylog doc gives settled bills, open tables
+and "last synced" (doc.updatedAt).
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules
