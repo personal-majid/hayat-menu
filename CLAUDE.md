@@ -238,6 +238,18 @@ The Overview card links "all spends ->".
 - Oct 2026 duplicate: BARATH TRADERS 32,780 on 3 Oct (purchase 67, 1 line,
   payment 57481) is a broken first save of 2 Oct (purchase 68, 11 lines).
 
+## One menu + spends day by day (v221)
+- Bottom menu is the same for a day and for a span: Live · Sales · Spends ·
+  Items · More. Day: floor / sales / buy (+ Cash & bank chip) / items; More =
+  Replay, Insights (Patterns, Similar, Forecast lab, Compare), Bills. Span:
+  Live jumps to today (data-golive), Sales = overview, Spends = money (+ Cash
+  & bank chip), Items; More = People, Voids.
+- Spends · day by day (expDaily) is the first card on Spends: every date,
+  newest first, opens to its lines in spTable (Item · Qty · Unit · Rate ·
+  Total · Group · bill/paid to); "open all". Day view Spends starts with
+  daySpendCard(DOC) built by spRows(doc) (bill lines + gap + payments no bill
+  covers). "Spend · whole period" = the item list for the span.
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules
