@@ -182,6 +182,29 @@ VideoEncoder (avc1.42001f / 4d401f / 640028) + assets/mp4-muxer.esm.js
 MediaRecorder and say when the file is not H.264. Playwright's Chromium has no
 H.264 encoder: t-simrec.mjs with VP9=1 swaps RV.mux='vp9' to test the path.
 
+## Owner menu, rain, Sales time slider, top items (v217)
+- Menu: the day pill (‹ date ›) is in the top bar; the bottom is one row of
+  tabs Today · Sales · Money · Insights · More that slides away while
+  scrolling down (#dock.hid) and comes back on scroll up / near the top.
+  Money = Cash & bank | Spends, Insights = Patterns | Similar days | Forecast
+  lab | Compare (TSUB chip row, .subnav; TLAST remembers the last page).
+  More = Replay, Bills, Items + the period chips. Fold button removed.
+- Rain: Open-Meteo forecast API (free tier = non-commercial, CC-BY 4.0;
+  Majid chose "free for now" 10 Oct 2026 - switch to the paid API Standard
+  plan before relying on it). Owner app pulls on open and when the last
+  pull is over 6 h old (checked every 30 min): first pull 92 past days, then
+  7. Stored in settings/weather {at,src,lat,lng,days:{date:{r:[24 x0.1mm],
+  p:[24 %]}}} by clock hour IST, max 400 days. Shown under Sales by hour
+  (wxNote) and on the Tomorrow tile. Not used by the forecast yet - the
+  rain-vs-sales check comes first.
+- Sales time slider: "⏱ Time slider" chip on the Sales tab, hidden until
+  tapped. The row lives in the dock (#dockTime) so dragging survives redraws;
+  it sets TCUT, so the whole page shows the day as of that minute. Steps
+  5 / 10 min or Smooth (1 min every 60 ms on Play). Closes when leaving Sales.
+- Top items (Items + Sales tabs): share strip Top 5 · Next N · Others and
+  ranked bars Top 10/15 + Others ('hayat-topn'). Colours = dataviz reference
+  slots 1-3, validated light and dark. No pie: 16 slices can't be read.
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules

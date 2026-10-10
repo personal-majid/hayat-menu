@@ -123,10 +123,32 @@ body.period #dockTime{display:none}
 #dock .dn.dplay{width:auto;padding:0 12px;font-size:14px;font-weight:800;white-space:nowrap;background:var(--pri);color:var(--onpri);border-color:transparent} #dock .dn.dplay[hidden]{display:none}
 #dock .dpill{flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:0 10px;font:inherit}
 #dock .dpill b{font-size:15px;white-space:nowrap} #dock .dpill small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#dock.fold #dockTabs,#dock.fold #dockSheet,#dock.fold #dockTime{display:none}
-#dock.fold #dockFold{transform:rotate(180deg)}
+/* the day in the top bar; one row of tabs at the bottom that slides away while scrolling down */
+.tday{display:flex;gap:6px;align-items:center;flex:0 1 360px;min-width:0}
+.tday .dn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--text);font-size:18px;cursor:pointer;flex:0 0 auto;line-height:1}
+.tday .dpill{flex:1;min-width:0;height:34px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:7px;padding:0 10px;font:inherit}
+.tday .dpill b{font-size:14px;white-space:nowrap} .tday .dpill small{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .tday .dcar{font-style:normal;color:var(--muted);font-size:11px}
+#dock{transition:transform .22s ease} #dock.hid{transform:translateY(110%)}
+.sltog{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px} .sltog .chip{border:1px solid var(--line2);background:var(--card);color:var(--text);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer} .sltog .chip.on{background:var(--pri);color:var(--onpri);border-color:transparent} .sltog .n{font-size:12.5px;color:var(--muted)}
+#dock .sl{flex-direction:column;align-items:stretch;gap:4px;padding:6px 12px 4px} #dock .sl .slt{display:flex;align-items:center;gap:10px} #dock .sl .slt input{flex:1;min-width:0;accent-color:var(--pri);height:30px} #dock .sl .slt b{font-size:15px;min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
+#dock .sl .slc{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} #dock .sl .slc .chip{padding:5px 10px;font-size:12px}
+.topit{--tp1:#2a78d6;--tp2:#eb6834;--tp3:#1baf7a;--tpo:#a8a49a}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .topit{--tp1:#3987e5;--tp2:#d95926;--tp3:#199e70;--tpo:#6d6a63} }
+:root[data-theme="dark"] .topit{--tp1:#3987e5;--tp2:#d95926;--tp3:#199e70;--tpo:#6d6a63}
+.topit .tpn button{border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px} .topit .tpn button.on{background:var(--pri);color:var(--onpri);border-color:transparent}
+.tpstrip{display:flex;gap:2px;height:22px;margin:4px 0 8px} .tpstrip i{display:block;min-width:4px} .tpstrip i:first-child{border-radius:4px 0 0 4px} .tpstrip i:last-child{border-radius:0 4px 4px 0}
+.topit .s1{background:var(--tp1)} .topit .s2{background:var(--tp2)} .topit .s3{background:var(--tp3)}
+.tpkey{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-bottom:12px} .tpkey i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px} .tpkey b{color:var(--text)}
+.tprows{display:grid;gap:3px} .tpr{display:grid;grid-template-columns:22px minmax(90px,240px) 1fr 52px 46px;gap:8px;align-items:center;font-size:13px;padding:3px 0;border-radius:6px} .tpr:hover{background:var(--soft)}
+.tpn2{color:var(--muted);font-size:11.5px;text-align:right} .tpl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .tpb{height:12px} .tpb i{display:block;height:100%;background:var(--tp1);border-radius:0 4px 4px 0;min-width:2px} .tpo .tpb i{background:var(--tpo)} .tpo .tpl{color:var(--muted);font-weight:700}
+.tpv{text-align:right;font-variant-numeric:tabular-nums;font-weight:700} .tpp{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+@media (max-width:640px){ .tpr{grid-template-columns:16px minmax(0,2fr) minmax(40px,1fr) 44px 38px;gap:6px;font-size:12px} }
+.wxn{margin:6px 0 0} .wxn small{color:var(--muted)}
+.subnav{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding:2px 0;scrollbar-width:none} .subnav::-webkit-scrollbar{display:none}
+.subnav button{flex:0 0 auto;border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.subnav button.on{background:var(--pri);color:var(--onpri);border-color:transparent}
 body.period #dPrev,body.period #dNext{visibility:hidden}
-@media (min-width:900px){ #dock{left:50%;transform:translateX(-50%);max-width:980px;border-radius:16px 16px 0 0;border:1px solid var(--line2);border-bottom:0} }
+@media (min-width:900px){ #dock{left:50%;transform:translateX(-50%);max-width:980px;border-radius:16px 16px 0 0;border:1px solid var(--line2);border-bottom:0} #dock.hid{transform:translateX(-50%) translateY(110%)} #dock{right:auto;width:560px} }
 .x.sm{width:22px;height:22px;font-size:11px;line-height:1;padding:0;border-radius:6px}
 .bar.fc{background:repeating-linear-gradient(45deg,var(--line2) 0 3px,transparent 3px 6px);border:1px dashed var(--muted);border-bottom:0;opacity:.9}
 .bc{position:relative;height:100%;display:flex;align-items:flex-end}
@@ -180,7 +202,7 @@ tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
 .card{overflow-x:auto} .card table{min-width:max-content;width:100%} .card table.close{min-width:0}
 @media (max-width:640px){
   .top{flex-wrap:wrap;gap:6px 8px;padding:8px 12px}
-  .top h1{font-size:16px;flex:1 1 auto}
+  .top h1{font-size:16px;flex:0 0 auto} .top h1 .h1o{display:none} .tday{flex:1 1 200px;order:0} .top #pc,.top #live{order:2} .top a.tb{order:1}
   .top .sp{display:none}
   .top #pc,.top #live{font-size:11px} .top a.tb{padding:4px 8px;font-size:12px}
   .top #prevDay{margin-left:0} .top #day{flex:1 1 120px;min-width:0;font-size:12px;padding:6px 8px}
@@ -299,7 +321,7 @@ tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:7
 #dockMore .tab{font-size:14px;padding:9px 14px}
 #dock #dockRange .chip{font-size:14px;padding:9px 14px}
 #dockTabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;padding:2px 6px 4px;border-top:1px solid var(--line)}
-.dtab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;border-radius:12px;cursor:pointer;padding:4px 2px}
+.dtab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;border-radius:12px;cursor:pointer;padding:4px 2px}
 .dtab span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .dtab.on{color:var(--pri);background:color-mix(in srgb,var(--pri) 9%,transparent)}
 .dtab.on svg{stroke-width:2.4}
@@ -391,7 +413,8 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
 </head>
 <body>
 <div class="top">
-  <h1>HAYAT · Owner</h1>
+  <h1>HAYAT<span class="h1o"> · Owner</span></h1>
+  <div class="tday"><button class="dn" id="dPrev" title="previous day">‹</button><button class="dpill" id="dPick" title="pick a day or a period"><b id="dLabel">—</b><small id="dSub"></small><i class="dcar">▾</i></button><button class="dn" id="dNext" title="next day">›</button></div>
   <span class="seg"><button class="tab on" data-mode="day">Day</button><button class="tab" data-mode="period">Period</button></span>
   <button class="nav" id="prevDay" title="previous day (←)">‹</button>
   <select id="day"></select>
@@ -413,13 +436,6 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
     <button class="chip" data-r="today">Today</button><button class="chip fc" id="fcChip" title="forecast on the strip and the charts">◔ Forecast</button><button class="chip" data-r="week">Week</button><button class="chip" data-r="month">Month</button><button class="chip" data-r="lmonth">Last month</button><button class="chip" data-r="pick">Pick a day…</button><button class="chip" data-r="range">Range…</button>
   </div>
   </div>
-  <div class="drow daybar">
-    <button class="dn" id="dPrev" title="previous day">‹</button>
-    <button class="dpill" id="dPick"><b id="dLabel">—</b><small id="dSub"></small></button>
-    <button class="dn" id="dNext" title="next day">›</button>
-    <button class="dn dplay" id="dReplay" title="play the whole day">▶ Replay</button>
-    <button class="dn" id="dockFold" title="collapse / expand">⌄</button>
-  </div>
   <nav class="drow" id="dockTabs"></nav>
 </div>
 
@@ -438,7 +454,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v216';
+const BOARD='v217';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -757,6 +773,31 @@ function lgStrip(){ if(MODE!=='day'||!DOC) return ''; const S=lgSuggest(recs());
     ${S.slice(0,3).map(r=>`<div class="lgrow"><span>⚑ <b>${rs(sum(r))}</b> · ${esc(r.kind)} · ${hm(r.settledAt||r.createdAt)} · KOT ${esc(r.kot)}</span><small>${Math.round(sum(r)/Math.max(1,lgTypical(recs())))}× a normal bill — large order?</small><button data-lgk="${esc(r.key)}" data-lg="${esc(lgId(r))}" data-lgv="1">Yes, large</button><button class="no" data-lgno="${esc(r.key)}">No</button></div>`).join('')}</div>`; }
 /* past days: find bills over Rs 4,000 once per day and store them in settings/large_orders (s = days already checked) */
 let LGSCAN={}, PRESCAN={busy:false,done:0,todo:0};
+/* RAIN: Open-Meteo (free tier: non-commercial, CC-BY 4.0; Majid chose it for now, 10 Oct 2026).
+   The owner app pulls when it opens and again if the last pull is over 6 h old, and keeps it in
+   settings/weather {at, src, lat, lng, days:{"YYYY-MM-DD":{r:[24 x 0.1 mm], p:[24 %]}}} by clock hour, India time.
+   First pull brings 92 past days, so rain-vs-sales can be checked right away. Up to 400 days kept. */
+let WX={days:{}}; const WX_TTL=6*3600e3;
+async function wxSync(force){ if(WX.busy||!FB||!FB.fs||FB.role!=='office') return; if(!force&&WX.at&&Date.now()-Date.parse(WX.at)<WX_TTL) return;
+  const C=window.CONFIG||{}, lat=+C.lat||11.0065785, lng=+C.lng||76.1270507; WX.busy=true;
+  try{ const u='https://api.open-meteo.com/v1/forecast?latitude='+lat.toFixed(4)+'&longitude='+lng.toFixed(4)+'&hourly=precipitation,precipitation_probability&past_days='+(WX.at?7:92)+'&forecast_days=3&timezone=Asia%2FKolkata';
+    const j=await (await fetch(u)).json(); const T=(j.hourly||{}).time||[], R=j.hourly.precipitation||[], P=j.hourly.precipitation_probability||[]; if(!T.length) throw new Error('no data');
+    const days=Object.assign({},WX.days||{}); T.forEach((t,i)=>{ const d=t.slice(0,10), h=+t.slice(11,13); const x=days[d]=days[d]&&days[d].r?{r:days[d].r.slice(),p:(days[d].p||[]).slice()}:{r:Array(24).fill(0),p:Array(24).fill(0)};
+      x.r[h]=Math.round(10*(+R[i]||0)); x.p[h]=Math.round(+P[i]||0); });
+    const keep=Object.keys(days).sort().slice(-400), out={}; keep.forEach(d=>out[d]=days[d]);
+    const doc={at:new Date().toISOString(),src:'open-meteo.com (CC-BY 4.0)',lat,lng,days:out}; WX=Object.assign({},doc);
+    await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','weather'),doc);
+  }catch(e){ console.warn('rain pull',e); } finally{ WX.busy=false; } }
+/* rain in business hour i of day d (0 = 05:00): mm and chance */
+function wxAt(d,i){ const h=i+BH0, x=new Date(d+'T12:00:00'); if(h>=24) x.setDate(x.getDate()+1); const w=(WX.days||{})[ymd(x)]; if(!w||!w.r) return null; return {mm:(w.r[h%24]||0)/10,p:(w.p||[])[h%24]||0}; }
+/* "Rain 14–16 · 3.1 mm" for the hours the shop is open (10:00-01:00); past hours by what fell, later hours by the chance */
+function wxSpans(d,fromH){ const L=[]; let cur=null;
+  for(let i=5;i<=20;i++){ const w=wxAt(d,i); if(!w) return null; const past=fromH!=null&&i<fromH, wet=past?w.mm>=0.5:(w.p>=50||w.mm>=0.5);
+    if(wet){ if(!cur){ cur={a:i,b:i,mm:0,p:0,past}; L.push(cur); } cur.b=i; cur.mm+=w.mm; cur.p=Math.max(cur.p,w.p); if(!past) cur.past=false; } else cur=null; }
+  return L; }
+function wxNote(d){ if(!WX.at||!d) return ''; const live=d===bizToday(), nowH=live?fcNow().nowH:24, L=wxSpans(d,live?nowH:(d<bizToday()?24:0)); if(L==null) return '';
+  const f=x=>hlabel(x.a)+'–'+hlabel(x.b+1)+(x.past?' · '+x.mm.toFixed(1)+' mm':' · '+x.p+'% chance');
+  return `<div class="note wxn">${L.length?'🌧 Rain '+L.map(f).join(', '):'☀ No rain'+(live?' so far, none expected':d>bizToday()?' expected':'')} <small>· open-meteo.com</small></div>`; }
 async function preScan(){ if(PRESCAN.busy||!FB||!FB.fs||FB.role!=='office') return; PRESCAN.busy=true;
   const list=Object.keys(INDEX).filter(d=>d<bizToday()&&INDEX[d]&&INDEX[d].hours&&!LGSCAN[d]).sort().slice(-120); PRESCAN={busy:true,done:0,todo:list.length};
   let add={}, seen={};
@@ -1236,7 +1277,7 @@ function hourly(){
   const [lo,hi]=hspan(H,showY?HY:[],showA?wa.H:[],HF||[],U?H.map((x,i)=>i===U.i?1:0):[]), top=Math.max(0,...H.map((v,i)=>v+(U&&U.i===i?U.v:0)));
   /* the axis = the highest real hour of this day (large orders and the forecast never stretch it; they are capped with ▲) */
   const max=Math.max(1,top||Math.max(0,...(HF||[])));
-  const nl=SR.filter(r=>isLarge(r)).length, lgNote=nl?`<div class="note" style="margin:4px 0 0">⚑ ${nl} large order${nl>1?'s':''} ${rs(SR.filter(r=>isLarge(r)).reduce((n,r)=>n+sum(r),0))} shown as grey caps · not in averages</div>`:'';
+  const nl=SR.filter(r=>isLarge(r)).length, lgNote=(span?'':wxNote(DAY))+(nl?`<div class="note" style="margin:4px 0 0">⚑ ${nl} large order${nl>1?'s':''} ${rs(SR.filter(r=>isLarge(r)).reduce((n,r)=>n+sum(r),0))} shown as grey caps · not in averages</div>`:'');
   const ov=span?'':`<div class="ovs">${[['y','yesterday',!!YDOC],['avg','avg '+dow+(wa?' ('+wa.n+')':''),!!wa],['fc','forecast',DAY===bizToday()]].filter(o=>o[2]).map(o=>`<label><input type="checkbox" data-ov="${o[0]}"${OV[o[0]]?' checked':''}> ${o[1]}</label>`).join('')}${U?`<span class="unkey"><i></i>open now ${rs(U.v)}</span>`:''}</div>`;
   return `<div class="card hourcard"><h2>Sales by hour <span class="n">${span?'avg per day · '+nd+' days':'tap an hour · <a href="#" data-rpgo>▶ replay the day</a>'}</span></h2>${hbars(H,lo,hi,max,showY?HY:null,'y ',null,span?180:210,showA?wa.H:null,F,U,HL)}${hx(lo,hi)}${ov}${lgNote}${span?'':lgStrip()}${span?'':hourCompare(H)}</div>`;
 }
@@ -1249,11 +1290,23 @@ function breakdown(){
 }
 
 function itemsOf(records){ const g={}; Object.values(records||{}).forEach(r=>{ if(r.status!=='settled') return; (r.items||[]).forEach(i=>{ const k=i.n; g[k]=g[k]||{n:i.n,cat:i.cat||'',q:0,v:0,bills:0}; g[k].q+=i.q||0; g[k].v+=i.a||0; g[k].bills++; }); }); return g; }
+/* TOP ITEMS: who carries the sales. A 16-slice pie can't be read, so: one share strip (top 5 · the next ones · everything else)
+   and ranked bars for the top 10 / 15 + "Others" in one row. Colours = dataviz reference slots 1-3, validated light + dark. */
+let TOPN=15; try{ TOPN=+localStorage.getItem('hayat-topn')||15; }catch(e){}
+function topItems(rows,tot){ if(!rows.length||!tot) return '';
+  const N=Math.min(TOPN,rows.length), top=rows.slice(0,N), rest=rows.slice(N), restV=rest.reduce((n,r)=>n+r.v,0);
+  const a=rows.slice(0,5).reduce((n,r)=>n+r.v,0), b=top.slice(5).reduce((n,r)=>n+r.v,0), pc=v=>Math.round(1000*v/tot)/10;
+  const seg=[['t5','Top 5',a,'1'],['tn',N>5?'Next '+(N-5):'',b,'2'],['ot','Others · '+rest.length+' items',restV,'3']].filter(x=>x[2]>0);
+  const L=top.map(r=>[r.n,r.v,r.q,'']).concat(restV?[['Others ('+rest.length+' items)',restV,rest.reduce((n,r)=>n+r.q,0),'o']]:[]), mx=Math.max(...L.map(x=>x[1]));
+  return `<div class="card wide topit"><h2>Top items <span class="n">share of ${rs(tot)} · <span class="tpn">${[10,15].map(n=>`<button type="button" class="${TOPN===n?'on':''}" data-topn="${n}">Top ${n}</button>`).join('')}</span></span></h2>
+    <div class="tpstrip" role="img" aria-label="${seg.map(x=>x[1]+' '+pc(x[2])+'%').join(', ')}">${seg.map(x=>`<i class="s${x[3]}" style="flex:${x[2]}" title="${esc(x[1])} · ${rs(x[2])} · ${pc(x[2])}%"></i>`).join('')}</div>
+    <div class="tpkey">${seg.map(x=>`<span><i class="s${x[3]}"></i>${esc(x[1])} <b>${pc(x[2])}%</b></span>`).join('')}</div>
+    <div class="tprows">${L.map((x,i)=>`<div class="tpr${x[3]?' tpo':''}" title="${esc(x[0])} · ${rs(x[1])} · ${x[2]} sold · ${pc(x[1])}%"><span class="tpn2">${x[3]?'':i+1}</span><span class="tpl">${esc(x[0])}</span><span class="tpb"><i style="width:${(100*x[1]/mx).toFixed(1)}%"></i></span><span class="tpv">${kfmt(x[1])}</span><span class="tpp">${pc(x[1])}%</span></div>`).join('')}</div></div>`; }
 function items(g){
   g=g||itemsOf(DOC&&DOC.records);
   let rows=Object.values(g).sort((a,b)=>b.v-a.v); if(Q) rows=rows.filter(r=>(r.n+' '+(r.cat||'')).toLowerCase().includes(Q));
   const tot=rows.reduce((n,r)=>n+r.v,0);
-  return `<div class="card wide"><h2>Item‑wise <span class="n">${rows.length} items · ${rs(tot)}</span></h2><input class="search" id="q" placeholder="Search item or category…" value="${esc(Q)}"><div class="scroll"><table><tr><th>#</th><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th class="r m">Bills</th><th class="r">Sales</th><th class="r">Share</th></tr>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.n)}</td><td class="m">${esc(r.cat||'')}</td><td class="r">${r.q}</td><td class="r m">${r.bills}</td><td class="r">${rs(r.v)}</td><td class="r">${tot?Math.round(100*r.v/tot):0}%</td></tr>`).join('')}</table></div></div>`;
+  return (Q?'':topItems(rows,tot))+`<div class="card wide"><h2>Item‑wise <span class="n">${rows.length} items · ${rs(tot)}</span></h2><input class="search" id="q" placeholder="Search item or category…" value="${esc(Q)}"><div class="scroll"><table><tr><th>#</th><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th class="r m">Bills</th><th class="r">Sales</th><th class="r">Share</th></tr>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.n)}</td><td class="m">${esc(r.cat||'')}</td><td class="r">${r.q}</td><td class="r m">${r.bills}</td><td class="r">${rs(r.v)}</td><td class="r">${tot?Math.round(100*r.v/tot):0}%</td></tr>`).join('')}</table></div></div>`;
 }
 
 let HSEL=null;   /* a tapped hour on the hour chart */
@@ -1311,7 +1364,7 @@ function rpOpenAt(doc,v){ if(!doc) return {n:0,v:0}; return asOf(doc,v,()=>{ con
 /* the activity window: first to last bill of any running day, whole hours */
 function rpSpan(){ let lo=1440,hi=0; rpList().forEach(d=>{ const c=rpCurve(d); if(c&&c.M.length){ lo=Math.min(lo,c.M[0]); hi=Math.max(hi,c.M[c.M.length-1]); } }); if(hi<=lo) return [300,1080]; return [Math.max(0,Math.floor(lo/60)*60),Math.min(1440,Math.ceil(hi/60+0.01)*60)]; }
 
-function openReplay(){ RP.open=true; if(RP.auto&&!RP.days.length){ RP.days=similarDays(2).map(x=>x.d); if(!RP.days.length){ const w=new Date(DAY+'T12:00:00'); w.setDate(w.getDate()-7); const wd=ymd(w); if(INDEX[wd]) RP.days=[wd]; } }
+function openReplay(){ if(SL.open) slClose(true); RP.open=true; if(RP.auto&&!RP.days.length){ RP.days=similarDays(2).map(x=>x.d); if(!RP.days.length){ const w=new Date(DAY+'T12:00:00'); w.setDate(w.getDate()-7); const wd=ymd(w); if(INDEX[wd]) RP.days=[wd]; } }
   let s=$('rpScreen'); if(!s){ s=document.createElement('div'); s.id='rpScreen'; document.body.appendChild(s); }
   s.hidden=false; document.body.classList.add('rpopen'); rpPaint(); }
 function closeReplay(){ rpStop(); RP.open=false; RP.adding=false; TCUT=null; const s=$('rpScreen'); if(s) s.hidden=true; document.body.classList.remove('rpopen'); render(); }
@@ -2309,7 +2362,7 @@ function preSheet(day){ day=day||bizToday(); const old=$('preSheet'); if(old) ol
 function tmCard(){ if(!FC||DAY!==bizToday()) return ''; const t=tomorrow(); if(!FC_BT) fcBacktest(); const M=fcModel(t); if(!M) return '';
   const P=M.prof.map(v=>v*M.f), pre=preFor(t).add, band=0.25, plan=M.plan*(FC_SCN==='pess'?1-band:FC_SCN==='opt'?1+band:1)+pre;
   const pk=(a,b)=>{ let m=a; for(let h=a;h<=b;h++) if(P[h]>P[m]) m=h; return hlabel(m)+':00'; }, top=['lunch '+pk(6,11),'dinner '+pk(12,20)];   /* 11:00-16:59 and 17:00-01:59 */
-  return `<div class="kpi click" id="tmTile" title="tap to add a pre-booking for tomorrow"><small>Tomorrow${FC_SCN!=='neut'?' · '+FC_SCN_N[FC_SCN].toLowerCase():''} · ${esc(rpName(t))}${M.pay>1?' · salary day':''}${M.why?' · '+esc(M.why):''}</small><b>${rs(plan)}</b><em class="rows"><span>Likely <b>${kfmt(M.plan*(1-band)+pre)}–${kfmt(M.plan*(1+band)+pre)}</b></span><span>Busiest <b>${top.join(', ')}</b></span><span>Pre-bookings <b>${pre?rs(pre):'—'}</b></span></em><button class="preadd" id="tmPre" type="button">+ Pre-booking</button></div>`; }
+  return `<div class="kpi click" id="tmTile" title="tap to add a pre-booking for tomorrow"><small>Tomorrow${FC_SCN!=='neut'?' · '+FC_SCN_N[FC_SCN].toLowerCase():''} · ${esc(rpName(t))}${M.pay>1?' · salary day':''}${M.why?' · '+esc(M.why):''}</small><b>${rs(plan)}</b><em class="rows"><span>Likely <b>${kfmt(M.plan*(1-band)+pre)}–${kfmt(M.plan*(1+band)+pre)}</b></span><span>Busiest <b>${top.join(', ')}</b></span><span>Pre-bookings <b>${pre?rs(pre):'—'}</b></span>${(()=>{ const L=WX.at?wxSpans(t,0):null; return L==null?'':`<span>Rain <b>${L.length?L.map(x=>hlabel(x.a)+'–'+hlabel(x.b+1)+' '+x.p+'%').join(', '):'none expected'}</b></span>`; })()}</em><button class="preadd" id="tmPre" type="button">+ Pre-booking</button></div>`; }
 function fcCard(F){ if(!F) return ''; const PB=preToday(); const total=F.total+PB.add, pct=total?Math.round(100*(F.act+PB.billed)/total):0, dev=F.exp?Math.round(100*(F.act/F.exp-1)):null;
   const cut=cutTs(); let by=''; if(cut!=null&&cut>Date.now()&&TCUT!=null){ const h=Math.min(23,Math.floor(TCUT/60)), fr=(TCUT%60)/60; let v=0; for(let i=0;i<h;i++) v+=F.fcH[i]||0; v+=(F.fcH[h]||0)*fr; const hh=String(Math.floor((h+BH0)%24)).padStart(2,'0'), mm=String(TCUT%60).padStart(2,'0'); by=`<span>By ${hh}:${mm} <b>${rs(v)}</b></span>`; }
   return `<div class="kpi click" id="fcTile" title="tap for how it is worked out"><small>Forecast today${F.scn?' · '+FC_SCN_N[F.scn].toLowerCase():''} ${F.why?'· '+esc(F.why):''}</small><b>${rs(total)}</b><em class="rows">${by}<span>Next hour <b>${rs(F.next)}</b></span><span>Pre-bookings <b>${PB.add?rs(PB.add):'—'}</b></span><span>Done <b>${pct}%</b></span><span>vs plan <b class="${dev==null?'':dev>=0?'up':'dn'}">${dev==null?'—':(dev>=0?'+':'')+dev+'%'}</b></span></em>
@@ -2578,23 +2631,25 @@ function waiters(){
 }
 
 /* the dock at the bottom: the mode's tabs, the range chips, the day pill. Collapsible; swipe the page to change day. */
-let DOCK_FOLD=false; try{ DOCK_FOLD=localStorage.getItem('hayat-dock')==='fold'; }catch(e){}
+/* Money and Insights each hold a few pages; a chip row on top switches between them and the tab remembers the last one */
+const TSUB={cash:[['cash','Cash & bank'],['buy','Spends']],patterns:[['patterns','Patterns'],['similar','Similar days'],['lab','Forecast lab'],['cmp','Compare']]};
+const TGRP={}; Object.entries(TSUB).forEach(([g,L])=>L.forEach(t=>TGRP[t[0]]=g)); const TLAST={};
+function subNav(){ const g=TGRP[TAB]; if(!g) return ''; TLAST[g]=TAB; return `<div class="subnav">${TSUB[g].map(t=>`<button type="button" class="${TAB===t[0]?'on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`; }
 function dockH(){ const d=$('dock'); if(d) document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px'); const b=$('dockMoreBtn'); if(b) b.setAttribute('aria-expanded',String(!$('dockSheet').hidden)); }
 function dock(){
   const d=$('dock'); if(!d) return;
   const IC={live:'<path d="M3 12h4l2-6 4 12 2-6h6"/>',sales:'<path d="M5 20V10M12 20V4M19 20v-7"/>',patterns:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',similar:'<path d="M4 17l5-5 4 3 7-8"/><path d="M4 12l5-3 4 2 7-5" opacity=".45"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',over:'<path d="M4 19h16M6 15l4-5 4 3 4-6"/>',people:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.4"/>',items:'<path d="M5 6h14M5 12h14M5 18h9"/>',money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>'};
   const svg=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
-  const prim=MODE==='period'?[['overview','Overview','over'],['people','People','people'],['items','Items','items'],['money','Money','money']]:[['floor','Live','live'],['sales','Sales','sales'],['patterns','Patterns','patterns'],['similar','Similar','similar']];
-  const sec=MODE==='period'?[['cash','Cash'],['voids','Voids']]:[['lab','Forecast lab'],['bills','Bills'],['items','Items'],['buy','Spends'],['cash','Cash'],['cmp','Compare']];
-  const cur=MODE==='period'?PTAB:TAB, attr=MODE==='period'?'data-ptab':'data-tab', inSec=sec.find(t=>t[0]===cur);
+  const prim=MODE==='period'?[['overview','Overview','over'],['people','People','people'],['items','Items','items'],['money','Money','money']]:[['floor','Today','live'],['sales','Sales','sales'],['cash','Money','money'],['patterns','Insights','patterns']];
+  const sec=MODE==='period'?[['cash','Cash'],['voids','Voids']]:[['bills','Bills'],['items','Items']];
+  const cur=MODE==='period'?PTAB:(TGRP[TAB]||TAB), attr=MODE==='period'?'data-ptab':'data-tab', inSec=sec.find(t=>t[0]===cur);
   $('dockTabs').innerHTML=prim.map(t=>`<button class="dtab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${svg(t[2])}<span>${t[1]}</span></button>`).join('')+`<button class="dtab${inSec?' on':''}" id="dockMoreBtn" aria-expanded="${!$('dockSheet').hidden}">${svg('more')}<span>${inSec?inSec[1]:'More'}</span></button>`;
   $('dockMore').innerHTML=(MODE==='period'?'':`<button class="tab rpgo" id="rpOpen">▶ Replay</button>`)+sec.map(t=>`<button class="tab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${t[1]}</button>`).join('');
   const sh=$('dockSheet'); $('dockMoreBtn').onclick=()=>{ sh.hidden=!sh.hidden; dockH(); };
-  $$('#dockTabs [data-tab],#dockMore [data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; sh.hidden=true; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
+  $$('#dockTabs [data-tab],#dockMore [data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; if(TLAST[TAB]&&TGRP[TLAST[TAB]]===TAB) TAB=TLAST[TAB]; window.scrollTo(0,0); Q=''; sh.hidden=true; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('#dockTabs [data-ptab],#dockMore [data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; sh.hidden=true; render(); });
   $$('#dockMore [data-tab],#dockMore [data-ptab],#dockMore #rpOpen').forEach(b=>b.addEventListener('click',()=>{ sh.hidden=true; }));
   const ro=$('rpOpen'); if(ro) ro.onclick=openReplay;
-  const rb=$('dReplay'); if(rb){ rb.hidden=MODE==='period'; rb.onclick=openReplay; }
   const P=periodPresets(), is=(a,b)=>MODE==='period'&&PER.from===a&&PER.to===b;
   const y=new Date(bizToday()+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y);
   const on={today:MODE==='day'&&DAY===bizToday(),week:is(P[0][1],P[0][2]),month:is(P[2][1],P[2][2]),lmonth:is(P[3][1],P[3][2])}; on.range=MODE==='period'&&!on.week&&!on.month&&!on.lmonth; on.pick=MODE==='day'&&!on.today;
@@ -2607,7 +2662,6 @@ function dock(){
   const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   if(MODE==='period'){ $('dLabel').textContent=PER.label||'Period'; $('dSub').textContent=PER.from?PER.from.slice(5)+' → '+PER.to.slice(5)+(PER.doc&&PER.doc.partial?' · so far':''):''; }
   else { const x=new Date(DAY+'T12:00:00'); $('dLabel').textContent=wd[x.getDay()]+' '+x.getDate()+' '+x.toLocaleString('en',{month:'short'}); $('dSub').textContent=TCUT!=null?'as of '+tcutLabel()+' ⏪':(DAY===bizToday()?'live':(INDEX[DAY]&&INDEX[DAY].rev?rs(INDEX[DAY].rev):'')); }
-  d.classList.toggle('fold',DOCK_FOLD);
   document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px');
 }
 function dockWire(){
@@ -2620,17 +2674,47 @@ function dockWire(){
     else if(r==='range'){ const P2=periodPresets(); if(MODE!=='period'||!PER.from){ MODE='period'; loadPeriod(P2[0][1],P2[0][2],P2[0][0]); } else render(); setTimeout(()=>{ const f=$('pFrom'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },600); }
     else { MODE='period'; const p=r==='week'?P[0]:r==='month'?P[2]:P[3]; loadPeriod(p[1],p[2],p[0]); } });
   $('dPrev').onclick=()=>stepDay(-1); $('dNext').onclick=()=>stepDay(1);
-  $('dPick').onclick=()=>{ const sh=$('dockSheet'); sh.hidden=!sh.hidden; dockH(); };
+  $('dPick').onclick=()=>{ const sh=$('dockSheet'); sh.hidden=!sh.hidden; $('dock').classList.remove('hid'); dockH(); };
   $('dockSheetX').onclick=()=>{ $('dockSheet').hidden=true; dockH(); };
   $$('#dockRange .chip').forEach(c=>c.addEventListener('click',()=>{ $('dockSheet').hidden=true; dockH(); },true));
-  document.addEventListener('click',e=>{ const sh=$('dockSheet'); if(sh&&!sh.hidden&&!e.target.closest('#dock')){ sh.hidden=true; dockH(); } });
-  $('dockFold').onclick=()=>{ DOCK_FOLD=!DOCK_FOLD; try{ localStorage.setItem('hayat-dock',DOCK_FOLD?'fold':'open'); }catch(e){} dock(); };
+  document.addEventListener('click',e=>{ const sh=$('dockSheet'); if(sh&&!sh.hidden&&!e.target.closest('#dock,#dPick')){ sh.hidden=true; dockH(); } });
+  /* scrolling down hides the tab row, scrolling up (or reaching the top) brings it back */
+  let lastY=window.scrollY; window.addEventListener('scroll',()=>{ const y=window.scrollY, d=$('dock'), sh=$('dockSheet'); if(!d) return;
+    if(y<60||y<lastY-6||(sh&&!sh.hidden)||SL.open) d.classList.remove('hid'); else if(y>lastY+6) d.classList.add('hid'); lastY=y; },{passive:true});
   /* swipe the page sideways to step a day */
   let sx=null, sy=null; const m=$('main');
   m.addEventListener('touchstart',e=>{ const t=e.touches[0]; sx=t.clientX; sy=t.clientY; },{passive:true});
   m.addEventListener('touchend',e=>{ if(sx==null) return; const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy; sx=null; if(MODE!=='day'||Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)) return; if(e.target.closest('.scroll,.kpis,.bars,.tabs,table')) return; stepDay(dx<0?1:-1); },{passive:true});
 }
+/* SALES TIME SLIDER: hidden until "⏱ Time slider" is tapped on the Sales tab. The row sits in the dock (outside
+   the page, so dragging survives the redraws) and the whole Sales page shows the day as it stood at that minute (TCUT). */
+const SL={open:false,step:10,playing:false,timer:null,drag:false,raf:0}; try{ SL.step=+localStorage.getItem('hayat-sl-step')||10; }catch(e){}
+function slSpan(){ const st=dayStartMs(DAY); let lo=1440, hi=0; Object.values((DOC&&DOC.records)||{}).forEach(r=>{ [r.createdAt,r.settledAt].forEach(x=>{ if(!x) return; const m=(T(x).getTime()-st)/60000; if(m>=0&&m<=1440){ lo=Math.min(lo,m); hi=Math.max(hi,m); } }); });
+  if(hi<=lo){ lo=300; hi=1200; } const a=Math.max(0,Math.floor(lo/30)*30), e=DAY===bizToday()?Math.max(a+10,Math.min(1440,(Date.now()-st)/60000)):Math.min(1440,Math.ceil(hi/30)*30); return [a,Math.floor(e)]; }
+function slLater(){ if(SL.raf) return; SL.raf=requestAnimationFrame(()=>{ SL.raf=0; render(); }); }
+function slStop(){ SL.playing=false; if(SL.timer){ clearInterval(SL.timer); SL.timer=null; } }
+function slClose(quiet){ slStop(); SL.open=false; TCUT=null; const r=$('dockTime'); if(r) r.remove(); if(!quiet) render(); }
+function slPlay(){ SL.drag=false; const [a,e]=slSpan(); let v=TCUT==null?a:TCUT; if(v>=e-1) v=a; TCUT=v; SL.playing=true;
+  const smooth=SL.step===1, dt=smooth?60:300, by=smooth?1:SL.step;   /* smooth: 1 min every 60 ms; steps: one step every 0.3 s */
+  SL.timer=setInterval(()=>{ const e2=slSpan()[1]; TCUT=Math.min(e2,TCUT+by); if(TCUT>=e2){ slStop(); if(DAY===bizToday()) TCUT=null; } slLater(); },dt); slLater(); }
+function slRow(){ const d=$('dock'); let r=$('dockTime'); const want=MODE==='day'&&TAB==='sales'&&SL.open&&!!DOC;
+  if(!want){ if(r) r.remove(); return; }
+  if(!r){ r=document.createElement('div'); r.id='dockTime'; r.className='drow tslide sl';
+    r.innerHTML=`<div class="slt"><input type="range" id="slRange"><b id="slLab">—</b></div><div class="slc"><button class="chip" id="slPlay">▶ Play</button>${[[5,'5 min'],[10,'10 min'],[1,'Smooth']].map(x=>`<button class="chip" data-slstep="${x[0]}">${x[1]}</button>`).join('')}<button class="chip" id="slLive">Live</button><button class="chip" id="slX" title="close the slider">✕</button></div>`;
+    d.insertBefore(r,$('dockTabs'));
+    const g=$('slRange'); g.oninput=()=>{ SL.drag=true; slStop(); TCUT=Math.min(+g.value,slSpan()[1]); $('slLab').textContent=tcutLabel(); slLater(); };
+    g.onchange=g.onpointerup=g.ontouchend=()=>{ SL.drag=false; };
+    $('slPlay').onclick=()=>{ if(SL.playing) slStop(); else slPlay(); slRow(); };
+    $$('[data-slstep]').forEach(b=>b.onclick=()=>{ SL.step=+b.dataset.slstep; try{ localStorage.setItem('hayat-sl-step',SL.step); }catch(e){} if(SL.playing){ slStop(); slPlay(); } slRow(); });
+    $('slLive').onclick=()=>{ slStop(); TCUT=null; render(); };
+    $('slX').onclick=()=>slClose(); }
+  const [a,e]=slSpan(), g=$('slRange'); g.min=a; g.max=e; g.step=SL.step;
+  if(!SL.drag) g.value=TCUT==null?e:TCUT;
+  $('slLab').textContent=TCUT==null?(DAY===bizToday()?'now':'end'):tcutLabel();
+  $('slPlay').textContent=SL.playing?'❚❚ Pause':'▶ Play'; $$('[data-slstep]').forEach(b=>b.classList.toggle('on',+b.dataset.slstep===SL.step));
+  $('slLive').textContent=DAY===bizToday()?'Live':'End'; d.classList.remove('hid'); document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px'); }
 function render(){
+  if(SL.open&&(MODE!=='day'||TAB!=='sales')) slClose(true);
   /* a PC whose clock is behind the shop's (or a browser in another zone) must not show negative ages */
   NOW=Math.max(Date.now(), DOC&&DOC.updatedAt?T(DOC.updatedAt).getTime():0);
   { const cut=cutTs(); if(cut!=null&&MODE==='day'&&cut<NOW) NOW=cut; }
@@ -2638,8 +2722,8 @@ function render(){
   const live=DAY===bizToday();
   document.body.classList.toggle('period',MODE==='period');
   if(MODE==='period'){ m.innerHTML=period()+`<div class="note">board ${BOARD}</div>`; }
-  else m.innerHTML=kpis()+
-    (TAB==='sales'?`<div class="grid">${hourly()}${runLine()}${pace()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
+  else m.innerHTML=kpis()+subNav()+
+    (TAB==='sales'?`<div class="sltog"><button type="button" class="chip${SL.open?' on':''}" id="slTog">⏱ ${SL.open?'Hide time slider':'Time slider'}</button><span class="n">${SL.open?(TCUT==null?'drag the slider (above the tabs) to see the day at any time':'showing the day as of <b>'+tcutLabel()+'</b>'):'see the day as it stood at any time'}</span></div><div class="grid">${hourly()}${runLine()}${pace()}${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); return topItems(R,R.reduce((n,r)=>n+r.v,0)); })()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${drafts()}${payments()}${purchases()}</div>`:
@@ -2650,10 +2734,11 @@ function render(){
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
-  dock(); addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
+  $$('[data-topn]').forEach(b=>b.onclick=()=>{ TOPN=+b.dataset.topn; try{ localStorage.setItem('hayat-topn',TOPN); }catch(e){} render(); });
+  dock(); slRow(); const stg=$('slTog'); if(stg) stg.onclick=()=>{ if(SL.open) slClose(); else { SL.open=true; render(); } }; addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
   simWire(); lgCardWire(); ptWire(); labWire(); spWire();
   $$('[data-rpgo]').forEach(a=>a.onclick=e=>{ e.preventDefault(); openReplay(); });
-  $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
+  $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; if(b.closest('#dockTabs')){ if(TLAST[TAB]&&TGRP[TLAST[TAB]]===TAB) TAB=TLAST[TAB]; window.scrollTo(0,0); } Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
   $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
   const pg=$('pGo'); if(pg) pg.onclick=()=>loadPeriod($('pFrom').value,$('pTo').value,''); const pr=$('pRefresh'); if(pr) pr.onclick=()=>loadPeriod(PER.from,PER.to,PER.label,true); const pd=$('pDetail'); if(pd) pd.onclick=()=>loadDetail(); const pp=$('perPerson'); if(pp) pp.onchange=()=>{ PER.person=pp.value; render(); };
@@ -2777,6 +2862,8 @@ async function go(){
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','recipes'),d=>{ RCP=d.exists()?d.data():null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','events'),d=>{ EVENTS=(d.exists()&&d.data().e)||{}; LAB.res=null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','large_orders'),d=>{ LARGE=(d.exists()&&d.data().b)||{}; LGSCAN=Object.assign(LGSCAN,(d.exists()&&d.data().s)||{}); applyLarge(); syncIndexToday(); FC_BT=null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','weather'),d=>{ const busy=WX.busy; WX=d.exists()?Object.assign({},d.data()):{days:{}}; WX.busy=busy; WX.loaded=true; render(); setTimeout(wxSync,1500); },()=>{ WX.loaded=true; setTimeout(wxSync,1500); });
+  setInterval(()=>wxSync(),30*60e3);   /* while the app stays open: check every 30 min, pull when over 6 h old */
   await days(); watchDay(); setTimeout(preScan,5000);
   [bizToday(),tomorrow()].forEach(day=>ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_prebook',day),d=>{ PBK[day]=(d.exists()&&d.data().e)||{}; render(); },()=>{}));
   setInterval(()=>{ if(DOC){ stamp(); render(); } healthPill(); },60000);
