@@ -1,6 +1,6 @@
 /* Hayat menu — offline cache.
    Bump CACHE below whenever you upload changes, so tablets pick them up. */
-const CACHE = "hayat-v221";
+const CACHE = "hayat-v231";
 const CORE = [
   "./","./index.html","./app.css","./config.js","./menu-data.js","./lang.js",
   "./assets/icons.js","./assets/qr.js","./shop.js",
@@ -32,7 +32,15 @@ self.addEventListener("fetch", e => {
 
   // network first for the page itself, so edits show up straight away
   if (e.request.mode === "navigate") {
-    e.respondWith(fetch(e.request).catch(() => caches.match("./index.html")));
+    // keep a copy of each page that loads, and when the network fails show THAT page
+    // (owner.html, kds.html...) - not the menu. The menu is only the last resort.
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res && res.ok) { const c = res.clone(); caches.open(CACHE).then(k => k.put(e.request, c)); }
+        return res;
+      }).catch(() => caches.match(e.request, { ignoreSearch: true })
+        .then(hit => hit || caches.match("./index.html")))
+    );
     return;
   }
   // JS and CSS: network first, so an update always lands

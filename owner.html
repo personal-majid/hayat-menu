@@ -161,6 +161,13 @@ body.period #dockTime{display:none}
 .ssrun{width:100%;height:150px;display:block;background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 25%} .ssrun path{fill:none;stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linejoin:round} .ssrun .l1{stroke:var(--sv1)} .ssrun .l2{stroke:var(--sv2)}
 .ssmt{display:grid;gap:2px;margin-top:10px;font-size:13px} .ssmt>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:4px 0;border-top:1px solid var(--line)} .ssmt>div>*:not(:first-child){text-align:right;font-variant-numeric:tabular-nums} .ssmt small{color:var(--muted)} .ssmt .ssmh{border-top:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .spc .spcg td{color:var(--muted);font-size:12.5px} .spc .spct td{border-bottom:2px solid var(--line2)}
+.fcmat{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:4px 0 10px} .fcmat>div,.fcmat>label{background:var(--soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px} .fcmat small{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.04em;text-transform:uppercase} .fcmat b{font-size:17px} .fcmat em{font-style:normal;font-size:12px;color:var(--muted)} .fcmat input{width:100%}
+.fcot input{width:74px;text-align:right}
+#dock .tday{padding:6px 12px 2px;flex:none;width:auto;display:flex} #dock .tday .dpill{height:38px} #dock .tday .dn{width:42px;height:38px}
+.calq{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 100%;order:-1} .calq .chip{border:1px solid var(--line2);background:var(--card);color:var(--text);border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer} #calX{margin-left:auto}
+@media (max-width:640px){ .calq{order:99} }
+.trr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:var(--soft);margin:6px 0;border-left:4px solid var(--line2)} .trr small{display:block;color:var(--muted);font-size:12px} .trn{text-align:right} .trn b{font-size:18px;display:block} .trn i{font-style:normal;font-size:12px;color:var(--muted)}
+.trr.ok{border-left-color:#2E7D5B} .trr.mid{border-left-color:#C0882C} .trr.bad{border-left-color:#C2362C} .trr.bad .trn i{color:#C2362C;font-weight:700}
 .wxn{margin:6px 0 0} .wxn small{color:var(--muted)}
 .subnav{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding:2px 0;scrollbar-width:none} .subnav::-webkit-scrollbar{display:none}
 .subnav button{flex:0 0 auto;border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -472,7 +479,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v221';
+const BOARD='v231';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -561,7 +568,8 @@ function pace(){
   const nowH=(()=>{ const d=new Date(NOW); return (d.getHours()-BH0+24)%24 + d.getMinutes()/60; })();
   const upto=live?nowH:24;
   const till=(H)=>{ if(!H) return null; let t=0; for(let i=0;i<24;i++){ if(i+1<=upto) t+=H[i]||0; else if(i<upto) t+=(H[i]||0)*(upto-i); } return t; };
-  const H=hbucket(recs().filter(r=>r.status==='settled')), today=till(H);
+  /* today = every bill so far (the hour we are in is real money, not a share of it); other days are cut at the same minute */
+  const H=hbucket(recs().filter(r=>r.status==='settled')), today=H.reduce((a,b)=>a+(b||0),0);
   const y=new Date(DAY+'T12:00:00'); y.setDate(y.getDate()-1); const yd=ymd(y);
   const yH=YDOC?hbucket(Object.values(YDOC.records||{}).filter(r=>r.status==='settled')):(INDEX[yd]&&INDEX[yd].hours);
   const w=new Date(DAY+'T12:00:00'); w.setDate(w.getDate()-7); const wd=ymd(w), wH=INDEX[wd]&&INDEX[wd].hours;
@@ -728,7 +736,10 @@ function kitchenSheet(){
    evening before it. Index 0 = 05:00 … index 23 = 04:00 next morning. */
 const BH0=5;
 function bh(ts){ const h=+(ts||'').slice(11,13); return h>=0?(h-BH0+24)%24:-1; }
-function hbucket(rows){ const H=Array(24).fill(0); rows.forEach(r=>{ const i=bh(r.settledAt); if(i>=0) H[i]+=r.total||0; }); return H; }
+/* sales by hour = by ORDER time (the bill's start), not pay time: a delivery paid at midnight belongs to the hour it was ordered.
+   Pay time put ~Rs 6,000 a day of late-closed deliveries into the last hours and the forecast counted it twice (Majid, 10 Oct). */
+function hbucket(rows){ const H=Array(24).fill(0); rows.forEach(r=>{ const i=bh(r.createdAt||r.settledAt); if(i>=0) H[i]+=r.total||0; }); return H; }
+function hbucketPaid(rows){ const H=Array(24).fill(0); rows.forEach(r=>{ const i=bh(r.settledAt); if(i>=0) H[i]+=r.total||0; }); return H; }
 /* only the active hours: one before the first sale, one after the last */
 function hspan(...Hs){ let lo=24,hi=-1; Hs.forEach(H=>(H||[]).forEach((v,i)=>{ if(v>0){ lo=Math.min(lo,i); hi=Math.max(hi,i); } })); if(hi<0) return [5,20]; return [Math.max(0,lo-1),Math.min(23,hi+1)]; }
 function hlabel(i){ return String((i+BH0)%24); }
@@ -737,16 +748,17 @@ const kfmt=v=>v>=1e5?'₹'+(v/1e5).toFixed(v%1e5?1:0)+'L':v>=1000?'₹'+(v/1000)
 function yscale(max,fmt){ if(!(max>0)) return {top:1,step:1,html:''}; const raw=max/4, p=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/p, step=(m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; const top=Math.ceil(max/step-0.02)*step; let out=''; for(let v=step; v<=top*1.001; v+=step){ const pc=100*v/top; out+=`<i class="yg" style="bottom:${pc}%"></i><b class="yl" style="bottom:${pc}%">${(fmt||kfmt)(v)}</b>`; } return {top,step,html:out}; }
 function ygrid(max,fmt){ return yscale(max,fmt).html; }
 function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH,F,U,LG){ const n=hi-lo+1; const Y=yscale(max); max=Y.top;
+  const uv=i=>!U?0:U.H?(U.H[i]||0):(U.i===i?U.v:0), un=i=>!U?0:U.N?(U.N[i]||0):(U.i===i?U.n:0);
   const seg=(b,v,c,t,lab)=>{ const bt=Math.min(100,100*b/max), ht=Math.min(100-bt,100*v/max), over=100*(b+v)/max>100.5; return `<div class="bar ${c}${over?' over':''}" style="position:absolute;left:0;right:0;bottom:${bt}%;height:${Math.max(3,ht)}%" data-t="${t}"></div>${lab?`<b class="unl ${c}l" style="bottom:${Math.min(80,bt+ht)}%">${over?'▲ ':''}${lab}</b>`:''}`; };
-  const lb=(i,v)=>{ const L=LG&&LG[i]; if(!(L>0)) return ''; const u=U&&U.i===i?U.v:0; return seg((v||0)+u,L,'lg',`${hlabel(i)}:00 large order ${rs(L)} · not in averages`,'+'+kfmt(L)+' large'); };
-  const ub=(i,v)=>U&&U.i===i&&U.v>0?`<div class="bar un" style="position:absolute;left:0;right:0;bottom:${Math.min(100,100*(v||0)/max)}%;height:${Math.max(3,Math.min(100-Math.min(100,100*(v||0)/max),100*U.v/max))}%" data-t="${hlabel(i)}:00 open now ${rs(U.v)} · ${U.n} order${U.n===1?'':'s'}${v?' · settled '+rs(v):''}"></div><b class="unl" style="bottom:${Math.min(88,100*((v||0)+U.v)/max)}%">+${kfmt(U.v)}</b>`:'';
+  const lb=(i,v)=>{ const L=LG&&LG[i]; if(!(L>0)) return ''; const u=uv(i); return seg((v||0)+u,L,'lg',`${hlabel(i)}:00 large order ${rs(L)} · not in averages`,'+'+kfmt(L)+' large'); };
+  const ub=(i,v)=>{ const u=uv(i), c=un(i); if(!(u>0)) return ''; return `<div class="bar un" style="position:absolute;left:0;right:0;bottom:${Math.min(100,100*(v||0)/max)}%;height:${Math.max(3,Math.min(100-Math.min(100,100*(v||0)/max),100*u/max))}%" data-t="${hlabel(i)}:00 ordered, not paid yet ${rs(u)} · ${c} bill${c===1?'':'s'}${v?' · paid '+rs(v):''}"></div>${u>=0.06*max?`<b class="unl" style="bottom:${Math.min(88,100*((v||0)+u)/max)}%">+${kfmt(u)}</b>`:''}`; };
   const mk=(i)=>{ let o=''; const m=(v,c)=>{ if(!(v>0)) return ''; const pc=100*v/max; return `<i class="${c}${pc>100?' over':''}" style="bottom:${Math.min(100,pc)}%"></i>`; };
     if(other&&otherTag==='y ') o+=m(other[i],'ym'); if(avgH) o+=m(avgH[i],'avgm'); return o; };
   const wrap=!!(avgH||(other&&otherTag==='y '));
   return `<div class="bars axed" style="grid-template-columns:repeat(${n},1fr)${height?';height:'+height+'px':''}">`+Y.html+H.slice(lo,hi+1).map((v,j)=>{ const i=lo+j;
     if(F&&i>=F.nowH&&F.fcH[i]>v){ const bar=`<div class="bc"><div class="bar fc${F.fcH[i]>max*1.005?' over':''}" style="height:${Math.min(100,Math.max(2,100*F.fcH[i]/max))}%" data-t="${hlabel(i)}:00 forecast ${rs(F.fcH[i])}${v?' · so far '+rs(v):''}"></div>${v?`<div class="bar" style="position:absolute;left:0;right:0;bottom:0;height:${Math.max(2,100*v/max)}%"></div>`:''}${ub(i,v)}${lb(i,v)}${mk(i)}</div>`; return bar; }
     const bar=`<div class="bar${cls?' '+cls:''}${HSEL===i?' cur':''}" data-h="${i}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
-    return wrap||(U&&U.i===i)||(LG&&LG[i]>0)?`<div class="bc">${bar}${ub(i,v)}${lb(i,v)}${mk(i)}</div>`:bar; }).join('')+'</div>'; }
+    return wrap||uv(i)>0||(LG&&LG[i]>0)?`<div class="bc">${bar}${ub(i,v)}${lb(i,v)}${mk(i)}</div>`:bar; }).join('')+'</div>'; }
 /* the same weekday's hourly average, from the day index (no reads) */
 function weekdayAvg(day){ const dow=new Date(day+'T12:00:00').getDay(); const days=Object.keys(INDEX).filter(d=>d!==day&&INDEX[d].hours&&new Date(d+'T12:00:00').getDay()===dow); if(days.length<2) return null;
   const A=Array(24).fill(0); days.forEach(d=>INDEX[d].hours.forEach((v,i)=>A[i]+=v||0)); return {H:A.map(v=>v/days.length),n:days.length}; }
@@ -772,10 +784,20 @@ function lgTypical(rows){ const v=rows.filter(r=>r.kind!=='staff').map(sum).filt
 /* a bill that looks like catering: >= Rs 5,000 and >= 5x the day's typical bill, not yet decided */
 function lgSuggest(rows){ const S=rows.filter(r=>r.status==='settled'||r.status==='open'||r.status==='due'), t=lgTypical(S);
   return S.filter(r=>{ const a=sum(r); return a>=5000&&a>=5*Math.max(t,1)&&!LARGE[lgId(r)]; }).sort((a,b)=>sum(b)-sum(a)); }
+/* PAST DAYS BY ORDER TIME: the shop PC's index counts a bill in the hour it was PAID. The owner app works out each past day
+   by order time from its day log once, and keeps it in settings/ohours {v, d:{day:{h:[24], lg:{billKey:[hour,amount]}}}}
+   so every chart, pattern and the forecast read the same clock as today's live hours. */
+let OHS={}; const OH_V=1; const OHSCAN={busy:false};
+function ohOf(doc,d){ const H=Array(24).fill(0), lg={}; Object.values(doc.records||{}).forEach(r=>{ if(r.status!=='settled') return; const i=bh(r.createdAt||r.settledAt); if(i<0) return; const v=r.total||0; H[i]+=v; if(v>2000) lg[lgRaw(Object.assign({},r,{day:d}))]=[i,v]; }); return {h:H.map(x=>Math.round(x*100)/100),lg}; }
+async function ohScan(){ if(OHSCAN.busy||!FB||!FB.fs||FB.role!=='office') return;
+  const list=Object.keys(INDEX).filter(d=>d<bizToday()&&(INDEX[d].hoursRaw||INDEX[d].hours)&&!OHS[d]).sort().slice(-150); if(!list.length) return; OHSCAN.busy=true; let add={}, n=0;
+  const flush=async()=>{ if(!n) return; try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','ohours'),{v:OH_V,d:add},{merge:true}); }catch(e){} add={}; n=0; };
+  try{ for(const d of list){ const doc=await loadDay(d); if(doc&&doc.records){ const o=ohOf(doc,d); OHS[d]=o; add[d]=o; n++; } if(n>=10){ await flush(); applyLarge(); } } await flush(); }
+  finally{ OHSCAN.busy=false; } applyLarge(); render(); }
 /* every day in the index: hours without the large orders, raw hours kept for history */
-function applyLarge(){ const by={}; Object.values(LARGE).forEach(x=>{ if(x&&x.large&&x.day){ (by[x.day]=by[x.day]||[]).push(x); } });
-  Object.keys(INDEX).forEach(d=>{ const x=INDEX[d]; if(!x) return; if(x.hours&&!x.hoursRaw) x.hoursRaw=x.hours.slice(); if(!x.hoursRaw) return;
-    const H=x.hoursRaw.slice(); let big=0; (by[d]||[]).forEach(l=>{ const h=l.h>=0&&l.h<24?l.h:null; if(h!=null){ const cut=Math.min(H[h]||0,l.amt||0); H[h]-=cut; big+=cut; } else big+=l.amt||0; });
+function applyLarge(){ const by={}; Object.entries(LARGE).forEach(([k,x])=>{ if(x&&x.large&&x.day){ (by[x.day]=by[x.day]||[]).push(Object.assign({raw:k.slice(k.indexOf('|')+1)},x)); } });
+  Object.keys(INDEX).forEach(d=>{ const x=INDEX[d]; if(!x) return; if(x.hours&&!x.hoursRaw) x.hoursRaw=x.hours.slice(); if(!x.hoursRaw) return; const O=OHS[d];
+    const H=(O&&O.h?O.h:x.hoursRaw).slice(); x.byOrder=!!(O&&O.h); let big=0; (by[d]||[]).forEach(l=>{ const oh=O&&O.lg&&O.lg[l.raw]; const h=oh?oh[0]:(l.h>=0&&l.h<24?l.h:null); if(h!=null){ const cut=Math.min(H[h]||0,l.amt||0); H[h]-=cut; big+=cut; } else big+=l.amt||0; });
     x.hours=H; x.big=big; }); FC_BT=null; }
 const nrev=d=>{ const x=INDEX[d]; return x?Math.max(0,(x.rev||0)-(x.big||0)):0; };
 async function lgSet(r,large){ const id=lgId(r); const v={large:!!large,day:lgDay(r),h:r.settledAt?bh(r.settledAt):bh(r.createdAt),amt:Math.round(sum(r)),kind:r.kind||'',kot:r.kot||'',at:new Date().toISOString()};
@@ -1328,7 +1350,7 @@ function runLine(){
   const Y0=YDOC?cum(hbucket(Object.values(YDOC.records||{}).filter(r=>r.status==='settled'&&normal(r,YDOC.day)))):null, wa=weekdayAvg(DAY), WA=wa?cum(wa.H):null;
   const F=live?fcToday(true):null; let fc=null;
   if(F){ const b=fcBand(F.nowH), act=B.reduce((n,p)=>n+p[1],0), rs0=F.rest.reduce((a,c)=>a+c,0), gap=Math.max(0,F.act-act)+(preToday().add||0), mk=m=>{ const o=[[nowMin,act]]; let t=act+gap; for(let h=F.nowH;h<24;h++){ t+=(F.rest[h]||0)*m; o.push([(h+1)*60,t]); } return o; };   /* gap: open bills + pre-bookings, so the line ends where the Forecast tile says */
-    const mP=rs0>0?Math.max(0,(F.total*(1-b)-F.act)/rs0):1, mO=rs0>0?(F.total*(1+b)-F.act)/rs0:1, m0=FC_SCN==='pess'?mP:FC_SCN==='opt'?mO:1;
+    const SM=scnMult(F), mP=SM.lo, mO=SM.hi, m0=FC_SCN==='pess'?mP:FC_SCN==='opt'?mO:1;   /* same rule as the outlook: spread only on what is still to come */
     fc={mid:mk(m0),lo:mk(mP),hi:mk(mO)}; }
   /* span: from the first sale (or 11:00) to the last hour with sales or forecast */
   const used=[...B.map(p=>p[0]),...(Y0?[]:[]),...(fc?fc.mid.filter((p,i,a)=>i===0||p[1]>a[i-1][1]+1).map(p=>p[0]):[])];
@@ -1359,8 +1381,8 @@ function hourly(){
   /* the scale follows only what is drawn, so a big yesterday never shrinks today */
   /* the scale follows TODAY only (bars + forecast still to come); yesterday and avg are thin markers, capped at the top with an arrow when higher */
   /* open (unrealized) orders: stacked on the hour we are in, so the bar shows what this hour will bring */
-  let U=null; if(!span&&DAY===bizToday()){ const O=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff'); const v=O.reduce((n,r)=>n+sum(r),0); const i=Math.max(0,Math.min(23,Math.floor(((TCUT!=null?TCUT:(Date.now()-dayStartMs(DAY))/60000))/60))); if(v>0) U={i,v,n:O.length}; }
-  const [lo,hi]=hspan(H,showY?HY:[],showA?wa.H:[],HF||[],U?H.map((x,i)=>i===U.i?1:0):[]), top=Math.max(0,...H.map((v,i)=>v+(U&&U.i===i?U.v:0)));
+  let U=null; if(!span&&DAY===bizToday()){ const O=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff'); const UH=Array(24).fill(0), UN=Array(24).fill(0); O.forEach(r=>{ const i=bh(r.createdAt); if(i>=0){ UH[i]+=sum(r); UN[i]++; } }); const v=UH.reduce((a,b)=>a+b,0); if(v>0) U={H:UH,N:UN,v,n:O.length}; }
+  const [lo,hi]=hspan(H,showY?HY:[],showA?wa.H:[],HF||[],U?U.H.map(x=>x>0?1:0):[]), top=Math.max(0,...H.map((v,i)=>v+(U?U.H[i]||0:0)));
   /* the axis = the highest real hour of this day (large orders and the forecast never stretch it; they are capped with ▲) */
   const max=Math.max(1,top||Math.max(0,...(HF||[])));
   const nl=SR.filter(r=>isLarge(r)).length, lgNote=(span?'':wxNote(DAY))+(nl?`<div class="note" style="margin:4px 0 0">⚑ ${nl} large order${nl>1?'s':''} ${rs(SR.filter(r=>isLarge(r)).reduce((n,r)=>n+sum(r),0))} shown as grey caps · not in averages</div>`:'');
@@ -2324,8 +2346,12 @@ function fcModel0(day,variant){
   const days=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort(), dow=new Date(day+'T12:00:00').getDay();
   const vv=variant||FC_BEST||'trim', all=days.filter(d=>new Date(d+'T12:00:00').getDay()===dow).slice(-12), same=all.slice(-6);
   if(same.length<2) return null;
-  let prof=FC_VARIANTS[vv](same);
-  const base=prof.reduce((a,b)=>a+b,0);
+  /* LEVEL from the last 4 same weekdays (x1, x0.7, x0.49...), hour PATTERN from the last 6 (plain average, top and bottom
+     dropped). Sundays jumped to ~Rs 88K for three weeks and the 6-week level kept saying 72K (Majid, 11 Oct). Replay, 51 days:
+     bias -10.8% -> -4.9%, error 19.0% -> 18.8%. */
+  const lv=FC_VARIANTS[vv](same.slice(-4)), base=lv.reduce((a,b)=>a+b,0);
+  const shp=Array(24).fill(0); for(let h=0;h<24;h++){ let v=same.map(d=>fcHours(d)[h]); if(v.length>=5) v=v.slice().sort((a,b)=>a-b).slice(1,-1); shp[h]=v.reduce((a,b)=>a+b,0)/(v.length||1); }
+  const st=shp.reduce((a,b)=>a+b,0); let prof=st>0?shp.map(v=>v/st*base):lv;
   { const k=0.1, sm=prof.map((v,h)=>v*(1-2*k)+(h>0?prof[h-1]:0)*k+(h<23?prof[h+1]:0)*k), t=sm.reduce((a,b)=>a+b,0)||1; prof=sm.map(v=>v/t*base); }
   const mean=L=>L.length?L.reduce((n,d)=>n+fcRev(d),0)/L.length:0;
   const last28=days.slice(-28), prev28=days.slice(-56,-28);
@@ -2356,6 +2382,64 @@ function fcModel0(day,variant){
 const FC_MODES=['day','recent','block','mix'];
 const FC_MODE_NAME={day:'whole day pace',recent:'last 3 hours',block:'busy vs slump hours',mix:'last 3 hours + busy/slump'};
 let FC_MODE=null;
+/* SHOP HOURS: settings/shophours {close:'00:30', dow:{'0'..'6':'HH:MM'}}. After closing nothing more is forecast;
+   the hour we are in only counts the minutes before closing (Majid, 11 Oct: "after 12:30 we almost close"). */
+let SHOPH=null; const CLOSE_DEF='00:30';
+const hm2min=t=>{ const m=/^(\d{1,2}):(\d{2})$/.exec(String(t||'').trim()); return m?((+m[1])*60+(+m[2])):null; };
+function closeAt(day){ const dw=String(new Date(day+'T12:00:00').getDay()); return (SHOPH&&SHOPH.dow&&SHOPH.dow[dw])||(SHOPH&&SHOPH.close)||CLOSE_DEF; }
+function closeMin(day){ const m=hm2min(closeAt(day)); return m==null?1170:(m-BH0*60+1440)%1440||1440; }   /* minutes after 05:00 */
+const openPart=(day,h)=>Math.max(0,Math.min(60,closeMin(day)-h*60));   /* minutes of hour h (05:00 = 0) the shop is open */
+/* when the last order usually comes in on this weekday (median of the cached day logs) */
+function lastOrderUsual(day){ const dw=new Date(day+'T12:00:00').getDay(), L=[];
+  Object.keys(CACHE||{}).filter(d=>d<bizToday()&&CACHE[d]&&CACHE[d].records&&(day==null||new Date(d+'T12:00:00').getDay()===dw)).sort().slice(-8).forEach(d=>{ const st=dayStartMs(d); let mx=null; Object.values(CACHE[d].records).forEach(r=>{ if(r.kind==='staff'||!r.createdAt) return; const m=(T(r.createdAt).getTime()-st)/60000; if(m>=0&&m<1440&&(mx==null||m>mx)) mx=m; }); if(mx!=null) L.push(mx); });
+  if(L.length<3) return null; L.sort((a,b)=>a-b); const m=Math.round(L[Math.floor(L.length/2)]); return String(Math.floor(((m/60)+BH0)%24)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+/* ROAD TRAFFIC (TomTom Routing, free 20K/month): drive time now vs no-traffic for a few routes, read when the app
+   opens and at most every 10 minutes. settings/traffic {key, routes:[{n,a:[lat,lng],b:[lat,lng]}]} - Majid pastes his own key. */
+let TRF=null; const TRF_DEF=[{n:'Perinthalmanna → Malappuram',a:[10.9764,76.2269],b:[11.0509,76.0711]},{n:'Malappuram → Perinthalmanna',a:[11.0509,76.0711],b:[10.9764,76.2269]}];
+let TRR={at:0,res:null,busy:false,err:null}; try{ const c=JSON.parse(localStorage.getItem('hayat-trf')||'null'); if(c&&c.res) TRR=Object.assign(TRR,c,{busy:false}); }catch(e){}
+/* the key: saved in the app (settings/traffic) first, else config.js  traffic: { tomtomKey } - already there */
+const trfKey=()=>{ const C=window.CONFIG||{}; return (TRF&&TRF.key)||(C.traffic&&C.traffic.tomtomKey)||C.tomtomKey||''; };   /* config.js already has traffic.tomtomKey (the menu map uses it) */
+async function trfRead(force){ if(!trfKey()||TRR.busy) return; if(!force&&Date.now()-TRR.at<10*60e3) return; TRR.busy=true; render();
+  const R=(TRF&&TRF.routes&&TRF.routes.length?TRF.routes:TRF_DEF); const out=[];
+  try{ for(const r of R){ const u='https://api.tomtom.com/routing/1/calculateRoute/'+r.a.join(',')+':'+r.b.join(',')+'/json?traffic=true&travelMode=car&computeTravelTimeFor=all&key='+encodeURIComponent(trfKey());
+      const j=await (await fetch(u)).json(); const x=j&&j.routes&&j.routes[0]&&j.routes[0].summary;
+      out.push(x?{n:r.n,now:Math.round(x.travelTimeInSeconds/60),free:Math.round((x.noTrafficTravelTimeInSeconds||x.travelTimeInSeconds)/60),delay:Math.round((x.trafficDelayInSeconds||0)/60),km:Math.round(x.lengthInMeters/100)/10}:{n:r.n,err:(j&&j.detailedError&&j.detailedError.message)||'no route'}); }
+    TRR={at:Date.now(),res:out,busy:false,err:null}; try{ localStorage.setItem('hayat-trf',JSON.stringify(TRR)); }catch(e){}
+    trfLog(out); }
+  catch(e){ TRR.busy=false; TRR.err=String(e&&e.message||e); } render(); }
+/* keep one reading per hour for later (traffic vs sales, maybe the forecast): settings/trf_YYYY-MM {d:{day:{hour:{at,r:[{n,now,free,delay}]}}}}
+   hour = business hour (0 = 05:00). A missed hour is fine - the next open fills the hour it is in. */
+const TRF_LOGGED={};
+async function trfLog(out){ if(!FB||!FB.fs||!out||!out.length) return; const day=bizToday(), h=String(new Date().getHours()).padStart(2,'0'), k=day+'|'+h;   /* clock hour, 00-23 */ if(TRF_LOGGED[k]) return; TRF_LOGGED[k]=1;
+  const rows=out.filter(x=>!x.err).map(x=>({n:x.n,now:x.now,free:x.free,delay:x.delay})); if(!rows.length) return;
+  try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','trf_'+day.slice(0,7)),{d:{[day]:{[h]:{at:new Date().toISOString(),r:rows}}}},{merge:true}); }catch(e){ delete TRF_LOGGED[k]; } }
+function trafficCard(){ if(DAY!==bizToday()) return '';
+  if(!trfKey()) return `<div class="card wide trf"><h2>Road traffic <span class="n">Perinthalmanna ↔ Malappuram</span></h2><div class="note">Free with a TomTom key (20,000 checks a month, no card). <a href="#" id="trfSet">Add your key</a></div></div>`;
+  const R=TRR.res||[], lvl=x=>x.err?'':x.delay>=10||x.now>=1.4*x.free?'bad':x.delay>=4||x.now>=1.15*x.free?'mid':'ok', word={bad:'busy',mid:'some traffic',ok:'clear'};
+  return `<div class="card wide trf"><h2>Road traffic <span class="n">${TRR.busy?'reading…':TRR.at?'at '+new Date(TRR.at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''} · <a href="#" id="trfNow">↻</a> · <a href="#" id="trfSet">routes &amp; key</a></span></h2>
+    ${R.length?R.map(x=>x.err?`<div class="trr"><span>${esc(x.n)}</span><span class="note">${esc(x.err)}</span></div>`:`<div class="trr ${lvl(x)}"><span><b>${esc(x.n)}</b><small>${x.km} km · normally ${x.free} min</small></span><span class="trn"><b>${x.now} min</b><i>${x.delay>0?'+'+x.delay+' min · ':''}${word[lvl(x)]}</i></span></div>`).join(''):'<div class="note">Tap ↻ to read the roads.</div>'}
+    ${TRR.err?`<div class="note">Could not read: ${esc(TRR.err)}</div>`:''}<p class="note">Busy roads usually mean more people out - good for walk-ins. TomTom live traffic.</p></div>`; }
+function trafficSheet(){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const R=(TRF&&TRF.routes&&TRF.routes.length?TRF.routes:TRF_DEF);
+  box.innerHTML=`<div class="sheet"><h2>Road traffic <button class="x" id="drillX">✕</button></h2>
+    <p class="sub">1) Make a free key at developer.tomtom.com (no card) and paste it here. 2) Routes: name and start / end as "lat, lng" (copy from Google Maps).</p>
+    <label class="fcmat" style="display:block"><small>TomTom key</small> <input type="password" class="fld" id="trfKey" autocomplete="off" placeholder="${TRF&&TRF.key?'saved - paste to replace':'paste your key'}"></label>
+    <table><tr><th>Route</th><th>From</th><th>To</th></tr>${R.concat([{n:'',a:'',b:''}]).map((r,i)=>`<tr data-trr="${i}"><td><input class="fld" data-k="n" value="${esc(r.n||'')}" placeholder="name"></td><td><input class="fld" data-k="a" value="${r.a?r.a.join(', '):''}" placeholder="10.97, 76.22"></td><td><input class="fld" data-k="b" value="${r.b?r.b.join(', '):''}" placeholder="11.05, 76.07"></td></tr>`).join('')}</table>
+    <div class="tabs" style="margin-top:10px"><button class="tab on" id="trfSave">Save</button></div></div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  $('trfSave').onclick=async()=>{ const pt=v=>{ const m=String(v).split(',').map(x=>+x.trim()); return m.length===2&&m.every(x=>isFinite(x)&&x!==0)?m:null; }, routes=[];
+    $$('[data-trr]',box).forEach(tr=>{ const n=tr.querySelector('[data-k="n"]').value.trim(), a=pt(tr.querySelector('[data-k="a"]').value), b=pt(tr.querySelector('[data-k="b"]').value); if(n&&a&&b) routes.push({n,a,b}); });
+    const k=$('trfKey').value.trim(); TRF={key:k||(TRF&&TRF.key)||'',routes};
+    try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','traffic'),TRF); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); TRR.at=0; trfRead(true); }; }
+function hoursSheet(){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const W=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], base=bizToday(), dayOf=i=>{ const x=new Date(base+'T12:00:00'); x.setDate(x.getDate()-((x.getDay()-i+7)%7)); return ymd(x); };
+  box.innerHTML=`<div class="sheet"><h2>Closing time <button class="x" id="drillX">✕</button></h2><p class="sub">After closing the forecast stops. Blank = the normal closing time.</p>
+    <label class="fcmat" style="display:block"><small>Normal closing time</small> <input type="time" class="fld" id="shClose" value="${(SHOPH&&SHOPH.close)||CLOSE_DEF}"></label>
+    <table><tr><th>Day</th><th>Closes</th><th class="m">Last order usually</th></tr>${W.map((w,i)=>`<tr><td>${w}</td><td><input type="time" class="fld" data-shd="${i}" value="${SHOPH&&SHOPH.dow&&SHOPH.dow[i]||''}"></td><td class="m">${lastOrderUsual(dayOf(i))||'—'}</td></tr>`).join('')}</table>
+    <div class="tabs" style="margin-top:10px"><button class="tab on" id="shSave">Save</button></div></div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  $('shSave').onclick=async()=>{ const dow={}; $$('[data-shd]',box).forEach(i=>{ if(i.value) dow[i.dataset.shd]=i.value; }); SHOPH={close:$('shClose').value||CLOSE_DEF,dow}; FC_HC={}; FC_BT=null;
+    try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','shophours'),SHOPH); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
 function fcLive(day,H,nowH,frac,open,mode){
   const M=fcModel(day); if(!M) return null; open=+open||0; mode=mode||FC_MODE||'day';
   const P=M.prof.map(v=>v*M.f), pk=Math.max(1,...P), busy=P.map(v=>v>=0.5*pk);
@@ -2373,10 +2457,11 @@ function fcLive(day,H,nowH,frac,open,mode){
       const r=mode==='recent'?half(rRec):mode==='block'?rb:mode==='mix'?(half(rRec)+rb)/2:rDay;
       C[h]=Math.min(1.6,Math.max(0.6,1+(r-1)*Math.min(1,share*0.25))); } }
   const corr=C[Math.min(23,nowH+1)];
-  const rest=P.map((v,h)=>h<nowH?0:h===nowH?Math.max(0,v*(1-frac)*C[h]):v*C[h]);
+  /* nothing after closing; the hour we are in only for its minutes before closing */
+  const rest=P.map((v,h)=>{ if(h<nowH) return 0; const op=openPart(day,h); if(!(op>0)) return 0; if(h===nowH){ const left=Math.max(0,op-frac*60); return Math.max(0,v*C[h]*left/op); } return v*C[h]; });
   const fcH=P.map((v,h)=>h<nowH?(H[h]||0):h===nowH?(H[h]||0)+open+rest[h]:rest[h]);
   const e2=(P[nowH-1]||0)+(P[nowH-2]||0), a2=(H[nowH-1]||0)+(H[nowH-2]||0); const mom=e2>0?Math.min(1.3,Math.max(0.7,1+((a2/e2)-1)*0.15)):1;
-  const next=P[nowH+1]!=null?P[nowH+1]*C[Math.min(23,nowH+1)]*mom:0;
+  const next=P[nowH+1]!=null&&openPart(day,nowH+1)>0?P[nowH+1]*C[Math.min(23,nowH+1)]*mom:0;
   const total=act+rest.reduce((a,b)=>a+b,0);
   return Object.assign({},M,{P,fcH,rest,total,next,corr,C,busy,share,act,exp,nowH,open,mode,rDay,rRec,rBusy,rSlump});
 }
@@ -2403,20 +2488,24 @@ const FC_BAND={6:.25,7:.25,8:.247,9:.19,10:.177,11:.164,12:.161,13:.149,14:.138,
 const fcBand=h=>h<6?.25:h>18?.09:FC_BAND[h];
 let FC_SCN='neut'; try{ FC_SCN=localStorage.getItem('hayat-fc-scn')||'neut'; }catch(e){}
 const FC_SCN_N={pess:'Pessimistic',neut:'Neutral',opt:'Optimistic'};
-function fcAdj(F){ if(!F||FC_SCN==='neut') return F; const b=fcBand(F.nowH), target=F.total*(FC_SCN==='pess'?1-b:1+b), restSum=F.rest.reduce((a,c)=>a+c,0);
-  const m=restSum>0?Math.max(0,(target-F.act)/restSum):1, rest=F.rest.map(v=>v*m);
+/* pessimistic / optimistic multiply only what is still to come: the spread is band x day total, but never more than
+   the remainder itself (rest x0 .. x2). Before: a tiny remainder at 1 am was stretched to +9% of the whole day (Majid, 11 Oct). */
+function scnMult(F){ const r=F.rest.reduce((a,c)=>a+c,0); if(!(r>0)) return {lo:1,hi:1,r}; const k=Math.min(1,fcBand(F.nowH)*F.total/r); return {lo:1-k,hi:1+k,r}; }
+function fcAdj(F){ if(!F||FC_SCN==='neut') return F; const S=scnMult(F), restSum=S.r;
+  const m=FC_SCN==='pess'?S.lo:S.hi, rest=F.rest.map(v=>v*m);
   return Object.assign({},F,{rest,fcH:F.fcH.map((v,h)=>h<F.nowH?v:h===F.nowH?v-F.rest[h]+rest[h]:rest[h]),next:F.next*m,total:F.act+restSum*m,scn:FC_SCN}); }
 function fcNow(){ const d=new Date(NOW); const h=(d.getHours()-BH0+24)%24; return {nowH:h,frac:d.getMinutes()/60}; }
-function fcToday(neutral){ if(DAY!==bizToday()||!DOC) return null; if(!FC_BT) fcBacktest(); const {nowH,frac}=fcNow(); const open=recs().filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff'&&normal(r)).reduce((n,r)=>n+sum(r),0); const F0=fcLive(DAY,hbucket(recs().filter(r=>r.status==='settled'&&normal(r))),nowH,frac,open);  return neutral?F0:fcAdj(F0); }
+function fcToday(neutral){ if(DAY!==bizToday()||!DOC) return null; if(!FC_BT) fcBacktest(); const {nowH,frac}=fcNow(); const H=hbucket(recs().filter(r=>normal(r)&&(r.status==='settled'||((r.status==='open'||r.status==='due')&&r.kind!=='staff'))).map(r=>Object.assign({},r,{total:sum(r)}))); const F0=fcLive(DAY,H,nowH,frac,0);   /* open bills sit in the hour they were ordered */  return neutral?F0:fcAdj(F0); }
 /* the forecast exactly as the app would have shown it at minute v of day d (replay slider).
    Only bills settled before v count; bills over Rs 4,000 / marked large are pre-bookings and stay out. */
 function fcAt(d,v){ const doc=d===DAY?DOC:(RP.docs[d]||null); if(!doc||!doc.records) return null; if(!FC_BT) fcBacktest();
   const st=dayStartMs(d), R=Object.values(doc.records).map(r=>Object.assign({},r,{day:d}));
   const mn=ts=>ts?(T(ts).getTime()-st)/60000:null, H=Array(24).fill(0), A=Array(24).fill(0);
-  R.forEach(r=>{ if(r.status!=='settled'||!normal(r,d)) return; const m=mn(r.settledAt); if(m==null||m<0||m>=1440) return; const i=Math.floor(m/60); A[i]+=r.total||0; if(m<v) H[i]+=r.total||0; });
+  R.forEach(r=>{ if(r.status!=='settled'||!normal(r,d)) return; const m=mn(r.createdAt||r.settledAt); if(m==null||m<0||m>=1440) return; const i=Math.floor(m/60); A[i]+=r.total||0; if(m<v) H[i]+=r.total||0; });   /* by order time; a bill ordered before v counts even if paid later */
   const nowH=Math.min(23,Math.floor(v/60)), frac=(v%60)/60;
   const open=R.filter(r=>r.kind!=='staff'&&normal(r,d)&&mn(r.createdAt)!=null&&mn(r.createdAt)<v&&!(r.status==='settled'&&mn(r.settledAt)<v)&&r.status!=='void'&&r.status!=='cancelled').reduce((n,r)=>n+sum(r),0);
-  const F=fcLive(d,H,nowH,frac,d===bizToday()?open:0); if(!F) return null;
+  if(d===bizToday()) R.forEach(r=>{ if((r.status==='open'||r.status==='due')&&r.kind!=='staff'&&normal(r,d)){ const m=mn(r.createdAt); if(m!=null&&m>=0&&m<v) H[Math.floor(m/60)]+=sum(r); } }); void open;
+  const F=fcLive(d,H,nowH,frac,0); if(!F) return null;
   /* sales expected in the next 60 / 120 minutes */
   const win=mins=>{ let t=0; for(let m=v; m<v+mins; m+=15){ const h=Math.floor(m/60); if(h>23) break; const left=h===nowH?Math.max(0.01,1-frac):1; t+=(F.rest[h]||0)/left*0.25*(h===nowH?1:1); } return t; };
   const realWin=mins=>R.filter(r=>r.status==='settled'&&normal(r,d)).reduce((n,r)=>{ const m=mn(r.settledAt); return n+(m!=null&&m>=v&&m<v+mins?(r.total||0):0); },0);
@@ -2459,11 +2548,11 @@ function fcCard(F){ if(!F) return ''; const PB=preToday(); const total=F.total+P
   const cut=cutTs(); let by=''; if(cut!=null&&cut>Date.now()&&TCUT!=null){ const h=Math.min(23,Math.floor(TCUT/60)), fr=(TCUT%60)/60; let v=0; for(let i=0;i<h;i++) v+=F.fcH[i]||0; v+=(F.fcH[h]||0)*fr; const hh=String(Math.floor((h+BH0)%24)).padStart(2,'0'), mm=String(TCUT%60).padStart(2,'0'); by=`<span>By ${hh}:${mm} <b>${rs(v)}</b></span>`; }
   return `<div class="kpi click" id="fcTile" title="tap for how it is worked out"><small>Forecast today${F.scn?' · '+FC_SCN_N[F.scn].toLowerCase():''} ${F.why?'· '+esc(F.why):''}</small><b>${rs(total)}</b><em class="rows">${by}<span>Next hour <b>${rs(F.next)}</b></span><span>Pre-bookings <b>${PB.add?rs(PB.add):'—'}</b></span><span>Done <b>${pct}%</b></span><span>vs plan <b class="${dev==null?'':dev>=0?'up':'dn'}">${dev==null?'—':(dev>=0?'+':'')+dev+'%'}</b></span></em>
     </div>`; }
-function scnBar(){ return `<div class="scnbar"><small>Forecast outlook</small><div class="scn">${['pess','neut','opt'].map(k=>`<button type="button" class="${FC_SCN===k?'on':''}" data-scn="${k}">${FC_SCN_N[k]}</button>`).join('')}</div><span class="scnwhy">${FC_SCN==='pess'?'slow day — lower end of the likely range':FC_SCN==='opt'?'busy day — upper end of the likely range':'middle of the likely range'}</span><button class="preadd" id="preAdd" type="button">+ Pre-booking</button><button class="preadd" id="fcHide" type="button" title="hide the forecast">Hide forecast</button></div>`; }
+function scnBar(){ return `<div class="scnbar"><small>Forecast outlook</small><div class="scn">${['pess','neut','opt'].map(k=>`<button type="button" class="${FC_SCN===k?'on':''}" data-scn="${k}">${FC_SCN_N[k]}</button>`).join('')}</div><span class="scnwhy">${FC_SCN==='pess'?'slow day — lower end of the likely range':FC_SCN==='opt'?'busy day — upper end of the likely range':'middle of the likely range'}</span><a href="#" class="n" id="shOpen">closes ${esc(closeAt(bizToday()))} · change</a><button class="preadd" id="preAdd" type="button">+ Pre-booking</button><button class="preadd" id="fcHide" type="button" title="hide the forecast">Hide forecast</button></div>`; }
 function fcSheet(){ const F=fcToday(); if(!F) return; const old=document.getElementById('drill'); if(old) old.remove();
   const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill'; const x=v=>'× '+v.toFixed(2); const QQ=r=>r==null?'—':(r>=1?'+':'')+Math.round(100*(r-1))+'%'; const nb=t=>{ for(let h=F.nowH+1;h<24;h++) if(F.busy[h]===t) return h; return Math.min(23,F.nowH+1); };
   box.innerHTML=`<div class="sheet"><h2>Forecast · ${esc(DAY)} <button class="x" id="drillX">✕</button></h2><p class="sub">Each link in the chain, so a wrong one is visible.</p>
-    <table><tr><td>Base · weighted average of the same weekday, last ${F.n} wks (last week ×1, then ×0.7 each week back; highest and lowest dropped; an hour over 2× its usual counts as a pre-booking)</td><td class="r">${rs(F.base)}</td></tr><tr><td>Growth · last 4 wks vs the 4 before (capped ±15%)</td><td class="r">${x(F.trend)}</td></tr><tr><td>Salary days · 1st–4th, learned from past months${F.cal>1&&F.pay>1?' (with a holiday the bigger one counts)':''}</td><td class="r">${x(F.pay||1)}</td></tr><tr><td>Calendar${F.why?' · '+esc(F.why):' · normal day'}</td><td class="r">${x(F.cal)}</td></tr><tr><td><b>Plan at open</b></td><td class="r"><b>${rs(F.plan)}</b></td></tr><tr><td>So far · actual ${rs(F.act)}${F.open?' (incl. '+rs(F.open)+' open bills)':''} vs expected ${rs(F.exp)} · ${Math.round(100*F.share)}% of the day</td><td class="r">${QQ(F.rDay)}</td></tr><tr><td>Last 3 hours vs plan</td><td class="r">${QQ(F.rRec)}</td></tr><tr><td>Busy hours so far vs plan</td><td class="r">${QQ(F.rBusy)}</td></tr><tr><td>Slump hours so far vs plan</td><td class="r">${QQ(F.rSlump)}</td></tr><tr><td>Rest of the day moved by · <b>${esc(FC_MODE_NAME[F.mode]||F.mode)}</b></td><td class="r">busy ${x(F.C[nb(true)])} · slump ${x(F.C[nb(false)])}</td></tr><tr><td>Pre-bookings · entered ${rs(preToday().inn)} · billed ${rs(preToday().billed)}</td><td class="r">+ ${rs(preToday().add)}</td></tr><tr><td><b>Forecast now</b></td><td class="r"><b>${rs(F.total+preToday().add)}</b></td></tr><tr><td>Next hour (${hlabel(F.nowH+1)}:00)</td><td class="r">${rs(F.next)}</td></tr></table>
+    <table><tr><td>Base · level from the last ${Math.min(4,F.n)} same weekdays (last week ×1, then ×0.7 each week back), hour pattern from the last ${F.n} (highest and lowest dropped; an hour over 2× its usual counts as a pre-booking)</td><td class="r">${rs(F.base)}</td></tr><tr><td>Growth · last 4 wks vs the 4 before (capped ±15%)</td><td class="r">${x(F.trend)}</td></tr><tr><td>Salary days · 1st–4th, learned from past months${F.cal>1&&F.pay>1?' (with a holiday the bigger one counts)':''}</td><td class="r">${x(F.pay||1)}</td></tr><tr><td>Calendar${F.why?' · '+esc(F.why):' · normal day'}</td><td class="r">${x(F.cal)}</td></tr><tr><td><b>Plan at open</b></td><td class="r"><b>${rs(F.plan)}</b></td></tr><tr><td>So far · actual ${rs(F.act)}${F.open?' (incl. '+rs(F.open)+' open bills)':''} vs expected ${rs(F.exp)} · ${Math.round(100*F.share)}% of the day</td><td class="r">${QQ(F.rDay)}</td></tr><tr><td>Last 3 hours vs plan</td><td class="r">${QQ(F.rRec)}</td></tr><tr><td>Busy hours so far vs plan</td><td class="r">${QQ(F.rBusy)}</td></tr><tr><td>Slump hours so far vs plan</td><td class="r">${QQ(F.rSlump)}</td></tr><tr><td>Rest of the day moved by · <b>${esc(FC_MODE_NAME[F.mode]||F.mode)}</b></td><td class="r">busy ${x(F.C[nb(true)])} · slump ${x(F.C[nb(false)])}</td></tr><tr><td>Pre-bookings · entered ${rs(preToday().inn)} · billed ${rs(preToday().billed)}</td><td class="r">+ ${rs(preToday().add)}</td></tr><tr><td><b>Forecast now</b></td><td class="r"><b>${rs(F.total+preToday().add)}</b></td></tr><tr><td>Next hour (${hlabel(F.nowH+1)}:00)</td><td class="r">${rs(F.next)}</td></tr></table>
     ${(()=>{ const B=fcBacktest(); const pc=v=>v==null?'—':v.toFixed(1)+'%'; return `<h3 style="margin:12px 0 4px;font-size:14px">How each method would have done · last ${B.days} days</h3><table><tr><th>Method</th><th class="r">Avg miss at open</th><th class="r">Bias</th></tr>${Object.keys(FC_VARIANTS).map(v=>`<tr${v===B.best?' style="font-weight:700"':''}><td>${v==='decay'?'weighted avg':v}${v===B.best?' · in use':''}${v===B.lowest&&v!==B.best?' · lowest miss':''}</td><td class="r">${pc(B[v].mape)}</td><td class="r">${B[v].bias==null?'—':(B[v].bias>=0?'+':'')+B[v].bias.toFixed(1)+'%'}</td></tr>`).join('')}</table><h3 style="margin:12px 0 4px;font-size:14px">How each way of moving the rest of the day would have done · noon to 9 pm</h3><table><tr><th>Way</th><th class="r">Avg miss of day total</th></tr>${FC_MODES.map(m=>`<tr${m===B.mode?' style="font-weight:700"':''}><td>${esc(FC_MODE_NAME[m])}${m===B.mode?' · in use':''}</td><td class="r">${pc(B['live_'+m])}</td></tr>`).join('')}<tr><td>With the live correction, by 4 pm</td><td class="r">${pc(B.at4pm)}</td><td></td></tr><tr><td>Next hour, through the day</td><td class="r">${pc(B.nextHour)}</td><td></td></tr></table>`; })()}
     <p class="note">The method with the smallest miss is picked automatically and re-tested every day. Open bills count as sales. Busy hours = at least half of the plan's peak hour; the rest are slump hours. Holidays are built in (Kerala, Eid, Onam) with a starting factor, replaced by our own once a holiday has passed. Rain and road traffic come later.</p></div>`;
   document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove(); fitTables(); }
@@ -2598,6 +2687,47 @@ function chickenCard(S,V){
     <table><tr><th>Dish</th><th class="r">Qty</th><th class="r">Bird / portion</th><th class="r">Birds</th><th class="r">Share</th></tr>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td class="r">${x.q}</td><td class="r">${x.each}</td><td class="r"><b>${Math.round(x.b*10)/10}</b></td><td class="r">${birds?Math.round(100*x.b/birds):0}%</td></tr>`).join('')}</table>
     <p class="note">Estimate: dish name → birds per portion (Full 1 · Half ½ · Qtr ¼ · 8 pc 1 · 4 pc ½ · mandi ¼ · boneless ≈ 0.2). Fix any factor and it is remembered.</p></div>`;
 }
+/* FOOD COST: raw material used per dish (estimate) x price -> cost per plate, food cost %, margin.
+   settings/costing {price:{chicken,rice,oil,fish,beef} (Rs per kg / litre), fixed:{DISH:Rs per plate}, rec:{DISH:{chicken,rice,oil,fish,beef}}}
+   Until Majid enters his own, recipe amounts are guessed from the dish name and prices are rough guesses (Oct 2026). */
+let FCO=null; const MAT=[['chicken','Chicken','kg',220],['rice','Rice','kg',120],['oil','Oil','L',170],['fish','Fish','kg',650],['beef','Beef','kg',400]];
+const matPrice=k=>{ const v=FCO&&FCO.price&&+FCO.price[k]; return v>0?v:MAT.find(m=>m[0]===k)[3]; };
+const priceSet=k=>!!(FCO&&FCO.price&&+FCO.price[k]>0);
+function recGuess(n){ const u=String(n||'').toUpperCase(), sf=/\bFULL\b/.test(u)?1:/\bHALF\b/.test(u)?.5:/\bQTR\b|QUARTER/.test(u)?.25:1, r={};
+  const birds=chickenOf(u); if(birds>0) r.chicken=Math.round(birds*(RCP&&RCP.perBird?+RCP.perBird:1.1)*1000)/1000;
+  const fish=/FISH|NEYMEEN|SEER|AYALA|MATHI|POMFRET|PRAWN|KOONTHAL|SQUID/.test(u), beef=/BEEF|MUTTON|LAMB|GOAT/.test(u);
+  if(/MANDI|KABSA|MAJBOOS/.test(u)){ r.rice=.6*sf; r.oil=.04*sf; if(fish) r.fish=1*sf; if(beef) r.beef=1*sf; }
+  else if(/BIRIYANI|BIRYANI/.test(u)){ r.rice=.15; r.oil=.02; if(fish) r.fish=.2; if(beef) r.beef=.2; }
+  else if(/MEALS|\bRICE\b|GHEE RICE|FRIED RICE/.test(u)){ r.rice=/MEALS/.test(u)?.25:.15; r.oil=.02; }
+  else { if(fish) r.fish=.25*sf; if(beef) r.beef=.25*sf; if(/FRY|BROAST|65|CHILLI|CRISPY|FRIES|PORATTA|PAROTTA|POROTTA/.test(u)) r.oil=.05*sf; else if(fish||beef||r.chicken) r.oil=.02*sf; }
+  Object.keys(r).forEach(k=>r[k]=Math.round(r[k]*1000)/1000); return r; }
+function recOf(n){ const u=String(n||'').trim().toUpperCase(); return (FCO&&FCO.rec&&FCO.rec[u])||recGuess(u); }
+function plateCost(n){ const u=String(n||'').trim().toUpperCase(); if(FCO&&FCO.fixed&&+FCO.fixed[u]>0) return {c:+FCO.fixed[u],fixed:true,r:recOf(u)}; const r=recOf(u); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return {c,fixed:false,r,own:!!(FCO&&FCO.rec&&FCO.rec[u])}; }
+function fcostCard(itemMap,sp){ const rows=Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).sort((a,b)=>b.v-a.v); if(!rows.length) return '';
+  const used={}; MAT.forEach(m=>used[m[0]]=0); let cost=0, sales=0, fixedSales=0;
+  const D=rows.map(x=>{ const pc=plateCost(x.n), price=x.v/x.q; MAT.forEach(m=>{ if(pc.r[m[0]]) used[m[0]]+=pc.r[m[0]]*x.q; }); const c=pc.c*x.q; cost+=c; sales+=x.v; if(pc.fixed||pc.own) fixedSales+=x.v; return {n:x.n,q:x.q,price,pc:pc.c,fixed:pc.fixed,own:pc.own,c,v:x.v}; });
+  const pct=sales?Math.round(1000*cost/sales)/10:0, known=sales?Math.round(100*fixedSales/sales):0, guessP=MAT.filter(m=>!priceSet(m[0])).length;
+  const band=pct>38?'dn':pct<25?'':'up';
+  return `<div class="card wide fco"><h2>Food cost · estimate <span class="n"><a href="#" id="fcoEdit">set prices &amp; dish costs</a></span></h2>
+    <div class="sstop"><div><small>Raw material</small><b>${rs(cost)}</b><em>for ${rs(sales)} of food sold</em></div><div><small>Food cost</small><b class="${band}">${pct}%</b><em>many restaurants aim ~30–35%</em></div><div><small>Gross margin</small><b>${rs(sales-cost)}</b><em>before salary, rent, gas</em></div><div><small>Your own numbers</small><b>${known}%</b><em>of sales${guessP?' · '+guessP+' prices still my guess':''}</em></div>${(()=>{ if(!sp||!sp.byDay) return ''; let g=0; Object.values(sp.byDay).forEach(L=>(L||[]).forEach(x=>{ if((x.g||spGrp(x.n,x.cat))==='purchase') g+=x.v; })); return g>0?`<div><small>Goods actually bought</small><b>${sales?Math.round(100*g/sales):0}%</b><em>${rs(g)} · the reality check (also drinks, packing, charcoal)</em></div>`:''; })()}</div>
+    <h3 class="ssh">Used (estimate)</h3><div class="fcmat">${MAT.filter(m=>used[m[0]]>0).map(m=>`<div><small>${m[1]}</small><b>${Math.round(used[m[0]]*10)/10} ${m[2]}</b><em>${rs(used[m[0]]*matPrice(m[0]))} · ₹${matPrice(m[0])}/${m[2]}${priceSet(m[0])?'':' (guess)'}</em></div>`).join('')}</div>
+    <h3 class="ssh">Per dish · top ${Math.min(15,D.length)}</h3><div class="scroll"><table><tr><th>Dish</th><th class="r">Sold</th><th class="r">Price</th><th class="r">Cost / plate</th><th class="r">Margin</th><th class="r">Food cost</th></tr>
+    ${D.slice(0,15).map(x=>{ const fp=x.price?Math.round(100*x.pc/x.price):0; return `<tr><td>${esc(x.n)}${x.fixed?' <span class="pill counter">your cost</span>':x.own?' <span class="pill counter">your recipe</span>':''}</td><td class="r">${Math.round(x.q*10)/10}</td><td class="r">${rs(x.price)}</td><td class="r">${x.pc?rs(x.pc):'<span class="n">—</span>'}</td><td class="r"><b>${rs(x.price-x.pc)}</b></td><td class="r ${fp>38?'dn':''}">${x.pc?fp+'%':'—'}</td></tr>`; }).join('')}</table></div>
+    <p class="note">Estimate: dish name → amount per plate (Full mandi ≈ 1 bird + 0.6 kg rice; Half ½; Qtr ¼; fish/beef mandi ≈ 1 kg per full) × price. Drinks and sides have no recipe yet (cost 0). Enter your real cost for the top 10 dishes - that is most of your sales.</p></div>`; }
+function fcoSheet(itemMap){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const rows=Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).sort((a,b)=>b.v-a.v).slice(0,30);
+  box.innerHTML=`<div class="sheet"><h2>Prices &amp; dish costs <button class="x" id="drillX">✕</button></h2>
+    <p class="sub">1) What you pay per kg / litre. 2) For each dish: either the <b>cost per plate</b> (if you know it), or the amounts per plate. Blank = my estimate.</p>
+    <div class="fcmat">${MAT.map(m=>`<label><small>${m[1]} ₹ / ${m[2]}</small><input type="number" class="fld" data-fcp="${m[0]}" value="${priceSet(m[0])?FCO.price[m[0]]:''}" placeholder="${m[3]} (guess)"></label>`).join('')}</div>
+    <div class="scroll"><table class="fcot"><tr><th>Dish</th><th class="r">Price</th><th class="r">Cost / plate ₹</th>${MAT.map(m=>`<th class="r">${m[1]} ${m[2]}</th>`).join('')}</tr>
+    ${rows.map(x=>{ const u=String(x.n).trim().toUpperCase(), r=recOf(u), own=FCO&&FCO.rec&&FCO.rec[u]; return `<tr data-fcd="${esc(u)}"><td>${esc(x.n)}</td><td class="r">${rs(x.v/x.q)}</td><td class="r"><input type="number" class="fld" data-k="fixed" value="${FCO&&FCO.fixed&&FCO.fixed[u]?FCO.fixed[u]:''}" placeholder="${Math.round(plateCost(u).c)||''}"></td>${MAT.map(m=>`<td class="r"><input type="number" step="0.01" class="fld" data-k="${m[0]}" value="${own&&r[m[0]]!=null?r[m[0]]:''}" placeholder="${r[m[0]]||''}"></td>`).join('')}</tr>`; }).join('')}</table></div>
+    <div class="tabs" style="margin-top:10px"><button class="tab on" id="fcoSave">Save</button></div></div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  $('fcoSave').onclick=async()=>{ const price={}, fixed={}, rec={};
+    $$('[data-fcp]',box).forEach(i=>{ if(+i.value>0) price[i.dataset.fcp]=+i.value; });
+    $$('[data-fcd]',box).forEach(tr=>{ const u=tr.dataset.fcd; const f=tr.querySelector('[data-k="fixed"]'); if(+f.value>0) fixed[u]=+f.value; const r={}; let any=false; MAT.forEach(m=>{ const i=tr.querySelector(`[data-k="${m[0]}"]`); if(i.value!==''){ r[m[0]]=+i.value; any=true; } }); if(any) rec[u]=Object.assign({},recGuess(u),r); });
+    FCO={price,fixed:Object.assign({},(FCO&&FCO.fixed)||{},fixed),rec:Object.assign({},(FCO&&FCO.rec)||{},rec)};
+    try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','costing'),FCO); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
 function recipeSheet(itemMap){
   const old=document.getElementById('drill'); if(old) old.remove();
   const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
@@ -2649,7 +2779,7 @@ function period(){
   let body='';
   if(PTAB==='overview') body=ssCard(PER.from,PER.to)+byDay+ssMonths()+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends();
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard+discCard;
-  else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+chickenCard(S,V);
+  else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+fcostCard(V?itemsOf(V.records):(S.items||{}),S.spend)+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
     const items=Object.values(sp.byItem).filter(x=>!PER.person||x.n===PER.person).sort((a,b)=>b.v-a.v), spTot=items.reduce((n,x)=>n+x.v,0);
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
@@ -2756,9 +2886,17 @@ function dock(){
   const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   if(MODE==='period'){ $('dLabel').textContent=PER.label||'Period'; $('dSub').textContent=PER.from?PER.from.slice(5)+' → '+PER.to.slice(5)+(PER.doc&&PER.doc.partial?' · so far':''):''; }
   else { const x=new Date(DAY+'T12:00:00'); $('dLabel').textContent=wd[x.getDay()]+' '+x.getDate()+' '+x.toLocaleString('en',{month:'short'}); $('dSub').textContent=TCUT!=null?'as of '+tcutLabel()+' ⏪':(DAY===bizToday()?'live':(INDEX[DAY]&&INDEX[DAY].rev?rs(INDEX[DAY].rev):'')); }
+  const nx=$('dNext'); if(nx){ const last=MODE==='day'&&DAY>=bizToday(); nx.style.visibility=last||MODE==='period'?'hidden':''; nx.disabled=last; }
+  placeDay();
   document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px');
 }
+/* phones: the date row sits just above the tabs (thumb reach) and hides with them; desktop: in the top bar */
+function placeDay(){ const t=document.querySelector('.tday'), dk=$('dock'), top=document.querySelector('.top'); if(!t||!dk||!top) return;
+  const narrow=matchMedia('(max-width:640px)').matches;
+  if(narrow&&t.parentElement!==dk) dk.insertBefore(t,$('dockTabs'));
+  else if(!narrow&&t.parentElement!==top) top.insertBefore(t,top.querySelector('h1').nextSibling); }
 function dockWire(){
+  window.addEventListener('resize',()=>{ placeDay(); dockH(); });
   document.body.appendChild($('calPop'));   /* out of the blurred top bar, which would pin a fixed box to itself */
   $('fcChip').onclick=()=>{ FC=!FC; try{ localStorage.setItem('hayat-fc',FC?'on':'off'); }catch(e){} render(); };
   $$('#dockRange .chip:not(.fc)').forEach(c=>c.onclick=()=>{ const r=c.dataset.r, P=periodPresets();
@@ -2768,7 +2906,7 @@ function dockWire(){
     else if(r==='range'){ const P2=periodPresets(); if(MODE!=='period'||!PER.from){ MODE='period'; loadPeriod(P2[0][1],P2[0][2],P2[0][0]); } else render(); setTimeout(()=>{ const f=$('pFrom'); if(f){ f.scrollIntoView({block:'center'}); f.focus(); } },600); }
     else { MODE='period'; const p=r==='week'?P[0]:r==='month'?P[2]:P[3]; loadPeriod(p[1],p[2],p[0]); } });
   $('dPrev').onclick=()=>stepDay(-1); $('dNext').onclick=()=>stepDay(1);
-  $('dPick').onclick=()=>{ const sh=$('dockSheet'); sh.hidden=!sh.hidden; $('dock').classList.remove('hid'); dockH(); };
+  $('dPick').onclick=e=>{ e.stopPropagation(); $('dockSheet').hidden=true; $('dock').classList.remove('hid'); calendar(); };
   $('dockSheetX').onclick=()=>{ $('dockSheet').hidden=true; dockH(); };
   $$('#dockRange .chip').forEach(c=>c.addEventListener('click',()=>{ $('dockSheet').hidden=true; dockH(); },true));
   document.addEventListener('click',e=>{ const sh=$('dockSheet'); if(sh&&!sh.hidden&&!e.target.closest('#dock,#dPick')){ sh.hidden=true; dockH(); } });
@@ -2818,16 +2956,19 @@ function render(){
   if(MODE==='period'){ m.innerHTML=(PTAB==='money'||PTAB==='cash'?`<div class="subnav">${[['money','Spends'],['cash','Cash & bank']].map(t=>`<button type="button" class="${PTAB===t[0]?'on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`:'')+period()+`<div class="note">board ${BOARD}</div>`; }
   else m.innerHTML=kpis()+subNav()+
     (TAB==='sales'?`<div class="sltog"><button type="button" class="chip${SL.open?' on':''}" id="slTog">⏱ ${SL.open?'Hide time slider':'Time slider'}</button><span class="n">${SL.open?(TCUT==null?'drag the slider (above the tabs) to see the day at any time':'showing the day as of <b>'+tcutLabel()+'</b>'):'see the day as it stood at any time'}</span></div><div class="grid">${hourly()}${runLine()}${pace()}${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); return topItems(R,R.reduce((n,r)=>n+r.v,0)); })()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
-     TAB==='floor'?`<div class="grid">${live?alerts():''}${unrealized()}${floor()}${kitchens()}</div>`:
+     TAB==='floor'?`<div class="grid">${live?alerts():''}${trafficCard()}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${daySpendCard(DOC,DAY)}${drafts()}${payments()}${purchases()}</div>`:
      TAB==='patterns'?patterns():
      TAB==='lab'?lab():
      TAB==='similar'?`<div class="grid">${similar()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:
-     TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
+     TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}${fcostCard(itemsOf(recs()))}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
+  { const fe=$('fcoEdit'); if(fe) fe.onclick=e=>{ e.preventDefault(); fcoSheet(MODE==='period'?(PER.V?itemsOf(PER.V.records):((PER.doc&&PER.doc.items)||{})):itemsOf(recs())); }; }
+  { const ts=$('trfSet'); if(ts) ts.onclick=e=>{ e.preventDefault(); trafficSheet(); }; const tn=$('trfNow'); if(tn) tn.onclick=e=>{ e.preventDefault(); trfRead(true); }; }
+  { const so=$('shOpen'); if(so) so.onclick=e=>{ e.preventDefault(); hoursSheet(); }; }
   $$('[data-spc]').forEach(x=>x.onchange=()=>{ SPC[x.dataset.spc]=x.value; render(); });
   $$('[data-topn]').forEach(b=>b.onclick=()=>{ TOPN=+b.dataset.topn; try{ localStorage.setItem('hayat-topn',TOPN); }catch(e){} render(); });
   dock(); slRow(); const stg=$('slTog'); if(stg) stg.onclick=()=>{ if(SL.open) slClose(); else { SL.open=true; render(); } }; addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
@@ -2920,8 +3061,13 @@ function calendar(){
       cells+=`<div class="d${v?' has':' none'}${w>55?' hot':''}${k===DAY?' cur':''}" style="--w:${Math.max(12,w)}" data-t="${k} ${v?rs(v)+' · '+(x.bills||0)+' bills':'no data'}" ${v?`data-pick="${k}"`:''}>${d}</div>`; }
     const tot=Object.keys(INDEX).filter(k=>k.startsWith(ymd(m).slice(0,7))).reduce((a,k)=>a+(INDEX[k].rev||0),0);
     return `<div class="cm"><h4>${m.toLocaleString('en',{month:'long',year:'numeric'})} <span style="float:right;margin-left:10px">${rs(tot)}</span></h4><div class="g">${['M','T','W','T','F','S','S'].map(x=>'<span>'+x+'</span>').join('')}${cells}</div><div class="lg">darker = bigger day · click to open</div></div>`; }).join('');
+  /* quick spans in the calendar itself: one tap on the date gives every choice */
+  pop.insertAdjacentHTML('beforeend',`<div class="calq">${[['today','Today'],['week','This week'],['month','This month'],['lmonth','Last month'],['range','Range…']].map(x=>`<button type="button" class="chip" data-calr="${x[0]}">${x[1]}</button>`).join('')}<button type="button" class="chip" id="calX" title="close">✕</button></div>`);
   pop.hidden=false;
-  $$('[data-pick]',pop).forEach(c=>c.onclick=()=>{ pop.hidden=true; setDay(c.dataset.pick); });
+  { const dk=$('dock'), top=dk&&getComputedStyle(dk).display!=='none'?dk.getBoundingClientRect().top:innerHeight; pop.style.bottom=Math.max(8,innerHeight-top+8)+'px'; pop.style.maxHeight=Math.max(200,top-24)+'px'; }   /* measured now: a stale --dockh pushed it off-screen */
+  $$('[data-pick]',pop).forEach(c=>c.onclick=()=>{ pop.hidden=true; MODE='day'; setDay(c.dataset.pick); render(); });
+  $$('[data-calr]',pop).forEach(c=>c.onclick=()=>{ pop.hidden=true; const t=document.querySelector('#dockRange [data-r="'+c.dataset.calr+'"]'); if(t) t.click(); });
+  const cx=$('calX'); if(cx) cx.onclick=()=>{ pop.hidden=true; };
 }
 let rzT=null; window.addEventListener('resize',()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{ if(DOC) render(); },250); });
 document.addEventListener('click',e=>{ const pop=$('calPop'); if(pop&&!pop.hidden&&!pop.contains(e.target)&&e.target.id!=='calBtn'&&!e.target.closest('[data-r="pick"],#dPick')) pop.hidden=true; });
@@ -2955,10 +3101,15 @@ async function go(){
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','kitchen'),d=>{ KSET=d.exists()?d.data():null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','recipes'),d=>{ RCP=d.exists()?d.data():null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','traffic'),d=>{ TRF=d.exists()?d.data():null; render(); setTimeout(()=>trfRead(false),1500); },()=>{ setTimeout(()=>trfRead(false),1500); });
+  setInterval(()=>trfRead(false),10*60e3);
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','shophours'),d=>{ SHOPH=d.exists()?d.data():null; FC_HC={}; FC_BT=null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','costing'),d=>{ FCO=d.exists()?d.data():null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','events'),d=>{ EVENTS=(d.exists()&&d.data().e)||{}; LAB.res=null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','large_orders'),d=>{ LARGE=(d.exists()&&d.data().b)||{}; LGSCAN=Object.assign(LGSCAN,(d.exists()&&d.data().s)||{}); applyLarge(); syncIndexToday(); FC_BT=null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','weather'),d=>{ const busy=WX.busy; WX=d.exists()?Object.assign({},d.data()):{days:{}}; WX.busy=busy; WX.loaded=true; render(); setTimeout(wxSync,1500); },()=>{ WX.loaded=true; setTimeout(wxSync,1500); });
   setInterval(()=>wxSync(),30*60e3);   /* while the app stays open: check every 30 min, pull when over 6 h old */
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','ohours'),d=>{ const x=d.exists()?d.data():null; if(x&&x.v===OH_V&&x.d){ OHS=Object.assign({},x.d,OHS); applyLarge(); FC_HC={}; FC_BT=null; render(); } setTimeout(ohScan,8000); },()=>{ setTimeout(ohScan,8000); });
   await days(); watchDay(); setTimeout(preScan,5000);
   [bizToday(),tomorrow()].forEach(day=>ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_prebook',day),d=>{ PBK[day]=(d.exists()&&d.data().e)||{}; render(); },()=>{}));
   setInterval(()=>{ if(DOC){ stamp(); render(); } healthPill(); },60000);

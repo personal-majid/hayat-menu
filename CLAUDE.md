@@ -250,6 +250,70 @@ The Overview card links "all spends ->".
   daySpendCard(DOC) built by spRows(doc) (bill lines + gap + payments no bill
   covers). "Spend · whole period" = the item list for the span.
 
+## Service worker: a page that fails to load shows itself, not the menu (v222)
+sw.js used to answer EVERY failed page load (weak signal, GitHub Pages mid-deploy)
+with ./index.html, so owner.html "redirected" to the menu. Now each page that
+loads is cached and a failed load shows the cached copy of that same page;
+index.html only when nothing is cached. Owner URL:
+https://personal-majid.github.io/hayat-menu/owner.html
+
+## Sales by hour = ORDER time (v224)
+Late-closed deliveries/counter bills (paid 1-6 h after the order, ~Rs 6,355/day,
+Rs 2,828 of it in the 00:00 hour - Sep 2026) sat in the last hours by pay time,
+and the live forecast ALSO added today's open bills: closing counted twice.
+- hbucket() buckets by createdAt (hbucketPaid() keeps pay time). Today's forecast
+  hours = paid + open (non-staff) bills in their ORDER hour; fcLive open = 0. fcAt
+  the same at minute v. Sales by hour shows open bills hatched in their order hour.
+- Past days: ohScan() rebuilds each day by order time from its day log once and
+  stores settings/ohours {v:1, d:{day:{h:[24], lg:{billKey:[hour,amt]}}}}; applyLarge
+  uses OHS[d].h instead of the shop PC's pay-time hours (x.byOrder) and takes
+  large orders out at their order hour.
+- Replay, 15 Sep days, same 4-week history: day-close error at 21:00 23% -> 9%,
+  at 23:00 14% -> 5% (bias +12% -> 0). fsim/ordertime.py.
+- Running total stays at pay time (when money arrives). Later: daylog.py on the
+  shop PC could write order-time hours itself.
+
+## Food cost (v225)
+Items (day and span): fcostCard - raw material used (chicken kg, rice kg, oil L,
+fish kg, beef kg) = dishes sold x amount per plate (recGuess from the dish name:
+Full mandi ~ 1 bird + 0.6 kg rice + 0.04 L oil, Half 1/2, Qtr 1/4, fish/beef mandi
+1 kg per full, meals 0.25 kg rice...) x price; food cost %, margin, per-dish cost
+per plate. "set prices & dish costs" (fcoSheet) -> settings/costing {price, fixed:
+{DISH: Rs per plate}, rec:{DISH:{...}}}; a fixed cost per plate wins over the
+recipe. Default prices are rough guesses (chicken 220/kg, rice 120, oil 170/L,
+fish 650, beef 400) and are labelled "(guess)". Span view also shows goods
+actually bought / sales as the reality check (Oct 2026: 34%).
+
+## Closing time + one-hand date (v226)
+- settings/shophours {close:'00:30', dow:{'0'..'6':'HH:MM'}}; closeMin(day) = minutes
+  after 05:00. fcLive: nothing forecast after closing; the hour we are in only for its
+  minutes before closing; "next hour" 0 after closing. "closes 00:30 · change" in the
+  outlook bar opens hoursSheet (per weekday, with "last order usually" from cached logs).
+- Date: tap the date = calendar straight away (calPop) with Today / This week / This
+  month / Last month / Range chips. "›" hidden on today. Phones (<=640px): placeDay()
+  moves .tday into #dock above the tabs (thumb reach, hides with the tabs); desktop:
+  top bar.
+
+## Outlook spread only on what is left (v227)
+fcAdj used to set total = day total x (1 +/- band) and stretch the remainder to get
+there - at 1:14 am a few hundred rupees of "rest" became +9% of the day. scnMult(F):
+spread = band x total but at most the remainder itself (rest x0..x2). After closing
+the three outlooks equal what was sold. runLine's likely range uses the same rule.
+
+## Road traffic on Live (v228)
+trafficCard(): TomTom Routing (free tier 20K requests/month, no card) for
+settings/traffic {key, routes:[{n,a:[lat,lng],b:[lat,lng]}]} (default
+Perinthalmanna <-> Malappuram). Read on open and every 10 min at most (cached in
+localStorage 'hayat-trf'); now vs no-traffic minutes, delay, busy / some / clear.
+Majid pastes his own key in "routes & key". Live crowd (Google popular times)
+cannot run inside a web page (cross-origin + Maps blocks iframes) - stays in the
+busy-board extension / Android collector.
+
+## TomTom key fallback (v229)
+trfKey(): settings/traffic.key (pasted in the app) first, else config.js
+CONFIG.traffic.tomtomKey (already there - the menu map uses it), else CONFIG.tomtomKey.
+Never write keys for Majid. Readings are cached per device only (localStorage).
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules
@@ -344,3 +408,8 @@ What that means, and what to say if it comes up:
   self-corrects after about a day of use.
 - 12 menu categories; research says 9 or fewer. Sides / Juices /
   Desserts are the obvious merge.
+
+## v231 — 4-week weekday level · hourly traffic log
+- fcModel0: day LEVEL = last 4 same weekdays (FC_VARIANTS on same.slice(-4)); HOUR PATTERN = last 6 (trimmed mean when ≥5), scaled to the level. Sunday 11 Oct ≈ ₹85K (old ≈ ₹77K). 51-day bias −10.8% → −4.9%.
+- trfLog(out): after each successful TomTom read, saves once per clock hour to settings/trf_YYYY-MM → {d:{YYYY-MM-DD:{HH:{at, r:[{n,now,free,delay}]}}}} (merge). Missed hours are fine. In-memory TRF_LOGGED guards repeats; failures retry next read.
+- Future: join trf_* with order-time hours (settings/ohours) to test traffic delay as a forecast signal once a few weeks exist.
