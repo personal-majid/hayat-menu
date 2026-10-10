@@ -479,7 +479,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v231';
+const BOARD='v233';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -2702,31 +2702,81 @@ function recGuess(n){ const u=String(n||'').toUpperCase(), sf=/\bFULL\b/.test(u)
   else { if(fish) r.fish=.25*sf; if(beef) r.beef=.25*sf; if(/FRY|BROAST|65|CHILLI|CRISPY|FRIES|PORATTA|PAROTTA|POROTTA/.test(u)) r.oil=.05*sf; else if(fish||beef||r.chicken) r.oil=.02*sf; }
   Object.keys(r).forEach(k=>r[k]=Math.round(r[k]*1000)/1000); return r; }
 function recOf(n){ const u=String(n||'').trim().toUpperCase(); return (FCO&&FCO.rec&&FCO.rec[u])||recGuess(u); }
-function plateCost(n){ const u=String(n||'').trim().toUpperCase(); if(FCO&&FCO.fixed&&+FCO.fixed[u]>0) return {c:+FCO.fixed[u],fixed:true,r:recOf(u)}; const r=recOf(u); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return {c,fixed:false,r,own:!!(FCO&&FCO.rec&&FCO.rec[u])}; }
-function fcostCard(itemMap,sp){ const rows=Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).sort((a,b)=>b.v-a.v); if(!rows.length) return '';
+/* sizes: you enter the FULL cost once; Half = ½ and Qtr = ¼ of it (fixed, Majid's choice) */
+const SZ_RE=/\s*[\(\[]?\s*\b(FULL|HALF|QTR|QRT|QUARTER)\b\s*[\)\]]?\s*/;
+function sizeOf(n){ const u=String(n||'').trim().toUpperCase(), m=u.match(SZ_RE); if(!m) return {fam:u,s:null,lab:''};
+  const w=m[1], s=w==='FULL'?1:w==='HALF'?.5:.25; return {fam:u.replace(SZ_RE,' ').replace(/\s+/g,' ').trim()||u, s, lab:s===1?'Full':s===.5?'Half':'Qtr'}; }
+function fullCost(fam){ const f=FCO&&FCO.full&&+FCO.full[fam]; if(f>0) return f; const L=FCO&&FCO.fixed; if(L){ const k=Object.keys(L).find(k=>{ const z=sizeOf(k); return z.fam===fam&&(z.s===1||z.s===null); }); if(k&&+L[k]>0) return +L[k]; } return 0; }
+function plateCost(n){ const u=String(n||'').trim().toUpperCase(), z=sizeOf(u);
+  const f=fullCost(z.fam); if(f>0) return {c:f*(z.s||1),fixed:true,derived:!!(z.s&&z.s<1),r:recOf(u)};
+  if(FCO&&FCO.fixed&&+FCO.fixed[u]>0) return {c:+FCO.fixed[u],fixed:true,r:recOf(u)};
+  const r=recOf(u); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return {c,fixed:false,r,own:!!(FCO&&FCO.rec&&FCO.rec[u])}; }
+/* monthly fixed costs (settings/costing.oh) */
+const OH=[['salary','Salary'],['rent','Rent'],['power','Power bill'],['gas','Gas (LPG)'],['other','Other (internet, loan…)']];
+const fixOf=k=>{ const v=FCO&&FCO.oh&&+FCO.oh[k]; return v>0?v:0; };
+function calDays(from,to){ if(!from) return 1; const t=bizToday(), e=to&&to<t?to:t; const a=new Date(from+'T00:00:00'), b=new Date(e+'T00:00:00'); return Math.max(1,Math.round((b-a)/864e5)+1); }
+function spendSplit(sp){ const o={purchase:0,salary:0,running:0}; if(!sp||!sp.byDay) return null; Object.values(sp.byDay).forEach(L=>(L||[]).forEach(x=>{ const g=x.g||spGrp(x.n,x.cat); if(o[g]!=null) o[g]+=x.v; else o.running+=x.v; })); return o; }
+/* FIXED-COST SHARE: this month so far, fixed costs ÷ sales = the % every dish carries (shared by sales value).
+   Salary = what spends show paid this month (or your monthly figure × days gone); running = spends; rent/power/gas/other × days gone / days in month. */
+const FXM={};
+function fxMonth(m){ const c=FXM[m]; if(c&&(c.done||Date.now()-c.at<1800000)) return c.v; if(c&&c.busy) return null;
+  FXM[m]={busy:true,at:Date.now(),v:null}; monthDoc(m).then(S=>{ const A=spendSplit(S&&S.spend)||{salary:0,running:0,purchase:0}, dim=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(), el=Math.min(dim,calDays(m+'-01',m+'-'+String(dim).padStart(2,'0'))), k=el/dim;
+    const sal=fixOf('salary')?{v:fixOf('salary')*k,src:'your monthly × '+el+'/'+dim}:{v:A.salary,src:'paid this month (spends)'};
+    const extra=OH.filter(o=>o[0]!=='salary').map(o=>[o[1],fixOf(o[0])*k]).filter(x=>x[1]>0), fixed=sal.v+A.running+extra.reduce((a,x)=>a+x[1],0), sales=(S&&S.sales)||0;
+    FXM[m]={at:Date.now(),done:!(S&&S.partial),v:{m,el,dim,sales,sal,run:A.running,goods:A.purchase,extra,fixed,pct:sales>0?fixed/sales:0}}; render(); }).catch(()=>{ FXM[m]={at:Date.now(),v:null}; }); return null; }
+function profitBlock(sales,estCost,sp,rng){ const days=rng?calDays(rng.from,rng.to):1, k=days/30, A=spendSplit(sp);
+  const MX=fxMonth(((rng&&rng.to)||DAY).slice(0,7));
+  const sal=fixOf('salary')?{v:fixOf('salary')*k,src:'your monthly × '+days+'/30'}:A&&A.salary>0?{v:A.salary,src:'paid in spends'}:MX&&MX.sal.v>0?{v:MX.sal.v/MX.el*days,src:'this month so far ÷ '+MX.el+' days'}:{v:0,src:'not set'};   /* monthly first: salary is paid in lumps */
+  const goods=A&&A.purchase>0?{v:A.purchase,src:'goods bought'}:{v:estCost,src:'food cost estimate'};
+  const run=A?A.running:(MX?MX.run/MX.el*days:0), extra=OH.filter(o=>o[0]!=='salary').map(o=>[o[1],fixOf(o[0])*k]).filter(x=>x[1]>0);
+  const fixed=sal.v+run+extra.reduce((a,x)=>a+x[1],0), net=sales-goods.v-fixed, gp=sales?goods.v/sales:0, be=gp<1?fixed/days/(1-gp):0;
+  const L=[['Sales',sales,''],['− '+(A&&A.purchase>0?'Goods bought':'Food cost (estimate)'),-goods.v,goods.src],['− Salary',-sal.v,sal.src]].concat(run>0?[['− Running costs',-run,A?'from spends':'this month so far ÷ '+(MX?MX.el:1)+' days']]:[]).concat(extra.map(x=>['− '+x[0],-x[1],'monthly × '+days+'/30']));
+  return `<h3 class="ssh">Profit after fixed costs ${days>1?'· '+days+' days':'· today'} <span class="n"><a href="#" id="ohEdit">set monthly costs</a></span></h3>
+    <div class="sstop"><div><small>Net profit</small><b class="${net<0?'dn':'up'}">${rs(net)}</b><em>${days>1?rs(net/days)+' a day':'after a day\'s share of fixed costs'}</em></div><div><small>Break-even sales</small><b>${be?rs(be):'—'}</b><em>a day · to cover fixed costs</em></div></div>
+    <div class="scroll"><table>${L.map(x=>`<tr><td>${x[0]}</td><td class="r"><b>${rs(Math.abs(x[1]))}</b></td><td class="n">${x[2]}</td></tr>`).join('')}<tr><td><b>= Net</b></td><td class="r"><b class="${net<0?'dn':''}">${rs(net)}</b></td><td></td></tr></table></div>
+    ${!OH.some(o=>o[0]!=='salary'&&fixOf(o[0]))?'<p class="note">Rent, power and gas are not set yet - tap “set monthly costs”. Leave one blank if it is already entered as a spend.</p>':''}`; }
+function ohSheet(){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  box.innerHTML=`<div class="sheet"><h2>Monthly fixed costs <button class="x" id="drillX">✕</button></h2>
+    <p class="sub">Enter once a month. Salary: your monthly total (smooth). Blank = what the spends show, which comes in lumps. Leave a cost blank if it is already entered as a spend (no double counting).</p>
+    <div class="fcmat">${OH.map(o=>`<label><small>${o[1]} ₹ / month</small><input type="number" class="fld" data-oh="${o[0]}" value="${fixOf(o[0])||''}" placeholder="${o[0]==='salary'?'from spends':'0'}"></label>`).join('')}</div>
+    <div class="tabs" style="margin-top:10px"><button class="tab on" id="ohSave">Save</button></div></div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
+  $('ohSave').onclick=async()=>{ const oh={}; $$('[data-oh]',box).forEach(i=>{ if(+i.value>0) oh[i.dataset.oh]=+i.value; });
+    FCO=Object.assign({},FCO||{},{oh,ohAt:new Date().toISOString()}); for(const k in FXM) delete FXM[k];
+    try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','costing'),FCO); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
+function fcostCard(itemMap,sp,rng){ const rows=Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).sort((a,b)=>b.v-a.v); if(!rows.length) return '';
   const used={}; MAT.forEach(m=>used[m[0]]=0); let cost=0, sales=0, fixedSales=0;
-  const D=rows.map(x=>{ const pc=plateCost(x.n), price=x.v/x.q; MAT.forEach(m=>{ if(pc.r[m[0]]) used[m[0]]+=pc.r[m[0]]*x.q; }); const c=pc.c*x.q; cost+=c; sales+=x.v; if(pc.fixed||pc.own) fixedSales+=x.v; return {n:x.n,q:x.q,price,pc:pc.c,fixed:pc.fixed,own:pc.own,c,v:x.v}; });
+  const MX=fxMonth(((rng&&rng.to)||DAY).slice(0,7)), ov=MX?MX.pct:0;
+  const D=rows.map(x=>{ const pc=plateCost(x.n), price=x.v/x.q; MAT.forEach(m=>{ if(pc.r[m[0]]) used[m[0]]+=pc.r[m[0]]*x.q; }); const c=pc.c*x.q; cost+=c; sales+=x.v; if(pc.fixed||pc.own) fixedSales+=x.v; return {n:x.n,q:x.q,price,pc:pc.c,fx:price*ov,fixed:pc.fixed,derived:pc.derived,own:pc.own,c,v:x.v}; });
   const pct=sales?Math.round(1000*cost/sales)/10:0, known=sales?Math.round(100*fixedSales/sales):0, guessP=MAT.filter(m=>!priceSet(m[0])).length;
   const band=pct>38?'dn':pct<25?'':'up';
   return `<div class="card wide fco"><h2>Food cost · estimate <span class="n"><a href="#" id="fcoEdit">set prices &amp; dish costs</a></span></h2>
-    <div class="sstop"><div><small>Raw material</small><b>${rs(cost)}</b><em>for ${rs(sales)} of food sold</em></div><div><small>Food cost</small><b class="${band}">${pct}%</b><em>many restaurants aim ~30–35%</em></div><div><small>Gross margin</small><b>${rs(sales-cost)}</b><em>before salary, rent, gas</em></div><div><small>Your own numbers</small><b>${known}%</b><em>of sales${guessP?' · '+guessP+' prices still my guess':''}</em></div>${(()=>{ if(!sp||!sp.byDay) return ''; let g=0; Object.values(sp.byDay).forEach(L=>(L||[]).forEach(x=>{ if((x.g||spGrp(x.n,x.cat))==='purchase') g+=x.v; })); return g>0?`<div><small>Goods actually bought</small><b>${sales?Math.round(100*g/sales):0}%</b><em>${rs(g)} · the reality check (also drinks, packing, charcoal)</em></div>`:''; })()}</div>
+    <div class="sstop"><div><small>Raw material</small><b>${rs(cost)}</b><em>for ${rs(sales)} of food sold</em></div><div><small>Food cost</small><b class="${band}">${pct}%</b><em>many restaurants aim ~30–35%</em></div><div><small>Gross margin</small><b>${rs(sales-cost)}</b><em>before salary, rent, gas</em></div><div><small>Fixed costs share</small><b>${MX?Math.round(MX.pct*1000)/10+'%':'…'}</b><em>${MX?'of every sale · '+rs(MX.fixed)+' ÷ '+rs(MX.sales)+' sales, '+MX.el+' days of '+MX.dim:'working it out'}</em></div><div><small>Your own numbers</small><b>${known}%</b><em>of sales${guessP?' · '+guessP+' prices still my guess':''}</em></div>${(()=>{ if(!sp||!sp.byDay) return ''; let g=0; Object.values(sp.byDay).forEach(L=>(L||[]).forEach(x=>{ if((x.g||spGrp(x.n,x.cat))==='purchase') g+=x.v; })); return g>0?`<div><small>Goods actually bought</small><b>${sales?Math.round(100*g/sales):0}%</b><em>${rs(g)} · the reality check (also drinks, packing, charcoal)</em></div>`:''; })()}</div>
     <h3 class="ssh">Used (estimate)</h3><div class="fcmat">${MAT.filter(m=>used[m[0]]>0).map(m=>`<div><small>${m[1]}</small><b>${Math.round(used[m[0]]*10)/10} ${m[2]}</b><em>${rs(used[m[0]]*matPrice(m[0]))} · ₹${matPrice(m[0])}/${m[2]}${priceSet(m[0])?'':' (guess)'}</em></div>`).join('')}</div>
-    <h3 class="ssh">Per dish · top ${Math.min(15,D.length)}</h3><div class="scroll"><table><tr><th>Dish</th><th class="r">Sold</th><th class="r">Price</th><th class="r">Cost / plate</th><th class="r">Margin</th><th class="r">Food cost</th></tr>
-    ${D.slice(0,15).map(x=>{ const fp=x.price?Math.round(100*x.pc/x.price):0; return `<tr><td>${esc(x.n)}${x.fixed?' <span class="pill counter">your cost</span>':x.own?' <span class="pill counter">your recipe</span>':''}</td><td class="r">${Math.round(x.q*10)/10}</td><td class="r">${rs(x.price)}</td><td class="r">${x.pc?rs(x.pc):'<span class="n">—</span>'}</td><td class="r"><b>${rs(x.price-x.pc)}</b></td><td class="r ${fp>38?'dn':''}">${x.pc?fp+'%':'—'}</td></tr>`; }).join('')}</table></div>
-    <p class="note">Estimate: dish name → amount per plate (Full mandi ≈ 1 bird + 0.6 kg rice; Half ½; Qtr ¼; fish/beef mandi ≈ 1 kg per full) × price. Drinks and sides have no recipe yet (cost 0). Enter your real cost for the top 10 dishes - that is most of your sales.</p></div>`; }
+    <h3 class="ssh">Per dish · top ${Math.min(15,D.length)}</h3><div class="scroll"><table><tr><th>Dish</th><th class="r">Sold</th><th class="r">Price</th><th class="r">Food / plate</th><th class="r">Fixed share</th><th class="r">Profit / plate</th><th class="r">Food cost</th></tr>
+    ${D.slice(0,15).map(x=>{ const fp=x.price?Math.round(100*x.pc/x.price):0; return `<tr><td>${esc(x.n)}${x.derived?' <span class="pill counter">from Full</span>':x.fixed?' <span class="pill counter">your cost</span>':x.own?' <span class="pill counter">your recipe</span>':''}</td><td class="r">${Math.round(x.q*10)/10}</td><td class="r">${rs(x.price)}</td><td class="r">${x.pc?rs(x.pc):'<span class="n">—</span>'}</td><td class="r">${MX?rs(x.fx):'…'}</td><td class="r"><b class="${x.price-x.pc-x.fx<0?'dn':''}">${rs(x.price-x.pc-x.fx)}</b></td><td class="r ${fp>38?'dn':''}">${x.pc?fp+'%':'—'}</td></tr>`; }).join('')}</table></div>
+    <p class="note">Enter only the <b>Full</b> cost of a dish - Half = ½, Qtr = ¼ automatically. Blank = my estimate (Full mandi ≈ 1 bird + 0.6 kg rice; fish/beef mandi ≈ 1 kg). Drinks and sides have no recipe yet (cost 0). Fixed share = this month's salary, rent, power and running costs spread over every sale by price.</p>${profitBlock(sales,cost,sp,rng)}</div>`; }
 function fcoSheet(itemMap){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
-  const rows=Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).sort((a,b)=>b.v-a.v).slice(0,30);
+  const F={}; Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).forEach(x=>{ const z=sizeOf(x.n), f=F[z.fam]||(F[z.fam]={fam:z.fam,v:0,sz:{},sized:false}); f.v+=x.v; if(z.s) f.sized=true; const k=z.lab||'One'; const e=f.sz[k]||(f.sz[k]={q:0,v:0}); e.q+=x.q; e.v+=x.v; });
+  Object.keys((FCO&&FCO.full)||{}).forEach(k=>{ if(!F[k]) F[k]={fam:k,v:0,sz:{},sized:true}; });
+  const fams=Object.values(F).sort((a,b)=>b.v-a.v);
+  const est=f=>{ const n=f.sized?f.fam+' FULL':f.fam; const r=recGuess(n); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return Math.round(c); };
+  const kids=(f,v)=>f.sized&&v>0?`Half ${rs(v/2)} · Qtr ${rs(v/4)}`:'';
   box.innerHTML=`<div class="sheet"><h2>Prices &amp; dish costs <button class="x" id="drillX">✕</button></h2>
-    <p class="sub">1) What you pay per kg / litre. 2) For each dish: either the <b>cost per plate</b> (if you know it), or the amounts per plate. Blank = my estimate.</p>
+    <p class="sub">1) What you pay per kg / litre. 2) Each dish: the <b>Full</b> cost only - Half and Qtr follow (½, ¼). Blank = my estimate. ${fams.length} dishes.</p>
     <div class="fcmat">${MAT.map(m=>`<label><small>${m[1]} ₹ / ${m[2]}</small><input type="number" class="fld" data-fcp="${m[0]}" value="${priceSet(m[0])?FCO.price[m[0]]:''}" placeholder="${m[3]} (guess)"></label>`).join('')}</div>
-    <div class="scroll"><table class="fcot"><tr><th>Dish</th><th class="r">Price</th><th class="r">Cost / plate ₹</th>${MAT.map(m=>`<th class="r">${m[1]} ${m[2]}</th>`).join('')}</tr>
-    ${rows.map(x=>{ const u=String(x.n).trim().toUpperCase(), r=recOf(u), own=FCO&&FCO.rec&&FCO.rec[u]; return `<tr data-fcd="${esc(u)}"><td>${esc(x.n)}</td><td class="r">${rs(x.v/x.q)}</td><td class="r"><input type="number" class="fld" data-k="fixed" value="${FCO&&FCO.fixed&&FCO.fixed[u]?FCO.fixed[u]:''}" placeholder="${Math.round(plateCost(u).c)||''}"></td>${MAT.map(m=>`<td class="r"><input type="number" step="0.01" class="fld" data-k="${m[0]}" value="${own&&r[m[0]]!=null?r[m[0]]:''}" placeholder="${r[m[0]]||''}"></td>`).join('')}</tr>`; }).join('')}</table></div>
+    <input class="fld" id="fcoQ" placeholder="Find a dish…" style="width:100%;margin:2px 0 8px">
+    <div class="scroll"><table class="fcot"><tr><th>Dish</th><th class="r">Sold</th><th class="r">Full cost ₹</th><th>Half · Qtr</th></tr>
+    ${fams.map(f=>{ const v=fullCost(f.fam); const ORD={Full:0,Half:1,Qtr:2,One:3}; const sold=Object.entries(f.sz).sort((a,b)=>ORD[a[0]]-ORD[b[0]]).map(([k,e])=>`${k==='One'?'':k+' '}${rs(e.v/e.q)}`).join(' · '); return `<tr data-fam="${esc(f.fam)}"><td>${esc(f.fam)}<br><span class="n">${sold}</span></td><td class="r">${rs(f.v)}</td><td class="r"><input type="number" class="fld" data-k="full" value="${v||''}" placeholder="${est(f)||''}"></td><td class="n" data-kids="${f.sized?1:''}">${kids(f,v)}</td></tr>`; }).join('')}</table></div>
     <div class="tabs" style="margin-top:10px"><button class="tab on" id="fcoSave">Save</button></div></div>`;
   document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
-  $('fcoSave').onclick=async()=>{ const price={}, fixed={}, rec={};
+  box.addEventListener('input',e=>{ const t=e.target; if(t.id==='fcoQ'){ const q=t.value.trim().toUpperCase(); $$('[data-fam]',box).forEach(tr=>tr.style.display=!q||tr.dataset.fam.includes(q)?'':'none'); return; }
+    if(t.dataset.k==='full'){ const tr=t.closest('tr'), c=tr.querySelector('[data-kids]'); if(c&&c.dataset.kids) c.textContent=+t.value>0?`Half ${rs(t.value/2)} · Qtr ${rs(t.value/4)}`:''; } });
+  $('fcoSave').onclick=async()=>{ const price={}, full=Object.assign({},(FCO&&FCO.full)||{}), fixed=Object.assign({},(FCO&&FCO.fixed)||{});
     $$('[data-fcp]',box).forEach(i=>{ if(+i.value>0) price[i.dataset.fcp]=+i.value; });
-    $$('[data-fcd]',box).forEach(tr=>{ const u=tr.dataset.fcd; const f=tr.querySelector('[data-k="fixed"]'); if(+f.value>0) fixed[u]=+f.value; const r={}; let any=false; MAT.forEach(m=>{ const i=tr.querySelector(`[data-k="${m[0]}"]`); if(i.value!==''){ r[m[0]]=+i.value; any=true; } }); if(any) rec[u]=Object.assign({},recGuess(u),r); });
-    FCO={price,fixed:Object.assign({},(FCO&&FCO.fixed)||{},fixed),rec:Object.assign({},(FCO&&FCO.rec)||{},rec)};
+    $$('[data-fam]',box).forEach(tr=>{ const fam=tr.dataset.fam, i=tr.querySelector('[data-k="full"]'); if(+i.value>0) full[fam]=+i.value; else delete full[fam];
+      Object.keys(fixed).forEach(k=>{ if(sizeOf(k).fam===fam) delete fixed[k]; }); });   /* old per-size costs move to the one Full cost */
+    FCO=Object.assign({},FCO||{},{price,full,fixed,rec:(FCO&&FCO.rec)||{}});
     try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','costing'),FCO); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
 function recipeSheet(itemMap){
   const old=document.getElementById('drill'); if(old) old.remove();
@@ -2779,7 +2829,7 @@ function period(){
   let body='';
   if(PTAB==='overview') body=ssCard(PER.from,PER.to)+byDay+ssMonths()+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends();
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard+discCard;
-  else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+fcostCard(V?itemsOf(V.records):(S.items||{}),S.spend)+chickenCard(S,V);
+  else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+fcostCard(V?itemsOf(V.records):(S.items||{}),S.spend,{from:PER.from,to:PER.to})+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
     const items=Object.values(sp.byItem).filter(x=>!PER.person||x.n===PER.person).sort((a,b)=>b.v-a.v), spTot=items.reduce((n,x)=>n+x.v,0);
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
@@ -2966,6 +3016,7 @@ function render(){
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}${fcostCard(itemsOf(recs()))}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
+  { const oe=$('ohEdit'); if(oe) oe.onclick=e=>{ e.preventDefault(); ohSheet(); }; }
   { const fe=$('fcoEdit'); if(fe) fe.onclick=e=>{ e.preventDefault(); fcoSheet(MODE==='period'?(PER.V?itemsOf(PER.V.records):((PER.doc&&PER.doc.items)||{})):itemsOf(recs())); }; }
   { const ts=$('trfSet'); if(ts) ts.onclick=e=>{ e.preventDefault(); trafficSheet(); }; const tn=$('trfNow'); if(tn) tn.onclick=e=>{ e.preventDefault(); trfRead(true); }; }
   { const so=$('shOpen'); if(so) so.onclick=e=>{ e.preventDefault(); hoursSheet(); }; }
@@ -3104,7 +3155,7 @@ async function go(){
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','traffic'),d=>{ TRF=d.exists()?d.data():null; render(); setTimeout(()=>trfRead(false),1500); },()=>{ setTimeout(()=>trfRead(false),1500); });
   setInterval(()=>trfRead(false),10*60e3);
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','shophours'),d=>{ SHOPH=d.exists()?d.data():null; FC_HC={}; FC_BT=null; render(); },()=>{});
-  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','costing'),d=>{ FCO=d.exists()?d.data():null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','costing'),d=>{ FCO=d.exists()?d.data():null; for(const k in FXM) delete FXM[k]; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','events'),d=>{ EVENTS=(d.exists()&&d.data().e)||{}; LAB.res=null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','large_orders'),d=>{ LARGE=(d.exists()&&d.data().b)||{}; LGSCAN=Object.assign(LGSCAN,(d.exists()&&d.data().s)||{}); applyLarge(); syncIndexToday(); FC_BT=null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','weather'),d=>{ const busy=WX.busy; WX=d.exists()?Object.assign({},d.data()):{days:{}}; WX.busy=busy; WX.loaded=true; render(); setTimeout(wxSync,1500); },()=>{ WX.loaded=true; setTimeout(wxSync,1500); });

@@ -413,3 +413,15 @@ What that means, and what to say if it comes up:
 - fcModel0: day LEVEL = last 4 same weekdays (FC_VARIANTS on same.slice(-4)); HOUR PATTERN = last 6 (trimmed mean when ≥5), scaled to the level. Sunday 11 Oct ≈ ₹85K (old ≈ ₹77K). 51-day bias −10.8% → −4.9%.
 - trfLog(out): after each successful TomTom read, saves once per clock hour to settings/trf_YYYY-MM → {d:{YYYY-MM-DD:{HH:{at, r:[{n,now,free,delay}]}}}} (merge). Missed hours are fine. In-memory TRF_LOGGED guards repeats; failures retry next read.
 - Future: join trf_* with order-time hours (settings/ohours) to test traffic delay as a forecast signal once a few weeks exist.
+
+## v232 — Full-only dish costs · monthly fixed costs · profit
+- sizeOf(name): "X FULL/HALF/QTR" → family X, size 1/½/¼. settings/costing.full[family] = Full cost; Half = ½, Qtr = ¼ (fixed, Majid's choice). Old per-size `fixed` entries move into `full` on next save.
+- fcoSheet: one row per dish family, every dish sold in the view (no top-30 cap), search box, live Half/Qtr preview. Per-dish raw-material inputs removed (old `rec` still honoured).
+- settings/costing.oh = monthly {salary, rent, power, gas, other}; ohSheet. fixOf(k) (not ohOf — that's order-hours).
+- profitBlock in the Food cost card: Sales − goods bought (period spends; day view = food-cost estimate) − salary (monthly × days/30; blank = spends paid) − running costs (spends) − rent/power/gas/other × days/30 = net; break-even sales/day = fixed per day ÷ (1 − goods%).
+
+## v233 — fixed costs shared across dishes
+- fxMonth(m): month of the viewed day/period, via monthDoc (cached 30 min; cleared when settings/costing changes). Fixed so far = salary (spends paid this month, or monthly × days gone/days in month if entered) + running (spends) + rent/power/gas/other × days gone/days in month. pct = fixed ÷ month sales so far.
+- Food cost card: "Fixed costs share" tile; per dish: Food / plate, Fixed share (= price × pct, i.e. by sales value — Majid's choice), Profit / plate.
+- Day-view profit block: salary/running fall back to month-so-far ÷ days gone.
+- Early in the month the % runs high when salary is paid upfront; it settles as sales build.
