@@ -219,6 +219,25 @@ spend opens that day's spends sheet (spDaySheet: sales of the day, paid out,
 supplier bills, every entry, Remove for duplicates, "open the whole day").
 The Overview card links "all spends ->".
 
+## Spends by item line, compare days, items pie (v220)
+- The cashier now enters each day's spends as ONE purchase bill (supplier
+  BARATH TRADERS / CASH) with lines VEGETABLE, K-P CHICKEN, BUILDING RENT,
+  PETROL, SALARY... spGrp(name) groups each line: SP_SAL -> Salary, SP_RUN
+  (rent, gas, diesel, petrol, auto, waste fee, cleaning, charity...) -> Running
+  costs, else Goods. Checked on Oct 2026: 2,55,849 / 57,100 / 1,50,920 =
+  4,63,869 total. buildMonth tags lines (SNAP_V 4); a bill whose lines do not
+  add up gets a "(not itemised)" line for the gap.
+- expDaily(pay,P,sp): a day with bill lines is split by its lines and its
+  supplier payments are skipped (same money); a day without lines uses the
+  payments (purchase payments sorted by their note).
+- Spends page = Expenses day by day (each day opens to its lines), Possible
+  duplicates, Spend (opens item by item), Salary, Compare two days (spCompare,
+  SPC). Sales vs spend only on Overview; discounts moved to People;
+  "by who was paid" only when more than one party.
+- Top items: pie (donut) of the top 5 + Others, then ranked bars.
+- Oct 2026 duplicate: BARATH TRADERS 32,780 on 3 Oct (purchase 67, 1 line,
+  payment 57481) is a broken first save of 2 Oct (purchase 68, 11 lines).
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules

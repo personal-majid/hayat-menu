@@ -132,9 +132,15 @@ body.period #dockTime{display:none}
 .sltog{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px} .sltog .chip{border:1px solid var(--line2);background:var(--card);color:var(--text);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer} .sltog .chip.on{background:var(--pri);color:var(--onpri);border-color:transparent} .sltog .n{font-size:12.5px;color:var(--muted)}
 #dock .sl{flex-direction:column;align-items:stretch;gap:4px;padding:6px 12px 4px} #dock .sl .slt{display:flex;align-items:center;gap:10px} #dock .sl .slt input{flex:1;min-width:0;accent-color:var(--pri);height:30px} #dock .sl .slt b{font-size:15px;min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
 #dock .sl .slc{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} #dock .sl .slc .chip{padding:5px 10px;font-size:12px}
-.topit{--tp1:#2a78d6;--tp2:#eb6834;--tp3:#1baf7a;--tpo:#a8a49a}
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .topit{--tp1:#3987e5;--tp2:#d95926;--tp3:#199e70;--tpo:#6d6a63} }
-:root[data-theme="dark"] .topit{--tp1:#3987e5;--tp2:#d95926;--tp3:#199e70;--tpo:#6d6a63}
+.topit{--tp1:#2a78d6;--tp2:#eb6834;--tp3:#1baf7a;--tp4:#eda100;--tp5:#e87ba4;--tpo:#a8a49a}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .topit{--tp1:#3987e5;--tp2:#d95926;--tp3:#199e70;--tp4:#c98500;--tp5:#d55181;--tpo:#6d6a63} }
+:root[data-theme="dark"] .topit{--tp1:#3987e5;--tp2:#d95926;--tp3:#199e70;--tp4:#c98500;--tp5:#d55181;--tpo:#6d6a63}
+.tppie{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:4px 0 14px} .tppie svg{width:160px;height:160px;flex:0 0 160px} .tppie path{stroke:var(--card);stroke-width:2} .tppie path:hover{opacity:.85}
+.tppie .p1{fill:var(--tp1)} .tppie .p2{fill:var(--tp2)} .tppie .p3{fill:var(--tp3)} .tppie .p4{fill:var(--tp4)} .tppie .p5{fill:var(--tp5)} .tppie .po{fill:var(--tpo)}
+.tppie .tpc1{font-size:11px;fill:var(--muted);font-weight:700} .tppie .tpc2{font-size:17px;fill:var(--text);font-weight:800}
+.tplg{flex:1 1 200px;display:grid;gap:4px;font-size:13px} .tplg>div{display:grid;grid-template-columns:12px minmax(0,1fr) 46px 52px;gap:8px;align-items:center} .tplg i{width:12px;height:12px;border-radius:3px;display:block}
+.tplg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .tplg b,.tplg em{text-align:right;font-variant-numeric:tabular-nums;font-style:normal} .tplg em{color:var(--muted);font-size:12px}
+.tplg .p1{background:var(--tp1)} .tplg .p2{background:var(--tp2)} .tplg .p3{background:var(--tp3)} .tplg .p4{background:var(--tp4)} .tplg .p5{background:var(--tp5)} .tplg .po{background:var(--tpo)}
 .topit .tpn button{border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px} .topit .tpn button.on{background:var(--pri);color:var(--onpri);border-color:transparent}
 .tpstrip{display:flex;gap:2px;height:22px;margin:4px 0 8px} .tpstrip i{display:block;min-width:4px} .tpstrip i:first-child{border-radius:4px 0 0 4px} .tpstrip i:last-child{border-radius:0 4px 4px 0}
 .topit .s1{background:var(--tp1)} .topit .s2{background:var(--tp2)} .topit .s3{background:var(--tp3)}
@@ -154,6 +160,7 @@ body.period #dockTime{display:none}
 .ssh{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 4px;font-weight:800}
 .ssrun{width:100%;height:150px;display:block;background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 25%} .ssrun path{fill:none;stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linejoin:round} .ssrun .l1{stroke:var(--sv1)} .ssrun .l2{stroke:var(--sv2)}
 .ssmt{display:grid;gap:2px;margin-top:10px;font-size:13px} .ssmt>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:4px 0;border-top:1px solid var(--line)} .ssmt>div>*:not(:first-child){text-align:right;font-variant-numeric:tabular-nums} .ssmt small{color:var(--muted)} .ssmt .ssmh{border-top:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.spc .spcg td{color:var(--muted);font-size:12.5px} .spc .spct td{border-bottom:2px solid var(--line2)}
 .wxn{margin:6px 0 0} .wxn small{color:var(--muted)}
 .subnav{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding:2px 0;scrollbar-width:none} .subnav::-webkit-scrollbar{display:none}
 .subnav button{flex:0 0 auto;border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -465,7 +472,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v219';
+const BOARD='v220';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -1155,7 +1162,12 @@ function spDays(from,to){ const out=[]; for(let d=from; d<=to; d=addDays(d,1)) o
 /* EXPENSES day by day (Majid, Oct 2026: "expenses are important, supplier bills are the same data twice").
    Money that went OUT: paid to suppliers (goods), salary, everything else. One bar per day, split by kind;
    tap a day to see every entry. Receipts (money in) are left out. */
-const EXP_K={purchase:['Goods (paid to suppliers)','#C0882C'],salary:['Salary','#1F4D4A'],expense:['Other expenses','#8C3A1E']};
+const EXP_K={purchase:['Goods','#C0882C'],salary:['Salary','#1F4D4A'],expense:['Running costs','#8C3A1E']};
+/* which group a spend line belongs to, by its name. The cashier now puts the whole day (vegetables, chicken, rent,
+   petrol, salary...) into ONE purchase bill, so the bill's lines - not who was paid - say what the money was for. */
+const SP_SAL=/salary|wage|advance|payroll|staff pay|bata|incentive/i;
+const SP_RUN=/rent|petrol|diesel|fuel|\bauto\b|taxi|charity|donation|belt|repair|maint|service charge|electric|current|\beb\b|kseb|water bill|gas|cylinder|lpg|wifi|internet|recharge|phone|mobile|tax|licen|fee|commission|transport|courier|clean|laundry|stationer|print|bank charge|sponsor|sponser|whistle/i;
+function spGrp(name,cat){ const t=String(name||'')+' '+String(cat||''); return SP_SAL.test(t)?'salary':SP_RUN.test(t)?'expense':'purchase'; }
 /* SALES vs SPEND: from the day index (rev, paidOut = money paid out: suppliers, salary, other) - no day docs needed.
    Bar pair per day + running totals, and month by month. Colours = dataviz slots 1-2 (validated light + dark). */
 function ssDays(from,to){ return spDays(from,to).filter(d=>d<=bizToday()).map(d=>{ const x=INDEX[d]||{}, live=d===bizToday()&&DOC; return {d,s:live?stats(DOC).rev:(x.rev||0),p:live?(DOC.paidOut||0):(x.paidOut||0)}; }); }
@@ -1180,10 +1192,15 @@ function ssMonths(){ const ms=[...new Set(Object.keys(INDEX).map(d=>d.slice(0,7)
     <div class="bars axed ssb ssm" style="grid-template-columns:repeat(${R.length},1fr)">${Y.html}${R.map(x=>`<div class="ssg" title="${mn(x.m)} · ${x.n} days · sales ${rs(x.s)} · spend ${rs(x.p)} · net ${rs(x.s-x.p)}"><i class="s1" style="height:${100*x.s/Y.top}%"></i><i class="s2" style="height:${100*x.p/Y.top}%"></i></div>`).join('')}</div>
     <div class="hx axed" style="grid-template-columns:repeat(${R.length},1fr)">${R.map(x=>`<span>${mn(x.m)}</span>`).join('')}</div>
     <div class="ssmt"><div class="ssmh"><span>Month</span><span>Sales</span><span>Spend</span><span>Net</span></div>${R.slice().reverse().map(x=>`<div><span>${mn(x.m)} <small>${x.n} days</small></span><span>${kfmt(x.s)}</span><span>${kfmt(x.p)}</span><b class="${x.s-x.p>=0?'up':'dn'}">${x.s-x.p>=0?'+':'−'}${kfmt(Math.abs(x.s-x.p))}</b></div>`).join('')}</div></div>`; }
-function expDaily(pay,P){
-  const L=(pay.list||[]).filter(x=>x.kind!=='receipt'&&x.flow!=='in'&&(!P||P(x))), by={};
-  L.forEach(x=>{ const b=by[x.d]=by[x.d]||{purchase:0,salary:0,expense:0,t:0,list:[]}; b[x.kind]=(b[x.kind]||0)+x.amount; b.t+=x.amount; b.list.push(x); });
-  const D=spDays(PER.from,PER.to).filter(d=>d<=bizToday()), tot={purchase:0,salary:0,expense:0}; L.forEach(x=>tot[x.kind]=(tot[x.kind]||0)+x.amount);
+function expDaily(pay,P,sp){
+  /* a day with supplier-bill lines: split those lines by name; payments to suppliers are the same money, so they are left out.
+     A day without lines: the payments, a "purchase" payment sorted by its note (ONION 20KG -> goods, PETROL -> running). */
+  const PL=(pay.list||[]).filter(x=>x.kind!=='receipt'&&x.flow!=='in'&&(!P||P(x))), by={}, SB=(sp&&sp.byDay)||{};
+  const add=(d,g,row)=>{ const b=by[d]=by[d]||{purchase:0,salary:0,expense:0,t:0,list:[]}; b[g]+=row.amount; b.t+=row.amount; b.list.push(Object.assign({g},row)); };
+  Object.keys(SB).forEach(d=>(SB[d]||[]).forEach(x=>{ if(PER.person&&x.by!==PER.person) return; add(d,x.g||spGrp(x.n,x.cat),{at:x.at,what:x.n,to:x.sup||'',q:x.q,unit:x.unit,mode:'',by:x.by,amount:x.v,line:1}); }));
+  PL.forEach(x=>{ if(x.kind==='purchase'&&(SB[x.d]||[]).length) return; const g=x.kind==='purchase'?spGrp(x.remarks,''):x.kind==='salary'?'salary':x.kind==='expense'?'expense':spGrp(x.remarks,'');
+    add(x.d,g,{at:x.at,what:x.remarks?(x.kind==='salary'&&x.party?x.party+' · ':'')+x.remarks:(x.party||x.kind),to:x.party||'',mode:x.mode,by:x.by,amount:x.amount}); });
+  const D=spDays(PER.from,PER.to).filter(d=>d<=bizToday()), tot={purchase:0,salary:0,expense:0}; Object.values(by).forEach(b=>{ tot.purchase+=b.purchase; tot.salary+=b.salary; tot.expense+=b.expense; });
   const all=tot.purchase+tot.salary+tot.expense, withSp=D.filter(d=>by[d]), avgD=withSp.length?all/D.length:0, big=withSp.slice().sort((a,b)=>by[b].t-by[a].t)[0];
   const Y=yscale(Math.max(1,...D.map(d=>by[d]?by[d].t:0))), dup=new Set(); (SPD.dups||[]).forEach(g=>g.items.forEach(x=>dup.add(x.day)));
   const bars=`<div class="bars axed expbars" style="grid-template-columns:repeat(${D.length},1fr)">${Y.html}${D.map(d=>{ const b=by[d]; if(!b) return '<div class="grp"></div>';
@@ -1192,12 +1209,32 @@ function expDaily(pay,P){
   const rows=D.slice().reverse().map(d=>{ const b=by[d]; if(!b) return `<div class="exprow none"><span class="d">${esc(rpName(d))}</span><span class="note">no expenses</span></div>`;
       const E=b.list.slice().sort((a,c)=>String(a.at||'').localeCompare(String(c.at||'')));
       return `<details class="exprow" id="exp-${d}"><summary><span class="d">${esc(rpName(d))}${dup.has(d)?' <span class="spp bad" title="an entry also shows on another day - see Possible duplicates">2×</span>':''}</span><span class="ks">${['purchase','salary','expense'].filter(k=>b[k]).map(k=>`<i style="background:${EXP_K[k][1]}"></i>${rs(b[k])}`).join(' ')}</span><b>${rs(b.t)}</b></summary>
-        <div class="scroll"><table><tr><th>Time</th><th>For</th><th>To / note</th><th class="m">Cash / bank</th><th class="m">By</th><th class="r">Amount</th></tr>${E.map(x=>`<tr><td>${hm(x.at)||'—'}</td><td><span class="pill ${x.kind==='salary'?'staff':x.kind==='purchase'?'counter':'delivery'}">${x.kind==='purchase'?'goods':x.kind==='salary'?'salary':'expense'}</span></td><td><b>${esc(x.party||'—')}</b>${x.remarks?' · '+esc(x.remarks):''}</td><td class="m">${esc(x.mode)}</td><td class="m">${esc(x.by)}</td><td class="r"><b>${rs(x.amount)}</b></td></tr>`).join('')}</table></div></details>`; }).join('');
+        <div class="scroll"><table><tr><th>Group</th><th>What</th><th class="m">Bill / paid to</th><th class="m">By</th><th class="r">Amount</th></tr>${E.sort((a,c)=>['salary','expense','purchase'].indexOf(a.g)-['salary','expense','purchase'].indexOf(c.g)||c.amount-a.amount).map(x=>`<tr><td><span class="pill ${x.g==='salary'?'staff':x.g==='purchase'?'counter':'delivery'}">${EXP_K[x.g][0].toLowerCase()}</span></td><td><b>${esc(x.what||'—')}</b>${x.q&&x.q!==1?' · '+x.q+(x.unit?' '+esc(x.unit):''):''}</td><td class="m">${esc(x.to||'')}${x.mode?' · '+esc(x.mode):''}</td><td class="m">${esc(x.by||'')}</td><td class="r"><b>${rs(x.amount)}</b></td></tr>`).join('')}</table></div></details>`; }).join('');
   return `<div class="card wide expcard"><h2>Expenses · day by day <span class="n">${esc(PER.label||'')} · money paid out · tap a bar or a day</span></h2>
     <div class="expk">${['purchase','salary','expense'].map(k=>`<span><i style="background:${EXP_K[k][1]}"></i>${EXP_K[k][0]} <b>${rs(tot[k])}</b></span>`).join('')}<span class="t">Total <b>${rs(all)}</b></span></div>
     <div class="expk sub"><span>Per day (average) <b>${rs(avgD)}</b></span>${big?`<span>Biggest day <b>${esc(rpName(big))} · ${rs(by[big].t)}</b></span>`:''}<span>${withSp.length} of ${D.length} days had expenses</span></div>
     ${bars}<div class="exprows">${rows}</div></div>`;
 }
+/* two days side by side: every spend line of day A and day B, matched by name, with the difference */
+let SPC={a:'',b:''};
+function spCompare(sp){ const SB=(sp&&sp.byDay)||{}, days=Object.keys(SB).filter(d=>(SB[d]||[]).length).sort(); if(days.length<2) return '';
+  let a=days.includes(SPC.a)?SPC.a:days[days.length-1], b=days.includes(SPC.b)&&SPC.b!==a?SPC.b:days.filter(d=>d!==a).slice(-1)[0];
+  const sumBy=d=>{ const m={}; (SB[d]||[]).forEach(x=>{ const k=String(x.n||'—').trim().toUpperCase(); const y=m[k]=m[k]||{n:x.n,g:x.g||spGrp(x.n,x.cat),v:0,q:0,unit:x.unit}; y.v+=x.v; y.q+=x.q||0; }); return m; };
+  const A=sumBy(a), B=sumBy(b), keys=[...new Set([...Object.keys(A),...Object.keys(B)])].sort((x,y)=>Math.max((A[y]||{}).v||0,(B[y]||{}).v||0)-Math.max((A[x]||{}).v||0,(B[x]||{}).v||0));
+  const tg=(M,g)=>Object.values(M).filter(x=>x.g===g).reduce((n,x)=>n+x.v,0), ta=Object.values(A).reduce((n,x)=>n+x.v,0), tb=Object.values(B).reduce((n,x)=>n+x.v,0);
+  const sel=(k,v)=>`<select class="tb sm" data-spc="${k}">${days.slice().reverse().map(d=>`<option value="${d}"${d===v?' selected':''}>${esc(rpName(d))}</option>`).join('')}</select>`;
+  const dc=v=>v===0?'<span class="n">same</span>':`<b class="${v>0?'dn':'up'}">${v>0?'+':'−'}${rs(Math.abs(v)).slice(1)}</b>`;   /* spending more = red */
+  return `<div class="card wide spc"><h2>Compare two days <span class="n">${sel('a',a)} vs ${sel('b',b)}</span></h2>
+    <div class="scroll"><table><tr><th>Item</th><th class="m">Group</th><th class="r">${esc(rpName(a))}</th><th class="r">${esc(rpName(b))}</th><th class="r">Difference</th></tr>
+    ${['purchase','salary','expense'].map(g=>`<tr class="spcg"><td>${EXP_K[g][0]}</td><td class="m"></td><td class="r">${rs(tg(A,g))}</td><td class="r">${rs(tg(B,g))}</td><td class="r">${dc(tg(A,g)-tg(B,g))}</td></tr>`).join('')}
+    <tr class="spct"><td><b>Total</b></td><td class="m"></td><td class="r"><b>${rs(ta)}</b></td><td class="r"><b>${rs(tb)}</b></td><td class="r">${dc(ta-tb)}</td></tr>
+    ${keys.map(k=>{ const x=A[k], y=B[k], g=(x||y).g; return `<tr><td>${esc((x||y).n)}</td><td class="m"><span class="pill ${g==='salary'?'staff':g==='purchase'?'counter':'delivery'}">${EXP_K[g][0].toLowerCase()}</span></td><td class="r">${x?rs(x.v):'<span class="n">—</span>'}</td><td class="r">${y?rs(y.v):'<span class="n">—</span>'}</td><td class="r">${dc((x?x.v:0)-(y?y.v:0))}</td></tr>`; }).join('')}</table></div>
+    <div class="note">Difference = ${esc(rpName(a))} minus ${esc(rpName(b))}. Red = spent more.</div></div>`; }
+function salaryCard(pay,P,sp){ const R=[]; const SB=(sp&&sp.byDay)||{};
+  Object.keys(SB).forEach(d=>(SB[d]||[]).forEach(x=>{ if((x.g||spGrp(x.n,x.cat))==='salary') R.push({d,what:x.n,amount:x.v,by:x.by}); }));
+  (pay.list||[]).forEach(x=>{ if(x.flow==='in'||(P&&!P(x))) return; if(x.kind==='salary'||(x.kind!=='purchase'&&SP_SAL.test(x.remarks||''))||(x.kind==='purchase'&&!(SB[x.d]||[]).length&&SP_SAL.test(x.remarks||''))) R.push({d:x.d,what:(x.party||'')+(x.remarks?' · '+x.remarks:''),amount:x.amount,by:x.by}); });
+  if(!R.length) return ''; R.sort((a,b)=>b.d.localeCompare(a.d)||b.amount-a.amount); const t=R.reduce((n,x)=>n+x.amount,0);
+  return `<div class="card wide"><h2>Salary <span class="n">${R.length} payments · ${rs(t)}</span></h2><div class="scroll"><table><tr><th>Day</th><th>Line</th><th class="m">By</th><th class="r">Amount</th></tr>${R.map(x=>`<tr class="rowlink" data-spd="${x.d}"><td>${esc(rpName(x.d))}</td><td>${esc(x.what||'—')}</td><td class="m">${esc(x.by||'')}</td><td class="r"><b>${rs(x.amount)}</b></td></tr>`).join('')}</table></div></div>`; }
 function expWire(){ $$('[data-expd]').forEach(b=>b.onclick=()=>{ const el=$('exp-'+b.dataset.expd); if(el){ el.open=true; el.scrollIntoView({behavior:'smooth',block:'center'}); } }); }
 function spDaily(){
   const D=spDays(PER.from,PER.to).filter(d=>d<=bizToday()), B=D.map(d=>(INDEX[d]&&INDEX[d].purchases)||0), P=D.map(d=>(INDEX[d]&&INDEX[d].paidOut)||0);
@@ -1334,9 +1371,13 @@ function topItems(rows,tot){ if(!rows.length||!tot) return '';
   const seg=[['t5','Top 5',a,'1'],['tn',N>5?'Next '+(N-5):'',b,'2'],['ot','Others · '+rest.length+' items',restV,'3']].filter(x=>x[2]>0);
   const L=top.map(r=>[r.n,r.v,r.q,'']).concat(restV?[['Others ('+rest.length+' items)',restV,rest.reduce((n,r)=>n+r.q,0),'o']]:[]), mx=Math.max(...L.map(x=>x[1]));
   return `<div class="card wide topit"><h2>Top items <span class="n">share of ${rs(tot)} · <span class="tpn">${[10,15].map(n=>`<button type="button" class="${TOPN===n?'on':''}" data-topn="${n}">Top ${n}</button>`).join('')}</span></span></h2>
-    <div class="tpstrip" role="img" aria-label="${seg.map(x=>x[1]+' '+pc(x[2])+'%').join(', ')}">${seg.map(x=>`<i class="s${x[3]}" style="flex:${x[2]}" title="${esc(x[1])} · ${rs(x[2])} · ${pc(x[2])}%"></i>`).join('')}</div>
-    <div class="tpkey">${seg.map(x=>`<span><i class="s${x[3]}"></i>${esc(x[1])} <b>${pc(x[2])}%</b></span>`).join('')}</div>
-    <div class="tprows">${L.map((x,i)=>`<div class="tpr${x[3]?' tpo':''}" title="${esc(x[0])} · ${rs(x[1])} · ${x[2]} sold · ${pc(x[1])}%"><span class="tpn2">${x[3]?'':i+1}</span><span class="tpl">${esc(x[0])}</span><span class="tpb"><i style="width:${(100*x[1]/mx).toFixed(1)}%"></i></span><span class="tpv">${kfmt(x[1])}</span><span class="tpp">${pc(x[1])}%</span></div>`).join('')}</div></div>`; }
+    ${(()=>{ /* pie: the top 5 items + everything else. 2px card-coloured gaps between slices; legend carries the labels */
+      const P=rows.slice(0,5).map((r,i)=>[r.n,r.v,'p'+(i+1)]), o=tot-P.reduce((n,x)=>n+x[1],0); if(o>0) P.push(['Others · '+(rows.length-5)+' items',o,'po']);
+      let a=-Math.PI/2; const R=70, r0=42, cx=80, cy=80, arc=(v)=>{ const a2=a+2*Math.PI*v/tot, big=a2-a>Math.PI?1:0, p=(rr,t)=>[cx+rr*Math.cos(t),cy+rr*Math.sin(t)].map(n=>n.toFixed(2)).join(' ');
+        const d=v>=tot-0.01?`M${p(R,a)} A${R} ${R} 0 1 1 ${p(R,a+Math.PI)} A${R} ${R} 0 1 1 ${p(R,a)} M${p(r0,a)} A${r0} ${r0} 0 1 0 ${p(r0,a+Math.PI)} A${r0} ${r0} 0 1 0 ${p(r0,a)}Z`:`M${p(R,a)} A${R} ${R} 0 ${big} 1 ${p(R,a2)} L${p(r0,a2)} A${r0} ${r0} 0 ${big} 0 ${p(r0,a)}Z`; a=a2; return d; };
+      return `<div class="tppie"><svg viewBox="0 0 160 160" role="img" aria-label="${esc(P.map(x=>x[0]+' '+pc(x[1])+'%').join(', '))}">${P.map(x=>`<path d="${arc(x[1])}" class="${x[2]}"><title>${esc(x[0])} · ${rs(x[1])} · ${pc(x[1])}%</title></path>`).join('')}<text x="80" y="76" text-anchor="middle" class="tpc1">Top 5</text><text x="80" y="94" text-anchor="middle" class="tpc2">${pc(tot-o)}%</text></svg>
+        <div class="tplg">${P.map(x=>`<div><i class="${x[2]}"></i><span>${esc(x[0])}</span><b>${pc(x[1])}%</b><em>${kfmt(x[1])}</em></div>`).join('')}</div></div>`; })()}
+<div class="tprows">${L.map((x,i)=>`<div class="tpr${x[3]?' tpo':''}" title="${esc(x[0])} · ${rs(x[1])} · ${x[2]} sold · ${pc(x[1])}%"><span class="tpn2">${x[3]?'':i+1}</span><span class="tpl">${esc(x[0])}</span><span class="tpb"><i style="width:${(100*x[1]/mx).toFixed(1)}%"></i></span><span class="tpv">${kfmt(x[1])}</span><span class="tpp">${pc(x[1])}%</span></div>`).join('')}</div></div>`; }
 function items(g){
   g=g||itemsOf(DOC&&DOC.records);
   let rows=Object.values(g).sort((a,b)=>b.v-a.v); if(Q) rows=rows.filter(r=>(r.n+' '+(r.cat||'')).toLowerCase().includes(Q));
@@ -2102,12 +2143,14 @@ function payKind(p){ if(p.flow==='in') return 'receipt'; const t=(p.type||'')+' 
 function staffName(r){ const rem=String(r.remarks||'').trim(); const w=rem.split(/\s+/)[0]; return (w&&!ORDER_WORDS.test(rem))?w.toUpperCase():(r.waiter||'CASHIER'); }
 function buildMonth(m,days,docs){
   const S={month:m,days:days.length,sales:0,bills:0,byDay:{},kinds:{},sections:{},waiters:{},disc:{by:{},list:[],total:0},staff:{by:{},list:[],total:0,menu:0},voids:{by:{},list:[],total:0,afterBill:{n:0,v:0}},paidOut:0,pay:{purchase:0,salary:0,expense:0,receipt:0,byParty:{},list:[]},spend:{byItem:{},byCat:{},byDay:{},total:0,salary:0}};
-  const SAL=/salary|wage|advance|payroll|staff pay/i;
+  const SAL=SP_SAL;
   S.days=0;
   days.forEach(d=>{ const doc=docs[d]; if(!doc) return; S.days++; S.paidOut+=doc.paidOut||0; let dr=0,db=0;
-    Object.values(doc.purchases||{}).forEach(pu=>(pu.items||[]).forEach(i=>{ const name=(i.n||'').trim()||'—', cat=SAL.test(name+' '+(i.cat||''))?'Salary':(i.cat||'Other'); const v=i.total||((i.q||0)*(i.cost||0)); const sp=S.spend;
+    Object.values(doc.purchases||{}).forEach(pu=>{ const its=(pu.items||[]).slice(), ls=its.reduce((n,i)=>n+(i.total||((i.q||0)*(i.cost||0))),0), rem=(+pu.total||0)-ls;
+      if(rem>1&&rem>0.01*(+pu.total||0)) its.push({n:'(not itemised)',q:1,unit:'',cost:rem,total:rem});   /* bill total the lines do not explain */
+      its.forEach(i=>{ const name=(i.n||'').trim()||'—', g=spGrp(name,i.cat), cat=EXP_K[g][0]; const v=i.total||((i.q||0)*(i.cost||0)); const sp=S.spend;
       const it=sp.byItem[name]=sp.byItem[name]||{n:name,cat,unit:i.unit||'',q:0,v:0,lines:0,costs:[]}; it.q+=i.q||0; it.v+=v; it.lines++; if(i.cost) it.costs.push(i.cost);
-      sp.byCat[cat]=(sp.byCat[cat]||0)+v; (sp.byDay[d]=sp.byDay[d]||[]).push({n:name,cat,q:i.q||0,unit:i.unit||'',cost:i.cost||0,v,by:pu.by||'',at:pu.at||''}); sp.total+=v; if(cat==='Salary') sp.salary+=v; }));
+      sp.byCat[cat]=(sp.byCat[cat]||0)+v; (sp.byDay[d]=sp.byDay[d]||[]).push({n:name,cat,g,q:i.q||0,unit:i.unit||'',cost:i.cost||0,v,by:pu.by||'',at:pu.at||'',sup:pu.supplier||''}); sp.total+=v; if(cat==='Salary') sp.salary+=v; }); });
     Object.values(doc.payments||{}).forEach(p=>{ if(p.deleted) return; const k=payKind(p); S.pay[k]+=p.amount||0; if(k!=='receipt'){ const who=p.party||p.remarks||'—'; const x=S.pay.byParty[who]=S.pay.byParty[who]||{n:0,v:0,kind:k}; x.n++; x.v+=p.amount||0; } S.pay.list.push({d,at:p.at,kind:k,party:p.party||'',remarks:p.remarks||'',mode:p.mode||'',by:p.by||'',amount:p.amount||0,flow:p.flow}); });
     Object.values(doc.records||{}).forEach(r=>{ const key=d+'/'+r.key;
       if(r.status==='settled'){ const v=sum(r); if(r.kind!=='staff'){ dr+=v; db++; S.kinds[r.kind]=(S.kinds[r.kind]||0)+v; S.sections[r.section||'—']=(S.sections[r.section||'—']||0)+v; if(r.waiter){ const w=S.waiters[r.waiter]=S.waiters[r.waiter]||{n:0,v:0}; w.n++; w.v+=v; } }
@@ -2129,7 +2172,7 @@ function buildMonth(m,days,docs){
   S.items=itemsOf(all); S.v=SNAP_V;
   return S;
 }
-const SNAP_V=3;
+const SNAP_V=4;   /* 4: spend lines grouped Goods / Salary / Running costs by line name */
 let LASTBUILD=null;   /* the day docs the last snapshot was built from: reuse, do not reload */
 async function monthDoc(m,force){
   const cur=m===bizToday().slice(0,7), {fs,db}=FB, ref=fs.doc(db,'vm_months',m);
@@ -2212,7 +2255,7 @@ function periodDoc(from,to,days,docs){
 function prevPeriod(from,to){ const a=new Date(from+'T12:00:00'), b=new Date(to+'T12:00:00'); const n=Math.round((b-a)/864e5)+1; const pb=new Date(a); pb.setDate(a.getDate()-1); const pa=new Date(pb); pa.setDate(pb.getDate()-n+1); return [ymd(pa),ymd(pb)]; }
 function idxSum(from,to){ const o={rev:0,bills:0,out:0,n:0}; Object.keys(INDEX).forEach(d=>{ if(d>=from&&d<=to&&(INDEX[d].rev||INDEX[d].bills)){ o.rev+=INDEX[d].rev||0; o.bills+=INDEX[d].bills||0; o.out+=INDEX[d].paidOut||0; o.n++; } }); return o; }
 /* ---- spend explorer: group / sort / filter, every group opens to its lines ---- */
-let SP={group:'cat',sort:'amount',q:'',cat:'',open:{}};
+let SP={group:'item',sort:'amount',q:'',cat:'',open:{}};
 const weekOf=d=>{ const x=new Date(d+'T12:00:00'); const dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); return 'Week of '+ymd(x).slice(5); };
 function spendExplorer(sp){
   const lines=[]; Object.keys(sp.byDay||{}).forEach(d=>(sp.byDay[d]||[]).forEach(x=>lines.push(Object.assign({d},x))));
@@ -2226,8 +2269,8 @@ function spendExplorer(sp){
     const byK={}; const kf=SP.group==='item'?x=>x.d:x=>x.n; G.lines.forEach(x=>{ const k=kf(x); const Y=byK[k]=byK[k]||{k,q:0,v:0,unit:x.unit,rates:[],days:new Set(),cat:x.cat}; Y.q+=x.q; Y.v+=x.v; if(x.cost) Y.rates.push(x.cost); Y.days.add(x.d); });
     const rows=Object.values(byK).sort((a,b)=>b.v-a.v);
     return `<table><tr><th>${SP.group==='item'?'Day':'Item'}</th>${SP.group==='cat'||SP.group==='item'?'':'<th class="m">Category</th>'}<th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th>${SP.group==='item'?'':'<th class="r m">Days</th>'}</tr>${rows.map(y=>`<tr><td>${esc(y.k)}</td>${SP.group==='cat'||SP.group==='item'?'':`<td class="m">${esc(y.cat)}</td>`}<td class="r">${Math.round(y.q*100)/100}</td><td>${esc(y.unit||'')}</td><td class="r">${y.rates.length?rs(y.rates.reduce((a,b)=>a+b,0)/y.rates.length):''}</td><td class="r"><b>${rs(y.v)}</b></td>${SP.group==='item'?'':`<td class="r m">${y.days.size}</td>`}</tr>`).join('')}</table>`; };
-  const ctl=`<div class="tabs" style="margin:0 0 8px"><select class="tb sm" data-sp="group">${[['cat','By category'],['item','By item'],['day','By day'],['week','By week']].map(o=>`<option value="${o[0]}"${SP.group===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="sort">${[['amount','Biggest first'],['name','A → Z'],['qty','Most qty'],['newest','Newest first']].map(o=>`<option value="${o[0]}"${SP.sort===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="cat"><option value="">All categories</option>${cats.map(c=>`<option${SP.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select><input class="search" style="width:auto;flex:1;min-width:120px;margin:0" id="spq" placeholder="Search item…" value="${esc(SP.q)}"></div>`;
-  return `<div class="card wide"><h2>Spend <span class="n">${groups.length} ${SP.group==='cat'?'categories':SP.group==='item'?'items':SP.group==='day'?'days':'weeks'} · ${L.length} lines · ${rs(tot)}</span></h2>${ctl}${groups.map(G=>`<details class="dd"${SP.open[G.k]?' open':''} data-spk="${esc(G.k)}"><summary><span>${esc(G.k)}</span><small>${G.n} lines${SP.group==='item'&&G.unit?' · '+Math.round(G.q*100)/100+' '+esc(G.unit):''} · ${tot?Math.round(100*G.v/tot):0}%</small><b>${rs(G.v)}</b></summary>${sub(G)}</details>`).join('')||'<div class="note">No spend lines in this span.</div>'}</div>`;
+  const ctl=`<div class="tabs" style="margin:0 0 8px"><select class="tb sm" data-sp="group">${[['cat','By group'],['item','By item'],['day','By day'],['week','By week']].map(o=>`<option value="${o[0]}"${SP.group===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="sort">${[['amount','Biggest first'],['name','A → Z'],['qty','Most qty'],['newest','Newest first']].map(o=>`<option value="${o[0]}"${SP.sort===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select><select class="tb sm" data-sp="cat"><option value="">All categories</option>${cats.map(c=>`<option${SP.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select><input class="search" style="width:auto;flex:1;min-width:120px;margin:0" id="spq" placeholder="Search item…" value="${esc(SP.q)}"></div>`;
+  return `<div class="card wide"><h2>Spend <span class="n">${groups.length} ${SP.group==='cat'?'groups':SP.group==='item'?'items':SP.group==='day'?'days':'weeks'} · ${L.length} lines · ${rs(tot)}</span></h2>${ctl}${groups.map(G=>`<details class="dd"${SP.open[G.k]?' open':''} data-spk="${esc(G.k)}"><summary><span>${esc(G.k)}</span><small>${G.n} lines${SP.group==='item'&&G.unit?' · '+Math.round(G.q*100)/100+' '+esc(G.unit):''} · ${tot?Math.round(100*G.v/tot):0}%</small><b>${rs(G.v)}</b></summary>${sub(G)}</details>`).join('')||'<div class="note">No spend lines in this span.</div>'}</div>`;
 }
 
 
@@ -2591,14 +2634,14 @@ function period(){
   const V=PER.V, W=fn=>V?withDoc(V,fn):'';
   let body='';
   if(PTAB==='overview') body=ssCard(PER.from,PER.to)+byDay+ssMonths()+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends();
-  else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard;
+  else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard+discCard;
   else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
     const items=Object.values(sp.byItem).filter(x=>!PER.person||x.n===PER.person).sort((a,b)=>b.v-a.v), spTot=items.reduce((n,x)=>n+x.v,0);
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
     const dayKeys=Object.keys(sp.byDay).sort().reverse();
     const dayCard=`<div class="card wide"><h2>Spend · day by day <span class="n">tap a day to open it</span></h2>${dayKeys.map(dk=>{ const L=sp.byDay[dk]; const t=L.reduce((n,x)=>n+x.v,0); return `<details class="dd"><summary><span>${dk}</span><small>${L.length} lines</small><b>${rs(t)}</b></summary><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th><th class="m">By</th></tr>${L.sort((a,b)=>b.v-a.v).map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${x.q}</td><td>${esc(x.unit)}</td><td class="r">${rs(x.cost)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="m">${esc(x.by)}</td></tr>`).join('')}</table></details>`; }).join('')||'<div class="note">No purchase lines in this span.</div>'}</div>`;
-    body=ssCard(PER.from,PER.to)+expDaily(pay,P)+mini('Expenses · by who was paid',partyBy)+spDupCard()+spendExplorer(sp)+mini('Purchases · by category',sp.byCat)+mini('Discounts · by person',S.disc.by)+discCard; }
+    body=expDaily(pay,P,sp)+spDupCard()+spendExplorer(sp)+salaryCard(pay,P,sp)+spCompare(sp)+(Object.keys(partyBy).length>1?mini('Expenses · by who was paid',partyBy):'');   /* discounts live on People */ }
   else if(PTAB==='cash') body=cashPeriod();
   else body=mini('Voids · by person',voidBy)+voidCard;
   return bar+k+tabs+`<div class="grid">${body}</div>`;
@@ -2769,6 +2812,7 @@ function render(){
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
+  $$('[data-spc]').forEach(x=>x.onchange=()=>{ SPC[x.dataset.spc]=x.value; render(); });
   $$('[data-topn]').forEach(b=>b.onclick=()=>{ TOPN=+b.dataset.topn; try{ localStorage.setItem('hayat-topn',TOPN); }catch(e){} render(); });
   dock(); slRow(); const stg=$('slTog'); if(stg) stg.onclick=()=>{ if(SL.open) slClose(); else { SL.open=true; render(); } }; addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
   simWire(); lgCardWire(); ptWire(); labWire(); spWire();
