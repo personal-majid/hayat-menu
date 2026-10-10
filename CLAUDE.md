@@ -205,6 +205,20 @@ H.264 encoder: t-simrec.mjs with VP9=1 swaps RV.mux='vp9' to test the path.
   ranked bars Top 10/15 + Others ('hayat-topn'). Colours = dataviz reference
   slots 1-3, validated light and dark. No pie: 16 slices can't be read.
 
+## Sales vs spend (v218)
+Period view: "Sales vs spend" opens Overview and Money (ssCard): totals Sales /
+Spend / Net / days spend > sales, a bar pair per day (tap = open the day) and
+running totals as two lines. Overview also has "month by month" (ssMonths, last
+6 months, with a Month/Sales/Spend/Net table). All from the day index
+(INDEX[d].rev, INDEX[d].paidOut = money paid out) - no day docs loaded. Today
+uses the live DOC. Colours = dataviz slots 1-2, validated light + dark.
+
+## Spends easier to reach (v219)
+Period bottom tab "Money" is now called "Spends". Tapping a day on Sales vs
+spend opens that day's spends sheet (spDaySheet: sales of the day, paid out,
+supplier bills, every entry, Remove for duplicates, "open the whole day").
+The Overview card links "all spends ->".
+
 ## Staff login — roles, not just "office"
 `crew/_list` gives names and roles; `crew/<id>` holds the code, which
 the browser never sees. Signing in writes `staff/<uid>` and the rules

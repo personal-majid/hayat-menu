@@ -143,6 +143,17 @@ body.period #dockTime{display:none}
 .tpn2{color:var(--muted);font-size:11.5px;text-align:right} .tpl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .tpb{height:12px} .tpb i{display:block;height:100%;background:var(--tp1);border-radius:0 4px 4px 0;min-width:2px} .tpo .tpb i{background:var(--tpo)} .tpo .tpl{color:var(--muted);font-weight:700}
 .tpv{text-align:right;font-variant-numeric:tabular-nums;font-weight:700} .tpp{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
 @media (max-width:640px){ .tpr{grid-template-columns:16px minmax(0,2fr) minmax(40px,1fr) 44px 38px;gap:6px;font-size:12px} }
+.ssv{--sv1:#2a78d6;--sv2:#eb6834}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .ssv{--sv1:#3987e5;--sv2:#d95926} }
+:root[data-theme="dark"] .ssv{--sv1:#3987e5;--sv2:#d95926}
+.sstop{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:2px 0 12px} .sstop small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800} .sstop b{font-size:20px} .sstop em{display:block;font-style:normal;font-size:12px;color:var(--muted)}
+@media (max-width:640px){ .sstop{grid-template-columns:repeat(2,minmax(0,1fr))} .sstop b{font-size:17px} }
+.sskey{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:2px 0 6px} .sskey i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px} .sskey .n{font-size:12px}
+.ssv .s1{background:var(--sv1)} .ssv .s2{background:var(--sv2)}
+.bars.ssb{height:170px} .bars.ssb.ssm{height:150px} .ssg{display:flex;align-items:flex-end;justify-content:center;gap:1px;padding:0 clamp(0px,0.5vw,5px);height:100%;position:relative;z-index:1;cursor:pointer} .ssg:hover{background:var(--soft)} .ssg i{display:block;flex:1 1 0;max-width:22px;min-height:1px;border-radius:3px 3px 0 0}
+.ssh{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 4px;font-weight:800}
+.ssrun{width:100%;height:150px;display:block;background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 25%} .ssrun path{fill:none;stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linejoin:round} .ssrun .l1{stroke:var(--sv1)} .ssrun .l2{stroke:var(--sv2)}
+.ssmt{display:grid;gap:2px;margin-top:10px;font-size:13px} .ssmt>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:4px 0;border-top:1px solid var(--line)} .ssmt>div>*:not(:first-child){text-align:right;font-variant-numeric:tabular-nums} .ssmt small{color:var(--muted)} .ssmt .ssmh{border-top:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .wxn{margin:6px 0 0} .wxn small{color:var(--muted)}
 .subnav{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding:2px 0;scrollbar-width:none} .subnav::-webkit-scrollbar{display:none}
 .subnav button{flex:0 0 auto;border:1px solid var(--line2);background:var(--card);color:var(--muted);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -454,7 +465,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v217';
+const BOARD='v219';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -1145,6 +1156,30 @@ function spDays(from,to){ const out=[]; for(let d=from; d<=to; d=addDays(d,1)) o
    Money that went OUT: paid to suppliers (goods), salary, everything else. One bar per day, split by kind;
    tap a day to see every entry. Receipts (money in) are left out. */
 const EXP_K={purchase:['Goods (paid to suppliers)','#C0882C'],salary:['Salary','#1F4D4A'],expense:['Other expenses','#8C3A1E']};
+/* SALES vs SPEND: from the day index (rev, paidOut = money paid out: suppliers, salary, other) - no day docs needed.
+   Bar pair per day + running totals, and month by month. Colours = dataviz slots 1-2 (validated light + dark). */
+function ssDays(from,to){ return spDays(from,to).filter(d=>d<=bizToday()).map(d=>{ const x=INDEX[d]||{}, live=d===bizToday()&&DOC; return {d,s:live?stats(DOC).rev:(x.rev||0),p:live?(DOC.paidOut||0):(x.paidOut||0)}; }); }
+function ssCard(from,to){ const D=ssDays(from,to); if(!D.length) return '';
+  const S=D.reduce((n,x)=>n+x.s,0), P=D.reduce((n,x)=>n+x.p,0), net=S-P, mg=S?Math.round(100*net/S):0, Y=yscale(Math.max(1,...D.map(x=>Math.max(x.s,x.p))));
+  const over=D.filter(x=>x.p>x.s&&x.p>0).length;
+  const bars=`<div class="bars axed ssb" style="grid-template-columns:repeat(${D.length},1fr)">${Y.html}${D.map(x=>`<div class="ssg click" data-spd="${x.d}" title="${esc(rpName(x.d))} · sales ${rs(x.s)} · spend ${rs(x.p)} · ${x.s-x.p>=0?'net +':'net '}${rs(x.s-x.p)}"><i class="s1" style="height:${100*x.s/Y.top}%"></i><i class="s2" style="height:${100*x.p/Y.top}%"></i></div>`).join('')}</div>
+    <div class="hx axed" style="grid-template-columns:repeat(${D.length},1fr)">${D.map((x,i)=>`<span>${D.length>16&&i%Math.ceil(D.length/12)?'':(+x.d.slice(8))}</span>`).join('')}</div>`;
+  /* running totals: two lines on one axis */
+  let cs=0,cp=0; const C=D.map(x=>{ cs+=x.s; cp+=x.p; return [cs,cp]; }), top=yscale(Math.max(1,cs,cp)).top, W=600, H=150, X=i=>D.length<2?W/2:6+(W-12)*i/(D.length-1), Yv=v=>H-4-(H-8)*v/top;
+  const ln=k=>C.map((c,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Yv(c[k]).toFixed(1)}`).join(' ');
+  const run=`<svg class="ssrun" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="running sales ${rs(cs)} and spend ${rs(cp)}"><path d="${ln(0)}" class="l1"/><path d="${ln(1)}" class="l2"/></svg>`;
+  return `<div class="card wide ssv"><h2>Sales vs spend <span class="n">${D.length} days · spend = money paid out (suppliers, salary, other) · tap a day for its spends${PTAB!=='money'?' · <a href="#" data-ptab="money">all spends →</a>':''}</span></h2>
+    <div class="sstop"><div><small>Sales</small><b>${rs(S)}</b></div><div><small>Spend</small><b>${rs(P)}</b></div><div><small>Net</small><b class="${net>=0?'up':'dn'}">${rs(net)}</b><em>${mg}% of sales</em></div><div><small>Days spend &gt; sales</small><b>${over}</b><em>usually supplier payment days</em></div></div>
+    <div class="sskey"><span><i class="s1"></i>Sales</span><span><i class="s2"></i>Spend</span></div>${bars}
+    <h3 class="ssh">Running total · ${rs(cs)} sales vs ${rs(cp)} spend so far</h3>${run}
+    <div class="sskey"><span><i class="s1"></i>Sales so far</span><span><i class="s2"></i>Spend so far</span><span class="n">the gap is what is left</span></div></div>`; }
+function ssMonths(){ const ms=[...new Set(Object.keys(INDEX).map(d=>d.slice(0,7)))].sort().slice(-6); if(ms.length<2) return '';
+  const R=ms.map(m=>{ const D=Object.keys(INDEX).filter(d=>d.startsWith(m)); return {m,s:D.reduce((n,d)=>n+(INDEX[d].rev||0),0),p:D.reduce((n,d)=>n+(INDEX[d].paidOut||0),0),n:D.length}; }), Y=yscale(Math.max(1,...R.map(x=>Math.max(x.s,x.p))));
+  const mn=m=>new Date(m+'-15T12:00:00').toLocaleString('en',{month:'short'});
+  return `<div class="card wide ssv"><h2>Sales vs spend · month by month <span class="n">last ${R.length} months${R[R.length-1].m===bizToday().slice(0,7)?' · this month so far':''}</span></h2><div class="sskey"><span><i class="s1"></i>Sales</span><span><i class="s2"></i>Spend</span></div>
+    <div class="bars axed ssb ssm" style="grid-template-columns:repeat(${R.length},1fr)">${Y.html}${R.map(x=>`<div class="ssg" title="${mn(x.m)} · ${x.n} days · sales ${rs(x.s)} · spend ${rs(x.p)} · net ${rs(x.s-x.p)}"><i class="s1" style="height:${100*x.s/Y.top}%"></i><i class="s2" style="height:${100*x.p/Y.top}%"></i></div>`).join('')}</div>
+    <div class="hx axed" style="grid-template-columns:repeat(${R.length},1fr)">${R.map(x=>`<span>${mn(x.m)}</span>`).join('')}</div>
+    <div class="ssmt"><div class="ssmh"><span>Month</span><span>Sales</span><span>Spend</span><span>Net</span></div>${R.slice().reverse().map(x=>`<div><span>${mn(x.m)} <small>${x.n} days</small></span><span>${kfmt(x.s)}</span><span>${kfmt(x.p)}</span><b class="${x.s-x.p>=0?'up':'dn'}">${x.s-x.p>=0?'+':'−'}${kfmt(Math.abs(x.s-x.p))}</b></div>`).join('')}</div></div>`; }
 function expDaily(pay,P){
   const L=(pay.list||[]).filter(x=>x.kind!=='receipt'&&x.flow!=='in'&&(!P||P(x))), by={};
   L.forEach(x=>{ const b=by[x.d]=by[x.d]||{purchase:0,salary:0,expense:0,t:0,list:[]}; b[x.kind]=(b[x.kind]||0)+x.amount; b.t+=x.amount; b.list.push(x); });
@@ -1224,10 +1259,10 @@ async function spDaySheet(d){ const old=$('drill'); if(old) old.remove(); const 
   const tb=P.reduce((n,[k,p])=>n+(+p.total||0),0), out=Y.filter(([k,p])=>p.flow==='out'), tp=out.reduce((n,[k,p])=>n+(+p.amount||0),0);
   const dupTag=(c,k)=>{ const o=dupKeys.get(c+'|'+k); return o?` <span class="spp bad">also on ${o.map(x=>(+x.slice(8))+' '+new Date(x+'T12:00:00').toLocaleString('en',{month:'short'})).join(', ')}</span>`:''; };
   box.querySelector('.sheet').innerHTML=`<h2>${esc(rpName(d))} · spends<button class="x" id="drillX">✕</button></h2>
-    <div class="kpis"><div class="kpi"><small>Supplier bills</small><b>${rs(tb)}</b><em>${P.length} bills</em></div><div class="kpi"><small>Paid out</small><b>${rs(tp)}</b><em>${out.length} entries</em></div></div>
+    <div class="kpis"><div class="kpi"><small>Sales</small><b>${rs(d===bizToday()&&DOC?stats(DOC).rev:((INDEX[d]||{}).rev||0))}</b><em><a href="#" id="spOpenDay">open the whole day →</a></em></div><div class="kpi"><small>Paid out</small><b>${rs(tp)}</b><em>${out.length} entries</em></div><div class="kpi"><small>Supplier bills</small><b>${rs(tb)}</b><em>${P.length} bills</em></div></div>
     <h3 class="sph">Supplier bills</h3>${P.map(([k,p])=>`<div class="spdi"><span>${hm(p.at)} · <b>${esc(p.supplier||'—')}</b>${p.billNo?' · bill '+esc(p.billNo):''} · <b>${rs(p.total)}</b>${dupTag('purchases',k)}<br><small>${esc((p.items||[]).slice(0,5).map(i=>i.q+'× '+i.n).join(', '))}${(p.items||[]).length>5?' …':''}${p.by?' · by '+esc(p.by):''}</small></span><button class="tab" data-sprm="${d}|purchases|${esc(k)}">Remove</button></div>`).join('')||'<div class="note">None.</div>'}
     <h3 class="sph">Paid out and received</h3>${Y.map(([k,p])=>`<div class="spdi"><span>${hm(p.at)} · <b>${esc(payKind(p))}</b> · ${esc(p.party||'')}${p.remarks?' · “'+esc(p.remarks)+'”':''} · <b class="${p.flow==='out'?'dn':'up'}">${p.flow==='out'?'−':'+'}${rs(p.amount)}</b>${p.mode?' · '+esc(p.mode):''}${dupTag('payments',k)}</span><button class="tab" data-sprm="${d}|payments|${esc(k)}">Remove</button></div>`).join('')||'<div class="note">None.</div>'}`;
-  $('drillX').onclick=()=>box.remove(); spRmWire(box); }
+  $('drillX').onclick=()=>box.remove(); spRmWire(box); const od=$('spOpenDay'); if(od) od.onclick=e=>{ e.preventDefault(); box.remove(); MODE='day'; TAB='cash'; setDay(d); render(); }; }
 function spRmWire(root){ $$('[data-sprm]',root).forEach(b=>b.onclick=async e=>{ e.stopPropagation(); const [d,c,k]=b.dataset.sprm.split('|'); await removeEntry(d,c,k); delete SPD.docs[d]; SPD.key=''; }); }
 function spWire(){ expWire(); $$('[data-spd]').forEach(b=>b.onclick=()=>spDaySheet(b.dataset.spd)); spRmWire(document); if(MODE==='period'&&PTAB==='money'&&SPD.key!==PER.from+'|'+PER.to&&!SPD.busy) setTimeout(spScan,0); }
 
@@ -2555,7 +2590,7 @@ function period(){
   const voidBy={}; Object.entries(S.voids.by).forEach(([kk,x])=>voidBy[kk]={n:x.n,v:x.v});
   const V=PER.V, W=fn=>V?withDoc(V,fn):'';
   let body='';
-  if(PTAB==='overview') body=byDay+sve+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends();
+  if(PTAB==='overview') body=ssCard(PER.from,PER.to)+byDay+ssMonths()+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends();
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard;
   else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
@@ -2563,7 +2598,7 @@ function period(){
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
     const dayKeys=Object.keys(sp.byDay).sort().reverse();
     const dayCard=`<div class="card wide"><h2>Spend · day by day <span class="n">tap a day to open it</span></h2>${dayKeys.map(dk=>{ const L=sp.byDay[dk]; const t=L.reduce((n,x)=>n+x.v,0); return `<details class="dd"><summary><span>${dk}</span><small>${L.length} lines</small><b>${rs(t)}</b></summary><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Total</th><th class="m">By</th></tr>${L.sort((a,b)=>b.v-a.v).map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${x.q}</td><td>${esc(x.unit)}</td><td class="r">${rs(x.cost)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="m">${esc(x.by)}</td></tr>`).join('')}</table></details>`; }).join('')||'<div class="note">No purchase lines in this span.</div>'}</div>`;
-    body=expDaily(pay,P)+sve+mini('Expenses · by who was paid',partyBy)+spDupCard()+spendExplorer(sp)+mini('Purchases · by category',sp.byCat)+mini('Discounts · by person',S.disc.by)+discCard; }
+    body=ssCard(PER.from,PER.to)+expDaily(pay,P)+mini('Expenses · by who was paid',partyBy)+spDupCard()+spendExplorer(sp)+mini('Purchases · by category',sp.byCat)+mini('Discounts · by person',S.disc.by)+discCard; }
   else if(PTAB==='cash') body=cashPeriod();
   else body=mini('Voids · by person',voidBy)+voidCard;
   return bar+k+tabs+`<div class="grid">${body}</div>`;
@@ -2640,7 +2675,7 @@ function dock(){
   const d=$('dock'); if(!d) return;
   const IC={live:'<path d="M3 12h4l2-6 4 12 2-6h6"/>',sales:'<path d="M5 20V10M12 20V4M19 20v-7"/>',patterns:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',similar:'<path d="M4 17l5-5 4 3 7-8"/><path d="M4 12l5-3 4 2 7-5" opacity=".45"/>',more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',over:'<path d="M4 19h16M6 15l4-5 4 3 4-6"/>',people:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.4"/>',items:'<path d="M5 6h14M5 12h14M5 18h9"/>',money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>'};
   const svg=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
-  const prim=MODE==='period'?[['overview','Overview','over'],['people','People','people'],['items','Items','items'],['money','Money','money']]:[['floor','Today','live'],['sales','Sales','sales'],['cash','Money','money'],['patterns','Insights','patterns']];
+  const prim=MODE==='period'?[['overview','Overview','over'],['people','People','people'],['items','Items','items'],['money','Spends','money']]:[['floor','Today','live'],['sales','Sales','sales'],['cash','Money','money'],['patterns','Insights','patterns']];
   const sec=MODE==='period'?[['cash','Cash'],['voids','Voids']]:[['bills','Bills'],['items','Items']];
   const cur=MODE==='period'?PTAB:(TGRP[TAB]||TAB), attr=MODE==='period'?'data-ptab':'data-tab', inSec=sec.find(t=>t[0]===cur);
   $('dockTabs').innerHTML=prim.map(t=>`<button class="dtab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${svg(t[2])}<span>${t[1]}</span></button>`).join('')+`<button class="dtab${inSec?' on':''}" id="dockMoreBtn" aria-expanded="${!$('dockSheet').hidden}">${svg('more')}<span>${inSec?inSec[1]:'More'}</span></button>`;
@@ -2739,7 +2774,7 @@ function render(){
   simWire(); lgCardWire(); ptWire(); labWire(); spWire();
   $$('[data-rpgo]').forEach(a=>a.onclick=e=>{ e.preventDefault(); openReplay(); });
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; if(b.closest('#dockTabs')){ if(TLAST[TAB]&&TGRP[TLAST[TAB]]===TAB) TAB=TLAST[TAB]; window.scrollTo(0,0); } Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
-  $$('[data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; render(); });
+  $$('[data-ptab]').forEach(b=>b.onclick=e=>{ if(e) e.preventDefault(); PTAB=b.dataset.ptab; Q=''; if(b.tagName==='A'||b.closest('#dockTabs')) window.scrollTo(0,0); render(); });
   $$('[data-per]').forEach(b=>b.onclick=()=>{ const p=b.dataset.per.split('|'); loadPeriod(p[0],p[1],p[2]); });
   const pg=$('pGo'); if(pg) pg.onclick=()=>loadPeriod($('pFrom').value,$('pTo').value,''); const pr=$('pRefresh'); if(pr) pr.onclick=()=>loadPeriod(PER.from,PER.to,PER.label,true); const pd=$('pDetail'); if(pd) pd.onclick=()=>loadDetail(); const pp=$('perPerson'); if(pp) pp.onchange=()=>{ PER.person=pp.value; render(); };
   $$('[data-mode]').forEach(b=>b.onclick=()=>{ MODE=b.dataset.mode; render(); });
