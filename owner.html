@@ -162,7 +162,7 @@ body.period #dockTime{display:none}
 .ssmt{display:grid;gap:2px;margin-top:10px;font-size:13px} .ssmt>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:4px 0;border-top:1px solid var(--line)} .ssmt>div>*:not(:first-child){text-align:right;font-variant-numeric:tabular-nums} .ssmt small{color:var(--muted)} .ssmt .ssmh{border-top:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .spc .spcg td{color:var(--muted);font-size:12.5px} .spc .spct td{border-bottom:2px solid var(--line2)}
 .fcmat{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:4px 0 10px} .fcmat>div,.fcmat>label{background:var(--soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px} .fcmat small{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.04em;text-transform:uppercase} .fcmat b{font-size:17px} .fcmat em{font-style:normal;font-size:12px;color:var(--muted)} .fcmat input{width:100%}
-.fcot input{width:74px;text-align:right}
+.fcot input{width:74px;text-align:right} .jdet summary{cursor:pointer;font-weight:700;margin:6px 0} .jdet .simtags{margin-bottom:6px} .tmbest{background:var(--soft);border-radius:12px;padding:10px 12px;margin:4px 0 10px;display:flex;flex-direction:column;gap:2px} .tmbest small{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)} .tmbest b{font-size:26px} .tmbest em{font-style:normal;color:var(--muted);font-size:13px} .tmt tr.on td{background:var(--soft)} .tmr .scroll{max-height:none} .tmsvg{width:100%;height:auto;max-height:180px} .tmsvg .tmb{fill:var(--pri);opacity:.18} .tmsvg .tml{fill:none;stroke:var(--pri);stroke-width:2} .tmsvg text{font-size:9px;fill:var(--muted)} .ohl{display:grid;grid-template-columns:1fr 110px 36px;gap:6px;margin:0 0 6px} .ohl input{width:100%} .fwt{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px} .fwt input{width:100%}
 #dock .tday{padding:6px 12px 2px;flex:none;width:auto;display:flex} #dock .tday .dpill{height:38px} #dock .tday .dn{width:42px;height:38px}
 .calq{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 100%;order:-1} .calq .chip{border:1px solid var(--line2);background:var(--card);color:var(--text);border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer} #calX{margin-left:auto}
 @media (max-width:640px){ .calq{order:99} }
@@ -479,7 +479,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v233';
+const BOARD='v237';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -2539,6 +2539,86 @@ function preSheet(day){ day=day||bizToday(); const old=$('preSheet'); if(old) ol
     try{ await FB.fs.setDoc(ref,{day,e:{[id]:v}},{merge:true}); }catch(err){ alert('Could not save: '+(err.code||err)); } };
   $$('[data-prerm]',box).forEach(b=>b.onclick=async()=>{ const id=b.dataset.prerm; const n=Object.assign({},E); delete n[id]; PBK[day]=n; render(); preSheet(day);
     try{ await FB.fs.setDoc(ref,{day,e:n}); }catch(err){ alert('Could not save: '+(err.code||err)); } }); }
+/* JUICE COUNTER: what the juice counter sold vs fruit / lemon / mint / ice / sugar bought; and bottled drinks sold vs bought.
+   Bills have no drink category (all "MAIN CATEGORY"), so this matches by name. Milk is left out (it also goes to tea and the kitchen). */
+const DR_SOFT=/7 ?UP|SPRITE|PEPSI|COCA|COKE|\bSLICE\b|MIRINDA|FANTA|THUMS ?UP|LIMCA|MAAZA|FROOTI|MOUNTAIN DEW|RED ?BULL|\bSTING\b|BISLERI|KINLEY|AQUAFINA|MINERAL|WATER BOTTLE|BOTTLE WATER|\bCAN\b|\bPET\b/i;
+const DR_JUICE=/JUICE|LIME|LEMON|MOJITO|SHAKE|FALOODA|LASSI|SMOOTHIE|AVIL ?MILK|SHARJAH|COOLER|PUNCH|MOCKTAIL|SQUASH|MILK ?SHAKE|SARBATH|SHARBAT|NANNARI/i;
+const DR_JCOST=/fruit|apple|orange|mango|pineapple|water ?melon|grape|pomegranate|papaya|banana|musamb|mosamb|lemon|\blime\b|naranga|mint|pudina|\bice\b|ice ?cube|sugar|chikku|sapota|avocado|strawberry|kiwi|dragon|guava|passion|juice|nannari|basil|sabja|falooda|vermicelli|ice ?cream/i;
+const drKind=n=>{ const u=String(n||''); if(DR_SOFT.test(u)) return 'soft'; if(DR_JUICE.test(u)) return 'juice'; return ''; };
+function juiceCard(itemMap,byDay){ const S={juice:{v:0,q:0,n:{}},soft:{v:0,q:0,n:{}}}; Object.values(itemMap||{}).forEach(x=>{ const k=drKind(x.n); if(!k||!(x.v>0)) return; S[k].v+=x.v; S[k].q+=x.q||0; S[k].n[x.n.trim()]=(S[k].n[x.n.trim()]||0)+x.v; });
+  const C={juice:{v:0,n:{}},soft:{v:0,n:{}}}, D={}; Object.entries(byDay||{}).forEach(([d,L])=>(L||[]).forEach(x=>{ const n=String(x.n||'').trim(); let k=DR_SOFT.test(n)?'soft':DR_JCOST.test(n)?'juice':''; if(!k||!(x.v>0)) return; C[k].v+=x.v; C[k].n[n]=(C[k].n[n]||0)+x.v; (D[d]=D[d]||{jc:0,sc:0})[k==='juice'?'jc':'sc']+=x.v; }));
+  if(!S.juice.v&&!S.soft.v&&!C.juice.v&&!C.soft.v) return '';
+  const pc=(c,v)=>v>0?Math.round(100*c/v)+'%':'—', B3=drink3m(), row=(t,k)=>`<tr><td><b>${t}</b></td><td class="r">${rs(S[k].v)}</td><td class="r">${Math.round(S[k].q)}</td><td class="r">${rs(C[k].v)}</td><td class="r"><b class="${S[k].v&&C[k].v/S[k].v>.4?'dn':''}">${pc(C[k].v,S[k].v)}</b></td><td class="r">${rs(S[k].v-C[k].v)}</td></tr>`;
+  const softRow=`<tr><td><b>Bottled drinks</b><br><span class="n">cost % over 3 months</span></td><td class="r">${rs(S.soft.v)}</td><td class="r">${Math.round(S.soft.q)}</td><td class="r">${rs(C.soft.v)}<br><span class="n">stock bought now</span></td><td class="r"><b class="${B3&&B3.sold&&B3.bought/B3.sold>.8?'dn':''}">${B3?pc(B3.bought,B3.sold):'…'}</b></td><td class="r">${B3?rs(B3.sold-B3.bought)+'<br><span class="n">3 months</span>':'…'}</td></tr>`;
+  const names=(o)=>Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`<span>${esc(n)} · ${rs(v)}</span>`).join('')||'<span class="n">none</span>';
+  const days=Object.keys(D).sort(), id='jc'+(days[0]||'d');
+  return `<div class="card wide jcard"><h2>Juice counter · sold vs bought</h2>
+    <div class="scroll"><table><tr><th></th><th class="r">Sold</th><th class="r">Glasses / bottles</th><th class="r">Bought</th><th class="r">Cost %</th><th class="r">Left</th></tr>${row('Fresh juices','juice')}${softRow}</table></div>${B3?`<p class="note"><b>Bottled · ${B3.ms.slice().reverse().map(m=>new Date(m+'-15T12:00:00').toLocaleString('en',{month:'short'})).join('–')}:</b> sold ${rs(B3.sold)} (${Math.round(B3.q)} bottles) · bought ${rs(B3.bought)} · ${B3.bought>B3.sold?'more bought than sold - stock on the shelf, or a missing sale':'cost '+pc(B3.bought,B3.sold)+' of sales'}.</p>`:''}
+    <p class="note">Fresh juices: fruit, lemon, mint, ice, sugar bought ÷ juice sales (good: under ~35%). Bottled: bought in one month, sold in the next - so their cost % is over the last 3 months. Milk is left out - it also goes to tea and the kitchen.</p>
+    <details class="jdet"><summary>What was matched (fix names if something is missing)</summary>
+      <h3 class="ssh">Juice items sold</h3><div class="simtags">${names(S.juice.n)}</div><h3 class="ssh">Juice things bought</h3><div class="simtags">${names(C.juice.n)}</div>
+      <h3 class="ssh">Bottled sold</h3><div class="simtags">${names(S.soft.n)}</div><h3 class="ssh">Bottled bought</h3><div class="simtags">${names(C.soft.n)}</div></details></div>`; }
+/* bottled drinks are bought one month and sold the next: judge them over 3 months (month snapshots, cached) */
+let DR3=null;
+function drink3m(){ if(DR3&&(DR3.v||DR3.busy)&&Date.now()-DR3.at<1800000) return DR3.v; DR3={busy:true,at:Date.now(),v:null};
+  const b=new Date(bizToday()+'T12:00:00'), ms=[0,1,2].map(i=>{ const x=new Date(b.getFullYear(),b.getMonth()-i,1,12); return ymd(x).slice(0,7); });
+  Promise.all(ms.map(m=>monthDoc(m).catch(()=>null))).then(L=>{ let sold=0,q=0,bought=0; L.forEach(S=>{ if(!S) return; Object.values(S.items||{}).forEach(x=>{ if(drKind(x.n)==='soft'&&x.v>0){ sold+=x.v; q+=x.q||0; } });
+      Object.values((S.spend&&S.spend.byDay)||{}).forEach(D=>(D||[]).forEach(x=>{ if(DR_SOFT.test(String(x.n||''))&&x.v>0) bought+=x.v; })); });
+    DR3={at:Date.now(),v:{ms,sold,q,bought}}; render(); }).catch(()=>{ DR3={at:Date.now(),v:null}; }); return null; }
+const dayLines=doc=>({[DAY]:spRows(doc).map(x=>({n:x.what,v:x.amount,q:x.q,unit:x.unit}))});
+/* TOMORROW LAB: how might the next day look? Three ways, each with its spread and its track record.
+   A) days like today (by money + running total) → what THEIR next day sold
+   B) the last 4 / 8 days on tomorrow's weekday
+   C) the app's own forecast (fcModel)
+   Track record = each method replayed on the last 30 finished days using only what it knew the evening before. */
+let TMR={f:'dow',n:10,open:false}; try{ const o=JSON.parse(localStorage.getItem('hayat-tmr')||'{}'); TMR=Object.assign(TMR,o); }catch(e){}
+const tmSave=()=>{ try{ localStorage.setItem('hayat-tmr',JSON.stringify(TMR)); }catch(e){} };
+function qtl(a,p){ if(!a.length) return 0; const b=a.slice().sort((x,y)=>x-y), i=(b.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return b[lo]+(b[hi]-b[lo])*(i-lo); }
+function dstats(a){ const n=a.length; if(!n) return null; const mean=a.reduce((x,y)=>x+y,0)/n, sd=n>1?Math.sqrt(a.reduce((x,y)=>x+(y-mean)**2,0)/(n-1)):0;
+  return {n,med:qtl(a,.5),mean,sd,cv:mean?sd/mean:0,p25:qtl(a,.25),p75:qtl(a,.75),min:Math.min(...a),max:Math.max(...a)}; }
+const tmOK=d=>INDEX[d]&&INDEX[d].hours&&nrev(d)>0&&!oneOff(d);
+function tmMatch(A,hc,d){ const B=fcHours(d); let a=0,b=0,ce=0,cn=0; for(let i=0;i<hc;i++){ a+=A[i]||0; b+=B[i]||0; if((A[i]||0)>0||(B[i]||0)>0){ ce+=Math.abs(b-a); cn++; } }
+  if(!(a>0)) return 0; const ms=Math.max(0,1-Math.abs((b-a)/a)/0.5), hs=cn?Math.max(0,1-(ce/cn)/(0.3*a)):0; return 0.5*ms+0.5*hs; }
+function tmKeep(f,base,d){ const w=new Date(d+'T12:00:00').getDay(), bw=new Date(base+'T12:00:00').getDay(); if(f==='all') return true; if(f==='dow') return w===bw;
+  const SK=['pay','monthend','hol','eve','after','longwk','ramadan','school','exams','gulf'], me=dayTags(base).F, x=dayTags(d).F; return w===bw&&SK.every(k=>!!me[k]===!!x[k]); }
+/* A: days like `base` (hours A up to hc), before `upto`, whose next day is also before `upto` */
+function tmLike(base,A,hc,upto,f,n){ return Object.keys(INDEX).filter(d=>d<base&&addDays(d,1)<upto&&tmOK(d)&&tmOK(addDays(d,1))&&tmKeep(f,base,d))
+    .map(d=>({d,nd:addDays(d,1),m:tmMatch(A,hc,d),v:nrev(d),nv:nrev(addDays(d,1))})).sort((a,b)=>b.m-a.m).slice(0,n); }
+function tmDow(t,n){ const w=new Date(t+'T12:00:00').getDay(); return Object.keys(INDEX).filter(d=>d<t&&d<bizToday()&&tmOK(d)&&new Date(d+'T12:00:00').getDay()===w).sort().slice(-n); }
+let TM_BT=null;
+function tmBacktest(){ if(TM_BT&&TM_BT.k===TMR.f+'|'+TMR.n+'|'+Object.keys(INDEX).length) return TM_BT;
+  const days=Object.keys(INDEX).filter(d=>d<bizToday()&&tmOK(d)).sort().slice(-30), R={A:[],B4:[],B8:[],C:[]};
+  days.forEach(t=>{ const y=addDays(t,-1); if(!INDEX[y]||!INDEX[y].hours) return; const act=nrev(t);
+    const L=tmLike(y,fcHours(y),24,t,TMR.f,TMR.n), sA=dstats(L.map(x=>x.nv)); if(sA&&sA.n>=3) R.A.push({t,p:sA.med,lo:sA.p25,hi:sA.p75,act});
+    [[4,'B4'],[8,'B8']].forEach(([n,k])=>{ const D=tmDow(t,n), sB=dstats(D.map(nrev)); if(sB&&sB.n>=3) R[k].push({t,p:sB.med,lo:sB.p25,hi:sB.p75,act}); });
+    try{ const M=fcModel(t); if(M&&M.plan>0) R.C.push({t,p:M.plan,lo:M.plan*.75,hi:M.plan*1.25,act}); }catch(e){} });
+  const sc=L=>L.length?{n:L.length,mape:L.reduce((a,x)=>a+Math.abs(x.p-x.act)/x.act,0)/L.length,bias:L.reduce((a,x)=>a+(x.p-x.act)/x.act,0)/L.length,hit:L.filter(x=>x.act>=x.lo&&x.act<=x.hi).length/L.length}:null;
+  TM_BT={k:TMR.f+'|'+TMR.n+'|'+Object.keys(INDEX).length,A:sc(R.A),B4:sc(R.B4),B8:sc(R.B8),C:sc(R.C)}; return TM_BT; }
+function tmCardBig(){ if(!INDEX||!Object.keys(INDEX).length) return '';
+  const live=DAY===bizToday(), t=addDays(DAY,1), S=live?simBase():null, A=live?S.A:fcHours(DAY), hc=live?S.hc:24;
+  if(!(A.slice(0,Math.max(1,hc)).reduce((a,b)=>a+(b||0),0)>0)) return `<div class="card wide tmr"><h2>Tomorrow · ${esc(rpName(t))}</h2><div class="note">Come back after the first hour of sales.</div></div>`;
+  const tw=rpWd(t), L=tmLike(DAY,A,hc,live?bizToday():DAY,TMR.f,TMR.n), sA=dstats(L.map(x=>x.nv));
+  const D4=tmDow(t,4), D8=tmDow(t,8), s4=dstats(D4.map(nrev)), s8=dstats(D8.map(nrev)); let M=null; try{ M=fcModel(t); }catch(e){}
+  const act=t<bizToday()&&INDEX[t]?nrev(t):null, BT=tmBacktest();
+  const meth=[['A','Days like today → next day',sA,BT.A],['B4','Last 4 '+tw+'s',s4,BT.B4],['B8','Last 8 '+tw+'s',s8,BT.B8],['C','App forecast',M&&M.plan>0?{n:1,med:M.plan,p25:M.plan*.75,p75:M.plan*1.25}:null,BT.C]].filter(x=>x[2]);
+  const best=meth.filter(x=>x[3]&&x[3].n>=8).sort((a,b)=>a[3].mape-b[3].mape)[0];
+  const pc=v=>Math.round(v*100)+'%';
+  const fC=[['dow','Same weekday'],['all','Any day'],['same','Same situation']].map(f=>`<button class="chip${TMR.f===f[0]?' on':''}" data-tmf="${f[0]}">${f[1]}</button>`).join('')+`<span style="width:8px"></span>`+[5,10,15].map(n=>`<button class="chip${TMR.n===n?' on':''}" data-tmn="${n}">top ${n}</button>`).join('');
+  const head=best?`<div class="tmbest"><small>Best guess · ${esc(best[1])}</small><b>${rs(best[2].med)}</b><em>usually ${rs(best[2].p25)} – ${rs(best[2].p75)} · this way was ${pc(best[3].mape)} off on average, last ${best[3].n} days${act!=null?` · <b>actual ${rs(act)}</b>`:''}</em></div>`:'';
+  const tbl=`<div class="scroll"><table class="tmt"><tr><th>Method</th><th class="r">Median</th><th class="r">Average</th><th class="r">Spread (SD)</th><th class="r">Middle 50%</th><th class="r">Low – high</th><th class="r">Days</th><th class="r">Off by · last 30</th><th class="r">Inside range</th></tr>
+    ${meth.map(([k,n,st,bt])=>`<tr${best&&best[0]===k?' class="on"':''}><td>${esc(n)}</td><td class="r"><b>${rs(st.med)}</b></td><td class="r">${st.mean!=null?rs(st.mean):'—'}</td><td class="r">${st.sd!=null?'±'+rs(st.sd)+' <span class="n">('+pc(st.cv)+')</span>':'—'}</td><td class="r">${rs(st.p25)} – ${rs(st.p75)}</td><td class="r">${st.min!=null?rs(st.min)+' – '+rs(st.max):'—'}</td><td class="r">${st.n}</td><td class="r">${bt?pc(bt.mape)+' <span class="n">'+(bt.bias>=0?'+':'')+pc(bt.bias)+'</span>':'—'}</td><td class="r">${bt?pc(bt.hit):'—'}</td></tr>`).join('')}</table></div>`;
+  const lst=`<h3 class="ssh">Days like ${live?'today so far':esc(rpName(DAY))} · and the day after</h3><div class="scroll"><table class="tmt"><tr><th>Day</th><th class="r">Match</th><th class="r">That day</th><th>Next day</th><th class="r">Next day sold</th><th class="r">Change</th></tr>
+    ${L.map(x=>{ const same=rpWd(x.nd)===tw, ch=(x.nv-x.v)/x.v; return `<tr><td><a href="#" data-day="${x.d}">${esc(rpName(x.d))}</a>${dayTags(x.d).L.length?' <span class="n">'+esc(dayTags(x.d).L.join(', '))+'</span>':''}</td><td class="r">${Math.round(100*x.m)}%</td><td class="r">${rs(x.v)}</td><td>${esc(rpName(x.nd))} ${same?'<span class="pill counter">✓ '+tw+'</span>':''}</td><td class="r"><b>${rs(x.nv)}</b></td><td class="r ${ch<0?'dn':'up'}">${ch>=0?'+':''}${pc(ch)}</td></tr>`; }).join('')||'<tr><td colspan="6" class="n">No days found - try Any day.</td></tr>'}</table></div>`;
+  /* hour band for tomorrow from the last 8 same weekdays */
+  const HH=D8.map(d=>fcHours(d)), P=k=>Array.from({length:24},(_,h)=>qtl(HH.map(x=>x[h]||0),k)), lo=P(.25), md=P(.5), hi=P(.75);
+  const h0=md.findIndex(v=>v>0), h1=23-md.slice().reverse().findIndex(v=>v>0);
+  let band=''; if(HH.length>=3&&h0>=0){ const W=320,Hh=110, n=h1-h0+1, mx=Math.max(1,...hi), x=i=>8+(W-16)*(i-h0)/Math.max(1,n-1), y=v=>Hh-14-(Hh-28)*v/mx;
+    const up=[], dn=[]; for(let i=h0;i<=h1;i++){ up.push(x(i)+','+y(hi[i])); dn.unshift(x(i)+','+y(lo[i])); }
+    band=`<h3 class="ssh">Tomorrow hour by hour · last ${HH.length} ${tw}s</h3><svg viewBox="0 0 ${W} ${Hh}" class="tmsvg" role="img" aria-label="hourly sales band"><polygon points="${up.concat(dn).join(' ')}" class="tmb"/><polyline points="${Array.from({length:n},(_,k)=>x(h0+k)+','+y(md[h0+k])).join(' ')}" class="tml"/>${Array.from({length:n},(_,k)=>h0+k).filter(i=>(i-h0)%2===0).map(i=>`<text x="${x(i)}" y="${Hh-2}" text-anchor="middle">${hlabel(i)}</text>`).join('')}</svg>
+      <p class="note">Line = median hour · shaded = middle 50% of ${tw}s. Busiest: ${(()=>{ let m=h0; for(let i=h0;i<=h1;i++) if(md[i]>md[m]) m=i; return hlabel(m)+':00 · about '+rs(md[m]); })()}.</p>`; }
+  const key=`<p class="note"><b>Median</b> = the middle day (half sold more, half less) · <b>SD</b> = how much days swing (small % = steady) · <b>Middle 50%</b> = the usual range · <b>Off by</b> = average miss when this method was replayed on each of the last 30 days, using only what it knew the evening before (the small ± shows if it guesses high or low) · <b>Inside range</b> = how often the real day fell inside its middle 50%.</p>`;
+  return `<div class="card wide tmr"><h2>Tomorrow · ${esc(rpName(t))} <span class="n"><a href="#" id="tmOpen">${TMR.open?'▴ less':'▾ full analysis'}</a></span></h2>${head}
+    ${TMR.open?`<div class="chips">${fC}</div>${tbl}${key}${lst}${band}`:`${!best&&sA?`<div class="tmbest"><small>Days like today → next day</small><b>${rs(sA.med)}</b><em>usually ${rs(sA.p25)} – ${rs(sA.p75)}</em></div>`:''}`}</div>`; }
 /* tomorrow: the plan for the next day, its likely range (80% of days fall inside, from the Oct 2026 replay) and its busiest hours */
 function tmCard(){ if(!FC||DAY!==bizToday()) return ''; const t=tomorrow(); if(!FC_BT) fcBacktest(); const M=fcModel(t); if(!M) return '';
   const P=M.prof.map(v=>v*M.f), pre=preFor(t).add, band=0.25, plan=M.plan*(FC_SCN==='pess'?1-band:FC_SCN==='opt'?1+band:1)+pre;
@@ -2693,15 +2773,19 @@ function chickenCard(S,V){
 let FCO=null; const MAT=[['chicken','Chicken','kg',220],['rice','Rice','kg',120],['oil','Oil','L',170],['fish','Fish','kg',650],['beef','Beef','kg',400]];
 const matPrice=k=>{ const v=FCO&&FCO.price&&+FCO.price[k]; return v>0?v:MAT.find(m=>m[0]===k)[3]; };
 const priceSet=k=>!!(FCO&&FCO.price&&+FCO.price[k]>0);
+/* weights per FULL plate: defaults you can change (settings/costing.wt); Half ½, Qtr ¼ */
+const WT_DEF=[['birdKg','Chicken · kg per bird',1.1],['rice','Rice · kg per Full mandi',.6],['oil','Oil · L per Full mandi',.04],['fish','Fish · kg per Full fish mandi',1],['beef','Beef/mutton · kg per Full mandi',1]];
+const WT=k=>{ const v=FCO&&FCO.wt&&+FCO.wt[k]; if(v>0) return v; if(k==='birdKg'&&RCP&&+RCP.perBird>0) return +RCP.perBird; return WT_DEF.find(w=>w[0]===k)[2]; };
 function recGuess(n){ const u=String(n||'').toUpperCase(), sf=/\bFULL\b/.test(u)?1:/\bHALF\b/.test(u)?.5:/\bQTR\b|QUARTER/.test(u)?.25:1, r={};
-  const birds=chickenOf(u); if(birds>0) r.chicken=Math.round(birds*(RCP&&RCP.perBird?+RCP.perBird:1.1)*1000)/1000;
+  const birds=chickenOf(u); if(birds>0) r.chicken=Math.round(birds*WT('birdKg')*1000)/1000;
   const fish=/FISH|NEYMEEN|SEER|AYALA|MATHI|POMFRET|PRAWN|KOONTHAL|SQUID/.test(u), beef=/BEEF|MUTTON|LAMB|GOAT/.test(u);
-  if(/MANDI|KABSA|MAJBOOS/.test(u)){ r.rice=.6*sf; r.oil=.04*sf; if(fish) r.fish=1*sf; if(beef) r.beef=1*sf; }
+  if(/MANDI|KABSA|MAJBOOS/.test(u)){ r.rice=WT('rice')*sf; r.oil=WT('oil')*sf; if(fish) r.fish=WT('fish')*sf; if(beef) r.beef=WT('beef')*sf; }
   else if(/BIRIYANI|BIRYANI/.test(u)){ r.rice=.15; r.oil=.02; if(fish) r.fish=.2; if(beef) r.beef=.2; }
   else if(/MEALS|\bRICE\b|GHEE RICE|FRIED RICE/.test(u)){ r.rice=/MEALS/.test(u)?.25:.15; r.oil=.02; }
   else { if(fish) r.fish=.25*sf; if(beef) r.beef=.25*sf; if(/FRY|BROAST|65|CHILLI|CRISPY|FRIES|PORATTA|PAROTTA|POROTTA/.test(u)) r.oil=.05*sf; else if(fish||beef||r.chicken) r.oil=.02*sf; }
   Object.keys(r).forEach(k=>r[k]=Math.round(r[k]*1000)/1000); return r; }
-function recOf(n){ const u=String(n||'').trim().toUpperCase(); return (FCO&&FCO.rec&&FCO.rec[u])||recGuess(u); }
+function recOf(n){ const u=String(n||'').trim().toUpperCase(); if(FCO&&FCO.rec&&FCO.rec[u]) return FCO.rec[u]; const z=sizeOf(u), F=FCO&&FCO.recF&&FCO.recF[z.fam];
+  if(F){ const g=recGuess(u), r=Object.assign({},g); Object.keys(F).forEach(k=>{ if(F[k]!==''&&F[k]!=null) r[k]=Math.round(+F[k]*(z.s||1)*1000)/1000; }); return r; } return recGuess(u); }   /* recF = your weights per FULL plate for a dish */
 /* sizes: you enter the FULL cost once; Half = ½ and Qtr = ¼ of it (fixed, Majid's choice) */
 const SZ_RE=/\s*[\(\[]?\s*\b(FULL|HALF|QTR|QRT|QUARTER)\b\s*[\)\]]?\s*/;
 function sizeOf(n){ const u=String(n||'').trim().toUpperCase(), m=u.match(SZ_RE); if(!m) return {fam:u,s:null,lab:''};
@@ -2710,39 +2794,50 @@ function fullCost(fam){ const f=FCO&&FCO.full&&+FCO.full[fam]; if(f>0) return f;
 function plateCost(n){ const u=String(n||'').trim().toUpperCase(), z=sizeOf(u);
   const f=fullCost(z.fam); if(f>0) return {c:f*(z.s||1),fixed:true,derived:!!(z.s&&z.s<1),r:recOf(u)};
   if(FCO&&FCO.fixed&&+FCO.fixed[u]>0) return {c:+FCO.fixed[u],fixed:true,r:recOf(u)};
-  const r=recOf(u); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return {c,fixed:false,r,own:!!(FCO&&FCO.rec&&FCO.rec[u])}; }
-/* monthly fixed costs (settings/costing.oh) */
-const OH=[['salary','Salary'],['rent','Rent'],['power','Power bill'],['gas','Gas (LPG)'],['other','Other (internet, loan…)']];
-const fixOf=k=>{ const v=FCO&&FCO.oh&&+FCO.oh[k]; return v>0?v:0; };
+  const r=recOf(u); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return {c,fixed:false,r,own:!!((FCO&&FCO.rec&&FCO.rec[u])||(FCO&&FCO.recF&&FCO.recF[z.fam]))}; }
+/* monthly fixed costs (settings/costing): salary = AUTO from spends; ohl = your own lines paid outside the app
+   (extra salaries, outside rent, power…) ₹/month; bulk = rice/oil/masala ₹/day (bought every 2-3 months, so the bills are kept out). */
+const SP_GAS=/\bgas\b|lpg|cylinder/i;
+const SP_BULK=/\brice\b|basmati|jeerakasala|kaima|\boil\b|sunflower|palmolein|masala|spice|turmeric|coriander|cardamom|jeera|cumin|ghee|chilli powder|pepper powder/i;
+const OH_OLD=[['rent','Rent'],['power','Power bill'],['other','Other']];
+function ohLines(){ if(FCO&&Array.isArray(FCO.ohl)) return FCO.ohl.filter(x=>x&&+x.v>0); const o=(FCO&&FCO.oh)||{}; return OH_OLD.filter(k=>+o[k[0]]>0).map(k=>({n:k[1],v:+o[k[0]]})); }
+const bulkDay=()=>{ const v=FCO&&+FCO.bulk; return v>0?v:0; };
 function calDays(from,to){ if(!from) return 1; const t=bizToday(), e=to&&to<t?to:t; const a=new Date(from+'T00:00:00'), b=new Date(e+'T00:00:00'); return Math.max(1,Math.round((b-a)/864e5)+1); }
-function spendSplit(sp){ const o={purchase:0,salary:0,running:0}; if(!sp||!sp.byDay) return null; Object.values(sp.byDay).forEach(L=>(L||[]).forEach(x=>{ const g=x.g||spGrp(x.n,x.cat); if(o[g]!=null) o[g]+=x.v; else o.running+=x.v; })); return o; }
-/* FIXED-COST SHARE: this month so far, fixed costs ÷ sales = the % every dish carries (shared by sales value).
-   Salary = what spends show paid this month (or your monthly figure × days gone); running = spends; rent/power/gas/other × days gone / days in month. */
+function spendSplit(sp){ const o={purchase:0,salary:0,running:0,gas:0,bulk:0}; if(!sp||!sp.byDay) return null; Object.values(sp.byDay).forEach(L=>(L||[]).forEach(x=>{ const g=x.g||spGrp(x.n,x.cat), t=String(x.n||'')+' '+String(x.cat||'');
+    if(g!=='salary'&&SP_GAS.test(t)) o.gas+=x.v; else if(g==='purchase'&&SP_BULK.test(String(x.n||''))) o.bulk+=x.v; else if(o[g]!=null) o[g]+=x.v; else o.running+=x.v; }));
+  if(!bulkDay()){ o.purchase+=o.bulk; o.bulk=0; } return o; }   /* no ₹/day set → bulk bills stay in goods as before */
+/* FIXED-COST SHARE: this month so far, fixed costs ÷ sales = the % every dish carries (shared by sales value). */
 const FXM={};
 function fxMonth(m){ const c=FXM[m]; if(c&&(c.done||Date.now()-c.at<1800000)) return c.v; if(c&&c.busy) return null;
-  FXM[m]={busy:true,at:Date.now(),v:null}; monthDoc(m).then(S=>{ const A=spendSplit(S&&S.spend)||{salary:0,running:0,purchase:0}, dim=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(), el=Math.min(dim,calDays(m+'-01',m+'-'+String(dim).padStart(2,'0'))), k=el/dim;
-    const sal=fixOf('salary')?{v:fixOf('salary')*k,src:'your monthly × '+el+'/'+dim}:{v:A.salary,src:'paid this month (spends)'};
-    const extra=OH.filter(o=>o[0]!=='salary').map(o=>[o[1],fixOf(o[0])*k]).filter(x=>x[1]>0), fixed=sal.v+A.running+extra.reduce((a,x)=>a+x[1],0), sales=(S&&S.sales)||0;
-    FXM[m]={at:Date.now(),done:!(S&&S.partial),v:{m,el,dim,sales,sal,run:A.running,goods:A.purchase,extra,fixed,pct:sales>0?fixed/sales:0}}; render(); }).catch(()=>{ FXM[m]={at:Date.now(),v:null}; }); return null; }
-function profitBlock(sales,estCost,sp,rng){ const days=rng?calDays(rng.from,rng.to):1, k=days/30, A=spendSplit(sp);
-  const MX=fxMonth(((rng&&rng.to)||DAY).slice(0,7));
-  const sal=fixOf('salary')?{v:fixOf('salary')*k,src:'your monthly × '+days+'/30'}:A&&A.salary>0?{v:A.salary,src:'paid in spends'}:MX&&MX.sal.v>0?{v:MX.sal.v/MX.el*days,src:'this month so far ÷ '+MX.el+' days'}:{v:0,src:'not set'};   /* monthly first: salary is paid in lumps */
-  const goods=A&&A.purchase>0?{v:A.purchase,src:'goods bought'}:{v:estCost,src:'food cost estimate'};
-  const run=A?A.running:(MX?MX.run/MX.el*days:0), extra=OH.filter(o=>o[0]!=='salary').map(o=>[o[1],fixOf(o[0])*k]).filter(x=>x[1]>0);
-  const fixed=sal.v+run+extra.reduce((a,x)=>a+x[1],0), net=sales-goods.v-fixed, gp=sales?goods.v/sales:0, be=gp<1?fixed/days/(1-gp):0;
-  const L=[['Sales',sales,''],['− '+(A&&A.purchase>0?'Goods bought':'Food cost (estimate)'),-goods.v,goods.src],['− Salary',-sal.v,sal.src]].concat(run>0?[['− Running costs',-run,A?'from spends':'this month so far ÷ '+(MX?MX.el:1)+' days']]:[]).concat(extra.map(x=>['− '+x[0],-x[1],'monthly × '+days+'/30']));
+  FXM[m]={busy:true,at:Date.now(),v:null}; monthDoc(m).then(S=>{ const A=spendSplit(S&&S.spend)||{salary:0,running:0,purchase:0,gas:0,bulk:0}, dim=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(), el=Math.min(dim,calDays(m+'-01',m+'-'+String(dim).padStart(2,'0'))), k=el/dim;
+    const sal={v:A.salary,src:'paid this month (spends)'};
+    const extra=ohLines().map(x=>[x.n,x.v*k]), fixed=sal.v+A.running+A.gas+extra.reduce((a,x)=>a+x[1],0), sales=(S&&S.sales)||0;
+    FXM[m]={at:Date.now(),done:!(S&&S.partial),v:{m,el,dim,sales,sal,run:A.running,gas:A.gas,goods:A.purchase,extra,fixed,pct:sales>0?fixed/sales:0}}; render(); }).catch(()=>{ FXM[m]={at:Date.now(),v:null}; }); return null; }
+function profitBlock(sales,estCost,sp,rng,estNoBulk){ const days=rng?calDays(rng.from,rng.to):1, k=days/30, A=spendSplit(sp), bd=bulkDay();
+  const MX=fxMonth(((rng&&rng.to)||DAY).slice(0,7)), avg=x=>'this month so far ÷ '+(MX?MX.el:1)+' days';
+  const sal=A&&A.salary>0?{v:A.salary,src:'from spends'}:MX&&MX.sal.v>0?{v:MX.sal.v/MX.el*days,src:avg()}:{v:0,src:'none in spends yet'};
+  const goods=A&&A.purchase>0?{v:A.purchase,src:bd?'goods bought (rice, oil, masala bills left out)':'goods bought'}:{v:bd?(estNoBulk!=null?estNoBulk:estCost):estCost,src:bd?'food cost estimate without rice & oil':'food cost estimate'};
+  const run=A?A.running:(MX?MX.run/MX.el*days:0), gas=A?A.gas:(MX?MX.gas/MX.el*days:0), extra=ohLines().map(x=>[x.n,x.v*k]), bulk=bd*days;
+  const fixed=sal.v+run+gas+extra.reduce((a,x)=>a+x[1],0), food=goods.v+bulk, net=sales-food-fixed, gp=sales?food/sales:0, be=gp<1?fixed/days/(1-gp):0;
+  const L=[['Sales',sales,''],['− '+(A&&A.purchase>0?'Goods bought':'Food cost (estimate)'),-goods.v,goods.src]].concat(bulk>0?[['− Rice, oil, masala',-bulk,'your ₹'+Math.round(bd).toLocaleString('en-IN')+' a day × '+days]]:[]).concat([['− Salary',-sal.v,sal.src]]).concat(run>0?[['− Running costs',-run,A?'from spends':avg()]]:[]).concat(gas>0?[['− Gas (LPG)',-gas,A?'from spends':avg()]]:[]).concat(extra.map(x=>['− '+x[0],-x[1],'monthly × '+days+'/30']));
   return `<h3 class="ssh">Profit after fixed costs ${days>1?'· '+days+' days':'· today'} <span class="n"><a href="#" id="ohEdit">set monthly costs</a></span></h3>
     <div class="sstop"><div><small>Net profit</small><b class="${net<0?'dn':'up'}">${rs(net)}</b><em>${days>1?rs(net/days)+' a day':'after a day\'s share of fixed costs'}</em></div><div><small>Break-even sales</small><b>${be?rs(be):'—'}</b><em>a day · to cover fixed costs</em></div></div>
-    <div class="scroll"><table>${L.map(x=>`<tr><td>${x[0]}</td><td class="r"><b>${rs(Math.abs(x[1]))}</b></td><td class="n">${x[2]}</td></tr>`).join('')}<tr><td><b>= Net</b></td><td class="r"><b class="${net<0?'dn':''}">${rs(net)}</b></td><td></td></tr></table></div>
-    ${!OH.some(o=>o[0]!=='salary'&&fixOf(o[0]))?'<p class="note">Rent, power and gas are not set yet - tap “set monthly costs”. Leave one blank if it is already entered as a spend.</p>':''}`; }
+    <div class="scroll"><table>${L.map(x=>`<tr><td>${esc(x[0])}</td><td class="r"><b>${rs(Math.abs(x[1]))}</b></td><td class="n">${x[2]}</td></tr>`).join('')}<tr><td><b>= Net</b></td><td class="r"><b class="${net<0?'dn':''}">${rs(net)}</b></td><td></td></tr></table></div>
+    ${!ohLines().length&&!bd?'<p class="note">Nothing set outside the app yet - tap “set monthly costs” for extra salaries, outside rent, power, and rice/oil/masala per day.</p>':''}`; }
 function ohSheet(){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
-  box.innerHTML=`<div class="sheet"><h2>Monthly fixed costs <button class="x" id="drillX">✕</button></h2>
-    <p class="sub">Enter once a month. Salary: your monthly total (smooth). Blank = what the spends show, which comes in lumps. Leave a cost blank if it is already entered as a spend (no double counting).</p>
-    <div class="fcmat">${OH.map(o=>`<label><small>${o[1]} ₹ / month</small><input type="number" class="fld" data-oh="${o[0]}" value="${fixOf(o[0])||''}" placeholder="${o[0]==='salary'?'from spends':'0'}"></label>`).join('')}</div>
-    <div class="tabs" style="margin-top:10px"><button class="tab on" id="ohSave">Save</button></div></div>`;
-  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
-  $('ohSave').onclick=async()=>{ const oh={}; $$('[data-oh]',box).forEach(i=>{ if(+i.value>0) oh[i.dataset.oh]=+i.value; });
-    FCO=Object.assign({},FCO||{},{oh,ohAt:new Date().toISOString()}); for(const k in FXM) delete FXM[k];
+  const m=bizToday().slice(0,7), MX=fxMonth(m), line=(x)=>`<div class="ohl"><input class="fld" data-ohn placeholder="e.g. Extra salary - cook" value="${esc(x.n||'')}"><input type="number" class="fld" data-ohv placeholder="₹ / month" value="${+x.v>0?x.v:''}"><button class="x" data-ohx>✕</button></div>`;
+  box.innerHTML=`<div class="sheet"><h2>Monthly costs <button class="x" id="drillX">✕</button></h2>
+    <div class="fcmat"><div><small>Salary · automatic</small><b>${MX?rs(MX.sal.v):'…'}</b><em>paid this month in spends</em></div><div><small>Gas (LPG) · automatic</small><b>${MX?rs(MX.gas):'…'}</b><em>from spends</em></div></div>
+    <h3 class="ssh">Paid outside the app · ₹ per month</h3><p class="sub">Extra salaries, outside rent, power bill, loan… Only what is <b>not</b> entered as a spend.</p>
+    <div id="ohList">${(ohLines().length?ohLines():[{}]).map(line).join('')}</div>
+    <button class="tab" id="ohAdd" style="margin:4px 0 12px">+ Add line</button>
+    <h3 class="ssh">Rice, oil, masala · ₹ per day</h3><p class="sub">Bought every 2–3 months. Example: ₹6,00,000 for 60 days = 10,000 a day. When set, those bills are left out of daily goods (no double counting).</p>
+    <input type="number" class="fld" id="ohBulk" placeholder="₹ per day" value="${bulkDay()||''}" style="width:100%">
+    <div class="tabs" style="margin-top:12px"><button class="tab on" id="ohSave">Save</button></div></div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); const x=e.target.closest('[data-ohx]'); if(x) x.parentElement.remove(); }; $('drillX').onclick=()=>box.remove();
+  $('ohAdd').onclick=()=>$('ohList').insertAdjacentHTML('beforeend',line({}));
+  $('ohSave').onclick=async()=>{ const ohl=$$('.ohl',box).map(r=>({n:r.querySelector('[data-ohn]').value.trim()||'Other',v:+r.querySelector('[data-ohv]').value||0})).filter(x=>x.v>0);
+    FCO=Object.assign({},FCO||{},{ohl,bulk:+$('ohBulk').value>0?+$('ohBulk').value:0,ohAt:new Date().toISOString()}); delete FCO.oh; for(const k in FXM) delete FXM[k];
     try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','costing'),FCO); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
 function fcostCard(itemMap,sp,rng){ const rows=Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).sort((a,b)=>b.v-a.v); if(!rows.length) return '';
   const used={}; MAT.forEach(m=>used[m[0]]=0); let cost=0, sales=0, fixedSales=0;
@@ -2755,28 +2850,31 @@ function fcostCard(itemMap,sp,rng){ const rows=Object.values(itemMap||{}).filter
     <h3 class="ssh">Used (estimate)</h3><div class="fcmat">${MAT.filter(m=>used[m[0]]>0).map(m=>`<div><small>${m[1]}</small><b>${Math.round(used[m[0]]*10)/10} ${m[2]}</b><em>${rs(used[m[0]]*matPrice(m[0]))} · ₹${matPrice(m[0])}/${m[2]}${priceSet(m[0])?'':' (guess)'}</em></div>`).join('')}</div>
     <h3 class="ssh">Per dish · top ${Math.min(15,D.length)}</h3><div class="scroll"><table><tr><th>Dish</th><th class="r">Sold</th><th class="r">Price</th><th class="r">Food / plate</th><th class="r">Fixed share</th><th class="r">Profit / plate</th><th class="r">Food cost</th></tr>
     ${D.slice(0,15).map(x=>{ const fp=x.price?Math.round(100*x.pc/x.price):0; return `<tr><td>${esc(x.n)}${x.derived?' <span class="pill counter">from Full</span>':x.fixed?' <span class="pill counter">your cost</span>':x.own?' <span class="pill counter">your recipe</span>':''}</td><td class="r">${Math.round(x.q*10)/10}</td><td class="r">${rs(x.price)}</td><td class="r">${x.pc?rs(x.pc):'<span class="n">—</span>'}</td><td class="r">${MX?rs(x.fx):'…'}</td><td class="r"><b class="${x.price-x.pc-x.fx<0?'dn':''}">${rs(x.price-x.pc-x.fx)}</b></td><td class="r ${fp>38?'dn':''}">${x.pc?fp+'%':'—'}</td></tr>`; }).join('')}</table></div>
-    <p class="note">Enter only the <b>Full</b> cost of a dish - Half = ½, Qtr = ¼ automatically. Blank = my estimate (Full mandi ≈ 1 bird + 0.6 kg rice; fish/beef mandi ≈ 1 kg). Drinks and sides have no recipe yet (cost 0). Fixed share = this month's salary, rent, power and running costs spread over every sale by price.</p>${profitBlock(sales,cost,sp,rng)}</div>`; }
+    <p class="note">Enter only the <b>Full</b> cost of a dish - Half = ½, Qtr = ¼ automatically. Blank = my estimate (Full mandi ≈ 1 bird + 0.6 kg rice; fish/beef mandi ≈ 1 kg). Drinks and sides have no recipe yet (cost 0). Fixed share = this month's salary, rent, power and running costs spread over every sale by price.</p>${profitBlock(sales,cost,sp,rng,Math.max(0,cost-used.rice*matPrice('rice')-used.oil*matPrice('oil')))}</div>`; }
 function fcoSheet(itemMap){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
   const F={}; Object.values(itemMap||{}).filter(x=>x.q>0&&x.v>0).forEach(x=>{ const z=sizeOf(x.n), f=F[z.fam]||(F[z.fam]={fam:z.fam,v:0,sz:{},sized:false}); f.v+=x.v; if(z.s) f.sized=true; const k=z.lab||'One'; const e=f.sz[k]||(f.sz[k]={q:0,v:0}); e.q+=x.q; e.v+=x.v; });
   Object.keys((FCO&&FCO.full)||{}).forEach(k=>{ if(!F[k]) F[k]={fam:k,v:0,sz:{},sized:true}; });
   const fams=Object.values(F).sort((a,b)=>b.v-a.v);
-  const est=f=>{ const n=f.sized?f.fam+' FULL':f.fam; const r=recGuess(n); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return Math.round(c); };
+  const est=f=>{ const n=f.sized?f.fam+' FULL':f.fam; const r=recOf(n); let c=0; MAT.forEach(m=>{ if(r[m[0]]) c+=r[m[0]]*matPrice(m[0]); }); return Math.round(c); };
   const kids=(f,v)=>f.sized&&v>0?`Half ${rs(v/2)} · Qtr ${rs(v/4)}`:'';
   box.innerHTML=`<div class="sheet"><h2>Prices &amp; dish costs <button class="x" id="drillX">✕</button></h2>
-    <p class="sub">1) What you pay per kg / litre. 2) Each dish: the <b>Full</b> cost only - Half and Qtr follow (½, ¼). Blank = my estimate. ${fams.length} dishes.</p>
+    <p class="sub">1) What you pay per kg / litre. 2) Weights per Full plate. 3) Each dish: the <b>Full</b> cost if you know it - Half and Qtr follow (½, ¼) - or tap ⚖ to set that dish's own weights. Blank = my estimate. ${fams.length} dishes.</p>
     <div class="fcmat">${MAT.map(m=>`<label><small>${m[1]} ₹ / ${m[2]}</small><input type="number" class="fld" data-fcp="${m[0]}" value="${priceSet(m[0])?FCO.price[m[0]]:''}" placeholder="${m[3]} (guess)"></label>`).join('')}</div>
+    <h3 class="ssh">Weights · used for every dish unless you change a dish below</h3><div class="fcmat">${WT_DEF.map(w=>`<label><small>${w[1]}</small><input type="number" step="0.01" class="fld" data-wt="${w[0]}" value="${FCO&&FCO.wt&&+FCO.wt[w[0]]>0?FCO.wt[w[0]]:''}" placeholder="${WT(w[0])}"></label>`).join('')}</div>
     <input class="fld" id="fcoQ" placeholder="Find a dish…" style="width:100%;margin:2px 0 8px">
     <div class="scroll"><table class="fcot"><tr><th>Dish</th><th class="r">Sold</th><th class="r">Full cost ₹</th><th>Half · Qtr</th></tr>
-    ${fams.map(f=>{ const v=fullCost(f.fam); const ORD={Full:0,Half:1,Qtr:2,One:3}; const sold=Object.entries(f.sz).sort((a,b)=>ORD[a[0]]-ORD[b[0]]).map(([k,e])=>`${k==='One'?'':k+' '}${rs(e.v/e.q)}`).join(' · '); return `<tr data-fam="${esc(f.fam)}"><td>${esc(f.fam)}<br><span class="n">${sold}</span></td><td class="r">${rs(f.v)}</td><td class="r"><input type="number" class="fld" data-k="full" value="${v||''}" placeholder="${est(f)||''}"></td><td class="n" data-kids="${f.sized?1:''}">${kids(f,v)}</td></tr>`; }).join('')}</table></div>
+    ${fams.map(f=>{ const v=fullCost(f.fam); const ORD={Full:0,Half:1,Qtr:2,One:3}; const sold=Object.entries(f.sz).sort((a,b)=>ORD[a[0]]-ORD[b[0]]).map(([k,e])=>`${k==='One'?'':k+' '}${rs(e.v/e.q)}`).join(' · '); return `<tr data-fam="${esc(f.fam)}"><td>${esc(f.fam)}<br><span class="n">${sold}</span></td><td class="r">${rs(f.v)}</td><td class="r"><input type="number" class="fld" data-k="full" value="${v||''}" placeholder="${est(f)||''}"></td><td class="n"><span data-kids="${f.sized?1:''}">${kids(f,v)}</span> <a href="#" data-wtg="${esc(f.fam)}" title="weights">⚖</a></td></tr>${(()=>{ const F=(FCO&&FCO.recF&&FCO.recF[f.fam])||{}, g=recGuess(f.sized?f.fam+' FULL':f.fam); return `<tr data-wtr="${esc(f.fam)}" style="display:${Object.keys(F).length?'':'none'}"><td colspan="4"><div class="fwt">${MAT.map(m=>`<label><small>${m[1]} ${m[2]} / Full</small><input type="number" step="0.01" class="fld" data-rf="${m[0]}" value="${F[m[0]]!=null?F[m[0]]:''}" placeholder="${g[m[0]]||0}"></label>`).join('')}</div></td></tr>`; })()}`; }).join('')}</table></div>
     <div class="tabs" style="margin-top:10px"><button class="tab on" id="fcoSave">Save</button></div></div>`;
-  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
-  box.addEventListener('input',e=>{ const t=e.target; if(t.id==='fcoQ'){ const q=t.value.trim().toUpperCase(); $$('[data-fam]',box).forEach(tr=>tr.style.display=!q||tr.dataset.fam.includes(q)?'':'none'); return; }
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); const g=e.target.closest('[data-wtg]'); if(g){ e.preventDefault(); const r=box.querySelector(`[data-wtr="${CSS.escape(g.dataset.wtg)}"]`); if(r) r.style.display=r.style.display==='none'?'':'none'; } }; $('drillX').onclick=()=>box.remove();
+  box.addEventListener('input',e=>{ const t=e.target; if(t.id==='fcoQ'){ const q=t.value.trim().toUpperCase(); $$('[data-fam]',box).forEach(tr=>tr.style.display=!q||tr.dataset.fam.includes(q)?'':'none'); $$('[data-wtr]',box).forEach(tr=>{ if(q&&!tr.dataset.wtr.includes(q)) tr.style.display='none'; }); return; }
     if(t.dataset.k==='full'){ const tr=t.closest('tr'), c=tr.querySelector('[data-kids]'); if(c&&c.dataset.kids) c.textContent=+t.value>0?`Half ${rs(t.value/2)} · Qtr ${rs(t.value/4)}`:''; } });
   $('fcoSave').onclick=async()=>{ const price={}, full=Object.assign({},(FCO&&FCO.full)||{}), fixed=Object.assign({},(FCO&&FCO.fixed)||{});
     $$('[data-fcp]',box).forEach(i=>{ if(+i.value>0) price[i.dataset.fcp]=+i.value; });
+    const wt={}; $$('[data-wt]',box).forEach(i=>{ if(+i.value>0) wt[i.dataset.wt]=+i.value; });
+    const recF=Object.assign({},(FCO&&FCO.recF)||{}); $$('[data-wtr]',box).forEach(tr=>{ const o={}; $$('[data-rf]',tr).forEach(i=>{ if(i.value!=='') o[i.dataset.rf]=+i.value; }); if(Object.keys(o).length) recF[tr.dataset.wtr]=o; else delete recF[tr.dataset.wtr]; });
     $$('[data-fam]',box).forEach(tr=>{ const fam=tr.dataset.fam, i=tr.querySelector('[data-k="full"]'); if(+i.value>0) full[fam]=+i.value; else delete full[fam];
       Object.keys(fixed).forEach(k=>{ if(sizeOf(k).fam===fam) delete fixed[k]; }); });   /* old per-size costs move to the one Full cost */
-    FCO=Object.assign({},FCO||{},{price,full,fixed,rec:(FCO&&FCO.rec)||{}});
+    FCO=Object.assign({},FCO||{},{price,full,fixed,wt,recF,rec:(FCO&&FCO.rec)||{}});
     try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','costing'),FCO); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
 function recipeSheet(itemMap){
   const old=document.getElementById('drill'); if(old) old.remove();
@@ -2829,7 +2927,7 @@ function period(){
   let body='';
   if(PTAB==='overview') body=ssCard(PER.from,PER.to)+byDay+ssMonths()+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends();
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard+discCard;
-  else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+fcostCard(V?itemsOf(V.records):(S.items||{}),S.spend,{from:PER.from,to:PER.to})+chickenCard(S,V);
+  else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+fcostCard(V?itemsOf(V.records):(S.items||{}),S.spend,{from:PER.from,to:PER.to})+juiceCard(V?itemsOf(V.records):(S.items||{}),S.spend&&S.spend.byDay)+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
     const items=Object.values(sp.byItem).filter(x=>!PER.person||x.n===PER.person).sort((a,b)=>b.v-a.v), spTot=items.reduce((n,x)=>n+x.v,0);
     const itemCard=`<div class="card wide"><h2>Spend · by item <span class="n">${items.length} items · ${rs(spTot)}</span></h2><div class="scroll"><table><tr><th>Item</th><th class="m">Category</th><th class="r">Qty</th><th>Unit</th><th class="r m">Avg rate</th><th class="r">Total</th><th class="r">Share</th><th class="r m">Times</th></tr>${items.map(x=>`<tr><td>${esc(x.n)}</td><td class="m">${esc(x.cat)}</td><td class="r">${Math.round(x.q*100)/100}</td><td>${esc(x.unit)}</td><td class="r m">${rs(x.avg||0)}</td><td class="r"><b>${rs(x.v)}</b></td><td class="r">${spTot?Math.round(100*x.v/spTot):0}%</td><td class="r m">${x.lines}</td></tr>`).join('')}</table></div></div>`;
@@ -3006,16 +3104,17 @@ function render(){
   if(MODE==='period'){ m.innerHTML=(PTAB==='money'||PTAB==='cash'?`<div class="subnav">${[['money','Spends'],['cash','Cash & bank']].map(t=>`<button type="button" class="${PTAB===t[0]?'on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`:'')+period()+`<div class="note">board ${BOARD}</div>`; }
   else m.innerHTML=kpis()+subNav()+
     (TAB==='sales'?`<div class="sltog"><button type="button" class="chip${SL.open?' on':''}" id="slTog">⏱ ${SL.open?'Hide time slider':'Time slider'}</button><span class="n">${SL.open?(TCUT==null?'drag the slider (above the tabs) to see the day at any time':'showing the day as of <b>'+tcutLabel()+'</b>'):'see the day as it stood at any time'}</span></div><div class="grid">${hourly()}${runLine()}${pace()}${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); return topItems(R,R.reduce((n,r)=>n+r.v,0)); })()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
-     TAB==='floor'?`<div class="grid">${live?alerts():''}${trafficCard()}${unrealized()}${floor()}${kitchens()}</div>`:
+     TAB==='floor'?`<div class="grid">${live?alerts():''}${tmCardBig()}${trafficCard()}${unrealized()}${floor()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${daySpendCard(DOC,DAY)}${drafts()}${payments()}${purchases()}</div>`:
      TAB==='patterns'?patterns():
      TAB==='lab'?lab():
      TAB==='similar'?`<div class="grid">${similar()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:
-     TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}${fcostCard(itemsOf(recs()))}</div>`)+
+     TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}${fcostCard(itemsOf(recs()))}${juiceCard(itemsOf(recs()),dayLines(DOC))}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
+  { const to=$('tmOpen'); if(to) to.onclick=e=>{ e.preventDefault(); TMR.open=!TMR.open; tmSave(); render(); }; $$('[data-tmf]').forEach(b=>b.onclick=()=>{ TMR.f=b.dataset.tmf; tmSave(); render(); }); $$('[data-tmn]').forEach(b=>b.onclick=()=>{ TMR.n=+b.dataset.tmn; tmSave(); render(); }); }
   { const oe=$('ohEdit'); if(oe) oe.onclick=e=>{ e.preventDefault(); ohSheet(); }; }
   { const fe=$('fcoEdit'); if(fe) fe.onclick=e=>{ e.preventDefault(); fcoSheet(MODE==='period'?(PER.V?itemsOf(PER.V.records):((PER.doc&&PER.doc.items)||{})):itemsOf(recs())); }; }
   { const ts=$('trfSet'); if(ts) ts.onclick=e=>{ e.preventDefault(); trafficSheet(); }; const tn=$('trfNow'); if(tn) tn.onclick=e=>{ e.preventDefault(); trfRead(true); }; }

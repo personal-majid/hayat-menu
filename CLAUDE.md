@@ -425,3 +425,23 @@ What that means, and what to say if it comes up:
 - Food cost card: "Fixed costs share" tile; per dish: Food / plate, Fixed share (= price × pct, i.e. by sales value — Majid's choice), Profit / plate.
 - Day-view profit block: salary/running fall back to month-so-far ÷ days gone.
 - Early in the month the % runs high when salary is paid upfront; it settles as sales build.
+
+## v234 — gas from spends
+- SP_GAS (/\bgas\b|lpg|cylinder/i): spendSplit puts these lines in their own `gas` bucket (out of running / goods). Manual Gas box removed from monthly costs (FCO.oh.gas ignored). Gas counts in the fixed-cost share and shows as "− Gas (LPG) · from spends" in the profit block.
+
+## v235 — monthly costs list · bulk ₹/day · weights
+- Salary is AUTOMATIC from spends (FCO.oh.salary override dropped). FCO.ohl=[{n,v}] = lines paid outside the app (extra salaries, outside rent, power…) ₹/month → × days/30 in profit, × days gone/days in month in the fixed share. Old FCO.oh rent/power/other read as lines until first save.
+- FCO.bulk = rice/oil/masala ₹/day. When set, SP_BULK purchase lines go to a `bulk` bucket and are left out of goods; profit adds bulk × days; day view uses the food estimate without rice & oil.
+- Weights: FCO.wt {birdKg, rice, oil, fish, beef} per Full mandi (WT()); FCO.recF[family] = a dish's own kg per Full (⚖ in the dish sheet), Half/Qtr scale ½/¼. recOf: rec[exact] → recF[family] → recGuess.
+
+## v236 — Tomorrow lab (Live tab)
+- tmCardBig(): Tomorrow · <day>. Methods: A) days like today (tmMatch: half money so far, half running total, on fcHours) → their NEXT day's nrev; B) last 4 / 8 days on tomorrow's weekday; C) fcModel(t).plan. Filters (TMR.f): same weekday / any day / same situation (dayTags SK flags), top 5/10/15; saved in localStorage 'hayat-tmr'.
+- dstats(): n, median, mean, SD (+CV), P25–P75, min–max. NOTE: `stats()` is the app's day-stats function — do not reuse the name.
+- tmBacktest(): last 30 finished days, each method using only data before that day (A uses the full previous day). Off by = mean abs % error (+bias); Inside range = share of actual within P25–P75 (C uses ±25%). Best guess = lowest error with ≥8 replayed days.
+- Hour band: P25/median/P75 of fcHours over the last 8 same weekdays (SVG).
+- Viewing a past day: Tomorrow = the next day; only data before the viewed day is used, and the actual is shown.
+
+## v237 — Juice counter (Items, day + period)
+- juiceCard(itemMap, byDay): bills have no drink category, so names decide. DR_SOFT (brands/bottles) wins over DR_JUICE (juice/lime/mojito/shake…). Cost lines: DR_JCOST (fruit, lemon, mint, ice, sugar…) → juice; DR_SOFT → bottled. Milk left out (also tea/kitchen).
+- Bottled drinks are bought one month and sold the next → their cost % is over the last 3 months: drink3m() sums month snapshots (monthDoc, cached 30 min). Day view spend lines via dayLines(DOC) (spRows).
+- "What was matched" lists every name used, so wrong matches are visible.
