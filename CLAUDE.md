@@ -445,3 +445,11 @@ What that means, and what to say if it comes up:
 - juiceCard(itemMap, byDay): bills have no drink category, so names decide. DR_SOFT (brands/bottles) wins over DR_JUICE (juice/lime/mojito/shake…). Cost lines: DR_JCOST (fruit, lemon, mint, ice, sugar…) → juice; DR_SOFT → bottled. Milk left out (also tea/kitchen).
 - Bottled drinks are bought one month and sold the next → their cost % is over the last 3 months: drink3m() sums month snapshots (monthDoc, cached 30 min). Day view spend lines via dayLines(DOC) (spRows).
 - "What was matched" lists every name used, so wrong matches are visible.
+
+## v238 — tab carry-over · DM notes are deliveries
+- tabCarry() (start of render): switching day ↔ period keeps the same kind of tab (sales↔overview, buy↔money, cash↔cash, items↔items; Live → Sales). Only when the caller did not set TAB/PTAB itself.
+- DELIV_WORDS (/^(d\.?m+\w*|hd|h\.d|deliver…|zomato|swiggy)/): counter bills with such a note are kind 'delivery' (r.viaNote), never staff. Before, "DMM"/"dmmm" ≤ ₹300 fell into staff food (ORDER_WORDS only had dm\b). No "not dispatched" alert for viaNote bills.
+- SNAP_V 5: month snapshots rebuild so sales include those bills.
+
+## v239 — bills list: Where
+- secOf(r) in the bills list (wide table "Where" column + phone card): Delivery / Counter / the section in title case (Ac, Non Ac, Hut, Juicy Hut, Parcel; FLOOR table section if the record has none); dine bills with a section but no table get "· no table" (waiters skipping the table number, mostly Non AC).
