@@ -485,3 +485,28 @@ What that means, and what to say if it comes up:
 - Live order: New orders → Unrealized (open orders) → Tables → Road traffic → Days like today → Needs attention → Tomorrow → Kitchens.
 - newOrders(): bills made in the last 60 min, newest first (5 on phone, 8 on PC): time, minutes ago, where, KOT, waiter, remark, items, ₹, paid / open / bill printed; tap = open the bill.
 - likeToday(): compact Similar days for today (simDays rows, current SIM filter): "days like this finished at" range + middle, top 3 matches; tap = Similar days page.
+
+## v248 — new top boxes (release 2 of 4)
+- kpis(): .kpis.top4 (2×2 on phone): Sales today paid+unpaid (paid / unpaid + split) · Forecast today (still to come, bills ~N, avg, next hour, ⚙) · Bills paid+unpaid N / ~forecast, avg now vs forecast avg · Next 10 minutes ₹ + bills · Tomorrow. Seats / table time / cash-card / paid out in a second row.
+- abRef(day, todayAvg, n): avg bill to expect = blend of today's avg (weight n/(n+25)) and last 4 same weekdays (nrev/bills). Forecast bills = bills now + still-to-come ₹ / abRef. fcNextMin(F,mins): forecast rate for the minutes left in this hour, spilling into the next.
+- Unpaid always counted (FC_UNP const true, tick removed). Outlook / closing time / pre-booking / hide moved behind ⚙ on the forecast box (FCSET.open → .fcset with scnBar). Traffic hint on its own line under the boxes. Time slider moved below the hourly chart + running total.
+
+## v249 — quick fixes (release 1 of 4)
+- Traffic extra minutes = max(TomTom trafficDelay, travel − no-traffic travel): TomTom's delay only counts reported jams, so history was all 0. History/usual/hint recompute from saved now/free.
+- Traffic read every 15 min while open (and at once on open if the last reading is older); trfLog key = 15-min slot "HH:MM" (old "HH" keys still read); history and usual group slots by hour (average).
+- trfNote() under the hourly chart (next to rain): roads heavy / medium / light, +min vs normal.
+- swipeTab(): swiping the page = next / previous bottom-bar tab (day: Live·Sales·Spends·Items; period: Sales·Spends·Items, swipe right from Sales = Live). Date only via ‹ › / calendar.
+- Grids: dotted minor line halfway between labelled lines (yscale bars; runLine + weekCard SVG).
+- catCard(): Items by category (name rules CATS; drinks via drKind), <details> per group, open state kept (CATOPEN). In Items tab and Sales tab after Top items. DR_SOFT also matches DEW, COCO COLA, MENIRAL, "ml"/"ltr" sizes.
+
+## v250 — charts (release 3 of 4)
+- billsCard() (Sales, after running total): Bills / Guests (footfall) / Avg bill per hour, order time, every non-staff bill paid + unpaid. Today solid with dots; forecast dotted = F.rest ÷ abRef (guests × today's guests-per-bill); usual weekday thin (last 4 same weekdays from OHS b/p/h). guestsOf(r): dine pax when entered, else 1.
+- ohOf now also stores b (bills) and p (guests) per hour; ohScan rescans days missing b (office role, once).
+- Top boxes and bills chart count the same thing: non-staff bills, paid + unpaid (large orders included).
+- itemsOf() includes open/due non-staff bills (top items, categories, food cost, juice counter see unpaid too).
+- Compare tab "Last 7 days": today's bar stacks paid + unpaid (hatched) + forecast still to come (dashed).
+
+## v251 — similar days by ₹ / bills / avg bill · replay to closing (release 4, part 1)
+- SIM.metric (localStorage 'hayat-simm'): 'amt' | 'bills' | 'avg'. simMetricToday() / simMetricDay() (other days from OHS b/h). Matching (md, cells, running total) uses the metric; "how it ended" (sofar, rest, end) stays in ₹. Days without OHS.b are skipped; a note says how many days are ready.
+- rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
+- Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
