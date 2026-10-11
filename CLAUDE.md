@@ -475,3 +475,13 @@ What that means, and what to say if it comes up:
 ## v245 — Week on week (Month → Sales)
 - weeksData(16): Mon–Sun weeks from INDEX (nrev = large orders out, finished days only); avg a day, % vs the week before, 4-week moving average. Only the current week is "still running" (light bar); older weeks with <4 days of data are dropped.
 - weekCard() sits after "Sales by day" in period overview. Forecast details (fcSheet) growth row links to it (#fcWeeks → this month, Sales).
+
+## v246 — new bill + void alerts (in the app)
+- alCheck(DOC) on every live vm_daylog snapshot (today only). First snapshot = baseline. New record key → green banner "🧾 New bill · KOT · where · waiter · ₹ · items"; more r.edits than before → red banner "✂ Void · KOT · item from→to (reason) · by". Tap a banner = open the bill (drill). Max 4 banners, bill 15 s / void 30 s.
+- Sound: WebAudio two-tone (void lower), unlocked on first tap (phones block sound before a tap); vibrate on Android; tab title flashes.
+- 🔔 / 🔕 in the top bar (localStorage 'hayat-alerts'). Only while the app is open; alerts arrive as fast as the shop PC syncs (~1 min).
+
+## v247 — Live tab order · New orders · Days like today
+- Live order: New orders → Unrealized (open orders) → Tables → Road traffic → Days like today → Needs attention → Tomorrow → Kitchens.
+- newOrders(): bills made in the last 60 min, newest first (5 on phone, 8 on PC): time, minutes ago, where, KOT, waiter, remark, items, ₹, paid / open / bill printed; tap = open the bill.
+- likeToday(): compact Similar days for today (simDays rows, current SIM filter): "days like this finished at" range + middle, top 3 matches; tap = Similar days page.

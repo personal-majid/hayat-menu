@@ -162,7 +162,7 @@ body.period #dockTime{display:none}
 .ssmt{display:grid;gap:2px;margin-top:10px;font-size:13px} .ssmt>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:4px 0;border-top:1px solid var(--line)} .ssmt>div>*:not(:first-child){text-align:right;font-variant-numeric:tabular-nums} .ssmt small{color:var(--muted)} .ssmt .ssmh{border-top:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .spc .spcg td{color:var(--muted);font-size:12.5px} .spc .spct td{border-bottom:2px solid var(--line2)}
 .fcmat{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:4px 0 10px} .fcmat>div,.fcmat>label{background:var(--soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px} .fcmat small{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.04em;text-transform:uppercase} .fcmat b{font-size:17px} .fcmat em{font-style:normal;font-size:12px;color:var(--muted)} .fcmat input{width:100%}
-.fcot input{width:74px;text-align:right} .wksvg{width:100%;height:auto;max-height:260px} .wksvg .wkb{fill:var(--pri)} .wksvg .wkb.part{fill:var(--pri);opacity:.4} .wksvg .wkl{fill:none;stroke:#c0882c;stroke-width:2.5} .wksvg .wkp{font-size:10px;font-weight:700} .wksvg .wkp.up{fill:#1e7a3c} .wksvg .wkp.dn{fill:#b3261e} .ptkey .k-wk,.ptkey .k-wkl,.ptkey .k-wkp{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle} .ptkey .k-wk{background:var(--pri)} .ptkey .k-wkp{background:var(--pri);opacity:.4} .ptkey .k-wkl{height:3px;background:#c0882c} .fcunp{font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);cursor:pointer} .fcunp input{margin:0} .trhint{font-size:12px;color:var(--muted);background:var(--soft);border-radius:999px;padding:3px 9px} .trhint.up{color:#1e7a3c} .trhint.dn{color:#a86b00} .trh td,.trh th{padding:4px 5px;font-size:12px} .trh td.ok{background:#e3f1e6} .trh td.mid{background:#f8ecd2} .trh td.bad{background:#f6d9d6;font-weight:700} .trh tr.avg td{border-bottom:2px solid var(--line2)} .jdet summary{cursor:pointer;font-weight:700;margin:6px 0} .jdet .simtags{margin-bottom:6px} .tmbest{background:var(--soft);border-radius:12px;padding:10px 12px;margin:4px 0 10px;display:flex;flex-direction:column;gap:2px} .tmbest small{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)} .tmbest b{font-size:26px} .tmbest em{font-style:normal;color:var(--muted);font-size:13px} .tmt tr.on td{background:var(--soft)} .tmr .scroll{max-height:none} .tmsvg{width:100%;height:auto;max-height:180px} .tmsvg .tmb{fill:var(--pri);opacity:.18} .tmsvg .tml{fill:none;stroke:var(--pri);stroke-width:2} .tmsvg text{font-size:9px;fill:var(--muted)} .ohl{display:grid;grid-template-columns:1fr 110px 36px;gap:6px;margin:0 0 6px} .ohl input{width:100%} .fwt{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px} .fwt input{width:100%}
+.fcot input{width:74px;text-align:right} .nolist{display:flex;flex-direction:column;gap:6px} .norow{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;background:var(--soft);border-radius:10px;padding:8px 10px;cursor:pointer} .norow .t,.norow .w,.norow .a{display:flex;flex-direction:column;gap:1px;min-width:0} .norow .a{align-items:flex-end} .norow small{font-size:12px;color:var(--muted)} .norow .it{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .pill.ok{background:#e3f1e6;color:#1e7a3c} .pill.open{background:#f8ecd2;color:#8a5a00} .pill.due{background:#f6d9d6;color:#b3261e} #alerts{position:fixed;top:56px;right:10px;left:auto;z-index:80;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 20px))} .altoast{position:relative;background:#fff;border:1px solid var(--line2);border-left:5px solid #1e7a3c;border-radius:12px;padding:10px 34px 10px 12px;box-shadow:0 6px 20px rgba(0,0,0,.15);cursor:pointer;display:flex;flex-direction:column;gap:2px;animation:alin .25s ease} .altoast.void{border-left-color:#b3261e} .altoast b{font-size:15px} .altoast small{font-size:12.5px;color:var(--muted);line-height:1.35} .altoast button{position:absolute;top:6px;right:6px;border:0;background:transparent;font-size:15px;cursor:pointer;color:var(--muted)} @keyframes alin{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}} .tb.bell{padding:4px 8px;font-size:16px;background:transparent;border:0;cursor:pointer} .tb.bell.off{opacity:.55} .wksvg{width:100%;height:auto;max-height:260px} .wksvg .wkb{fill:var(--pri)} .wksvg .wkb.part{fill:var(--pri);opacity:.4} .wksvg .wkl{fill:none;stroke:#c0882c;stroke-width:2.5} .wksvg .wkp{font-size:10px;font-weight:700} .wksvg .wkp.up{fill:#1e7a3c} .wksvg .wkp.dn{fill:#b3261e} .ptkey .k-wk,.ptkey .k-wkl,.ptkey .k-wkp{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle} .ptkey .k-wk{background:var(--pri)} .ptkey .k-wkp{background:var(--pri);opacity:.4} .ptkey .k-wkl{height:3px;background:#c0882c} .fcunp{font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);cursor:pointer} .fcunp input{margin:0} .trhint{font-size:12px;color:var(--muted);background:var(--soft);border-radius:999px;padding:3px 9px} .trhint.up{color:#1e7a3c} .trhint.dn{color:#a86b00} .trh td,.trh th{padding:4px 5px;font-size:12px} .trh td.ok{background:#e3f1e6} .trh td.mid{background:#f8ecd2} .trh td.bad{background:#f6d9d6;font-weight:700} .trh tr.avg td{border-bottom:2px solid var(--line2)} .jdet summary{cursor:pointer;font-weight:700;margin:6px 0} .jdet .simtags{margin-bottom:6px} .tmbest{background:var(--soft);border-radius:12px;padding:10px 12px;margin:4px 0 10px;display:flex;flex-direction:column;gap:2px} .tmbest small{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)} .tmbest b{font-size:26px} .tmbest em{font-style:normal;color:var(--muted);font-size:13px} .tmt tr.on td{background:var(--soft)} .tmr .scroll{max-height:none} .tmsvg{width:100%;height:auto;max-height:180px} .tmsvg .tmb{fill:var(--pri);opacity:.18} .tmsvg .tml{fill:none;stroke:var(--pri);stroke-width:2} .tmsvg text{font-size:9px;fill:var(--muted)} .ohl{display:grid;grid-template-columns:1fr 110px 36px;gap:6px;margin:0 0 6px} .ohl input{width:100%} .fwt{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px} .fwt input{width:100%}
 #dock .tday{padding:6px 12px 2px;flex:none;width:auto;display:flex} #dock .tday .dpill{height:38px} #dock .tday .dn{width:42px;height:38px}
 .calq{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 100%;order:-1} .calq .chip{border:1px solid var(--line2);background:var(--card);color:var(--text);border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer} #calX{margin-left:auto}
 @media (max-width:640px){ .calq{order:99} }
@@ -448,6 +448,7 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
   <div id="calPop" hidden></div>
   <span class="sp"></span>
   <span class="live" id="pc" hidden><i></i><span></span></span>
+  <button class="tb bell" id="bell" type="button" title="sound + banner for every new bill and every void">🔔</button>
   <span class="live" id="live"><i></i><span>connecting…</span></span>
   <a class="tb" href="./#/admin" style="text-decoration:none">Office</a>
 </div>
@@ -479,7 +480,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v245';
+const BOARD='v247';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -617,6 +618,20 @@ function upsell(){
   return `<div class="card wide"><h2>Upselling · by waiter <span class="n">extras sold with the main course</span></h2><table><tr><th>Waiter</th><th class="r m">Bills</th><th class="r">Bills with extras</th>${cols.map(c=>`<th class="r">${c}</th>`).join('')}<th class="r">Extras ₹</th></tr>${rows.map(([n,w])=>`<tr><td>${esc(n)}</td><td class="r m">${w.bills}</td><td class="r"><b>${Math.round(100*w.with/w.bills)}%</b></td>${cols.map(c=>`<td class="r">${w.k[c]||''}</td>`).join('')}<td class="r"><b>${rs(w.v)}</b></td></tr>`).join('')}</table></div>`;
 }
 /* ordered, not paid: the money still on the floor and on the road */
+/* DAYS LIKE TODAY (Live): the 3 closest past days so far and how they ended -> where today may close. Full page: Similar days. */
+function likeToday(){ if(DAY!==bizToday()) return ''; let res; try{ res=simDays(); }catch(e){ return ''; } const {S,rows}=res||{}; if(!S||!(S.mine>0)||!rows||!rows.length) return '';
+  const close=rows.filter(r=>r.close), ref=(close.length?close:rows.slice(0,3)).slice(0,5), ends=ref.map(r=>S.mine+r.rest).sort((a,b)=>a-b), med=ends[Math.floor(ends.length/2)];
+  const filt={all:'any day',dow:'same weekday',same:'same situation',wk:'Mon–Fri',we:'Sat–Sun'}[SIM.filter]||'';
+  return `<div class="card wide liket"><h2>Days like today <span class="n">${filt} · <a href="#" data-tab="similar">open similar days</a></span></h2>
+    <div class="tmbest"><small>Days like this finished at</small><b>${rs(ends[0])}${ends.length>1?' – '+rs(ends[ends.length-1]):''}</b><em>middle ${rs(med)} · from ${ref.length} ${close.length?'close':'nearest'} day${ref.length>1?'s':''} · today so far ${rs(S.mine)}${!close.length&&rows[0].match<60?' · weak match':''}</em></div>
+    <div class="nolist">${rows.slice(0,3).map(r=>`<div class="norow rowlink" data-tab="similar"><span class="t"><b>${r.match}%</b><small>match</small></span><span class="w"><b>${esc(rpName(r.d))}</b><small>so far ${rs(r.sofar)} <span class="${r.md>=0?'up':'dn'}">${r.md>=0?'+':''}${Math.round(100*r.md)}%</span>${r.tags&&r.tags.length?' · '+esc(r.tags.slice(0,2).join(', ')):''}</small></span><span class="a"><b>${rs(r.end)}</b><small>ended</small></span></div>`).join('')}</div></div>`; }
+/* NEW ORDERS: the latest bills made (newest first, last 60 min, max 8) - what just came in, paid or not */
+function newOrders(){ if(DAY!==bizToday()) return ''; const now=tsNow();
+  const R=recs().filter(r=>r.createdAt&&r.status!=='void'&&r.status!=='cancelled'&&mins(r.createdAt,now)!=null&&mins(r.createdAt,now)<=60).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,window.innerWidth<640?5:8);
+  const n60=recs().filter(r=>r.createdAt&&mins(r.createdAt,now)!=null&&mins(r.createdAt,now)<=60&&r.status!=='void').length;
+  const where=r=>r.kind==='dine'?(r.table||(r.section?String(r.section).toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):'dine')):r.kind==='delivery'?'🛵 delivery':r.kind==='staff'?'👤 staff':'🎟 '+(r.token?'T'+r.token:'counter');
+  const st=r=>r.status==='settled'?'<span class="pill ok">paid</span>':r.status==='due'?'<span class="pill due">bill printed</span>':'<span class="pill open">open</span>';
+  return `<div class="card wide newo"><h2>New orders <span class="n">${n60} in the last hour</span></h2>${R.length?`<div class="nolist">${R.map(r=>{ const m=mins(r.createdAt,now); return `<div class="norow rowlink" data-drill="${esc(r.key)}"><span class="t"><b>${hm(r.createdAt)}</b><small>${m<1?'now':m+' min ago'}</small></span><span class="w"><b>${esc(where(r))}</b><small>KOT ${esc(r.kot||'')}${r.waiter?' · '+esc(r.waiter):''}${r.remarks?' · “'+esc(r.remarks)+'”':''}</small><small class="it">${(r.items||[]).slice(0,3).map(i=>i.q+'× '+esc(i.n)).join(', ')}${(r.items||[]).length>3?'…':''}</small></span><span class="a"><b>${sum(r)?rs(sum(r)):'—'}</b>${st(r)}</span></div>`; }).join('')}</div>`:'<div class="note">No new orders in the last hour.</div>'}</div>`; }
 function unrealized(){
   /* every open ticket, staff-looking ones included - a remark can fool the staff rule, and a hidden table is worse than a mislabelled one */
   const O=recs().filter(r=>r.status==='open'||r.status==='due').sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
@@ -3181,7 +3196,7 @@ function render(){ tabCarry();
   if(MODE==='period'){ m.innerHTML=(PTAB==='money'||PTAB==='cash'?`<div class="subnav">${[['money','Spends'],['cash','Cash & bank']].map(t=>`<button type="button" class="${PTAB===t[0]?'on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`:'')+period()+`<div class="note">board ${BOARD}</div>`; }
   else m.innerHTML=kpis()+subNav()+
     (TAB==='sales'?`<div class="sltog"><button type="button" class="chip${SL.open?' on':''}" id="slTog">⏱ ${SL.open?'Hide time slider':'Time slider'}</button><span class="n">${SL.open?(TCUT==null?'drag the slider (above the tabs) to see the day at any time':'showing the day as of <b>'+tcutLabel()+'</b>'):'see the day as it stood at any time'}</span></div><div class="grid">${hourly()}${runLine()}${pace()}${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); return topItems(R,R.reduce((n,r)=>n+r.v,0)); })()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
-     TAB==='floor'?`<div class="grid">${live?alerts():''}${tmCardBig()}${trafficCard()}${unrealized()}${floor()}${kitchens()}</div>`:
+     TAB==='floor'?`<div class="grid">${newOrders()}${unrealized()}${floor()}${trafficCard()}${likeToday()}${live?alerts():''}${tmCardBig()}${kitchens()}</div>`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${daySpendCard(DOC,DAY)}${drafts()}${payments()}${purchases()}</div>`:
      TAB==='patterns'?patterns():
@@ -3228,6 +3243,32 @@ function render(){ tabCarry();
 }
 
 let unsub=null;
+/* ALERTS (in the app): a banner + sound for every NEW bill and every VOID / edit, live day only.
+   The first snapshot of the day is the baseline (no flood on open). Off/on with the 🔔 in the top bar. */
+let ALERT_ON=true; try{ ALERT_ON=localStorage.getItem('hayat-alerts')!=='off'; }catch(e){}
+let AL_SEEN=null, AL_DAY=null, AL_CTX=null;
+function alUnlock(){ try{ if(!AL_CTX){ const C=window.AudioContext||window.webkitAudioContext; if(C) AL_CTX=new C(); } if(AL_CTX&&AL_CTX.state==='suspended') AL_CTX.resume(); }catch(e){} }
+['pointerdown','keydown'].forEach(ev=>addEventListener(ev,alUnlock,{passive:true}));
+function bellPaint(){ const b=document.getElementById('bell'); if(b){ b.textContent=ALERT_ON?'🔔':'🔕'; b.title=ALERT_ON?'alerts on: new bills + voids (tap to mute)':'alerts off (tap to turn on)'; b.classList.toggle('off',!ALERT_ON); } }
+setTimeout(()=>{ const b=document.getElementById('bell'); if(b){ bellPaint(); b.onclick=()=>{ ALERT_ON=!ALERT_ON; try{ localStorage.setItem('hayat-alerts',ALERT_ON?'on':'off'); }catch(e){} bellPaint(); if(ALERT_ON){ alBeep('bill'); alToast('bill','🔔 Alerts on','new bills and voids will beep while the app is open'); } }; } },0);   /* phones only allow sound after a tap */
+function alBeep(kind){ try{ alUnlock(); const c=AL_CTX; if(!c) return; const tones=kind==='void'?[[440,.18],[330,.28]]:[[880,.12],[1175,.16]]; let t=c.currentTime+.02;
+    tones.forEach(([f,d])=>{ const o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.35,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(c.destination); o.start(t); o.stop(t+d+.02); t+=d+.05; }); }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate(kind==='void'?[120,80,120]:[80]); }catch(e){} }
+function alToast(kind,title,sub,key){ let box=document.getElementById('alerts'); if(!box){ box=document.createElement('div'); box.id='alerts'; document.body.appendChild(box); }
+  const el=document.createElement('div'); el.className='altoast '+kind; el.innerHTML=`<b>${title}</b><small>${sub}</small><button type="button" aria-label="close">✕</button>`;
+  el.onclick=e=>{ if(e.target.tagName==='BUTTON'){ el.remove(); return; } el.remove(); if(key) try{ drill(key); }catch(x){} };
+  box.prepend(el); while(box.children.length>4) box.lastChild.remove(); setTimeout(()=>el.remove(),kind==='void'?30000:15000); }
+function alCheck(doc){ if(!doc||!doc.records||DAY!==bizToday()) return; const day=DAY;
+  const snap={}; Object.values(doc.records).forEach(r=>{ snap[r.key]=(r.edits||[]).length; });
+  if(AL_DAY!==day||!AL_SEEN){ AL_SEEN=snap; AL_DAY=day; return; }   /* baseline */
+  const fresh=[], voidsNew=[]; Object.values(doc.records).forEach(r=>{ const was=AL_SEEN[r.key]; if(was==null) fresh.push(r); else if((r.edits||[]).length>was) voidsNew.push([r,(r.edits||[]).slice(was)]); });
+  AL_SEEN=snap; if(!ALERT_ON) return;
+  const where=r=>r.kind==='dine'?(r.table||r.section||'dine'):r.kind==='delivery'?'delivery':r.kind==='staff'?'staff':(r.token?'token '+r.token:r.kind||'');
+  const items=r=>(r.items||[]).slice(0,3).map(i=>i.q+'× '+esc(i.n)).join(', ')+((r.items||[]).length>3?'…':'');
+  fresh.slice(0,4).forEach(r=>alToast('bill',`🧾 New bill · KOT ${esc(r.kot||'')}`,`${esc(where(r))}${r.waiter?' · '+esc(r.waiter):''}${sum(r)?' · '+rs(sum(r)):''}${items(r)?'<br>'+items(r):''}`,r.key));
+  voidsNew.slice(0,4).forEach(([r,E])=>alToast('void',`✂ Void · KOT ${esc(r.kot||'')} · ${esc(where(r))}`,E.map(e=>`${esc(e.item||'')} ${e.from!=null?e.from+'→'+(e.void||e.from===e.to?0:e.to):''}${e.reason?' ('+esc(e.reason)+')':''}${e.by?' · '+esc(e.by):''}`).join('<br>'),r.key));
+  if(voidsNew.length) alBeep('void'); else if(fresh.length) alBeep('bill');
+  if(fresh.length||voidsNew.length){ const t0=document.title; document.title=(voidsNew.length?'✂ void · ':'🧾 new bill · ')+t0.replace(/^(✂ void|🧾 new bill) · /,''); setTimeout(()=>{ document.title=document.title.replace(/^(✂ void|🧾 new bill) · /,''); },8000); } }
 async function watchDay(){
   if(unsub){ unsub(); unsub=null; } DOC=null; YDOC=null; render();
   const {fs,db}=FB, want=DAY;
@@ -3237,7 +3278,7 @@ async function watchDay(){
     /* a finished day: the published file, else Firebase once */
     const d=await loadDay(DAY); if(want!==DAY) return; DOC=d; stamp(); render(); return;
   }
-  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); CACHE[DAY]=DOC; SRC[DAY]='firebase'; syncIndexToday(); stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
+  unsub=fs.onSnapshot(fs.doc(db,'vm_daylog',DAY),d=>{ DOC=prep(d.exists()?d.data():null); alCheck(DOC); CACHE[DAY]=DOC; SRC[DAY]='firebase'; syncIndexToday(); stamp(); render(); },e=>{ $('live').className='live bad'; $('live').lastElementChild.textContent=e.code||'error'; });
 }
 /* the index is read once an hour; today's entry is refreshed from the live doc so every trend has the last sale */
 function syncIndexToday(){ if(!DOC||DAY!==bizToday()) return; const S=recs().filter(r=>r.status==='settled'); const cs=closeStats(recs()), close={}; Object.keys(cs).forEach(k=>{ const a=avg(cs[k].total); if(a!=null) close[k]=a; });
