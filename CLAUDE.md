@@ -510,3 +510,16 @@ What that means, and what to say if it comes up:
 - SIM.metric (localStorage 'hayat-simm'): 'amt' | 'bills' | 'avg'. simMetricToday() / simMetricDay() (other days from OHS b/h). Matching (md, cells, running total) uses the metric; "how it ended" (sofar, rest, end) stays in ₹. Days without OHS.b are skipped; a note says how many days are ready.
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
+
+## v252 — unpaid first · cleaner top boxes · soft curves · amount-first alerts · slider tucked away
+- Top boxes (.kpi.tb): Today so far (paid + unpaid, ▲/▼ vs yesterday at the same minute by ORDER time, paid · unpaid small) · Unpaid now (Dine / CO / Delivery / Staff, ₹ + count) · Forecast (still to come, next hour, ⚙) · Bills (now → ~forecast, avg → ~) · Next 10 min · Tomorrow.
+- hourCompare: today = paid + unpaid of that hour (split bar, unpaid hatched amber), "till HH" cumulative too; the unpaid part of a bar is tappable (data-h).
+- billsCard lines are Catmull-Rom curves (soft), clamped to the baseline.
+- New-bill banner leads with the amount (big ₹ · where); a KOT opened at ₹0 alerts once it gets an amount (AL_WAIT).
+- Time slider: no row on the page. ⏱ button in the Sales-by-hour header opens the dock slider; a one-line "showing the day as of … · back to now" only while scrubbing.
+
+## GOAL (Majid) — next-customer prediction · work on TUESDAY 13 Oct 2026
+- Say, live: "in the next ~3 min a DELIVERY / COUNTER / DINE order will come, about ₹700 (e.g. alfaham + juice)".
+- Target accuracy: time within 2–5 min (early or late), amount within 10–15%, type right.
+- Approach to try: per-type arrival rates by minute-of-day × weekday × trend (Poisson / hazard), basket model per hour × type (item mix, avg value), conditioned on the last orders; run many backtest loops / simulations on all history (minute-level from day logs) and tune until the hit rate is as high as possible; show the measured hit rate in the app.
+- Honest limit: exact minute of ONE order is random; ±2–5 min is reachable in busy hours, not slow ones. Score before claiming.
