@@ -47,3 +47,6 @@ package-lock.json
 firebase-debug.log
 firestore-debug.log
 rules-run.log
+
+# daily cash slips (photos of the cash book: balances, salaries) and their reports: business data, never on the public site
+daily_slips/

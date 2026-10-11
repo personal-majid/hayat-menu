@@ -453,3 +453,25 @@ What that means, and what to say if it comes up:
 
 ## v239 — bills list: Where
 - secOf(r) in the bills list (wide table "Where" column + phone card): Delivery / Counter / the section in title case (Ac, Non Ac, Hut, Juicy Hut, Parcel; FLOOR table section if the record has none); dine bills with a section but no table get "· no table" (waiters skipping the table number, mostly Non AC).
+
+## v240 — traffic history
+- trfHist(): "history" link on the Road traffic card. Reads settings/trf_YYYY-MM for this + 2 previous months; grid = days (newest first) × clock hours in business order (from BH0), cell = extra minutes (delay, or now−free) for the chosen route; "Usual" row = average per hour; day sales (nrev) beside each day; tap a day to open it. Green <4, amber 4–9, red ≥10.
+- Readings exist only for hours when the app was open (trfLog). Hourly-always needs a Cloudflare Worker cron (offered, not built).
+
+## v241 — traffic hint on the forecast (numbers unchanged)
+- trfUsual(): loads settings/trf_* (3 months, cached 1 h), usual extra minutes per clock hour (avg of both routes, today excluded). trfHint() in scnBar: latest reading (≤45 min old) vs usual at that hour → "roads busier / quieter than usual / as usual for HH:00" (busier: ≥3 min and ≥1.4× usual; quieter: ≤−3 min and ≤0.6×); "learning (n/3)" until 3 past readings exist at that hour.
+- Deliberately NOT in the forecast math yet (Majid's choice). After 2–3 weeks: measure traffic deviation vs sales-vs-forecast per hour, then add a capped nudge only if it helps.
+
+## v242 — everything by ORDER time, unpaid included
+- soldRecs(R,day): settled + open/due (not staff), large orders out. Used by pace (today), running total (steps at createdAt; key shows "incl. ₹X not paid yet"), similar days (simBase). Forecast (fcToday) and hourly bars already did this; history hours (INDEX.hours ← OHS) are order time with large orders removed.
+- Sales KPI stays = paid; Unrealized = the unpaid part. Pace today = Sales + Unrealized (test t-pace).
+
+## v243 — "count unpaid bills" tick
+- FC_UNP (localStorage 'hayat-fcunp', default on) in the forecast bar (scnBar). soldRecs() honours it, so the forecast (fcToday now uses soldRecs), pace, running total and similar days switch together. Off: paid bills only; Pace title says "paid only".
+
+## v244 — last paid-time spots moved to order time
+- fcAt realWin (replay "real next 60/120 min"), large-order hour (lgSet, auto-large), large-order list per hour (LGREV) now use createdAt (settledAt only as fallback). Rule: every hourly stat is by when the bill was MADE.
+
+## v245 — Week on week (Month → Sales)
+- weeksData(16): Mon–Sun weeks from INDEX (nrev = large orders out, finished days only); avg a day, % vs the week before, 4-week moving average. Only the current week is "still running" (light bar); older weeks with <4 days of data are dropped.
+- weekCard() sits after "Sales by day" in period overview. Forecast details (fcSheet) growth row links to it (#fcWeeks → this month, Sales).
