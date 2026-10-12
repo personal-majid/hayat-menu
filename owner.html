@@ -482,7 +482,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v255';
+const BOARD='v257';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -3206,7 +3206,7 @@ function dock(){
   const sec=MODE==='period'?[['people','People'],['voids','Voids']]:[['patterns','Insights'],['bills','Bills']];
   const cur=MODE==='period'?(PTAB==='cash'?'money':PTAB):(TGRP[TAB]||TAB), attr=MODE==='period'?'data-ptab':'data-tab', inSec=sec.find(t=>t[0]===cur);
   $('dockTabs').innerHTML=prim.map(t=>t[0]==='@live'?`<button class="dtab" data-golive="1" title="today, live">${svg(t[2])}<span>${t[1]}</span></button>`:`<button class="dtab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${svg(t[2])}<span>${t[1]}</span></button>`).join('')+`<button class="dtab${inSec?' on':''}" id="dockMoreBtn" aria-expanded="${!$('dockSheet').hidden}">${svg('more')}<span>${inSec?inSec[1]:'More'}</span></button>`;
-  $('dockMore').innerHTML=(MODE==='period'?'':`<button class="tab rpgo" id="rpOpen">▶ Replay</button>`)+sec.map(t=>`<button class="tab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${t[1]}</button>`).join('');
+  $('dockMore').innerHTML=(MODE==='period'?'':`<button class="tab rpgo" id="rpOpen">▶ Replay</button>`)+sec.map(t=>`<button class="tab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${t[1]}</button>`).join('')+`<a class="tab" href="captain.html" target="_blank" rel="noopener" title="tables, KOT, bills, UPI, cleaning · staff & tables in Admin">🧑‍🍳 Captain app ↗</a>`;
   const sh=$('dockSheet'); $('dockMoreBtn').onclick=()=>{ sh.hidden=!sh.hidden; dockH(); };
   $$('#dockTabs [data-tab],#dockMore [data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; if(TLAST[TAB]&&TGRP[TLAST[TAB]]===TAB) TAB=TLAST[TAB]; window.scrollTo(0,0); Q=''; sh.hidden=true; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('#dockTabs [data-ptab],#dockMore [data-ptab]').forEach(b=>b.onclick=()=>{ PTAB=b.dataset.ptab; Q=''; sh.hidden=true; render(); });

@@ -246,8 +246,9 @@ def draw_kot(job: dict, ticket: dict, idx: int, total: int, width: int):
     head = ("CANCEL" if ticket.get("cancel") else "REPRINT" if ticket.get("reprint")
             else "KOT" + (f" #{ticket['round']}" if ticket.get("round") else ""))
     s.text(head + "  ·  " + name, 40, True, "center", gap=10, invert=True)
-    if o.get("source") == "counter":
-        who = ("TABLE " + str(o.get("table"))) if o.get("table") else ("DELIVERY" if o.get("mode") == "delivery" else "TOKEN " + str(o.get("token", "")))
+    if o.get("source") in ("counter", "captain") or o.get("mode") == "dinein" or ticket.get("table"):
+        tbl = o.get("table") or ticket.get("table")
+        who = ("TABLE " + str(tbl)) if tbl else ("DELIVERY" if o.get("mode") == "delivery" else "TOKEN " + str(o.get("token", "")))
         mode = {"dinein": "DINE-IN", "delivery": "DELIVERY"}.get(o.get("mode"), "TAKEAWAY")
         s.text(who, 46, True, "center", gap=4)
         s.row(mode + ((" · #" + str(o["token"])) if o.get("token") and o.get("table") else ""), when(job.get("at")), 22)
@@ -289,6 +290,8 @@ def draw_bill(job: dict, width: int, cfg):
     s.text(addr + ("  ·  " + phone if phone else ""), 18, False, "center", gap=8)
     s.rule()
     s.row("Bill · " + str(o.get("id", "")), when(job.get("at")), 22, True)
+    if o.get("table"):
+        s.row("TABLE " + str(o["table"]) + ((" · " + str(o["pax"]) + " guests") if o.get("pax") else ""), "by " + str(o.get("by") or ""), 24, True)
     s.row(str(o.get("name") or ""), str(o.get("phone") or ""), 22)
     if o.get("addr"):
         s.text(str(o["addr"]), 19, False, gap=4)
@@ -306,10 +309,14 @@ def draw_bill(job: dict, width: int, cfg):
     s.row("TOTAL", rupee(total), 36, True)
     s.space(6)
     if o.get("paid"):
-        s.text("PAID · " + ("UPI" if o.get("payMode") == "upi" else "Cash"), 26, True, "center", gap=4, invert=True)
+        mode = {"upi": "UPI", "card": "Card", "split": "Split", "credit": "Credit"}.get(o.get("payMode"), "Cash")
+        s.text("PAID · " + mode, 26, True, "center", gap=4, invert=True)
     else:
         s.text("TO PAY  " + rupee(total), 30, True, "center", gap=4, invert=True)
-        s.text("Cash or UPI to the rider", 20, False, "center")
+        if o.get("mode") == "delivery":
+            s.text("Cash or UPI to the rider", 20, False, "center")
+        else:
+            s.text("Cash · UPI · Card", 20, False, "center")
     if o.get("rider"):
         s.text("Rider: " + str(o["rider"]), 20, False, "center")
     s.space(6)

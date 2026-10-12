@@ -186,7 +186,7 @@ async function viewStaff(){ const {fs,db}=CTX; PEOPLE=await HayatAuth.people(CTX
     +'<div class="row"><input id="nName" placeholder="Name" style="width:180px"><select id="nRole">'+['cleaner','waiter','kitchen','captain','office'].map(r=>'<option value="'+r+'">'+HC.ROLE[r]+'</option>').join('')+'</select><button class="btn primary" id="nAdd">+ Add with a new code</button></div>'
     +'<div class="note">Removing someone stops new sign-ins. A phone already signed in stays signed in until you delete its record in Firebase console → Firestore → staff.</div></div>';
   const code=()=>String(Math.floor(100000+Math.random()*900000));
-  const writeList=async()=>{ await fs.setDoc(fs.doc(db,'crew','_list'),{people:PEOPLE.map(p=>({id:p.id,name:p.name,role:p.role||''}))}); };
+  const writeList=async()=>{ await fs.setDoc(fs.doc(db,'crew','_list'),{people:PEOPLE.map(p=>Object.assign({},p,{id:p.id,name:p.name,role:p.role||''}))}); };
   const setCrew=async(p,c)=>{ const cur=await fs.getDoc(fs.doc(db,'crew',p.id)).catch(()=>null); const data={name:p.name,role:p.role||'office'}; if(c) data.code=c; else if(!(cur&&cur.exists())) data.code=code(); await fs.setDoc(fs.doc(db,'crew',p.id),data,{merge:true}); };
   document.querySelectorAll('[data-pi]').forEach(s=>s.onchange=async()=>{ const p=PEOPLE[+s.dataset.pi]; p.role=s.value; try{ await setCrew(p); await writeList(); toast('Saved'); }catch(e){ toast('Not saved: '+(e.code||e.message)); } });
   document.querySelectorAll('[data-code]').forEach(b=>b.onclick=async()=>{ const p=PEOPLE[+b.dataset.code], c=code(); try{ await setCrew(p,c); alert(p.name+'\'s new code: '+c+'\n\nWrite it down now; it is not shown again.'); }catch(e){ toast('Not saved: '+(e.code||e.message)); } });

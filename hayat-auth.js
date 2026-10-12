@@ -32,7 +32,7 @@
   }
   async function form(el, ctx, roles, done, note){
     var P = await people(ctx);
-    var list = P.filter(function(p){ return !p.role || roles.indexOf(p.role) >= 0; });
+    var list = P.filter(function(p){ return !p.off && (!p.role || roles.indexOf(p.role) >= 0); });
     if(!list.length){
       el.innerHTML = '<div class="ha-box"><b>No staff codes yet.</b><p>Majid: open the Cleaning page as office → <b>Staff &amp; codes</b> to give each person a name and a code.</p></div>';
       return;

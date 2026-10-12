@@ -102,11 +102,12 @@ const hm=ms=>new Date(ms+5.5*3600e3).toISOString().slice(11,16);
 
 let WEB=[], OPEN=[], DONE={}, META=null, FB=null, seen=new Set(), first=true, strike=new Set(JSON.parse(sessionStorage.getItem('kds-x')||'[]'));
 /* the web counter: each KOT round, and each CANCEL ticket, as its own card */
+const kesc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));   /* web/captain orders carry typed notes: never raw HTML */
 function webOpen(){ const out=[], now=Date.now();
-  for(const o of WEB){ if(!o.kots||!o.kots.length) continue; const gone=o.status==='delivered'||o.status==='cancelled';
-    const items=[]; o.kots.forEach(k=>{ if(gone&&!(k.kind==='cancel'&&now-(k.at||0)<45*60000)) return; (k.lines||[]).forEach(l=>items.push({n:l.name+(l.label?' ('+l.label+')':''),q:l.q,t:k.at,cancel:k.kind==='cancel',reason:k.reason||'',round:k.n})); });
+  for(const o of WEB){ if(!o.kots||!o.kots.length||o.noKds) continue;   /* captain-app trial orders stay off the screen unless Settings says so */ const gone=o.status==='delivered'||o.status==='cancelled';
+    const items=[]; o.kots.forEach(k=>{ if(gone&&!(k.kind==='cancel'&&now-(k.at||0)<45*60000)) return; (k.lines||[]).forEach(l=>items.push({n:kesc(l.name+(l.label?' ('+l.label+')':'')),q:+l.q||0,t:k.at,cancel:k.kind==='cancel',reason:kesc(k.reason||''),round:k.n})); });
     if(!items.length) continue;
-    out.push({invoiceId:'w'+o.id,orderAt:o.at,items,table:o.table||'',section:o.mode==='dinein'?'':'',type:o.mode==='dinein'?'':'Parcel',token:o.token,taker:o.by||'',web:true}); }
+    out.push({invoiceId:'w'+kesc(o.id),orderAt:o.at,items,table:kesc(o.table||''),section:o.mode==='dinein'?kesc(o.section||''):'',type:o.mode==='dinein'?'':'Parcel',token:kesc(o.token||''),taker:kesc(o.by||''),web:true}); }
   return out; }
 function tickets(){ const mine=new Set(stations()), out=[];
   for(const o of OPEN.concat(webOpen())){ const base=tms(o.orderAt), groups={};
