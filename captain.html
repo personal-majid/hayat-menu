@@ -377,6 +377,22 @@ body.typing .dock .sugs,body.typing .dock .cats,body.typing .dock .catnav,body.t
 .bcard .bl{padding:11px 14px}
 
 input[type=search]::-webkit-search-cancel-button,input[type=search]::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
+/* KOT options / kitchen status / out of stock */
+.kob{flex:none;width:52px;border-radius:16px;background:var(--card);border:1px solid var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--pri)} .kob small{font-size:10px;font-weight:700;color:var(--muted)} .kob.on{background:var(--accwash);border-color:var(--acc)}
+.quick.kf button{padding:9px 12px;font-size:14px} .quick.kf button.on{background:var(--acc);color:#fff}
+.kchips{display:grid;gap:8px} .kc{border-radius:13px;border:1.5px solid var(--line2);background:var(--card);padding:10px 12px;text-align:left;display:flex;flex-direction:column;gap:2px} .kc.on{border-color:var(--pri);background:color-mix(in srgb,var(--pri) 8%,var(--card))} .kc small{color:var(--muted);font-weight:600}
+.selfb{margin-top:10px;background:var(--eatwash);border-radius:12px;padding:10px 12px;font-size:14px}
+.klist{padding:12px 14px} .krow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:7px 0;border-top:1px dashed var(--line)} .krow:first-of-type{border-top:0} .krow span{font-size:13px;color:var(--ink2)}
+.kst{font-weight:800!important;white-space:nowrap} .kst.ready{color:var(--good)!important} .kst.cooking{color:var(--bill)!important} .kst.seen{color:var(--eat)!important}
+.oosx{opacity:.55;background:repeating-linear-gradient(135deg,var(--card) 0 10px,var(--bg2) 10px 20px)!important} .oosx .nm{text-decoration:line-through}
+/* seat diagram on table cards */
+.tb .seats2{position:absolute;right:8px;bottom:8px}
+.tb .seats2 .tbl{fill:none;stroke:var(--muted);stroke-width:1.4;opacity:.6}
+.tb .seats2 circle{fill:var(--card);stroke:var(--muted);stroke-width:1.2;opacity:.75}
+.tb .seats2 circle.on{fill:var(--eat);stroke:var(--eat);opacity:1}
+.tb.bill .seats2 circle.on{fill:var(--bill);stroke:var(--bill)}
+.tb .px{font-weight:800;color:var(--ink)} .tb .px i{font-style:normal;color:var(--muted);font-weight:600}
+.tb .ts b{font-weight:800;color:var(--ink)}
 /* ===== v262 halls · category switcher ===== */
 .sppick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .spt{position:relative;min-height:96px;border-radius:18px;background:var(--card);border:2px solid var(--line);padding:14px;text-align:left;display:flex;flex-direction:column;justify-content:flex-end;box-shadow:var(--shadow)}

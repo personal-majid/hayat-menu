@@ -41,6 +41,13 @@ main{padding:12px 14px 40px}
 .it li small{font-size:13px;font-weight:500;color:var(--muted)}
 .ft{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;margin-top:auto}
 .done{border:0;background:var(--good);color:#fff;border-radius:10px;padding:12px 18px;font:700 18px "Jost",sans-serif}
+.st{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:11px 12px;font:700 16px "Jost",sans-serif} .st.go{background:#c27c12;border-color:#c27c12;color:#fff}
+.tmr b{font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+.tk .tno{font:800 34px "Jost",sans-serif;letter-spacing:-.5px} .tk .sec{font:600 14px "Jost",sans-serif;color:var(--muted);margin-left:8px}
+.tk .who{padding:4px 12px 0;font-size:15px;font-weight:600;color:var(--ink)}
+.knote{margin:8px 12px 0;padding:8px 10px;border-radius:8px;background:#fff3c4;color:#5a4300;font-weight:700;font-size:16px}
+.tag.ur{background:#c0392b;color:#fff} .tag.hl{background:#555;color:#fff} .tag.tr{background:repeating-linear-gradient(135deg,#e3a94e 0 8px,#f6e9d2 8px 16px);color:#3a2a00;font-weight:800}
+.tk.hold{opacity:.55;border-style:dashed} .tk.urg{border-color:#c0392b;box-shadow:0 0 0 2px #c0392b} .tk.trial{border-style:dashed}
 .empty{color:var(--muted);font-size:20px;text-align:center;padding:60px 0}
 .msg{max-width:640px;margin:60px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;font-size:17px}
 .msg a{color:var(--accent)}
@@ -100,23 +107,26 @@ let POPT=null; function pop(k){ const b=document.getElementById('popk')||documen
   b.className=k.cancel?'cx':''; b.innerHTML='<b>'+(k.cancel?'✕ CANCEL':'NEW KOT')+'</b><span>'+where+'</span><small>'+k.items.map(i=>i.q+'× '+i.n).slice(0,4).join(' · ')+'</small>'; b.hidden=false; clearTimeout(POPT); POPT=setTimeout(()=>{ b.hidden=true; },6000); b.onclick=()=>{ b.hidden=true; }; }
 const hm=ms=>new Date(ms+5.5*3600e3).toISOString().slice(11,16);
 
-let WEB=[], OPEN=[], DONE={}, META=null, FB=null, seen=new Set(), first=true, strike=new Set(JSON.parse(sessionStorage.getItem('kds-x')||'[]'));
+let TRIAL=[], KDSTRIAL=false, KST={}, WEB=[], OPEN=[], DONE={}, META=null, FB=null, seen=new Set(), first=true, strike=new Set(JSON.parse(sessionStorage.getItem('kds-x')||'[]'));
 /* the web counter: each KOT round, and each CANCEL ticket, as its own card */
 const kesc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));   /* web/captain orders carry typed notes: never raw HTML */
 function webOpen(){ const out=[], now=Date.now();
-  for(const o of WEB){ if(!o.kots||!o.kots.length||o.noKds) continue;   /* captain-app trial orders stay off the screen unless Settings says so */ const gone=o.status==='delivered'||o.status==='cancelled';
-    const items=[]; o.kots.forEach(k=>{ if(gone&&!(k.kind==='cancel'&&now-(k.at||0)<45*60000)) return; (k.lines||[]).forEach(l=>items.push({n:kesc(l.name+(l.label?' ('+l.label+')':'')),q:+l.q||0,t:k.at,cancel:k.kind==='cancel',reason:kesc(k.reason||''),round:k.n})); });
+  /* captain-app TRIAL orders show only when Setup → Settings → "Show trial orders on the kitchen screen" is on */
+  for(const o of WEB.concat(KDSTRIAL?TRIAL:[])){ if(!o.kots||!o.kots.length||(o.noKds&&!o.trial)) continue; const gone=o.status==='delivered'||o.status==='cancelled';
+    const items=[]; o.kots.forEach(k=>{ if(gone&&!(k.kind==='cancel'&&now-(k.at||0)<45*60000)) return; (k.lines||[]).forEach(l=>{ if(l.station==='none') return;   /* bottled drinks: the waiter brings them */
+      items.push({n:kesc(l.name+(l.label?' ('+l.label+')':'')),q:+l.q||0,t:k.at,cancel:k.kind==='cancel',reason:kesc(k.reason||''),round:k.n,note:kesc(k.note||''),hold:!!(k.hold&&!k.fireAt),fire:k.fireAt||0,pri:k.pri||''}); }); });
     if(!items.length) continue;
-    out.push({invoiceId:'w'+kesc(o.id),orderAt:o.at,items,table:kesc(o.table||''),section:o.mode==='dinein'?kesc(o.section||''):'',type:o.mode==='dinein'?'':'Parcel',token:kesc(o.token||''),taker:kesc(o.by||''),web:true}); }
+    out.push({invoiceId:'w'+kesc(o.id),orderAt:o.at,items,table:kesc(o.table||''),section:o.mode==='dinein'?kesc(o.section||''):'',type:o.mode==='dinein'?'':'Parcel',token:kesc(o.token||''),taker:kesc(String(o.by||'').replace(/^SIM · /,'')),pax:o.pax||0,trial:!!o.trial,web:true,src:o.source||''}); }
   return out; }
 function tickets(){ const mine=new Set(stations()), out=[];
   for(const o of OPEN.concat(webOpen())){ const base=tms(o.orderAt), groups={};
     for(const it of o.items||[]){ const st=station(it.n).filter(s=>mine.has(s)); if(!st.length) continue;
-      const t=tms(it.t)||base; const k=String(Math.round((t||0)/60000))+(it.cancel?'c':''); (groups[k]=groups[k]||{t,items:[],st:new Set(),cancel:!!it.cancel,reason:it.reason||'',round:it.round}).items.push(it); st.forEach(s=>groups[k].st.add(s)); }
+      const t=tms(it.t)||base; const k=String(Math.round((t||0)/60000))+(o.web&&it.round!=null&&!it.cancel?'r'+it.round:'')+(it.cancel?'c':'');   /* web/captain: one card per KOT round, even two rounds in the same minute */ (groups[k]=groups[k]||{t,items:[],st:new Set(),cancel:!!it.cancel,reason:it.reason||'',round:it.round,note:it.note||'',hold:!!it.hold,fire:it.fire||0,pri:it.pri||''}).items.push(it); st.forEach(s=>groups[k].st.add(s)); }
     const ks=Object.keys(groups).sort(); ks.forEach((k,idx)=>{ const g=groups[k], id=ST.screen+'_'+o.invoiceId+'_'+k;
       const mg={}; g.items.forEach(it=>{ const n=String(it.n).trim(); (mg[n]=mg[n]||{n,q:0}).q+=(+it.q||1); }); g.items=Object.values(mg);
-      if(DONE[id]) return; out.push({id,inv:o.invoiceId,round:k,addon:!g.cancel&&(idx>0||(g.t&&base&&g.t-base>60000)),t:g.t,items:g.items,st:[...g.st],o,cancel:g.cancel,reason:g.reason,kotN:g.round}); }); }
-  return out.sort((a,b)=>(a.t||0)-(b.t||0)); }
+      if(DONE[id]) return; out.push({id,inv:o.invoiceId,round:k,addon:!g.cancel&&(idx>0||(g.t&&base&&g.t-base>60000)),t:g.t,items:g.items,st:[...g.st],o,cancel:g.cancel,reason:g.reason,kotN:g.round,note:g.note,hold:g.hold,fire:g.fire,pri:g.pri}); }); }
+  /* urgent first, held KOTs last, then oldest first */
+  return out.sort((a,b)=>((b.pri==='urgent')-(a.pri==='urgent'))||((a.hold?1:0)-(b.hold?1:0))||((a.t||0)-(b.t||0))); }
 function render(){ const now=Date.now(), T=tickets();
   $('stName').textContent=SCREENS[ST.screen].n; $('count').textContent=T.length+' open';
   $('stTabs').innerHTML=Object.keys(SCREENS).map(k=>'<button aria-pressed="'+(k===ST.screen)+'" data-k="'+k+'">'+SCREENS[k].n+'</button>').join('');
@@ -125,15 +135,26 @@ function render(){ const now=Date.now(), T=tickets();
   let fresh=0;
   $('main').innerHTML='<div class="grid">'+T.map(k=>{ const age=k.t?Math.max(0,(now-k.t)/60000):0, prep=Math.max(...k.st.map(s=>PREP[s]||5)), c=age<prep?'g':age<prep+5?'a':'r', o=k.o;
       if(!seen.has(k.id)){ seen.add(k.id); if(!first){ fresh++; pop(k); } }
-      const par=o.type==='Parcel', where=par?'🛍️ #'+(o.token||o.kot||''):(SEC[o.section]||o.section||'')+' '+(o.table||'');
-      return '<div class="tk '+(k.cancel?'cx':c)+'"><div class="hd"><span class="tb">'+where+'<small>'+(o.taker||'')+'</small></span><span class="age">'+Math.floor(age)+'′</span></div>'
-        +'<div class="tags">'+(k.cancel?'<span class="tag cx">✕ CANCEL'+(k.reason?' · '+k.reason:'')+'</span>':'')+(par?'<span class="tag par">Parcel · pack it</span>':'')+(k.addon?'<span class="tag add">+ Add-on</span>':'')+'<span class="tag">KOT'+(k.kotN&&!k.cancel?' #'+k.kotN:'')+' '+(k.t?hm(k.t):'')+'</span>'+(o.web?'<span class="tag">counter</span>':'')+'</div>'
+      const par=o.type==='Parcel', where=par?'🛍️ #'+(o.token||o.kot||''):(o.table?'<b class="tno">'+o.table+'</b>':'')+'<small class="sec">'+(SEC[o.section]||o.section||'')+'</small>';
+      const ks=KST[k.id]||{}, held=k.hold&&!k.cancel;
+      return '<div class="tk '+(k.cancel?'cx':held?'hold':c)+(k.pri==='urgent'?' urg':'')+(o.trial?' trial':'')+'"><div class="hd"><span class="tb">'+where+'</span><span class="age">'+Math.floor(age)+'′</span></div>'
+        +'<div class="who">'+(o.taker?'👤 '+o.taker:'')+(o.pax?' · 👥 '+o.pax:'')+'</div>'
+        +'<div class="tags">'+(o.trial?'<span class="tag tr">TRIAL · practice</span>':'')+(k.pri==='urgent'?'<span class="tag ur">⚡ URGENT</span>':k.pri==='norush'?'<span class="tag">🐢 no rush</span>':'')+(held?'<span class="tag hl">⏸ HOLD · wait for fire</span>':'')+(k.fire&&!held?'<span class="tag ur">🔥 FIRE NOW</span>':'')+(k.cancel?'<span class="tag cx">✕ CANCEL'+(k.reason?' · '+k.reason:'')+'</span>':'')+(par?'<span class="tag par">Parcel · pack it</span>':'')+(k.addon?'<span class="tag add">+ Add-on</span>':'')+'<span class="tag">KOT'+(k.kotN&&!k.cancel?' #'+k.kotN:'')+' '+(k.t?hm(k.t):'')+'</span>'+(o.web&&!o.src.match(/captain|sim/)?'<span class="tag">counter</span>':'')+'</div>'
+        +(k.note?'<div class="knote">📝 '+k.note+'</div>':'')
         +'<ul class="it">'+k.items.map((it,i)=>{ const x=strike.has(k.id+'#'+i); return '<li class="'+(x?'x':'')+'" data-s="'+k.id+'#'+i+'"><span class="q">'+(it.q||1)+'×</span><span>'+it.n+'</span></li>'; }).join('')+'</ul>'
-        +'<div class="ft"><span>target '+Math.round(prep)+' min</span><button class="done" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">✓ Done</button></div></div>'; }).join('')+'</div>'+recentHtml();
+        +'<div class="ft">'+(held?'<span>waiting for the waiter to fire</span>':ks.prepAt?'<span class="tmr">🔥 cooking <b>'+mmss(now-ks.prepAt)+'</b> / '+Math.round(prep)+' min</span>':ks.acceptAt?'<span class="tmr">👍 in queue <b>'+mmss(now-ks.acceptAt)+'</b></span><button class="st go" data-st="prep" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">🔥 Start</button>':'<span>target '+Math.round(prep)+' min</span><button class="st" data-st="acc" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">👍 Accept</button><button class="st go" data-st="prep" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">🔥 Start</button>')
+        +(held?'':'<button class="done" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">✓ Ready</button>')+'</div></div>'; }).join('')+'</div>'+recentHtml();
   $('main').querySelectorAll('li[data-s]').forEach(li=>li.onclick=()=>{ const s=li.dataset.s; strike.has(s)?strike.delete(s):strike.add(s); sessionStorage.setItem('kds-x',JSON.stringify([...strike])); li.classList.toggle('x'); });
   $('main').querySelectorAll('.done').forEach(b=>b.onclick=()=>bump(b.dataset.id,b.dataset.inv,b.dataset.r));
+  $('main').querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>kstate(b.dataset.id,b.dataset.inv,b.dataset.r,b.dataset.st));
   bindRecent(); if(fresh&&ST.sound) beep(); first=false; }
 let RECENT=[];
+const mmss=ms=>{ const s=Math.max(0,Math.round(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+/* accept (seen, in the queue) and start (cooking, own timer) - the waiter's phone shows both */
+async function kstate(id,inv,round,st){ const k=tickets().find(x=>x.id===id), now=Date.now(), cur=KST[id]||{};
+  const v=Object.assign({},cur,{screen:ST.screen,inv:Number(inv)||inv,round,at:(k&&k.t)||now,table:k?(k.o.table||null):null}); if(st==='acc') v.acceptAt=now; if(st==='prep'){ v.prepAt=now; if(!v.acceptAt) v.acceptAt=now; }
+  KST[id]=v; render(); try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'kds_state',id),v); }catch(e){ alert('Could not save: '+(e.code||e.message)); } }
+setInterval(()=>{ if(document.querySelector('.tmr')) render(); },15000);
 function recentHtml(){ return RECENT.length?'<div class="recent">Done just now: '+RECENT.slice(-5).reverse().map(r=>'<button data-u="'+r.id+'">↩ '+r.lab+'</button>').join('')+'</div>':''; }
 function bindRecent(){ document.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>unbump(b.dataset.u)); }
 async function bump(id,inv,round){ const k=tickets().find(x=>x.id===id); DONE[id]={local:true}; RECENT.push({id,lab:k?(k.o.type==='Parcel'?'Parcel #'+(k.o.token||''):(SEC[k.o.section]||'')+' '+(k.o.table||'')):id}); render();
@@ -166,10 +187,13 @@ setInterval(cleanBar,30000);
     const fail=e=>stop(e&&e.code==='permission-denied'?'<b>Not allowed.</b> This sign-in is not kitchen or office, or the latest firestore.rules are not published yet.':'<b>Could not reach Firebase.</b> '+(e&&(e.code||e.message)));
     fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ META=d.exists()?d.data():null; feed(); },fail);
     fs.onSnapshot(fs.query(fs.collection(db,'orders'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ WEB=snap.docs.map(d=>Object.assign({id:d.id},d.data())).filter(o=>o.source==='counter'||(o.kots&&o.kots.length)); render(); },()=>{});
-    fs.onSnapshot(fs.collection(db,'vm_open'),snap=>{ OPEN=snap.docs.map(d=>d.data()); const live=new Set(OPEN.map(o=>String(o.invoiceId)).concat(WEB.map(o=>'w'+o.id)));
+    fs.onSnapshot(fs.collection(db,'vm_open'),snap=>{ OPEN=snap.docs.map(d=>d.data()); const live=new Set(OPEN.map(o=>String(o.invoiceId)).concat(WEB.map(o=>'w'+o.id)).concat(TRIAL.map(o=>'w'+o.id)));
       Object.keys(DONE).forEach(id=>{ if(!live.has(id.split('_')[1])) delete DONE[id]; }); render(); },fail);
     const since=new Date(Date.now()-12*3600e3);
     fs.onSnapshot(fs.query(fs.collection(db,'kds'),fs.where('doneAt','>=',since)),snap=>{ snap.docs.forEach(d=>{ DONE[d.id]=d.data(); }); render(); },fail);
+    fs.onSnapshot(fs.query(fs.collection(db,'kds_state'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ snap.docs.forEach(d=>{ KST[d.id]=d.data(); }); render(); },()=>{});
+    let trialOff=null; fs.onSnapshot(fs.doc(db,'settings','captain'),d=>{ const on=!!(d.exists()&&d.data().kdsTrial); if(on===KDSTRIAL&&(trialOff||!on)) return; KDSTRIAL=on; if(trialOff){ trialOff(); trialOff=null; TRIAL=[]; }
+      if(on) trialOff=fs.onSnapshot(fs.query(fs.collection(db,'trial_orders'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ TRIAL=snap.docs.map(d=>Object.assign({id:d.id},d.data())); render(); },()=>{}); render(); },()=>{});
     fs.onSnapshot(fs.doc(db,'cleanplan','main'),d=>{ CPLAN=d.exists()&&d.data().tasks?Object.assign({},HayatClean.DEFAULT_PLAN,d.data()):HayatClean.DEFAULT_PLAN; cleanBar(); },()=>{});
     fs.onSnapshot(fs.query(fs.collection(db,'cleanlog'),fs.where('day','==',HayatClean.bizDate())),s=>{ CLOGS=s.docs.map(d=>d.data()); cleanBar(); },()=>{});
   };
