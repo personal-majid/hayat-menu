@@ -511,6 +511,20 @@ What that means, and what to say if it comes up:
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
 
+## v255 — slider-true running line · real forecast bars · tomorrow on Sales
+- runLine: "now" = NOW (slider), not Date.now(). While scrubbing, bills after the slider are drawn as a faint dotted line (.rlact) + key "what really came after".
+- hourly(): the axis includes the forecast still to come (no more capped ▲ boxes).
+- tmCard no longer needs FC; tmCardBig also on Sales (today) and its hour band shows without "full analysis". Test t-v255.
+
+## v254 — add-on alerts + add-ons in Live
+- alCheck snapshot per bill = {e:edits, k:kots, s:sum, q:item qty map}. Add-on = more KOTs or an item qty up, AND total up (voids never count). Toast "＋₹X ＋ add-on · table" (blue, class addon) with the items added.
+- AO log {billKey:[{at,d,items,n}]} kept in localStorage 'hayat-ao' for today only (per phone) — ₹ delta / items are known only for add-ons seen while the app was open.
+- New orders (Live) merges new bills + add-ons (AO log, else r.kots[1..] in the last 60 min → "items added", amount "—"). Header: "N new · ＋M add-ons ₹X · last hour". Test t-ao.
+
+## v253 — current hour tappable + unpaid vs yesterday
+- Sales by hour: forecast/current-hour bars carry data-h → tap opens hourCompare with a **Forecast** row (dashed amber) vs Today so far / Yesterday / last same weekday / avg. Works even when forecast tiles are hidden (Fh no longer needs FC).
+- Unpaid box: yUn = yesterday's non-staff bills ordered by this minute and still unpaid then → "▲/▼ ₹X vs yesterday this time".
+
 ## v252 — unpaid first · cleaner top boxes · soft curves · amount-first alerts · slider tucked away
 - Top boxes (.kpi.tb): Today so far (paid + unpaid, ▲/▼ vs yesterday at the same minute by ORDER time, paid · unpaid small) · Unpaid now (Dine / CO / Delivery / Staff, ₹ + count) · Forecast (still to come, next hour, ⚙) · Bills (now → ~forecast, avg → ~) · Next 10 min · Tomorrow.
 - hourCompare: today = paid + unpaid of that hour (split bar, unpaid hatched amber), "till HH" cumulative too; the unpaid part of a bar is tappable (data-h).
