@@ -482,7 +482,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v257';
+const BOARD='v258';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -505,9 +505,15 @@ const ORDER_WORDS=/^(co|c\/o|c\.o|d\.?m+\w*|hd|h\.d|cnt|cntr|counter|parcel|take
 const DELIV_WORDS=/^(d\.?m+\w*|hd|h\.d|deliver\w*|home ?del\w*|zomato|swiggy)\b/i;
 const staffNames=()=>new Set(Object.values((FLOOR&&FLOOR.staff)||{}).map(n=>String(n).trim().toUpperCase()).filter(Boolean));
 /* the ticket remark says who ate: "tan", "viva", "SOHAIL ALF" - staff food, in any section */
+const STAFF_MAX_CO=600;
+const nz=v=>v!=null&&String(v).trim()!==''&&String(v).trim().toLowerCase()!=='null';   /* VMENU writes the word null */
 const isStaff=r=>{ const rem=String(r.remarks||'').trim(); const w=rem.split(/\s+/)[0]||'';
-  if(rem&&!ORDER_WORDS.test(rem)){ if(staffNames().has(w.toUpperCase())) return true; if(/^[a-z]{2,14}$/i.test(rem)&&sum(r)<=STAFF_MAX) return true; if(/\bstaff\b/i.test(rem)) return true; }
-  /* a cashier bill is a counter sale to a customer - only the remark makes it staff food */
+  if(rem&&!ORDER_WORDS.test(rem)){ if(staffNames().has(w.toUpperCase())) return true; if(/\bstaff\b/i.test(rem)) return true;
+    if(/^[a-z]{2,14}$/i.test(rem)&&sum(r)<=STAFF_MAX) return true;
+    /* v258 (Majid): at the COUNTER a customer sale is noted CO / counter / parcel / DM…; any other note ("viv a", "tan", "sohail alf") is staff food.
+       Not when the note carries a phone number (a customer order) or the bill is too big for a staff meal. */
+    const k=r.kindRaw||r.kind; if(k==='counter'&&!/\d{6,}/.test(rem)&&/[a-z]/i.test(rem)&&sum(r)<=STAFF_MAX_CO) return true; }
+  /* no note on a counter bill = a customer sale */
   return false; };
 function prep(doc){ if(doc&&doc.records) Object.values(doc.records).forEach(r=>{ if(!r.kindRaw) r.kindRaw=r.kind; const dn=r.kindRaw!=='delivery'&&r.kindRaw!=='dine'&&DELIV_WORDS.test(String(r.remarks||'').trim()); r.viaNote=dn; r.kind=dn?'delivery':isStaff(r)?'staff':r.kindRaw; }); return doc; }
 
@@ -2176,7 +2182,7 @@ function drill(key){
   const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill'; box.dataset.k=key;
   const stay=mins(r.createdAt,r.settledAt||tsNow());
   box.innerHTML=`<div class="sheet"><h2>KOT ${esc(r.kot)} <span class="pill ${esc(r.kind)}">${esc(r.kind)}</span><button class="x" id="drillX">✕</button></h2>
-    <p class="sub">${esc(r.section||'')}${r.table?' · table '+esc(r.table):''}${r.token?' · token '+esc(r.token):''}${r.waiter?' · waiter '+esc(r.waiter):''}${r.pax?' · '+r.pax+' pax':''}${r.invoiceId?' · invoice '+r.invoiceId:''}${r.customer&&r.customer.name?' · '+esc(r.customer.name):''}${r.customer&&r.customer.phone?' '+esc(r.customer.phone):''}${r.rider?' · rider '+esc(r.rider):''}<br>${esc(r.status)} · ${stay!=null?stay+' min':''}${r.dueAt?' · order→bill '+mins(r.createdAt,r.dueAt)+'m':''}${r.settledAt&&r.dueAt?' · bill→paid '+mins(r.dueAt,r.settledAt)+'m':''} · total ${rs(sum(r))}${r.remarks?'<br>“'+esc(r.remarks)+'”':''}</p>
+    <p class="sub">${esc(r.section||'')}${r.table?' · table '+esc(r.table):''}${r.token?' · token '+esc(r.token):''}${r.waiter?' · waiter '+esc(r.waiter):''}${r.pax?' · '+r.pax+' pax':''}${r.invoiceId?' · invoice '+r.invoiceId:''}${r.customer&&nz(r.customer.name)?' · '+esc(r.customer.name):''}${r.customer&&nz(r.customer.phone)?' '+esc(r.customer.phone):''}${r.rider?' · rider '+esc(r.rider):''}<br>${esc(r.status)} · ${stay!=null?stay+' min':''}${r.dueAt?' · order→bill '+mins(r.createdAt,r.dueAt)+'m':''}${r.settledAt&&r.dueAt?' · bill→paid '+mins(r.dueAt,r.settledAt)+'m':''} · total ${rs(sum(r))}${r.remarks?'<br>“'+esc(r.remarks)+'”':''}</p>
     <div class="lgbar">${sum(r)>0?lgButton(r):''}<small>Large order = catering / bulk. Stays in sales &amp; cash, left out of hour averages and forecast.</small></div>
     <div class="tl">${ev.map((e,i)=>`<div class="ev ${e.cls}"><span class="at">${hm(e.at)}</span><b>${e.title}</b>${i?`<span class="gap">+${mins(ev[i-1].at,e.at)} min</span>`:''}${e.body}</div>`).join('')}</div>
     <p class="note">First seen in log ${esc(r.seen||'')} · last change ${esc(r.updated||'')}</p></div>`;
@@ -2335,7 +2341,7 @@ function buildMonth(m,days,docs){
   S.items=itemsOf(all); S.v=SNAP_V;
   return S;
 }
-const SNAP_V=5;   /* 4: spend lines grouped Goods / Salary / Running costs by line name · 5: DM-note bills are deliveries, not staff food */
+const SNAP_V=6;   /* 4: spend lines grouped Goods / Salary / Running costs by line name · 5: DM-note bills are deliveries, not staff food */
 let LASTBUILD=null;   /* the day docs the last snapshot was built from: reuse, do not reload */
 async function monthDoc(m,force){
   const cur=m===bizToday().slice(0,7), {fs,db}=FB, ref=fs.doc(db,'vm_months',m);
