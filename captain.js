@@ -17,6 +17,7 @@
 (function(){
 'use strict';
 var C = window.CONFIG || {};
+var SETUP = !!window.HAYAT_SETUP;   /* setup.html: the office's Staff / Tables / Menu / Settings / Trial / Usage - not for the floor */
 var $ = function(id){ return document.getElementById(id); };
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function rs(n){ n = Math.round(+n || 0); return (n < 0 ? '−' : '') + '₹' + Math.abs(n).toLocaleString('en-IN'); }
@@ -58,6 +59,9 @@ window.CAPTAIN = S;   /* tests + console */
 window.CAPTAIN_MENU = function(){ return BYID; };
 
 function ref(c, id){ return S.F.doc(S.D, c, id); }
+/* TRIAL: bills, cleaning and table locks live in trial_* collections, apart from the website's real orders.
+   The owner app reads only VMENU's vm_* data, so nothing here ever mixes with the real sales. */
+function C_(n){ return isTrial() ? 'trial_' + n : n; }
 function col(c){ return S.F.collection(S.D, c); }
 function saveDraft(){ lsSet('hayat-cap-draft', S.draft); }
 function cfg(k, d){ return S.cfg[k] == null ? d : S.cfg[k]; }
@@ -65,6 +69,7 @@ function isTrial(){ return cfg('trial', true) !== false; }
 
 /* ---------------- toasts + sound ---------------- */
 function toast(msg, kind, sub){
+  if(kind === 'bad') try{ ux('err', { m:String(msg).replace(/<[^>]+>/g, '').slice(0, 60) }); }catch(e){}
   var box = $('toasts'); var el = document.createElement('div');
   el.className = 'toast' + (kind ? ' ' + kind : ''); el.innerHTML = msg + (sub ? '<small>' + sub + '</small>' : '');
   el.onclick = function(){ el.remove(); };
@@ -351,20 +356,24 @@ async function sendKot(tid){
   var adds = draftOf(tid).filter(function(l){ return l.q > 0; }).map(function(l){ return clean({ k:l.k, id:l.id, name:l.name, label:l.note ? (l.label ? l.label + ' · ' : '') + l.note : l.label, price:l.price, q:l.q, vn:l.vn || undefined, kit:l.kit || undefined }); });
   if(!adds.length){ toast('Nothing new to send', 'bad'); return; }
   if(!S.online){ toast('No internet', 'bad', 'the KOT needs internet to reach the kitchen'); return; }
+  /* a send id saved WITH the draft: if the phone refreshes mid-send and the waiter taps again, the bill
+     already holds a KOT with this id and nothing goes to the kitchen twice */
+  var dd = S.draft[tid]; if(!dd.sid){ dd.sid = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); saveDraft(); } var sid = dd.sid;
   SENDING[tid] = true; render();
   var now = Date.now(), me = who(), round = 1, saved;
-  var lockRef = ref('tablelock', t.id), local = openOrder(t);
+  var lockRef = ref(C_('tablelock'), t.id), local = openOrder(t);
   try{
     saved = await S.F.runTransaction(S.D, async function(tx){
       var lk = await tx.get(lockRef), oid = (lk.exists() && lk.data().oid) || (local && local.id) || null, cur = null, r = null;
-      if(oid){ r = ref('orders', oid); var sn = await tx.get(r); if(sn.exists() && !closed(sn.data())) cur = sn.data(); }
+      if(oid){ r = ref(C_('orders'), oid); var sn = await tx.get(r); if(sn.exists() && !closed(sn.data())) cur = sn.data(); }
+      if(cur && (cur.kots || []).some(function(k){ return k.sid === sid; })) return Object.assign({}, cur, { id:oid, __dup:true });
       if(!cur){
-        var id = orderId(), nr = ref('orders', id), ex = await tx.get(nr); if(ex.exists()){ id = orderId() + 'X'; nr = ref('orders', id); }
+        var id = orderId(), nr = ref(C_('orders'), id), ex = await tx.get(nr); if(ex.exists()){ id = orderId() + 'X'; nr = ref(C_('orders'), id); }
         var o = clean({ id:id, at:now, status:'accepted', log:[{ s:'placed', at:now }, { s:'accepted', at:now, by:me }], source:'captain', mode:'dinein', kind:'dine',
           table:t.name, tableId:t.id, space:t.space, section:t.spaceName, pax:(S.draft[tid] && S.draft[tid].pax) || null,
           by:me, byRole:S.me.role, crew:S.me.id, custUid:(S.ctx.user && S.ctx.user.uid) || '', day:bizDay(now),
           lines:adds.map(function(a){ return Object.assign({}, a, { at:now, by:me, rounds:[{ n:1, q:a.q, at:now, by:me }] }); }),
-          kots:[{ n:1, kind:'kot', at:now, by:me, lines:adds.map(function(a){ return { k:a.k, name:a.name, label:a.label || '', q:a.q, station:station(a) }; }) }],
+          kots:[{ n:1, kind:'kot', at:now, by:me, sid:sid, lines:adds.map(function(a){ return { k:a.k, name:a.name, label:a.label || '', q:a.q, station:station(a) }; }) }],
           kotN:1, edits:[], total:linesTotal(adds), discount:null, tip:0, trial:isTrial(), noKds:isTrial() && !cfg('kdsTrial', false) });
         tx.set(nr, o); tx.set(lockRef, { oid:id, at:now, table:t.name }); round = 1;
         return o;
@@ -374,17 +383,19 @@ async function sendKot(tid){
       adds.forEach(function(a){ var l = lines.filter(function(z){ return z.k === a.k; })[0];
         if(l){ l.q += a.q; l.rounds.push({ n:round, q:a.q, at:now, by:me }); }
         else lines.push(Object.assign({}, a, { at:now, by:me, rounds:[{ n:round, q:a.q, at:now, by:me }] })); });
-      var kots = (cur.kots || []).concat([{ n:round, kind:'kot', at:now, by:me, lines:adds.map(function(a){ return { k:a.k, name:a.name, label:a.label || '', q:a.q, station:station(a) }; }) }]);
+      var kots = (cur.kots || []).concat([{ n:round, kind:'kot', at:now, by:me, sid:sid, lines:adds.map(function(a){ return { k:a.k, name:a.name, label:a.label || '', q:a.q, station:station(a) }; }) }]);
       var patch = clean({ lines:lines, kots:kots, kotN:round, total:money(Object.assign({}, cur, { lines:lines })).total, editedAt:now, dueAt:null });
       tx.update(r, patch); if(!lk.exists() || lk.data().oid !== oid) tx.set(lockRef, { oid:oid, at:now, table:t.name });
       return Object.assign({}, cur, patch, { id:oid });
     });
   }catch(e){ SENDING[tid] = false; toast('KOT not sent', 'bad', esc(e && e.message || e)); render(); return; }
   SENDING[tid] = false;
-  S.orders[saved.id] = saved;
-  bumpPop(adds);
+  var dup = saved.__dup; delete saved.__dup;
+  S.orders[saved.id] = saved; setMode(t, 'bill');
+  bumpPop(adds); ux('kot', { round:round, items:adds.reduce(function(n, a){ return n + a.q; }, 0), ms:dd && dd.at ? Date.now() - dd.at : undefined, dup:dup || undefined });
   /* take off only what was sent - dishes tapped while it was sending stay in the draft */
-  var d = S.draft[tid]; if(d){ taken.forEach(function(x){ var l = d.lines.filter(function(z){ return z.k === x.k; })[0]; if(l) l.q -= x.q; }); d.lines = d.lines.filter(function(l){ return l.q > 0; }); if(!d.lines.length) delete S.draft[tid]; saveDraft(); }
+  var d = S.draft[tid]; if(d){ delete d.sid; taken.forEach(function(x){ var l = d.lines.filter(function(z){ return z.k === x.k; })[0]; if(l) l.q -= x.q; }); d.lines = d.lines.filter(function(l){ return l.q > 0; }); if(!d.lines.length) delete S.draft[tid]; saveDraft(); }
+  if(dup){ toast('Already sent ✓', 'good', 'this KOT reached the kitchen before the phone refreshed'); render(); return; }
   var printed = await printKot(saved, adds, round, false);
   toast('KOT ' + round + ' sent · ' + adds.reduce(function(n, a){ return n + a.q; }, 0) + ' item' + (adds.length > 1 || adds[0].q > 1 ? 's' : ''), 'good', esc(t.name) + (printed ? ' · printing in the kitchen' : canPrint() ? '' : ' · kitchen printer not set up'));
   vib([12, 40, 12]);
@@ -394,7 +405,7 @@ async function sendKot(tid){
 /* every change to a running bill goes through a transaction that refuses a bill already closed
    on another phone - a payment can never overwrite a cancel, a void never edits a paid bill */
 function txOrder(oid, fn){
-  var r = ref('orders', oid);
+  var r = ref(C_('orders'), oid);
   return S.F.runTransaction(S.D, async function(tx){
     var sn = await tx.get(r); if(!sn.exists()) throw new Error('bill not found');
     var cur = Object.assign({}, sn.data(), { id:oid }); if(closed(cur)) throw new Error('this bill was already ' + (cur.status === 'cancelled' ? 'cancelled' : 'paid') + ' on another phone');
@@ -416,7 +427,7 @@ async function voidLine(oid, k, qty, reason){
         total:money(Object.assign({}, cur, { lines:lines })).total, editedAt:now };
     });
   }catch(e){ fail('Not removed', e); return; }
-  S.orders[oid] = o2;
+  S.orders[oid] = o2; ux('void', { name:out.l.name, q:qty, reason:reason });
   printKot(o2, [out.l], out.n, true, reason);
   toast('Removed ' + qty + '× ' + esc(out.l.name), '', 'cancel ticket ' + (canPrint() ? 'sent to the kitchen' : 'saved'));
   render();
@@ -426,7 +437,7 @@ async function dueBill(oid){
   var now = Date.now(), o;
   try{ o = await txOrder(oid, function(cur){ return { dueAt:now, dueCount:(cur.dueCount || 0) + 1, total:money(cur).total, log:(cur.log || []).concat([{ s:'due', at:now, by:who() }]) }; }); }
   catch(e){ fail('Bill not saved', e); return; }
-  S.orders[oid] = o;
+  S.orders[oid] = o; ux('due', { n:o.dueCount });
   var p = await printBill(o);
   toast((o.dueCount > 1 ? 'Bill printed again · ' : 'Bill · ') + rs(money(o).total), 'good', p ? 'printing at the counter' : canPrint() ? 'bill printing is off in Settings' : 'printer not set up - show the bill on this phone');
   render(); paySheet(oid);
@@ -457,11 +468,11 @@ async function moveTable(oid, toId){
   var now = Date.now(), from = o.tableId, fresh;
   try{
     fresh = await S.F.runTransaction(S.D, async function(tx){
-      var r = ref('orders', oid), to = ref('tablelock', t.id), sn = await tx.get(r), lk = await tx.get(to);
+      var r = ref(C_('orders'), oid), to = ref(C_('tablelock'), t.id), sn = await tx.get(r), lk = await tx.get(to);
       if(!sn.exists() || closed(sn.data())) throw new Error('bill already closed');
-      if(lk.exists() && lk.data().oid && lk.data().oid !== oid){ var other = await tx.get(ref('orders', lk.data().oid)); if(other.exists() && !closed(other.data())) throw new Error(t.name + ' was just taken'); }
+      if(lk.exists() && lk.data().oid && lk.data().oid !== oid){ var other = await tx.get(ref(C_('orders'), lk.data().oid)); if(other.exists() && !closed(other.data())) throw new Error(t.name + ' was just taken'); }
       var cur = sn.data(), patch = clean({ table:t.name, tableId:t.id, space:t.space, section:t.spaceName, moves:(cur.moves || []).concat([{ at:now, by:who(), from:cur.table, to:t.name }]) });
-      tx.update(r, patch); tx.set(to, { oid:oid, at:now, table:t.name }); if(from) tx.set(ref('tablelock', from), { oid:null, at:now });
+      tx.update(r, patch); tx.set(to, { oid:oid, at:now, table:t.name }); if(from) tx.set(ref(C_('tablelock'), from), { oid:null, at:now });
       return Object.assign({}, cur, patch, { id:oid });
     });
   }catch(e){ fail('Not moved', e); return; }
@@ -480,7 +491,7 @@ async function cancelBill(oid, reason){
 }
 async function setPax(tid, n){
   n = Math.max(1, Math.min(40, n)); var t = tableById(tid), o = t && openOrder(t);
-  if(o){ o.pax = n; try{ await S.F.updateDoc(ref('orders', o.id), { pax:n }); }catch(e){} }
+  if(o){ o.pax = n; try{ await S.F.updateDoc(ref(C_('orders'), o.id), { pax:n }); }catch(e){} }
   else { S.draft[tid] = S.draft[tid] || { lines:[] }; S.draft[tid].pax = n; saveDraft(); }
   render();
 }
@@ -490,7 +501,7 @@ async function requestClean(tid, kind, urgency, note, quiet){
   var t = tableById(tid); if(!t) return;
   var id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), now = Date.now();
   var c = clean({ id:id, table:t.name, tableId:t.id, space:t.space, spaceName:t.spaceName, kind:kind, urgency:urgency, note:note || '', by:who(), byRole:S.me.role, at:now, status:'open', day:bizDay(now) });
-  try{ await S.F.setDoc(ref('cleanreq', id), c); S.clean[id] = c; }catch(e){ toast('Request not sent', 'bad', esc(e.message || e)); return; }
+  try{ await S.F.setDoc(ref(C_('cleanreq'), id), c); S.clean[id] = c; }catch(e){ toast('Request not sent', 'bad', esc(e.message || e)); return; }
   if(!quiet) toast('🧹 Cleaner called · ' + esc(t.name), 'clean', kindName(kind) + (urgency === 'urgent' ? ' · URGENT' : ''));
   render();
 }
@@ -499,7 +510,7 @@ async function cleanStep(id, to){
   if(to === 'taken'){ patch.takenBy = who(); patch.takenAt = now; }
   if(to === 'done'){ patch.doneBy = who(); patch.doneAt = now; if(!c.takenAt){ patch.takenAt = now; patch.takenBy = who(); } }
   if(to === 'cancelled'){ patch.cancelBy = who(); patch.cancelAt = now; }
-  try{ await S.F.updateDoc(ref('cleanreq', id), patch); Object.assign(c, patch); }catch(e){ toast('Not saved', 'bad', esc(e.message || e)); return; }
+  try{ await S.F.updateDoc(ref(C_('cleanreq'), id), patch); Object.assign(c, patch); }catch(e){ toast('Not saved', 'bad', esc(e.message || e)); return; }
   if(to === 'done') toast('✓ ' + esc(c.table) + ' is clean', 'good');
   render();
 }
@@ -526,18 +537,18 @@ function navItems(){
   var r = S.me ? S.me.role : '';
   if(r === 'cleaner') return [['clean','Clean',IC.clean], ['floor','Tables',IC.tables]];
   var n = [['floor','Tables',IC.tables], ['bills','Bills',IC.bills], ['clean','Clean',IC.clean]];
-  if(r === 'office') n.push(['admin','Admin',IC.admin]);
   return n;
 }
 function topBar(){
   var openC = Object.values(S.clean).filter(function(c){ return c.status === 'open' || c.status === 'taken'; }).length;
-  return '<header class="top"><div class="brand">Hayat<small>' + esc(ROLES[S.me.role] || 'Captain') + '</small></div>' +
+  return '<header class="top"><div class="brand">Hayat<small>' + (SETUP ? 'Setup' : esc(ROLES[S.me.role] || 'Captain')) + '</small></div>' +
     (isTrial() ? '<span class="pill trial" title="Bills here are a trial: the owner app still counts VMENU">TRIAL</span>' : '') +
     '<span class="sp"></span><span class="pill"><i class="dot' + (S.online ? '' : ' off') + '"></i>' + (S.online ? 'live' : 'offline') + '</span>' +
     '<button class="me" data-a="me">' + '<span>' + esc(S.me.name) + '</span>' + avatar(S.me.name) + '</button></header>' +
     (openC && S.view !== 'clean' && S.me.role === 'cleaner' ? '' : '');
 }
 function nav(){
+  if(SETUP) return '';
   var openC = Object.values(S.clean).filter(function(c){ return c.status === 'open'; }).length;
   var due = Object.values(S.orders).filter(function(o){ return !closed(o) && o.dueAt && !o.paid; }).length;
   return '<nav class="nav">' + navItems().map(function(n){
@@ -548,28 +559,29 @@ function nav(){
 function softRender(){
   var ae = document.activeElement;
   if(S.view === 'admin' && (S.adminDirty || (ae && /INPUT|SELECT|TEXTAREA/.test(ae.tagName)))) return;
-  if(S.view === 'order' && ae && ae.id === 'q'){   /* the captain is typing: keep the field (and the keyboard), refresh only the bill */
-    var t = curTable(); if(!t) return; var bc = $('billcol'); if(bc) bc.innerHTML = billHtml(t);
-    var ob = document.querySelector('#dock .ordbar'); if(ob){ var tmp = document.createElement('div'); tmp.innerHTML = orderDock(); var nb = tmp.querySelector('.ordbar'); if(nb) ob.replaceWith(nb); }
-    if(S.refresh) try{ S.refresh(); }catch(e){} return; }
+  if(S.view === 'order' && ae && ae.id === 'q'){ orderRefresh(); return; }   /* the captain is typing: keep the field (and the keyboard) */
   render(); }
+var LASTV = '';
 function render(){
   var app = $('app'); if(!app) return;
+  if(S.me && S.view + '|' + (S.table || '') !== LASTV){ LASTV = S.view + '|' + (S.table || ''); ux('view'); }
+  if(SETUP && S.me){ S.view = 'admin'; }
   var a = document.activeElement, keep = a && a.id && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') ? { id:a.id, s:a.selectionStart, e:a.selectionEnd } : null;
   if(!S.me){ app.innerHTML = loginView(); }
   else {
+    if(S.view === 'spaces'){ app.innerHTML = spacesView(); return; }
     var body = S.view === 'order' ? orderView() : S.view === 'bills' ? billsView() : S.view === 'clean' ? cleanView() : S.view === 'admin' ? adminView() : floorView();
     app.innerHTML = (S.online ? '' : '<div class="offline">No internet · KOTs and payments wait until it is back</div>') + topBar() + '<main id="main">' + body + '</main>' + (S.view === 'order' ? orderDock() : nav());
   }
   document.body.classList.toggle('inorder', !!(S.me && S.view === 'order'));
-  dockSize();
+  dockSize(); if(S.me) saveUI();
   if(keep){ var el = $(keep.id); if(el){ el.focus(); try{ el.setSelectionRange(keep.s, keep.e); }catch(e){} } }
   if(S.refresh) try{ S.refresh(); }catch(e){}
 }
 
 /* ---------------- login ---------------- */
 function loginView(){
-  var P = S.people.filter(function(p){ return !p.off && APP_ROLES.indexOf(p.role || 'office') >= 0; });
+  var P = S.people.filter(function(p){ return !p.off && (SETUP ? (p.role || 'office') === 'office' : APP_ROLES.indexOf(p.role || 'office') >= 0); });
   if(S.pinFor){
     var p = S.pinFor;
     return '<div class="login"><div class="hero">' + avatar(p.name, 'big') + '<h2 style="margin:10px 0 2px">' + esc(p.name) + '</h2><div class="muted">' + esc(ROLES[p.role || 'office'] || '') + ' · enter your code</div></div>' +
@@ -583,7 +595,7 @@ function loginView(){
   return '<div class="login"><div class="hero"><div class="brand">Hayat<small>Captain</small></div><p class="muted" style="margin:10px 0 0">Who is using this phone?</p></div>' +
     (roles.length > 1 ? '<div class="chips" style="justify-content:center"><button class="chip' + (S.roleF ? '' : ' on') + '" data-a="rolef" data-r="">Everyone</button>' + roles.map(function(r){ return '<button class="chip' + (S.roleF === r ? ' on' : '') + '" data-a="rolef" data-r="' + r + '">' + ROLES[r] + 's</button>'; }).join('') + '</div>' : '') +
     (P.length ? '<div class="people">' + shown.map(function(p){ return '<button class="person" data-a="pick" data-id="' + esc(p.id) + '">' + avatar(p.name, 'big') + '<span>' + esc(p.name) + '<br><small>' + esc(ROLES[p.role || 'office'] || p.role) + '</small></span></button>'; }).join('') + '</div>'
-      : '<div class="card"><h2>No staff yet</h2><p class="sub">The office adds people and codes. Sign in as office from the website once, or ask Majid.</p></div>') +
+      : '<div class="card"><h2>No staff yet</h2><p class="sub">Owner app → More → 👥 Staff → add people with a code.</p></div>') +
     '</div>';
 }
 async function verify(p, code){
@@ -600,7 +612,7 @@ async function pinKey(k){
   var p = S.pinFor, ok = await verify(p, S.pin);
   if(!ok){ S.pin = ''; render(); var e2 = $('pin'); if(e2) e2.classList.add('err'); vib([40, 40, 40]); toast('That code did not work', 'bad'); return; }
   S.me = { id:p.id, name:p.name, role:p.role || 'office' }; lsSet('hayat-cap-me', S.me);
-  S.pin = ''; S.pinFor = null; S.view = S.me.role === 'cleaner' ? 'clean' : 'floor';
+  S.pin = ''; S.pinFor = null; if(SETUP){ S.view = 'admin'; toast('Hello ' + esc(p.name.split(' ')[0]) + ' 👋', 'good'); render(); return; } S.view = S.me.role === 'cleaner' ? 'clean' : (mySpaces() || S.me.role === 'office' ? 'floor' : 'spaces'); S.space = mySpaces() ? 'mine' : 'all';
   toast('Hello ' + esc(p.name.split(' ')[0]) + ' 👋', 'good'); render();
 }
 
@@ -612,12 +624,13 @@ function floorView(){
   var seats = T.reduce(function(n, t){ return n + (t.seats || 0); }, 0), used = busy.reduce(function(n, x){ return n + (x[1].o.pax || x[0].seats || 0); }, 0);
   var sp = floor().spaces;
   var mineOk = function(x){ return !S.mine || (x[1].o && x[1].o.crew === S.me.id) || draftCount(x[0].id); };
+  var MS = mySpaces() || [];
   var head = '<div class="sum"><div><small>Tables</small><b>' + busy.length + '<span class="muted" style="font-size:13px">/' + T.length + '</span></b></div><div><small>Running</small><b>' + (run >= 100000 ? (run / 100000).toFixed(2) + 'L' : rs(run)) + '</b></div><div><small>Bill due</small><b>' + billed + '</b></div><div><small>Cleaning</small><b>' + cl + '</b></div></div>' +
-    '<div class="chips"><button class="chip' + (S.space === 'all' ? ' on' : '') + '" data-a="space" data-s="all">All<small>' + busy.length + '/' + T.length + '</small></button>' +
+    '<div class="chips spchips">' + (MS.length ? '<button class="chip' + (S.space === 'mine' ? ' on' : '') + '" data-a="space" data-s="mine">My halls<small>' + MS.map(function(id){ var z = sp.filter(function(q){ return q.id === id; })[0]; return z ? z.name : ''; }).join(' + ') + '</small></button>' : '') + '<button class="chip' + (S.space === 'all' ? ' on' : '') + '" data-a="space" data-s="all">All<small>' + busy.length + '/' + T.length + '</small></button>' +
     sp.map(function(s){ var n = (s.tables || []).length, b = st.filter(function(x){ return x[0].space === s.id && x[1].o; }).length; return '<button class="chip' + (S.space === s.id ? ' on' : '') + '" data-a="space" data-s="' + esc(s.id) + '">' + esc(s.name) + '<small>' + b + '/' + n + '</small></button>'; }).join('') +
-    '<button class="chip' + (S.mine ? ' on' : '') + '" data-a="mine">★ Mine</button></div>' +
+    '<button class="chip' + (S.mine ? ' on' : '') + '" data-a="mine">★ My bills</button><button class="chip" data-a="sppick">✎ Halls</button></div>' +
     attnHtml() + '<div class="legend"><span><i style="background:var(--free)"></i>Free</span><span><i style="background:var(--eat)"></i>Eating</span><span><i style="background:var(--bill)"></i>Bill given</span><span><i style="background:var(--clean)"></i>Cleaning</span><span class="muted">' + used + '/' + seats + ' seats</span></div>';
-  var body = sp.filter(function(s){ return S.space === 'all' || S.space === s.id; }).map(function(s){
+  var body = sp.filter(function(s){ return S.space === 'all' || S.space === s.id || (S.space === 'mine' && (MS.indexOf(s.id) >= 0 || !MS.length)); }).map(function(s){
     var rows = st.filter(function(x){ return x[0].space === s.id && mineOk(x); });
     if(!rows.length) return '';
     var b = rows.filter(function(x){ return x[1].o; });
@@ -670,23 +683,13 @@ function suggestions(t){
 }
 function hlab(h){ return (h % 12 || 12) + (h < 12 ? 'am' : 'pm'); }
 function sugHtml(t){
-  var L = suggestions(t); if(!L.length) return '';
+  var L = suggestions(t); if(!L.length) return '<div class="sugs" id="sugs"><span class="sugph">Smart picks show here as the order grows</span></div>';   /* the row is always there: no jump when the first suggestion arrives */
   return '<div class="sugs" id="sugs">' + L.map(function(s, n){
     if(s.repeat) return '<button class="sug rep" data-a="rep" data-n="' + s.repeat.n + '">↻ <b>Repeat ' + esc(s.why) + '</b><small>' + s.repeat.lines.reduce(function(a, l){ return a + l.q; }, 0) + ' items</small></button>';
     var c = s.x.ch[s.i] || s.x.ch[0];
     return '<button class="sug ' + s.cls + '" data-a="sug" data-id="' + esc(s.x.id) + '" data-i="' + s.i + '" data-q="' + s.q + '">' + (s.q > 1 ? '<i>' + s.q + '×</i> ' : '+ ') + '<b>' + esc(s.x.name) + (c.label ? ' ' + esc(short(c.label)) : '') + '</b><small>' + rs(c.price * s.q) + ' · ' + esc(s.why) + '</small></button>';
   }).join('') + '</div>';
 }
-function orderView(){
-  var t = curTable(); if(!t){ S.view = 'floor'; return floorView(); }
-  var s = tstate(t), o = s.o, pax = (o && o.pax) || (S.draft[t.id] && S.draft[t.id].pax) || 0;
-  var sub = esc(t.spaceName) + ' · ' + t.seats + ' seats' + (o ? ' · ' + ago(o.at) + (o.by ? ' · ' + esc(o.by) : '') : '');
-  var head = '<div class="ohead"><div class="tt"><b>Table ' + esc(t.name) + '</b><small>' + sub + '</small></div>' +
-    '<div class="pax"><button data-a="pax" data-d="-1" aria-label="fewer guests">−</button><span>👥 ' + (pax || '–') + '</span><button data-a="pax" data-d="1" aria-label="more guests">+</button></div><button class="more" data-a="tmenu" aria-label="table options">⋯</button></div>';
-  var banner = s.st === 'clean' ? '<div class="card" style="border-color:var(--clean);background:var(--cleanwash)"><b>' + kindIc(s.c.kind) + ' ' + esc(kindName(s.c.kind)) + '</b> asked ' + agoT(s.c.at) + ' by ' + esc(s.c.by) + (s.c.status === 'taken' ? ' · <b>' + esc(s.c.takenBy) + '</b> is on it' : '') + '<div class="row" style="margin-top:8px;display:flex;gap:8px"><button class="btn" data-a="cdone" data-id="' + esc(s.c.id) + '">✓ Table is clean</button></div></div>' : '';
-  return '<div class="ord"><div>' + head + banner + '<div id="items">' + itemsHtml(t) + '</div></div><aside class="billcol" id="billcol">' + billHtml(t) + '</aside></div>';
-}
-function catsHtml(){ return '<div class="chips cats" id="cats"' + (S.q ? ' style="display:none"' : '') + '><button class="chip' + (!S.cat ? ' on' : '') + '" data-a="cat" data-c="">★ Now</button>' + MENU.map(function(c){ return '<button class="chip' + (S.cat === c.id ? ' on' : '') + '" data-a="cat" data-c="' + esc(c.id) + '">' + esc(c.name) + '</button>'; }).join('') + '</div>'; }
 function itemHtml(x, chs, D, best){
   var qOf = function(label){ return D.filter(function(l){ return l.id === x.id && l.label === label; }).reduce(function(n, l){ return n + l.q; }, 0); };
   chs = chs || x.ch.map(function(c, i){ return i; });
@@ -694,17 +697,6 @@ function itemHtml(x, chs, D, best){
   var groups = []; chs.forEach(function(i){ var c = x.ch[i], p = String(c.label).split(' · '), g = p.length > 1 ? p[0] : ''; var G = groups.filter(function(z){ return z.g === g; })[0]; if(!G) groups.push(G = { g:g, b:[] });
     var n = qOf(c.label); G.b.push('<button class="sz' + (n ? ' has' : '') + (best && chs.length === 1 ? ' hit' : '') + '" data-a="add" data-lp="qty" data-id="' + esc(x.id) + '" data-i="' + i + '" title="' + esc(c.label) + '"><b>' + esc(p.length > 1 ? short(p[1]) : short(c.label)) + '</b><span>' + rs(c.price) + '</span>' + (n ? '<span class="q">' + n + '</span>' : '') + '</button>'); });
   return '<div class="it' + (best ? ' best' : '') + '"><div class="nm">' + esc(x.name) + (x.sub ? '<small>' + esc(x.sub) + '</small>' : '') + '</div>' + groups.map(function(G){ return '<div class="szr">' + (G.g ? '<small>' + esc(G.g) + '</small>' : '') + '<div class="szs">' + G.b.join('') + '</div></div>'; }).join('') + '</div>';
-}
-function itemsHtml(t){
-  var D = draftOf(t.id), q = S.q.trim();
-  if(q){ var R = searchMenu(q); S.best = R[0] || null;
-    if(!R.length) return '<div class="empty"><b>🔎</b>Nothing matches “' + esc(S.q) + '”.<br><small>Try the first letters: <b>cm f</b> = Chicken Mandi Full</small></div>';
-    return '<div class="sec-t">' + R.length + ' found' + (R[0].chs.length === 1 || R[0].x.ch.length === 1 ? ' · Enter adds the first' : '') + '</div><div class="items">' + R.map(function(r, i){ return itemHtml(r.x, r.sz ? r.chs : null, D, i === 0); }).join('') + '</div>'; }
-  S.best = null;
-  var list, title = '';
-  if(S.cat){ var c = MENU.filter(function(z){ return z.id === S.cat; })[0]; list = c ? c.items.map(function(it){ return BYID[it.id]; }).filter(Boolean) : []; title = c ? c.name : ''; }
-  else { list = hotNow(16); title = 'Selling now · ' + hlab(nowHour()); }
-  return (title ? '<div class="sec-t">' + esc(title) + '</div>' : '') + '<div class="items">' + list.map(function(x){ return itemHtml(x, null, D); }).join('') + '</div>';
 }
 function billHtml(t){
   var s = tstate(t), o = s.o, D = draftOf(t.id), L = o ? live(o) : [];
@@ -727,14 +719,113 @@ function billHtml(t){
   acts += '</div>';
   return '<div class="bhd"><b>Bill · ' + esc(t.name) + '</b>' + (o ? '<span class="badge2 ' + (o.dueAt ? 'b-bill' : 'b-eat') + '">' + (o.dueAt ? 'bill given' : 'KOT ' + (o.kotN || 1)) + '</span>' : '') + '</div><div class="blines">' + rows + '</div>' + tot + nudge + acts;
 }
+/* ---------------- two modes on a phone ----------------
+   A NEW table opens on quick-pick dishes. A table that already has a bill opens on the BILL
+   (what was ordered, when, the total) - the waiter usually comes back to check, bill or pay.
+   "＋ Add items" or 🔍 switches to dishes; sending a KOT goes back to the bill. */
+function wide(){ return innerWidth >= 900; }
+function omode(t){ if(wide()) return 'menu'; if(draftCount(t.id)) return 'menu'; var m = (S.omodes || {})[t.id]; if(m) return m; return openOrder(t) ? 'bill' : 'menu'; }
+function setMode(t, m){ S.omodes = S.omodes || {}; S.omodes[t.id] = m; }
+function orderView(){
+  var t = curTable(); if(!t){ S.view = 'floor'; return floorView(); }
+  var s = tstate(t), o = s.o, pax = (o && o.pax) || (S.draft[t.id] && S.draft[t.id].pax) || 0, md = omode(t);
+  var lastK = o ? Math.max.apply(null, (o.kots || []).map(function(k){ return k.at || 0; }).concat([o.at || 0])) : 0;
+  var sub = esc(t.spaceName) + ' · ' + t.seats + ' seats' + (o ? ' · seated ' + ago(o.at) + (o.by ? ' · ' + esc(o.by) : '') : '');
+  var head = '<div class="ohead"><div class="tt"><b>Table ' + esc(t.name) + '</b><small>' + sub + '</small></div>' +
+    '<div class="pax"><button data-a="pax" data-d="-1" aria-label="fewer guests">−</button><span>👥 ' + (pax || '–') + '</span><button data-a="pax" data-d="1" aria-label="more guests">+</button></div><button class="more" data-a="tmenu" aria-label="table options">⋯</button></div>';
+  var banner = s.st === 'clean' ? '<div class="card" style="border-color:var(--clean);background:var(--cleanwash)"><b>' + kindIc(s.c.kind) + ' ' + esc(kindName(s.c.kind)) + '</b> asked ' + agoT(s.c.at) + ' by ' + esc(s.c.by) + (s.c.status === 'taken' ? ' · <b>' + esc(s.c.takenBy) + '</b> is on it' : '') + '<div class="row" style="margin-top:8px;display:flex;gap:8px"><button class="btn" data-a="cdone" data-id="' + esc(s.c.id) + '">✓ Table is clean</button></div></div>' : '';
+  if(md === 'bill' && o){
+    var m = money(o), L = live(o), byK = {};
+    (o.kots || []).filter(function(k){ return k.kind === 'kot'; }).forEach(function(k){ byK[k.n] = k; });
+    var status = o.dueAt ? '<span class="badge2 b-bill">bill given ' + ago(o.dueAt) + ' ago</span>' : '<span class="badge2 b-eat">eating · KOT ' + (o.kotN || 1) + '</span>';
+    return '<div class="bview">' + head + banner +
+      '<div class="bsum"><div><small>Bill</small><b>' + rs(m.total) + '</b></div><div><small>Items</small><b>' + L.reduce(function(n, l){ return n + l.q; }, 0) + '</b></div><div><small>Last KOT</small><b>' + ago(lastK) + '</b></div></div>' +
+      '<div class="card bcard"><div class="bhd2">' + status + '<span class="muted" style="font-size:12.5px">tap a dish to remove it</span></div>' +
+      L.map(function(l){ var r = (l.rounds || []).filter(function(z){ return z.n !== 'void'; }).map(function(z){ return z.n; }).filter(function(v, i, a){ return a.indexOf(v) === i; });
+        return '<div class="bl" data-a="void" data-k="' + esc(l.k) + '" role="button"><span class="qx">' + l.q + '×</span><span class="n">' + esc(l.name) + r.map(function(v){ return '<span class="rnd">K' + v + (byK[v] ? ' ' + hm(byK[v].at) : '') + '</span>'; }).join('') + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join('') +
+      (m.off ? '<div class="bl"><span></span><span class="n">' + esc(offLabel(o)) + '</span><span class="a">−' + rs(m.off) + '</span></div>' : '') +
+      '<div class="btot"><div class="g"><span>Total</span><span>' + rs(m.total) + '</span></div></div></div>' +
+      (function(){ var n = billNudge(t, o); return n ? '<div class="card">' + n + '</div>' : ''; })() + '</div>';
+  }
+  return '<div class="ord"><div>' + head + banner + (o && !wide() ? '<button class="backbill" data-a="omode" data-m="bill">🧾 Back to the bill · ' + rs(money(o).total) + '</button>' : '') + '<div id="items">' + itemsHtml(t) + '</div></div><aside class="billcol" id="billcol">' + billHtml(t) + '</aside></div>';
+}
+function billNudge(t, o){
+  if(!o || o.dueAt) return ''; var have = inBill(t); if(Object.keys(have).some(function(id){ return isDessert(BYID[id]); })) return '';
+  var ds = IDX.filter(isDessert).sort(function(a, b){ return (b.q || 0) - (a.q || 0); }).slice(0, 2); if(!ds.length) return '';
+  return '<div class="nudge"><small>Before the bill · something sweet?</small>' + ds.map(function(x){ var i = topChoice(x); return '<button class="sug" data-a="sug" data-id="' + esc(x.id) + '" data-i="' + i + '" data-q="1">+ <b>' + esc(x.name) + '</b><small>' + rs(x.ch[i].price) + '</small></button>'; }).join('') + '</div>';
+}
+/* ---------------- where am I working today? ----------------
+   After signing in, a waiter picks the hall(s) they cover; the floor then shows just those tables.
+   Kept per person per business day; "All" or another hall is one tap away on the floor. */
+function mySpaces(){ var v = lsGet('hayat-cap-space', null); return v && S.me && v.me === S.me.id && v.day === bizDay() ? v.sp : null; }
+function setMySpaces(sp){ lsSet('hayat-cap-space', { me:S.me.id, day:bizDay(), sp:sp }); }
+function spacesView(){
+  var sp = floor().spaces, cur = S.pickSp || mySpaces() || [];
+  return '<div class="login"><div class="hero"><div class="brand">Hayat<small>' + esc(ROLES[S.me.role] || '') + '</small></div><h2 style="margin:14px 0 2px">Where are you working, ' + esc(S.me.name.split(' ')[0]) + '?</h2><p class="muted" style="margin:0">Pick one or more · you can change it any time</p></div>' +
+    '<div class="sppick">' + sp.map(function(s){ var on = cur.indexOf(s.id) >= 0, busy = (s.tables || []).filter(function(t){ return openOrder(Object.assign({ space:s.id, spaceName:s.name }, t)); }).length;
+      return '<button class="spt' + (on ? ' on' : '') + '" data-a="sptog" data-s="' + esc(s.id) + '"><b>' + esc(s.name) + '</b><small>' + (s.tables || []).length + ' tables' + (busy ? ' · ' + busy + ' busy' : '') + '</small><i>' + (on ? '✓' : '') + '</i></button>'; }).join('') + '</div>' +
+    '<div class="row" style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-a="spall" style="flex:1">All halls</button><button class="btn pri" data-a="spgo" style="flex:2"' + (cur.length ? '' : ' disabled') + '>Start · ' + (cur.length ? cur.length + ' hall' + (cur.length > 1 ? 's' : '') : 'pick a hall') + '</button></div></div>';
+}
+
+/* ---------------- categories: no sliding strip ----------------
+   ‹ 🍗 Mandi · 12 ›  - arrows or a swipe on the list step through categories in a fixed order;
+   tapping the name opens every category as big tiles (all visible, one tap). */
+var CAT_IC = [[/mandi/i,'🍗'],[/alfaham|grill/i,'🔥'],[/fish|sea/i,'🐟'],[/broast|fried/i,'🍟'],[/biri|rice/i,'🍚'],[/bread/i,'🫓'],[/curr|gravy/i,'🍛'],[/juice|shake/i,'🥤'],[/bottle/i,'🧃'],[/tea|coffee/i,'☕'],[/dessert|sweet/i,'🍰'],[/salad|side/i,'🥗'],[/shawarma/i,'🌯'],[/drink/i,'🥤']];
+function catIc(n){ for(var i = 0; i < CAT_IC.length; i++) if(CAT_IC[i][0].test(n)) return CAT_IC[i][1]; return '🍽️'; }
+function catList(){ return [{ id:'', name:'Now', ic:'★', n:Math.min(16, IDX.length) }].concat(MENU.map(function(c){ return { id:c.id, name:c.name, ic:catIc(c.name), n:c.items.length }; })); }
+function catIdx(){ var L = catList(); for(var i = 0; i < L.length; i++) if(L[i].id === (S.cat || '')) return i; return 0; }
+function catsHtml(){ var L = catList(), i = catIdx(), c = L[i];
+  return '<div class="catnav" id="cats"><button class="cstep" data-a="cstep" data-d="-1" aria-label="previous category">‹</button><button class="ccur" data-a="cgrid"><span class="ci">' + c.ic + '</span><b>' + esc(c.name) + '</b><small>' + (i + 1) + '/' + L.length + ' · all ▾</small></button><button class="cstep" data-a="cstep" data-d="1" aria-label="next category">›</button></div>'; }
+function stepCat(d){ var L = catList(), i = (catIdx() + d + L.length) % L.length; S.cat = L[i].id; orderRefresh(); window.scrollTo(0, 0); vib(6); }
+function catGrid(){
+  var L = catList(), cur = S.cat || '';
+  sheet('<h2>Categories</h2><p class="sub">Always in this order · swipe the dish list left/right to step through</p><div class="cgrid">' + L.map(function(c){ return '<button class="' + (c.id === cur ? 'on' : '') + '" data-cg="' + esc(c.id) + '"><span>' + c.ic + '</span><b>' + esc(c.name) + '</b><small>' + c.n + '</small></button>'; }).join('') + '</div>');
+  document.querySelectorAll('[data-cg]').forEach(function(b){ b.onclick = function(){ S.cat = b.dataset.cg; closeSheet(); orderRefresh(); window.scrollTo(0, 0); }; });
+}
+/* search results sit right ABOVE the search box, best match nearest the thumb, the rest stacked upward */
+function sresHtml(t){
+  var q = S.q.trim(); if(!q){ S.best = null; return ''; }
+  var R = searchMenu(q).slice(0, 8), D = draftOf(t.id); S.best = R[0] || null;
+  if(!R.length) return '<div class="sres" id="sres"><div class="sr none">No dish matches “' + esc(q) + '” · try first letters: <b>cmf</b> = Chicken Mandi Full</div></div>';
+  var qOf = function(x, label){ return D.filter(function(l){ return l.id === x.id && l.label === label; }).reduce(function(n, l){ return n + l.q; }, 0); };
+  return '<div class="sres" id="sres">' + R.map(function(r, i){ var x = r.x, chs = r.sz ? r.chs : x.ch.map(function(c, j){ return j; });
+    if(x.ch.length === 1){ var n1 = qOf(x, x.ch[0].label); return '<div class="sr' + (i === 0 ? ' best' : '') + '" data-a="add" data-lp="qty" data-id="' + esc(x.id) + '" data-i="0" role="button"><span class="nm">' + esc(x.name) + (x.ch[0].label ? ' <small>' + esc(x.ch[0].label) + '</small>' : '') + '</span><span class="sp">' + (n1 ? '<i>' + n1 + '</i>' : '') + rs(x.ch[0].price) + '</span></div>'; }
+    return '<div class="sr' + (i === 0 ? ' best' : '') + '"><span class="nm">' + esc(x.name) + '</span><span class="szb">' + chs.map(function(j){ var c = x.ch[j], n = qOf(x, c.label); return '<button data-a="add" data-lp="qty" data-id="' + esc(x.id) + '" data-i="' + j + '" class="' + (n ? 'has' : '') + (i === 0 && chs.length === 1 ? ' hit' : '') + '"><b>' + esc(short(c.label)) + '</b><span>' + rs(c.price) + '</span>' + (n ? '<i>' + n + '</i>' : '') + '</button>'; }).join('') + '</span></div>';
+  }).join('') + '</div>';
+}
+function itemsHtml(t){
+  var D = draftOf(t.id), list, title = '';
+  if(S.cat){ var c = MENU.filter(function(z){ return z.id === S.cat; })[0]; list = c ? c.items.map(function(it){ return BYID[it.id]; }).filter(Boolean) : []; title = c ? c.name : ''; }
+  else { list = hotNow(16); title = 'Quick pick · selling now ' + hlab(nowHour()); }
+  return (title ? '<div class="sec-t">' + esc(title) + '</div>' : '') + '<div class="items">' + list.map(function(x){ return itemHtml(x, null, D); }).join('') + '</div>';
+}
 function orderDock(){
   var t = curTable(); if(!t) return '';
-  var s = tstate(t), o = s.o, D = draftOf(t.id), n = (o ? live(o).reduce(function(a, l){ return a + l.q; }, 0) : 0) + draftCount(t.id), tot = (o ? money(o).total : 0) + linesTotal(D);
+  var s = tstate(t), o = s.o, D = draftOf(t.id), md = omode(t), n = (o ? live(o).reduce(function(a, l){ return a + l.q; }, 0) : 0) + draftCount(t.id), tot = (o ? money(o).total : 0) + linesTotal(D);
   var btn = D.length ? '<button class="btn pri" data-a="kot"' + (SENDING[t.id] ? ' disabled' : '') + '>' + (SENDING[t.id] ? 'Sending…' : 'Send KOT') + ' · ' + draftCount(t.id) + '</button>' : o ? (o.dueAt ? '<button class="btn pri" data-a="pay">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due">🧾 Due bill</button>') : '<button class="btn pri" disabled>Send KOT</button>';
-  return '<div class="dock" id="dock">' + sugHtml(t) + catsHtml() +
-    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><div class="sbox"><input id="q" type="search" placeholder="Search dishes · try cmf" value="' + esc(S.q) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="go">' + (S.q ? '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>' : '') + '</div></div>' +
-    '<div class="ordbar"><button class="tray" data-a="billsheet"><span><b>' + rs(tot) + '</b><small>' + n + ' item' + (n === 1 ? '' : 's') + (D.length ? ' · ' + draftCount(t.id) + ' not sent' : '') + ' · bill ▴</small></span></button>' + btn + '</div></div>';
+  var bar = '<div class="ordbar"><button class="tray" data-a="billsheet"><span><b>' + rs(tot) + '</b><small>' + n + ' item' + (n === 1 ? '' : 's') + (D.length ? ' · ' + draftCount(t.id) + ' not sent' : '') + ' · bill ▴</small></span></button>' + btn + '</div>';
+  if(md === 'bill' && o) return '<div class="dock" id="dock" data-mode="bill">' + sugHtml(t) +
+    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><button class="addbtn" data-a="omode" data-m="menu">＋ Add items</button><button class="srch" data-a="omode" data-m="search" aria-label="search dishes">🔍</button></div>' +
+    '<div class="ordbar">' + (o.dueAt ? '<button class="btn acc" data-a="due" style="flex:none">🖨 Again</button><button class="btn pri" data-a="pay" style="flex:1">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due" style="flex:1">🧾 Due bill · ' + rs(money(o).total) + '</button>') + '</div></div>';
+  return '<div class="dock" id="dock" data-mode="menu">' + sresHtml(t) + sugHtml(t) + catsHtml() +
+    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><div class="sbox"><input id="q" type="search" placeholder="Search dishes · try cmf" value="' + esc(S.q) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">' + (S.q ? '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>' : '') + '</div></div>' + bar + '</div>';
 }
+/* redraw everything EXCEPT the search box, so the keyboard stays up while dishes are added */
+function orderRefresh(){
+  var t = curTable(), d = $('dock'); if(S.view !== 'order' || !t || !d || d.dataset.mode !== (omode(t) === 'bill' && openOrder(t) ? 'bill' : 'menu')) return render();
+  var main = $('main'); if(main){ var y = window.scrollY; main.innerHTML = orderView(); window.scrollTo(0, y); }
+  var tmp = document.createElement('div'); tmp.innerHTML = orderDock(); var nd = tmp.firstChild;
+  ['sres', 'sugs', 'cats'].forEach(function(id){ var old = $(id), nw = nd.querySelector('#' + id); if(old && nw) old.replaceWith(nw); else if(old && !nw) old.remove(); else if(!old && nw){ var anchor = id === 'sres' ? d.firstChild : (id === 'sugs' ? ($('cats') || d.querySelector('.srow')) : d.querySelector('.srow')); d.insertBefore(nw, anchor); } });
+  var ob = d.querySelector('.ordbar'), nb = nd.querySelector('.ordbar'); if(ob && nb) ob.replaceWith(nb);
+  var sb = d.querySelector('.sbox'), cx = sb && sb.querySelector('.qx2'); if(sb){ if(S.q && !cx) sb.insertAdjacentHTML('beforeend', '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>'); else if(!S.q && cx) cx.remove(); }
+  if(S.refresh) try{ S.refresh(); }catch(e){}
+  dockSize(); saveUI();
+}
+/* a refresh (or the app being killed) must lose nothing: the screen, the table, the search and the unsent items come back */
+function saveUI(){ lsSet('hayat-cap-ui', { at:Date.now(), view:S.view, table:S.table, q:S.q, cat:S.cat, omodes:S.omodes || {}, me:S.me ? S.me.id : '' }); }
+function restoreUI(){ var u = lsGet('hayat-cap-ui', null); if(!u || !S.me || u.me !== S.me.id || Date.now() - u.at > 45 * 60e3) return;
+  S.omodes = u.omodes || {}; if(u.view === 'order' && u.table && tableById(u.table)){ S.view = 'order'; S.table = u.table; S.q = u.q || ''; S.cat = u.cat || ''; pushHist('order'); }
+  else if(u.view && u.view !== 'login' && u.view !== 'order') S.view = u.view; }
 
 /* ---------------- snackbar with Undo ---------------- */
 var SNACK = null;
@@ -745,16 +836,17 @@ function snack(msg, undo){
   if(undo) $('snUndo').onclick = function(){ el.className = ''; undo(); };
   SNACK = setTimeout(function(){ el.className = ''; }, 2600);
 }
-function addAndSnack(t, x, i, q){
+function addAndSnack(t, x, i, q, via){
   var c = x.ch[i] || x.ch[0]; q = q || 1;
+  ux('add', { id:x.id, name:x.name, label:c.label || '', q:q, via:via || (S.q ? 'search' : 'quick:' + (S.cat || 'now')), qtext:S.q || undefined, inBill:draftCount(t.id) });
   for(var n = 0; n < q; n++) addDraft(t.id, x, c);
   var k = x.id + '|' + (c.label || '');
-  snack('+' + (q > 1 ? q + '× ' : ' ') + esc(x.name) + (c.label ? ' ' + esc(short(c.label)) : '') + ' · ' + rs(c.price * q), function(){ stepDraft(t.id, k, -q); render(); });
+  snack('+' + (q > 1 ? q + '× ' : ' ') + esc(x.name) + (c.label ? ' ' + esc(short(c.label)) : '') + ' · ' + rs(c.price * q), function(){ ux('undo', { id:x.id, q:q }); stepDraft(t.id, k, -q); orderRefresh(); });
 }
 function qtySheet(t, x, i){
   var c = x.ch[i];
   sheet('<h2>' + esc(x.name) + (c.label ? ' · ' + esc(c.label) : '') + '</h2><p class="sub">' + rs(c.price) + ' each · how many?</p><div class="qgrid">' + [1,2,3,4,5,6,8,10].map(function(n){ return '<button data-qn="' + n + '"><b>' + n + '</b><small>' + rs(c.price * n) + '</small></button>'; }).join('') + '</div>');
-  document.querySelectorAll('[data-qn]').forEach(function(b){ b.onclick = function(){ closeSheet(); addAndSnack(t, x, i, +b.dataset.qn); render(); }; });
+  document.querySelectorAll('[data-qn]').forEach(function(b){ b.onclick = function(){ closeSheet(); addAndSnack(t, x, i, +b.dataset.qn, 'hold'); orderRefresh(); }; });
 }
 
 /* ---------------- bills ---------------- */
@@ -791,8 +883,8 @@ function cleanView(){
 /* ---------------- admin ---------------- */
 function adminView(){
   if(S.me.role !== 'office') return '<div class="empty">Office only.</div>';
-  var tabs = '<div class="seg" style="margin-bottom:12px">' + [['staff','Staff'],['tables','Tables'],['menu','Menu'],['settings','Settings']].map(function(x){ return '<button class="' + (S.adminTab === x[0] ? 'on' : '') + '" data-a="atab" data-t="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
-  return '<h1 class="pg">Admin</h1>' + tabs + (S.adminTab === 'tables' ? tablesAdmin() : S.adminTab === 'menu' ? menuAdmin() : S.adminTab === 'settings' ? settingsAdmin() : staffAdmin());
+  var tabs = '<div class="seg" style="margin-bottom:12px">' + [['staff','Staff'],['tables','Tables'],['menu','Menu'],['settings','Settings'],['trial','Trial'],['usage','Usage']].map(function(x){ return '<button class="' + (S.adminTab === x[0] ? 'on' : '') + '" data-a="atab" data-t="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  return '<h1 class="pg">Setup · captain app</h1>' + tabs + (S.adminTab === 'tables' ? tablesAdmin() : S.adminTab === 'menu' ? menuAdmin() : S.adminTab === 'settings' ? settingsAdmin() : S.adminTab === 'trial' ? trialAdmin() : S.adminTab === 'usage' ? usageAdmin() : staffAdmin());
 }
 function staffAdmin(){
   var P = S.people.slice().sort(function(a, b){ return (a.off ? 1 : 0) - (b.off ? 1 : 0) || APP_ROLES.indexOf(a.role) - APP_ROLES.indexOf(b.role) || String(a.name).localeCompare(b.name); });
@@ -966,9 +1058,12 @@ function upiLink(amt, o){
 function notes(pay){ /* exact, then the notes people really hand over */ var v = [pay]; [50, 100, 500].forEach(function(s){ var x = Math.ceil(pay / s) * s; if(x > pay) v.push(x); }); var big = [500, 1000, 2000].filter(function(x){ return x > pay; })[0]; if(big) v.push(big); if(pay < 2000 && v.indexOf(2000) < 0) v.push(2000); return v.filter(function(x, i, a){ return a.indexOf(x) === i; }).sort(function(a, b){ return a - b; }).slice(0, 6); }
 function paySheet(oid){
   var o = S.orders[oid]; if(!o) return;
+  var payT0 = Date.now(); ux('payopen', { oid:oid });
   var P = { mode:cfg('payDefault', 'cash'), field:'recv', recv:'', dtype:(o.discount && o.discount.type) || 'amt', dval:o.discount && o.discount.value ? String(o.discount.value) : '', tip:o.tip ? String(o.tip) : '', split:['', '', ''], confirm:false, details:false, cleanAfter:cfg('cleanAfter', true) !== false };
-  if(P.mode !== 'cash') P.field = '';
-  sheet('<div id="payBody"></div>');
+  var keep = lsGet('hayat-cap-pay', null);   /* what was typed survives a refresh / an accidental close for 15 min */
+  if(keep && keep.oid === oid && Date.now() - keep.at < 15 * 60e3 && keep.P) Object.assign(P, keep.P, { confirm:false });
+  if(P.mode !== 'cash' && P.field === 'recv') P.field = '';
+  sheet('<div id="payBody" data-oid="' + esc(oid) + '"></div>');
   var sig0 = '', M = null;
   var cur = function(){ return S.orders[oid] || o; };
   var calc = function(){ var d = +P.dval > 0 ? { type:P.dtype, value:+P.dval } : null; return money(cur(), { discount:d, tip:Math.round(+P.tip || 0) }); };
@@ -992,7 +1087,7 @@ function paySheet(oid){
     if(P.mode === 'card') h += '<div class="cardmsg">Take <b>' + rs(m.pay) + '</b> on the card machine, then tap below.</div>';
     if(P.mode === 'split') h += '<div class="splits">' + ['Cash', 'UPI', 'Card'].map(function(lab, i){ return '<button class="recv sm' + (P.field === 'sp' + i ? ' on' : '') + '" data-pf="sp' + i + '"><small>' + lab + '</small><b>' + (sp[i] ? rs(sp[i]) : '—') + '</b></button>'; }).join('') + '</div><div class="chg ' + (left === 0 ? 'ok' : 'bad') + ' sm"><small>' + (left === 0 ? 'Adds up' : left > 0 ? 'Still to split' : 'Too much') + '</small><b>' + (left === 0 ? '✓' : rs(Math.abs(left))) + '</b></div>';
     if(link && !P.field) h += '<div class="qrbox"><img alt="UPI QR" src="' + window.qrSvg(link, 340) + '"><div><div class="upi">SCAN · ANY UPI APP</div><b>' + rs(upiAmt) + '</b><small>' + esc(cfg('upi', '') || (C.upi || {}).id) + '</small><small>amount is filled in</small></div></div>';
-    else if((P.mode === 'upi') && !link && !P.field) h += '<div class="card" style="background:var(--accwash);border-color:var(--acc);margin:10px 0">No UPI ID yet.' + (S.me.role === 'office' ? ' Admin → Settings → UPI.' : ' Ask the office to add it.') + '</div>';
+    else if((P.mode === 'upi') && !link && !P.field) h += '<div class="card" style="background:var(--accwash);border-color:var(--acc);margin:10px 0">No UPI ID yet.' + ' Owner app → More → Setup → Settings.' + '</div>';
     if(P.field){
       var qk = P.field === 'recv' ? notes(m.pay).map(function(v){ return '<button data-qv="' + v + '">' + (v === m.pay ? 'Exact ' : '') + rs(v) + '</button>'; }).join('')
         : P.field === 'disc' ? '<span class="dt"><button class="' + (P.dtype === 'amt' ? 'on' : '') + '" data-dt="amt">₹</button><button class="' + (P.dtype === 'pct' ? 'on' : '') + '" data-dt="pct">%</button></span>' + [5, 10, 15, 20].map(function(v){ return '<button data-qd="' + v + '">' + v + '%</button>'; }).join('') + (m.sub % 10 ? '<button data-qro="1">Round off ' + rs(m.sub % 10) + '</button>' : '') + '<button data-qv="">None</button>'
@@ -1006,6 +1101,7 @@ function paySheet(oid){
     h += '<div class="payact">' + (o.paid ? '<button class="btn" id="pX" style="flex:1">Close · paid</button>' : '<button class="btn" id="pPrint" style="flex:none" aria-label="print bill">🖨</button><button class="btn ' + (P.confirm ? 'acc' : 'pri') + '" id="pGo" style="flex:1"' + (short_ ? ' disabled' : '') + '>' + (m.total === 0 && m.sub > 0 ? 'Total is ₹0 · check the discount' : P.confirm ? 'Yes, ' + rs(upiAmt) + ' arrived in UPI ✓' : '✓ Money received · ' + rs(m.pay)) + '</button>') + '</div>' +
       (o.paid ? '' : '<p class="muted" style="font-size:12px;text-align:center;margin:6px 0 0">' + (P.confirm ? 'Check the UPI app shows success, then tap again.' : 'Tap only after the money is with you.') + '</p>');
     var b = $('payBody'); if(!b) return; b.innerHTML = h; bind(m, left, sp);
+    if(!o.paid) lsSet('hayat-cap-pay', { oid:oid, at:Date.now(), P:{ mode:P.mode, field:P.field, recv:P.recv, dtype:P.dtype, dval:P.dval, tip:P.tip, split:P.split, cleanAfter:P.cleanAfter } });
   };
   var bind = function(m, left, sp){
     var q = function(sel, fn){ document.querySelectorAll('#payBody ' + sel).forEach(function(e){ e.onclick = function(ev){ ev.preventDefault(); fn(e); draw(); }; }); };
@@ -1029,7 +1125,7 @@ function paySheet(oid){
       go.disabled = true; S.refresh = null;
       var d = +P.dval > 0 ? { type:P.dtype, value:+P.dval } : null;
       var PP = { mode:P.mode, discount:d, tip:Math.round(+P.tip || 0), tendered:P.mode === 'cash' ? Math.round(+P.recv || 0) : 0, split:[{ mode:'cash', amt:sp[0] }, { mode:'upi', amt:sp[1] }, { mode:'card', amt:sp[2] }], cleanAfter:P.cleanAfter };
-      var ok = await markPaid(oid, PP, m.pay); if(ok){ closeSheet(); if(S.view === 'order') S.view = 'floor'; render(); } else { go.disabled = false; S.refresh = refresh; }
+      var ok = await markPaid(oid, PP, m.pay); ux('pay', { mode:P.mode, ok:!!ok, ms:Date.now() - payT0, amt:m.pay, tip:PP.tip || undefined, disc:PP.discount ? PP.discount.value + PP.discount.type : undefined }); if(ok){ lsSet('hayat-cap-pay', null); closeSheet(); if(S.view === 'order') S.view = 'floor'; render(); } else { go.disabled = false; S.refresh = refresh; }
     };
   };
   var lastSig = '';
@@ -1073,7 +1169,7 @@ function longPress(el){
 var SW = null;
 document.addEventListener('touchstart', function(e){
   var p = e.touches[0], sh = e.target.closest('.sheet'), sc = $('scrim');
-  SW = { x:p.clientX, y:p.clientY, t:Date.now(), sheet:sh && !sc.classList.contains('side') && (sh.scrollTop <= 0 || e.target.closest('.grab,.payhd,h2')) ? sh : null, edge:p.clientX < 22 ? 'l' : p.clientX > innerWidth - 22 ? 'r' : '' };
+  SW = { x:p.clientX, y:p.clientY, t:Date.now(), sheet:sh && !sc.classList.contains('side') && (sh.scrollTop <= 0 || e.target.closest('.grab,.payhd,h2')) ? sh : null, edge:p.clientX < 22 ? 'l' : p.clientX > innerWidth - 22 ? 'r' : '', inItems:!!e.target.closest('#items') };
 }, { passive:true });
 document.addEventListener('touchmove', function(e){
   if(!SW || !SW.sheet) return; var dy = e.touches[0].clientY - SW.y; if(dy > 0){ SW.sheet.style.transform = 'translateY(' + dy + 'px)'; SW.sheet.style.transition = 'none'; SW.dy = dy; }
@@ -1081,6 +1177,7 @@ document.addEventListener('touchmove', function(e){
 document.addEventListener('touchend', function(e){
   if(!SW) return; var p = e.changedTouches[0], dx = p.clientX - SW.x, dy = p.clientY - SW.y, fast = Date.now() - SW.t < 450;
   if(SW.sheet){ var sh = SW.sheet; sh.style.transition = 'transform .18s'; if((SW.dy || 0) > 110 || ((SW.dy || 0) > 50 && fast)) closeSheet(); else sh.style.transform = ''; }
+  else if(!$('scrim') && !SW.edge && S.view === 'order' && SW.inItems && Math.abs(dx) > 60 && Math.abs(dy) < 45 && $('cats')){ stepCat(dx < 0 ? 1 : -1); }
   else if(!$('scrim') && Math.abs(dx) > 70 && Math.abs(dy) < 60){
     if(SW.edge === 'l' && dx > 0 && S.view === 'order'){ S.view = 'floor'; S.q = ''; render(); }
     else if(SW.edge === 'r' && dx < 0 && S.me && S.me.role !== 'cleaner' && (S.view === 'floor' || S.view === 'order')) billsDrawer();
@@ -1097,6 +1194,139 @@ if(window.visualViewport){ var vvF = function(){ var vv = window.visualViewport,
 var DRO = window.ResizeObserver ? new ResizeObserver(function(){ dockSize(); }) : null, DOBS = null;
 function dockSize(){ var d = $('dock'); document.documentElement.style.setProperty('--dockh', (d ? d.offsetHeight : 0) + 'px'); if(DRO && d && DOBS !== d){ try{ if(DOBS) DRO.unobserve(DOBS); }catch(e){} DRO.observe(d); DOBS = d; } }
 
+/* ---------------- what real people do (usage capture) ----------------
+   Every tap (what it hit, where), searches (and how many results), adds and by which route,
+   undo, voids, errors, dead taps (nothing there) and rage taps (3 fast taps in one spot).
+   Batched to ux_events/{session}_{n}; ux_sessions/{session} holds who / device / counts.
+   Setup → Usage reads them back: the struggles, and each session step by step to replay. */
+var UX = { sid:'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), buf:[], n:0, cnt:0, t0:Date.now(), taps:[], started:false, q:null };
+function uxOn(){ return !SETUP && S.F && S.me && cfg('uxLog', true) !== false; }
+function ux(e, d){ if(!uxOn()) return; if(!UX.started) uxStart(); UX.cnt++; UX.buf.push(clean(Object.assign({ t:Date.now() - UX.t0, e:e, v:S.view, tb:S.view === 'order' ? (S.table || undefined) : undefined }, d || {}))); if(UX.buf.length >= 60) uxFlush(); }
+function uxStart(){ UX.started = true; S.F.setDoc(ref('ux_sessions', UX.sid), clean({ sid:UX.sid, start:UX.t0, day:bizDay(UX.t0), who:S.me.name, crew:S.me.id, role:S.me.role, w:innerWidth, h:innerHeight, dpr:window.devicePixelRatio || 1, ua:navigator.userAgent.slice(0, 140), standalone:!!(window.matchMedia && matchMedia('(display-mode: standalone)').matches), events:0 })).catch(function(){}); }
+function uxFlush(){ if(!UX.buf.length || !S.F || !UX.started) return; var chunk = UX.buf.splice(0), n = UX.n++;
+  S.F.setDoc(ref('ux_events', UX.sid + '_' + String(n).padStart(4, '0')), { sid:UX.sid, n:n, at:Date.now(), ev:chunk }).catch(function(){ UX.buf = chunk.concat(UX.buf); UX.n--; });
+  S.F.setDoc(ref('ux_sessions', UX.sid), { end:Date.now(), events:UX.cnt }, { merge:true }).catch(function(){}); }
+setInterval(uxFlush, 15000);
+document.addEventListener('visibilitychange', function(){ if(document.hidden){ ux('hide'); uxFlush(); } else ux('show'); });
+addEventListener('pagehide', function(){ uxFlush(); });
+document.addEventListener('pointerup', function(e){
+  if(!uxOn()) return; var el = e.target.closest('[data-a],button,input,a,[role=button],select,label,.sr,.tb'), x = Math.round(e.clientX), y = Math.round(e.clientY), now = Date.now();
+  UX.taps = UX.taps.filter(function(p){ return now - p.t < 800 && Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30; }); UX.taps.push({ t:now, x:x, y:y });
+  if(UX.taps.length === 3) ux('rage', { x:x, y:y, on:el ? (el.dataset.a || el.tagName.toLowerCase()) : 'nothing' });
+  if(!el){ ux('dead', { x:x, y:y, w:innerWidth, h:innerHeight, txt:String(e.target.innerText || '').slice(0, 30) }); return; }
+  ux('tap', { a:el.dataset.a || el.id || el.tagName.toLowerCase(), id:el.dataset.id || el.dataset.t || el.dataset.k || el.dataset.c || el.dataset.m || el.dataset.v || undefined, i:el.dataset.i, x:x, y:y, lp:LP.fired || undefined, txt:String(el.innerText || el.value || '').replace(/\s+/g, ' ').slice(0, 40) });
+}, true);
+function uxQuery(){ clearTimeout(UX.q); UX.q = setTimeout(function(){ if(!S.q) return; var r = searchMenu(S.q); ux('search', { q:S.q, n:r.length, best:r[0] ? r[0].x.name : '' }); }, 700); }
+
+/* ---------------- Setup → Trial: replay a real VMENU day into the TRIAL tables ----------------
+   Yesterday's dine-in bills, from the hour you pick, played live (same gaps, or faster) as captain
+   orders in trial_orders: tables fill, KOTs, add-ons, bills, payments - so the floor and the phones
+   can be watched with real-looking traffic. Never touches VMENU data or the real orders. */
+var SIM = { ev:[], i:0, tm:null, made:{}, locks:{}, msg:'' };
+var SEC_SP = { 'AC':'ac', 'NON AC':'nonac', 'NONAC':'nonac', 'HUT':'hut', 'JUICY HUT':'juicy', 'JUICE HUT':'juicy' };
+function tsMs(s){ return s ? new Date(String(s).replace(' ', 'T')).getTime() : 0; }
+function choiceFor(vn, p){
+  var key = String(vn || '').trim().toUpperCase(), hit = null;
+  IDX.forEach(function(x){ x.ch.forEach(function(c, i){ if(!hit && c.vn && String(c.vn).trim().toUpperCase() === key) hit = { x:x, i:i }; }); });
+  if(hit) return { k:hit.x.id + '|' + (hit.x.ch[hit.i].label || ''), id:hit.x.id, name:hit.x.name, label:hit.x.ch[hit.i].label || '', price:+p || hit.x.ch[hit.i].price, vn:vn, kit:hit.x.ch[hit.i].kit || hit.x.kit || '' };
+  var pn = parseName(vn); return { k:'v-' + slug(pn.fam) + '|' + pn.size, id:'v-' + slug(pn.fam), name:titleCase(pn.fam), label:pn.size, price:+p || 0, vn:vn, kit:'' };
+}
+async function simPrepare(day, fromH, max, speed){
+  var sn = await S.F.getDoc(ref('vm_daylog', day)); if(!sn.exists()) throw new Error('no VMENU day log for ' + day);
+  var R = Object.values(sn.data().records || {}).filter(function(r){ return (r.kind === 'dine' || r.kindRaw === 'dine') && r.status !== 'void' && r.status !== 'cancelled' && (r.items || []).length && r.createdAt && new Date(String(r.createdAt).replace(' ', 'T')).getHours() >= fromH; })
+    .sort(function(a, b){ return tsMs(a.createdAt) - tsMs(b.createdAt); }).slice(0, max);
+  if(!R.length) throw new Error('no dine bills after ' + fromH + ':00 on ' + day);
+  var base = tsMs(R[0].createdAt), start = Date.now() + 3000, at = function(s){ return start + (tsMs(s) - base) / speed; }, ev = [];
+  R.forEach(function(r, n){ var it = (r.items || []).filter(function(i){ return i.q > 0; }).map(function(i){ return Object.assign(choiceFor(i.n, i.p), { q:+i.q }); });
+    var kts = (r.kots || []).map(tsMs).filter(Boolean).sort(), split = kts.length > 1 && it.length > 1 ? it.length - 1 : it.length;
+    var sp = SEC_SP[String(r.section || '').toUpperCase().trim()] || 'ac';
+    ev.push({ at:at(r.createdAt), k:'open', n:n, sp:sp, pax:r.pax || null, lines:it.slice(0, split), by:r.waiter || 'SIM' });
+    if(split < it.length) ev.push({ at:start + (kts[1] - base) / speed, k:'add', n:n, lines:it.slice(split), by:r.waiter || 'SIM' });
+    if(r.dueAt) ev.push({ at:at(r.dueAt), k:'due', n:n });
+    if(r.settledAt) ev.push({ at:at(r.settledAt), k:'pay', n:n, mode:/card/i.test(r.payMode || '') ? 'card' : /upi|bank|gpay/i.test(r.payMode || '') ? 'upi' : 'cash' });
+  });
+  ev.sort(function(a, b){ return a.at - b.at; });
+  return { ev:ev, bills:R.length, span:Math.round((tsMs(R[R.length - 1].settledAt || R[R.length - 1].createdAt) - base) / 60000) };
+}
+function simFreeTable(sp){
+  var T = allTables(), taken = function(t){ return SIM.locks[t.id] || openOrder(t); };
+  return T.filter(function(t){ return t.space === sp && !taken(t); })[0] || T.filter(function(t){ return !taken(t); })[0] || null;
+}
+async function simStep(){
+  var now = Date.now();
+  while(SIM.i < SIM.ev.length && SIM.ev[SIM.i].at <= now){
+    var e = SIM.ev[SIM.i++], me = 'SIM · ' + e.by;
+    try{
+      if(e.k === 'open'){ var t = simFreeTable(e.sp); if(!t){ SIM.msg = 'no free table for a ' + e.sp + ' bill - skipped'; continue; }
+        var id = 'S' + Date.now().toString(36).toUpperCase() + e.n, o = clean({ id:id, at:now, status:'accepted', log:[{ s:'placed', at:now }], source:'sim', mode:'dinein', kind:'dine', table:t.name, tableId:t.id, space:t.space, section:t.spaceName, pax:e.pax, by:me, byRole:'waiter', crew:'sim', day:bizDay(now),
+          lines:e.lines.map(function(l){ return Object.assign({}, l, { at:now, by:me, rounds:[{ n:1, q:l.q, at:now, by:me }] }); }), kots:[{ n:1, kind:'kot', at:now, by:me, lines:e.lines.map(function(l){ return { k:l.k, name:l.name, label:l.label, q:l.q, station:station(l) }; }) }], kotN:1, edits:[], total:linesTotal(e.lines), discount:null, tip:0, trial:true, noKds:true });
+        await S.F.setDoc(S.F.doc(S.D, 'trial_orders', id), o); await S.F.setDoc(S.F.doc(S.D, 'trial_tablelock', t.id), { oid:id, at:now, table:t.name });
+        SIM.made[e.n] = { id:id, t:t.id }; SIM.locks[t.id] = id; SIM.msg = t.name + ' seated · ' + e.lines.length + ' dishes'; }
+      var m = SIM.made[e.n]; if(!m || e.k === 'open') continue;
+      var r0 = S.F.doc(S.D, 'trial_orders', m.id), cur = (await S.F.getDoc(r0)).data(); if(!cur) continue;
+      if(e.k === 'add'){ var L = cur.lines.concat(e.lines.map(function(l){ return Object.assign({}, l, { at:now, by:me, rounds:[{ n:2, q:l.q, at:now, by:me }] }); }));
+        await S.F.updateDoc(r0, clean({ lines:L, kots:cur.kots.concat([{ n:2, kind:'kot', at:now, by:me, lines:e.lines.map(function(l){ return { k:l.k, name:l.name, label:l.label, q:l.q, station:station(l) }; }) }]), kotN:2, total:linesTotal(L) })); SIM.msg = cur.table + ' add-on'; }
+      if(e.k === 'due'){ await S.F.updateDoc(r0, { dueAt:now, dueCount:1 }); SIM.msg = cur.table + ' asked for the bill'; }
+      if(e.k === 'pay'){ await S.F.updateDoc(r0, clean({ paid:true, payMode:e.mode, paidAt:now, paidBy:me, pays:[{ mode:e.mode, amt:cur.total }], status:'delivered', dueAt:cur.dueAt || now })); delete SIM.locks[m.t]; SIM.msg = cur.table + ' paid ' + rs(cur.total) + ' · ' + e.mode; }
+    }catch(err){ SIM.msg = 'error: ' + (err.message || err); }
+  }
+  if(SIM.i >= SIM.ev.length){ clearInterval(SIM.tm); SIM.tm = null; SIM.msg = 'Replay finished ✓'; }
+  var box = $('simStat'); if(box) box.innerHTML = simStatus();
+}
+function simStatus(){ if(!SIM.ev.length) return 'Not running.'; var nx = SIM.ev[SIM.i]; return '<b>' + SIM.i + ' / ' + SIM.ev.length + '</b> steps · ' + esc(SIM.msg || '') + (nx && SIM.tm ? '<br><small>next: ' + nx.k + ' in ' + Math.max(0, Math.round((nx.at - Date.now()) / 1000)) + ' s</small>' : ''); }
+async function clearTrial(){
+  var all = Object.values(S.orders), n = 0;
+  for(var i = 0; i < all.length; i++){ try{ await S.F.deleteDoc(S.F.doc(S.D, 'trial_orders', all[i].id)); n++; }catch(e){} }
+  var T = allTables(); for(var j = 0; j < T.length; j++){ try{ await S.F.setDoc(S.F.doc(S.D, 'trial_tablelock', T[j].id), { oid:null, at:Date.now() }); }catch(e){} }
+  var C = Object.values(S.clean); for(var k = 0; k < C.length; k++){ try{ await S.F.deleteDoc(S.F.doc(S.D, 'trial_cleanreq', C[k].id)); }catch(e){} }
+  return n;
+}
+function trialAdmin(){
+  var y = new Date(Date.now() - BH0 * 3600e3); y.setDate(y.getDate() - 1); var yd = ymd(y), h = Math.max(11, new Date().getHours() - 1);
+  var open = Object.values(S.orders).filter(function(o){ return !closed(o); }).length;
+  return '<div class="card"><h2>Replay a real day · live</h2><p class="sub">Real VMENU dine-in bills played as captain orders into the <b>trial tables</b> (trial_orders). Phones in the captain app see tables fill, KOTs, bills and payments. VMENU and the owner app are never touched.</p>' +
+    '<div class="adj"><label class="f" style="margin:0">Day<input id="smDay" type="date" value="' + yd + '"></label><label class="f" style="margin:0">From<select id="smH">' + [11,12,13,14,15,16,17,18,19,20,21,22].map(function(x){ return '<option value="' + x + '"' + (x === h ? ' selected' : '') + '>' + x + ':00</option>'; }).join('') + '</select></label>' +
+    '<label class="f" style="margin:0">Bills<select id="smN">' + [8, 15, 25, 40].map(function(x){ return '<option' + (x === 15 ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label><label class="f" style="margin:0">Speed<select id="smS"><option value="1">real gaps</option><option value="5" selected>5× faster</option><option value="20">20× faster</option><option value="120">2 min total-ish</option></select></label></div>' +
+    '<div class="row" style="display:flex;gap:8px;margin-top:12px"><button class="btn pri" data-a="simgo" style="flex:2">▶ Start replay</button><button class="btn" data-a="simstop" style="flex:1">■ Stop</button></div><div id="simStat" class="note" style="margin-top:10px">' + simStatus() + '</div><p class="muted" style="font-size:12.5px">Keep this page open while it plays.</p></div>' +
+    '<div class="card"><h2>Clear trial data</h2><p class="sub">' + Object.keys(S.orders).length + ' trial bills (' + open + ' open) · ' + Object.keys(S.clean).length + ' cleaning requests in the last 36 h.</p><button class="btn bad" data-a="simclear" style="width:100%">Delete all trial bills, locks and cleaning requests</button></div>';
+}
+/* ---------------- Setup → Usage: where people struggle ---------------- */
+var UXV = { sess:null, busy:false, open:null, ev:{} };
+async function uxLoad(){ if(UXV.busy) return; UXV.busy = true;
+  try{ var since = Date.now() - 7 * 864e5, out = []; await new Promise(function(ok){ var off = S.F.onSnapshot(S.F.query(col('ux_sessions'), S.F.where('start', '>=', since)), function(sn){ sn.forEach(function(d){ out.push(d.data()); }); try{ off(); }catch(e){} ok(); }, function(){ ok(); }); });
+    UXV.sess = out.sort(function(a, b){ return b.start - a.start; });
+    for(var i = 0; i < Math.min(30, UXV.sess.length); i++) await uxEvents(UXV.sess[i].sid);
+  }catch(e){ UXV.sess = []; } UXV.busy = false; render(); }
+async function uxEvents(sid){ if(UXV.ev[sid]) return UXV.ev[sid]; var L = [];
+  for(var n = 0; n < 200; n++){ var d = await S.F.getDoc(ref('ux_events', sid + '_' + String(n).padStart(4, '0'))); if(!d.exists()) break; L = L.concat(d.data().ev || []); }
+  UXV.ev[sid] = L; return L; }
+function med(a){ if(!a.length) return null; var b = a.slice().sort(function(x, y){ return x - y; }); return b[Math.floor(b.length / 2)]; }
+function usageAdmin(){
+  if(!UXV.sess){ uxLoad(); return '<div class="card"><h2>Usage</h2><p class="sub">Loading the last 7 days…</p></div>'; }
+  var S2 = UXV.sess, E = [].concat.apply([], S2.map(function(s){ return (UXV.ev[s.sid] || []).map(function(e){ return Object.assign({ sid:s.sid, who:s.who }, e); }); }));
+  var taps = E.filter(function(e){ return e.e === 'tap'; }), dead = E.filter(function(e){ return e.e === 'dead'; }), rage = E.filter(function(e){ return e.e === 'rage'; }), errs = E.filter(function(e){ return e.e === 'err'; });
+  var adds = E.filter(function(e){ return e.e === 'add'; }), undo = E.filter(function(e){ return e.e === 'undo'; }), kots = E.filter(function(e){ return e.e === 'kot'; }), pays = E.filter(function(e){ return e.e === 'pay'; }), qs = E.filter(function(e){ return e.e === 'search'; });
+  var by = {}; adds.forEach(function(a){ by[a.via || '?'] = (by[a.via || '?'] || 0) + 1; });
+  var zero = {}; qs.filter(function(q){ !q.n && (zero[q.q] = (zero[q.q] || 0) + 1); return 0; });
+  var tK = med(kots.map(function(k){ return k.ms || 0; }).filter(Boolean)), tP = med(pays.map(function(k){ return k.ms || 0; }).filter(Boolean));
+  var pct = function(a, b){ return b ? Math.round(100 * a / b) + '%' : '—'; };
+  var errTop = {}; errs.forEach(function(e){ errTop[e.m] = (errTop[e.m] || 0) + 1; });
+  var deadSpots = {}; dead.forEach(function(d){ var k = d.v + ' · ' + (d.txt || '(empty)'); deadSpots[k] = (deadSpots[k] || 0) + 1; });
+  var top = function(o, n){ return Object.keys(o).sort(function(a, b){ return o[b] - o[a]; }).slice(0, n || 6); };
+  var dl = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ sessions:S2, events:UXV.ev }));
+  return '<div class="card"><h2>Usage · last 7 days</h2><p class="sub">' + S2.length + ' sessions · ' + [].concat(S2.map(function(s){ return s.who; })).filter(function(v, i, a){ return a.indexOf(v) === i; }).length + ' people · ' + E.length + ' events</p>' +
+    '<div class="sum" style="grid-template-columns:repeat(3,1fr)"><div><small>Order → KOT</small><b>' + (tK ? Math.round(tK / 1000) + 's' : '—') + '</b></div><div><small>Pay sheet</small><b>' + (tP ? Math.round(tP / 1000) + 's' : '—') + '</b></div><div><small>Taps / dish</small><b>' + (adds.length ? (taps.length / adds.length).toFixed(1) : '—') + '</b></div>' +
+    '<div><small>Dead taps</small><b>' + pct(dead.length, taps.length + dead.length) + '</b></div><div><small>Rage taps</small><b>' + rage.length + '</b></div><div><small>Undo</small><b>' + pct(undo.length, adds.length) + '</b></div></div>' +
+    '<table class="tbl"><tr><th>Dishes added by</th><th class="r">n</th></tr>' + top(by, 8).map(function(k){ return '<tr><td>' + esc(k) + '</td><td class="r">' + by[k] + ' · ' + pct(by[k], adds.length) + '</td></tr>'; }).join('') + '</table>' +
+    (top(zero).length ? '<h3 class="sec-t">Searches with no result</h3><p>' + top(zero, 12).map(function(k){ return '<span class="badge2 b-urg" style="margin:2px">' + esc(k) + ' ×' + zero[k] + '</span>'; }).join(' ') + '</p>' : '') +
+    (top(errTop).length ? '<h3 class="sec-t">Errors people saw</h3><table class="tbl">' + top(errTop).map(function(k){ return '<tr><td>' + esc(k) + '</td><td class="r">' + errTop[k] + '</td></tr>'; }).join('') + '</table>' : '') +
+    (top(deadSpots).length ? '<h3 class="sec-t">Taps that hit nothing</h3><table class="tbl">' + top(deadSpots).map(function(k){ return '<tr><td>' + esc(k) + '</td><td class="r">' + deadSpots[k] + '</td></tr>'; }).join('') + '</table>' : '') +
+    '<a class="btn" style="width:100%;margin-top:10px;text-decoration:none" download="hayat-usage.json" href="' + dl + '">⬇ Download all of it (for Claude to study)</a></div>' +
+    '<div class="card"><h2>Sessions · step by step</h2><div class="list">' + S2.slice(0, 30).map(function(s){ var L = UXV.ev[s.sid] || [], dur = L.length ? Math.round(L[L.length - 1].t / 60000) : 0;
+      return '<button class="li" data-a="uxopen" data-id="' + esc(s.sid) + '"><span class="tico">' + esc(initials(s.who)) + '</span><span class="n">' + esc(s.who) + ' · ' + esc(ROLES[s.role] || s.role || '') + '<small>' + new Date(s.start).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + ' · ' + dur + ' min · ' + L.length + ' events · ' + s.w + '×' + s.h + (s.standalone ? ' · app' : ' · browser') + '</small></span><span class="v">›</span></button>' +
+        (UXV.open === s.sid ? '<div class="uxline">' + L.map(function(e){ return '<div><i>' + (e.t / 1000).toFixed(1) + 's</i> <b>' + esc(e.e) + '</b> ' + esc([e.a, e.id, e.txt, e.q, e.via, e.m, e.n != null ? 'n=' + e.n : '', e.ms ? Math.round(e.ms / 1000) + 's' : ''].filter(Boolean).join(' · ')) + (e.tb ? ' <small>' + esc(e.tb) + '</small>' : '') + '</div>'; }).join('') + '</div>' : ''); }).join('') + '</div></div>';
+}
+
 /* ============================================================
    EVENTS
    ============================================================ */
@@ -1111,20 +1341,27 @@ document.addEventListener('click', function(e){
   if(a === 'me'){ meSheet(); return; }
   if(a === 'nav'){ var leaving = S.view === 'order'; S.view = el.dataset.v; S.q = ''; if(leaving && history.state && history.state.cap === 'order'){ HIST.skip++; history.back(); } window.scrollTo(0, 0); render(); return; }
   if(a === 'space'){ S.space = el.dataset.s; render(); return; }
+  if(a === 'sppick'){ S.pickSp = (mySpaces() || []).slice(); S.view = 'spaces'; render(); return; }
+  if(a === 'sptog'){ S.pickSp = S.pickSp || (mySpaces() || []).slice(); var si = S.pickSp.indexOf(el.dataset.s); if(si >= 0) S.pickSp.splice(si, 1); else S.pickSp.push(el.dataset.s); vib(6); render(); return; }
+  if(a === 'spall'){ setMySpaces(floor().spaces.map(function(z){ return z.id; })); S.pickSp = null; S.space = 'all'; S.view = 'floor'; render(); return; }
+  if(a === 'spgo'){ if(!(S.pickSp || []).length) return; setMySpaces(S.pickSp); S.pickSp = null; S.space = 'mine'; S.view = 'floor'; render(); return; }
+  if(a === 'cstep'){ stepCat(+el.dataset.d); return; }
+  if(a === 'cgrid'){ catGrid(); return; }
   if(a === 'mine'){ S.mine = !S.mine; render(); return; }
   if(a === 'table'){ var tid = el.dataset.t; if(S.me.role === 'cleaner'){ var c = openClean(tableById(tid)); if(c) cleanStep(c.id, c.status === 'open' ? 'taken' : 'done'); else toast('Nothing to clean at ' + esc(tableById(tid).name)); return; }
-    S.table = tid; S.view = 'order'; S.q = ''; S.cat = ''; pushHist('order'); window.scrollTo(0, 0); render(); return; }
-  if(a === 'cat'){ S.cat = el.dataset.c; render(); return; }
-  if(a === 'add' && t){ var x = BYID[el.dataset.id]; if(!x) return; addAndSnack(t, x, +el.dataset.i, 1); render(); return; }
-  if(a === 'sug' && t){ var xs = BYID[el.dataset.id]; if(!xs) return; addAndSnack(t, xs, +el.dataset.i, +el.dataset.q || 1); closeSheet(); render(); return; }
-  if(a === 'rep' && t){ var o4 = openOrder(t), kk = o4 && (o4.kots || []).filter(function(z){ return z.kind === 'kot' && String(z.n) === el.dataset.n; })[0]; if(!kk) return;
+    S.table = tid; S.view = 'order'; S.q = ''; S.cat = ''; if(S.omodes) delete S.omodes[tid]; pushHist('order'); window.scrollTo(0, 0); render(); return; }
+  if(a === 'cat'){ S.cat = el.dataset.c; orderRefresh(); window.scrollTo(0, 0); return; }
+  if(a === 'omode' && t){ var mm = el.dataset.m; setMode(t, mm === 'search' ? 'menu' : mm); if(mm === 'bill'){ S.q = ''; } render(); window.scrollTo(0, 0); if(mm === 'search'){ var qi = $('q'); if(qi) qi.focus(); } return; }
+  if(a === 'add' && t){ var x = BYID[el.dataset.id]; if(!x) return; addAndSnack(t, x, +el.dataset.i, 1, el.closest('#sres') ? 'search' : el.closest('#scrim') ? 'sheet' : 'quick:' + (S.cat || 'now')); orderRefresh(); return; }
+  if(a === 'sug' && t){ var xs = BYID[el.dataset.id]; if(!xs) return; addAndSnack(t, xs, +el.dataset.i, +el.dataset.q || 1, 'suggest:' + (el.className.replace('sug', '').trim() || 'pair')); closeSheet(); setMode(t, 'menu'); orderRefresh(); return; }
+  if(a === 'rep' && t){ ux('add', { via:'repeat', n:el.dataset.n }); var o4 = openOrder(t), kk = o4 && (o4.kots || []).filter(function(z){ return z.kind === 'kot' && String(z.n) === el.dataset.n; })[0]; if(!kk) return;
     var n0 = 0; kk.lines.forEach(function(l){ var src = (o4.lines || []).filter(function(z){ return z.k === l.k; })[0], id0 = (src && src.id) || l.k.split('|')[0], xm = BYID[id0];
       if(!src && xm){ var cm = xm.ch.filter(function(c){ return c.label === (l.label || ''); })[0]; if(cm) src = { id:id0, label:cm.label, price:cm.price, vn:cm.vn, kit:cm.kit || xm.kit }; }
       if(!src || !(src.price > 0)) return; var xx = xm || { id:id0, name:l.name, kit:src.kit };
       var d = S.draft[t.id] = S.draft[t.id] || { lines:[] }; if(!d.at) d.at = Date.now(); var ex = d.lines.filter(function(z){ return z.k === l.k; })[0]; if(ex) ex.q += l.q; else d.lines.push(clean({ k:l.k, id:xx.id, name:l.name, label:src.label || l.label || '', price:src.price || 0, q:l.q, vn:src.vn, kit:src.kit })); n0 += l.q; });
-    saveDraft(); snack('↻ ' + n0 + ' items from KOT ' + kk.n + ' added · not sent yet', function(){ kk.lines.forEach(function(l){ stepDraft(t.id, l.k, -l.q); }); render(); }); render(); return; }
-  if(a === 'qclr'){ S.q = ''; render(); var qq = $('q'); if(qq) qq.focus(); return; }
-  if(a === 'dq' && t){ stepDraft(t.id, el.dataset.k, +el.dataset.d); render(); return; }
+    saveDraft(); setMode(t, 'menu'); snack('↻ ' + n0 + ' items from KOT ' + kk.n + ' added · not sent yet', function(){ kk.lines.forEach(function(l){ stepDraft(t.id, l.k, -l.q); }); orderRefresh(); }); render(); return; }
+  if(a === 'qclr'){ S.q = ''; var qq = $('q'); if(qq){ qq.value = ''; qq.focus(); } orderRefresh(); return; }
+  if(a === 'dq' && t){ stepDraft(t.id, el.dataset.k, +el.dataset.d); if($('scrim') && S.refresh) S.refresh(); orderRefresh(); return; }
   if(a === 'dclear' && t){ delete S.draft[t.id]; saveDraft(); closeSheet(); render(); return; }
   if(a === 'note' && t){ noteSheet(el.dataset.k); return; }
   if(a === 'void' && t){ voidSheet(el.dataset.k); return; }
@@ -1154,6 +1391,11 @@ document.addEventListener('click', function(e){
   if(a === 'fsadd'){ F.spaces.push({ id:'sp' + Date.now().toString(36), name:'New space', tables:[] }); render(); return; }
   if(a === 'fsdel'){ var si = +el.dataset.si; if((F.spaces[si].tables || []).length && !confirm('Delete ' + F.spaces[si].name + ' and its ' + F.spaces[si].tables.length + ' tables?')) return; F.spaces.splice(si, 1); render(); return; }
   if(a === 'fsave'){ saveFloor(); return; }
+  if(a === 'simgo'){ if(SIM.tm){ toast('Already playing'); return; } var dy = $('smDay').value, fh = +$('smH').value, nn = +$('smN').value, spd = +$('smS').value; el.disabled = true; el.textContent = 'Loading the day…';
+    simPrepare(dy, fh, nn, spd).then(function(P){ SIM.ev = P.ev; SIM.i = 0; SIM.made = {}; SIM.locks = {}; SIM.msg = P.bills + ' bills · about ' + Math.max(1, Math.round(P.span / spd)) + ' min'; SIM.tm = setInterval(simStep, 1000); toast('Replay started · ' + P.bills + ' bills', 'good'); render(); }).catch(function(e){ fail('Could not start', e); render(); }); return; }
+  if(a === 'simstop'){ if(SIM.tm){ clearInterval(SIM.tm); SIM.tm = null; SIM.msg = 'Stopped'; } render(); return; }
+  if(a === 'simclear'){ if(!confirm('Delete every TRIAL bill, lock and cleaning request? Real VMENU data is not touched.')) return; if(SIM.tm){ clearInterval(SIM.tm); SIM.tm = null; } clearTrial().then(function(n){ toast('Cleared ' + n + ' trial bills', 'good'); render(); }); return; }
+  if(a === 'uxopen'){ UXV.open = UXV.open === el.dataset.id ? null : el.dataset.id; render(); return; }
   if(a === 'msrc'){ saveCfg({ menuSrc:el.dataset.v }).then(function(){ if(el.dataset.v === 'web') loadMenu(); else usePos(); render(); }); return; }
   if(a === 'mrebuild'){ el.disabled = true; el.textContent = 'Learning… (reads 7 days of bills)'; buildPosMenu().then(function(b){ if(b.fams.length >= 10){ POSM = b; usePos(); toast('Learned ' + b.fams.length + ' dishes from ' + b.bills + ' bills', 'good'); } else toast('Too few VMENU bills found', 'bad'); render(); }).catch(function(e){ fail('Could not learn', e); render(); }); return; }
   if(a === 'mhide'){ var E = S.posEdit; E.hide[el.dataset.id] = !E.hide[el.dataset.id]; if(!E.hide[el.dataset.id]) delete E.hide[el.dataset.id]; S.adminDirty = true; render(); return; }
@@ -1173,16 +1415,20 @@ document.addEventListener('click', function(e){
 });
 document.addEventListener('input', function(e){
   var el = e.target;
-  if(el.id === 'q'){ S.q = el.value; var box = $('items'), t = curTable(); if(box && t){ var had = box.querySelector('.it'); box.innerHTML = itemsHtml(t); if(!had) window.scrollTo(0, 0); } var ch = $('cats'), sg = $('sugs'); if(ch) ch.style.display = S.q ? 'none' : ''; if(sg) sg.style.display = S.q ? 'none' : '';
-    var sb = el.parentNode, cx = sb.querySelector('.qx2'); if(S.q && !cx){ sb.insertAdjacentHTML('beforeend', '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>'); } else if(!S.q && cx) cx.remove(); dockSize(); return; }
+  if(el.id === 'q'){ S.q = el.value; var t = curTable(), d = $('dock'); if(t && d){ var old = $('sres'), tmp = document.createElement('div'); tmp.innerHTML = sresHtml(t); var nw = tmp.firstChild; if(old && nw) old.replaceWith(nw); else if(old) old.remove(); else if(nw) d.insertBefore(nw, d.firstChild); }
+    var sb = el.parentNode, cx = sb.querySelector('.qx2'); if(S.q && !cx){ sb.insertAdjacentHTML('beforeend', '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>'); } else if(!S.q && cx) cx.remove(); dockSize(); saveUI(); uxQuery(); return; }
   if(S.view === 'admin') S.adminDirty = true;
   if(el.id === 'mq'){ S.mq = el.value; var c = el.selectionStart; render(); var m = $('mq'); if(m){ m.focus(); try{ m.setSelectionRange(c, c); }catch(x){} } return; }
   if(el.dataset.mp != null && S.posEdit){ var v = el.value.replace(/\D/g, ''); if(v === '') delete S.posEdit.price[el.dataset.mp]; else S.posEdit.price[el.dataset.mp] = +v; return; }
   if(el.dataset.fs != null && S.floorEdit){ S.floorEdit.spaces[+el.dataset.fs].name = el.value; return; }
   if(el.dataset.ft != null && S.floorEdit){ var p = el.dataset.ft.split(':'); S.floorEdit.spaces[+p[0]].tables[+p[1]].name = el.value; return; }
 });
+/* tapping a result must not take the focus off the search box (the keyboard would drop and the dock jump) */
+['pointerdown', 'mousedown'].forEach(function(ev){ document.addEventListener(ev, function(e){ if(e.target.closest('#sres, #snack') && document.activeElement && document.activeElement.id === 'q') e.preventDefault(); }); });
+document.addEventListener('focusin', function(e){ if(e.target.id === 'q'){ document.body.classList.add('typing'); dockSize(); } });
+document.addEventListener('focusout', function(e){ if(e.target.id === 'q') setTimeout(function(){ if(document.activeElement && document.activeElement.id === 'q') return; document.body.classList.remove('typing'); dockSize(); }, 120); });
 document.addEventListener('keydown', function(e){ if(e.key === 'Enter' && e.target.id === 'q'){ e.preventDefault(); var b = S.best, t = curTable(); if(!b || !t) return;
-  if(b.chs.length === 1 || b.x.ch.length === 1){ addAndSnack(t, b.x, b.chs[0] || 0, 1); S.q = ''; render(); var q = $('q'); if(q) q.focus(); } else toast('Pick a size for ' + esc(b.x.name), '', b.x.ch.map(function(c){ return short(c.label); }).join(' · ')); } });
+  if(b.chs.length === 1 || b.x.ch.length === 1){ addAndSnack(t, b.x, b.chs[0] || 0, 1, 'enter'); S.q = ''; var q = $('q'); if(q){ q.value = ''; q.focus(); } orderRefresh(); } else toast('Pick a size for ' + esc(b.x.name), '', b.x.ch.map(function(c){ return short(c.label); }).join(' · ')); } });
 
 async function saveCfg(p){
   var next = Object.assign({}, S.cfg, p);
@@ -1225,26 +1471,29 @@ function onClean(){
 }
 
 async function boot(){
-  try{ S.ctx = await window.HayatAuth.start(); }
+  try{ S.ctx = await window.HayatAuth.start({ cache:true }); }
   catch(e){ $('app').innerHTML = '<div class="login"><div class="card"><h2>Cannot connect</h2><p class="sub">' + esc(e.message || e) + '</p></div></div>'; return; }
   S.F = S.ctx.fs; S.D = S.ctx.db;
   var F = S.F, since = Date.now() - 20 * 3600e3;
   /* resume only someone who signed in HERE on this phone - an office sign-in from the website must not open the captain app as Majid */
   var mine = lsGet('hayat-cap-me', null);
-  if(S.ctx.crewId && APP_ROLES.indexOf(S.ctx.role) >= 0 && mine && mine.id === S.ctx.crewId) S.me = { id:S.ctx.crewId, name:S.ctx.name || S.ctx.crewId, role:S.ctx.role };
-  if(S.me) S.view = S.me.role === 'cleaner' ? 'clean' : 'floor';
+  if(S.ctx.crewId && APP_ROLES.indexOf(S.ctx.role) >= 0 && ((mine && mine.id === S.ctx.crewId) || (SETUP && S.ctx.role === 'office'))) S.me = { id:S.ctx.crewId, name:S.ctx.name || S.ctx.crewId, role:S.ctx.role };
+  if(S.me && SETUP){ if(S.me.role !== 'office') S.me = null; else S.view = 'admin'; }
+  else if(S.me){ S.view = S.me.role === 'cleaner' ? 'clean' : (mySpaces() || S.me.role === 'office' ? 'floor' : 'spaces'); S.space = mySpaces() ? 'mine' : 'all'; restoreUI(); }
   var bad = function(what){ return function(err){ console.warn(what, err); }; };
   F.onSnapshot(ref('crew', '_list'), function(d){ S.people = (d.exists() && d.data().people) || []; if(!S.me) render(); }, bad('crew'));
   F.onSnapshot(ref('settings', 'floor'), function(d){ S.floor = d.exists() ? d.data() : null; softRender(); }, bad('floor'));
-  F.onSnapshot(ref('settings', 'captain'), function(d){ var was = cfg('menuSrc', 'pos'); S.cfg = d.exists() ? d.data() : {}; if(cfg('menuSrc', 'pos') !== was){ if(cfg('menuSrc', 'pos') === 'web') loadMenu().then(softRender); else usePos(); } softRender(); }, bad('captain'));
+  F.onSnapshot(ref('settings', 'captain'), function(d){ var was = cfg('menuSrc', 'pos'), wasT = isTrial(); S.cfg = d.exists() ? d.data() : {}; if(isTrial() !== wasT && S.relisten) S.relisten(); if(cfg('menuSrc', 'pos') !== was){ if(cfg('menuSrc', 'pos') === 'web') loadMenu().then(softRender); else usePos(); } softRender(); }, bad('captain'));
   F.onSnapshot(ref('settings', 'print'), function(d){ S.print = d.exists() ? d.data() : {}; }, bad('print'));
   var subs = [];
   var listen = function(){ subs.forEach(function(u){ try{ u(); }catch(e){} }); subs = []; since = Date.now() - 36 * 3600e3;
-  subs.push(F.onSnapshot(F.query(col('orders'), F.where('at', '>=', since)), function(snap){
-    var o = {}; snap.forEach(function(d){ o[d.id] = Object.assign({ id:d.id }, d.data()); }); S.orders = o; softRender(); }, bad('orders')));
-  subs.push(F.onSnapshot(F.query(col('cleanreq'), F.where('at', '>=', since)), function(snap){
+  subs.push(F.onSnapshot(F.query(col(C_('orders')), F.where('at', '>=', since)), function(snap){
+    var o = {}; snap.forEach(function(d){ o[d.id] = Object.assign({ id:d.id }, d.data()); }); S.orders = o; softRender();
+    if(!S.payBack){ S.payBack = true; var pk = lsGet('hayat-cap-pay', null); if(pk && S.me && Date.now() - pk.at < 10 * 60e3 && o[pk.oid] && !closed(o[pk.oid]) && !$('scrim')) paySheet(pk.oid); }   /* back where the waiter was */
+  }, bad('orders')));
+  subs.push(F.onSnapshot(F.query(col(C_('cleanreq')), F.where('at', '>=', since)), function(snap){
     var c = {}; snap.forEach(function(d){ c[d.id] = Object.assign({ id:d.id }, d.data()); }); S.clean = c; onClean(); softRender(); }, bad('cleanreq'))); };
-  listen(); setInterval(listen, 6 * 3600e3);   /* the window moves on a tablet left running for days */
+  S.relisten = listen; listen(); setInterval(listen, 6 * 3600e3);   /* the window moves on a tablet left running for days */
   await loadMenu();
   render();
   var learn = function(){ ensurePosMenu().then(function(){ if(usePos()) softRender(); }); };

@@ -485,7 +485,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v260';
+const BOARD='v262';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -2083,49 +2083,6 @@ function simWire(){
   const g=$('simGo'); if(g) g.onclick=()=>{ RP.days=SIM.pick.slice(0,4); RP.auto=false; RP.adding=false; TCUT=null; RP.view='race'; openReplay(); };
 }
 let BF={kind:'',status:'',waiter:'',section:'',sort:'time'};
-/* ============================================================
-   STAFF (v260) - who works here and their codes. Same records the captain app,
-   kitchen screen and cleaning page sign in with: crew/{id} {name, role, code, phone, off}
-   + crew/_list {people:[{id,name,role,phone,off}]} (names only - no codes).
-   ============================================================ */
-const ST_ROLES=[['captain','Captain','takes orders, bills, payments · captain app'],['waiter','Waiter','takes orders, bills, payments · captain app'],['runner','Runner','serves food, sees tables · captain app'],['cashier','Cashier','bills + payments · captain app'],['cleaner','Cleaner','cleaning requests · captain app'],['kitchen','Cook / kitchen','kitchen screen (KDS)'],['office','Office / manager','everything + Admin']];
-const stRole=r=>(ST_ROLES.find(x=>x[0]===r)||[r,r||'Office'])[1];
-const STF={list:null,busy:false,open:null,code:null};
-function stCode(){ return String(Math.floor(100000+Math.random()*900000)); }
-async function stLoad(force){ if(!FB||!FB.fs||STF.busy||(STF.list&&!force)) return; STF.busy=true; const {fs,db}=FB;
-  try{ const d=await fs.getDoc(fs.doc(db,'crew','_list')); STF.list=(d.exists()&&d.data().people)||[]; }catch(e){ STF.list=[]; STF.err=e.code||e.message; } STF.busy=false; render(); }
-async function stWriteList(P){ const {fs,db}=FB; await fs.setDoc(fs.doc(db,'crew','_list'),{people:P.map(p=>{ const x={id:p.id,name:p.name,role:p.role||''}; if(p.phone) x.phone=p.phone; if(p.off) x.off=true; return x; })}); STF.list=P; }
-function staffPage(){
-  if(!STF.list){ stLoad(); return '<div class="card wide"><h2>Staff</h2><div class="note">Loading…</div></div>'; }
-  const url=location.href.replace(/[^/]*$/,'')+'captain.html', P=STF.list.slice().sort((a,b)=>(a.off?1:0)-(b.off?1:0)||ST_ROLES.findIndex(r=>r[0]===a.role)-ST_ROLES.findIndex(r=>r[0]===b.role)||String(a.name).localeCompare(b.name));
-  const cnt={}; P.filter(p=>!p.off).forEach(p=>cnt[p.role||'office']=(cnt[p.role||'office']||0)+1);
-  const roleSel=(id,v)=>`<select id="${id}">${ST_ROLES.map(r=>`<option value="${r[0]}"${(v||'office')===r[0]?' selected':''}>${r[1]}</option>`).join('')}</select>`;
-  const qr=window.qrSvg?`<img src="${window.qrSvg(url,240)}" alt="captain app QR" style="width:120px;height:120px;background:#fff;border-radius:10px;padding:6px">`:'';
-  return `<div class="grid"><div class="card wide stf"><h2>Staff &amp; codes <span class="n">${P.filter(p=>!p.off).length} active · ${ST_ROLES.filter(r=>cnt[r[0]]).map(r=>cnt[r[0]]+' '+r[1].split(' ')[0].toLowerCase()).join(' · ')}</span></h2>
-    <div class="stadd"><input id="stName" placeholder="Name, e.g. Rafeek" autocomplete="off">${roleSel('stRole','captain')}<input id="stPhone" inputmode="tel" placeholder="Phone (optional)" autocomplete="off"><input id="stCode" inputmode="numeric" value="${STF.code||(STF.code=stCode())}" placeholder="Code 4–6 digits" autocomplete="off"><button class="stgo" id="stAdd" type="button">+ Add person</button></div>
-    <div class="note">Each person signs in on ANY phone: pick their name → type the code. Tell them the code once; it is not shown again unless you tap “show”.</div>
-    <div class="stlist">${P.map(p=>`<div class="strow${p.off?' off':''}" data-sid="${esc(p.id)}"><div class="stn"><b>${esc(p.name)}</b>${p.off?'<small>switched off</small>':''}</div><select data-strole="${esc(p.id)}">${ST_ROLES.map(r=>`<option value="${r[0]}"${(p.role||'office')===r[0]?' selected':''}>${r[1]}</option>`).join('')}</select><input data-stphone="${esc(p.id)}" value="${esc(p.phone||'')}" inputmode="tel" placeholder="phone">
-      <div class="stb"><button type="button" data-stnew="${esc(p.id)}">New code</button><button type="button" data-stshow="${esc(p.id)}">Show code</button><button type="button" data-stoff="${esc(p.id)}">${p.off?'Switch on':'Switch off'}</button><button type="button" class="bad" data-strm="${esc(p.id)}" title="remove for good">Remove</button></div></div>`).join('')||'<div class="note">Nobody yet - add the first person above.</div>'}</div></div>
-    <div class="card"><h2>Who opens what</h2><table class="sttab">${ST_ROLES.map(r=>`<tr><td><b>${r[1]}</b></td><td>${r[2]}</td></tr>`).join('')}</table></div>
-    <div class="card"><h2>Captain app</h2><div style="display:flex;gap:12px;align-items:center">${qr}<div><a href="captain.html" target="_blank" rel="noopener"><b>Open the captain app ↗</b></a><div class="note" style="margin:6px 0">Staff scan this on their phone → Add to Home screen. Office opens <b>Admin</b> there for tables, menu prices, UPI and printing.</div><span class="stb"><button type="button" id="stCopy">Copy link</button></span></div></div></div></div>`;
-}
-function staffBind(){
-  const {fs,db}=FB||{}; if(!fs) return; const L=()=>STF.list||[], find=id=>L().find(p=>p.id===id);
-  const say=t=>{ const n=document.createElement('div'); n.className='altoast bill'; n.innerHTML='<b>'+t+'</b>'; let box=$('alerts'); if(!box){ box=document.createElement('div'); box.id='alerts'; document.body.appendChild(box); } box.prepend(n); setTimeout(()=>n.remove(),6000); };
-  const add=$('stAdd'); if(add) add.onclick=async()=>{ const name=$('stName').value.trim(), role=$('stRole').value, phone=$('stPhone').value.replace(/[^\d+]/g,''), code=$('stCode').value.trim();
-    if(!name){ say('Type a name'); return; } if(!/^\d{4,6}$/.test(code)){ say('Code must be 4–6 digits'); return; }
-    if(L().some(p=>p.name.toLowerCase()===name.toLowerCase()&&!p.off)){ say(esc(name)+' is already on the list'); return; }
-    const id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+Math.random().toString(36).slice(2,5);
-    try{ await fs.setDoc(fs.doc(db,'crew',id),{name,role,code,phone:phone||null}); await stWriteList(L().concat([{id,name,role,phone}])); STF.code=null; say(esc(name)+' added · '+stRole(role)+' · code '+esc(code)); render(); }catch(e){ say('Not saved: '+esc(e.code||e.message)); } };
-  $$('[data-strole]').forEach(s=>s.onchange=async()=>{ const p=find(s.dataset.strole); if(!p) return; try{ await fs.setDoc(fs.doc(db,'crew',p.id),{role:s.value},{merge:true}); await stWriteList(L().map(z=>z.id===p.id?Object.assign({},z,{role:s.value}):z)); say(esc(p.name)+' is now '+stRole(s.value)); }catch(e){ say('Not saved: '+esc(e.code||e.message)); } });
-  $$('[data-stphone]').forEach(s=>s.onchange=async()=>{ const p=find(s.dataset.stphone); if(!p) return; const ph=s.value.replace(/[^\d+]/g,''); try{ await fs.setDoc(fs.doc(db,'crew',p.id),{phone:ph||null},{merge:true}); await stWriteList(L().map(z=>z.id===p.id?Object.assign({},z,{phone:ph}):z)); say('Phone saved'); }catch(e){ say('Not saved'); } });
-  $$('[data-stnew]').forEach(b=>b.onclick=async()=>{ const p=find(b.dataset.stnew); if(!p) return; const c=prompt('New code for '+p.name+' (4–6 digits)',stCode()); if(c==null) return; if(!/^\d{4,6}$/.test(c.trim())){ say('Code must be 4–6 digits'); return; } try{ await fs.setDoc(fs.doc(db,'crew',p.id),{code:c.trim()},{merge:true}); say(esc(p.name)+"'s new code: "+esc(c.trim())); }catch(e){ say('Not saved'); } });
-  $$('[data-stshow]').forEach(b=>b.onclick=async()=>{ const p=find(b.dataset.stshow); if(!p) return; try{ const d=await fs.getDoc(fs.doc(db,'crew',p.id)); const c=d.exists()&&d.data().code; say(c?esc(p.name)+"'s code: "+esc(c):'No code stored - set a new one'); }catch(e){ say('Codes are hidden by the rules - set a new one'); } });
-  $$('[data-stoff]').forEach(b=>b.onclick=async()=>{ const p=find(b.dataset.stoff); if(!p) return; try{ await fs.setDoc(fs.doc(db,'crew',p.id),{off:!p.off},{merge:true}); await stWriteList(L().map(z=>z.id===p.id?Object.assign({},z,{off:!p.off}):z)); render(); }catch(e){ say('Not saved'); } });
-  $$('[data-strm]').forEach(b=>b.onclick=async()=>{ const p=find(b.dataset.strm); if(!p||!confirm('Remove '+p.name+' for good?')) return; try{ await fs.deleteDoc(fs.doc(db,'crew',p.id)); await stWriteList(L().filter(z=>z.id!==p.id)); render(); }catch(e){ say('Not removed'); } });
-  const cp=$('stCopy'); if(cp) cp.onclick=()=>{ const u=location.href.replace(/[^/]*$/,'')+'captain.html'; try{ navigator.clipboard.writeText(u); say('Link copied'); }catch(e){ prompt('Captain app link',u); } };
-}
-
 function bills(){
   const all=recs();
   const R=all.slice().sort((a,b)=>String(b.settledAt||b.createdAt||'').localeCompare(String(a.settledAt||a.createdAt||'')));
@@ -3255,7 +3212,7 @@ function dock(){
   const svg=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
   /* ONE menu for a day and for a span of days: Live · Sales · Spends · Items · More (Majid, 10 Oct 2026) */
   const prim=MODE==='period'?[['@live','Live','live'],['overview','Sales','sales'],['money','Spends','money'],['items','Items','items']]:[['floor','Live','live'],['sales','Sales','sales'],['buy','Spends','money'],['items','Items','items']];
-  const sec=MODE==='period'?[['people','People'],['voids','Voids'],['staff','👥 Staff']]:[['patterns','Insights'],['bills','Bills'],['staff','👥 Staff']];
+  const sec=MODE==='period'?[['people','People'],['voids','Voids']]:[['patterns','Insights'],['bills','Bills']];
   const cur=MODE==='period'?(PTAB==='cash'?'money':PTAB):(TGRP[TAB]||TAB), attr=MODE==='period'?'data-ptab':'data-tab', inSec=sec.find(t=>t[0]===cur);
   $('dockTabs').innerHTML=prim.map(t=>t[0]==='@live'?`<button class="dtab" data-golive="1" title="today, live">${svg(t[2])}<span>${t[1]}</span></button>`:`<button class="dtab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${svg(t[2])}<span>${t[1]}</span></button>`).join('')+`<button class="dtab${inSec?' on':''}" id="dockMoreBtn" aria-expanded="${!$('dockSheet').hidden}">${svg('more')}<span>${inSec?inSec[1]:'More'}</span></button>`;
   $('dockMore').innerHTML=(MODE==='period'?'':`<button class="tab rpgo" id="rpOpen">▶ Replay</button>`)+sec.map(t=>`<button class="tab${cur===t[0]?' on':''}" ${attr}="${t[0]}">${t[1]}</button>`).join('')+`<a class="tab" href="captain.html" target="_blank" rel="noopener" title="tables, KOT, bills, UPI, cleaning · staff & tables in Admin">🧑‍🍳 Captain app ↗</a>`;
@@ -3352,7 +3309,6 @@ function render(){ tabCarry();
   NOW=Math.max(Date.now(), DOC&&DOC.updatedAt?T(DOC.updatedAt).getTime():0);
   { const cut=cutTs(); if(cut!=null&&MODE==='day'&&cut<NOW) NOW=cut; }
   const m=$('main');
-  if((MODE==='day'&&TAB==='staff')||(MODE==='period'&&PTAB==='staff')){ m.innerHTML=staffPage()+`<div class="note">board ${BOARD}</div>`; document.body.classList.toggle('period',MODE==='period'); dock(); staffBind(); return; }
   if(!DOC&&MODE==='day'){ m.innerHTML='<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; document.body.classList.remove('period'); dock(); return; }
   const live=DAY===bizToday();
   document.body.classList.toggle('period',MODE==='period');

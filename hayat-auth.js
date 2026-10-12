@@ -9,14 +9,18 @@
 (function(){
   var V = '12.19.0';
   function esc(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-  async function start(){
+  async function start(opts){ opts = opts || {};
     var cfg = window.CONFIG && window.CONFIG.firebase;
     if(!cfg || !cfg.projectId) throw Object.assign(new Error('This page has no Firebase settings. Open it from the website.'), {code:'no-config'});
     var appM = await import('https://www.gstatic.com/firebasejs/' + V + '/firebase-app.js');
     var fs = await import('https://www.gstatic.com/firebasejs/' + V + '/firebase-firestore.js');
     var au = await import('https://www.gstatic.com/firebasejs/' + V + '/firebase-auth.js');
     var app = appM.getApps().length ? appM.getApp() : appM.initializeApp(cfg);
-    var db = fs.getFirestore(app), auth = au.getAuth(app);
+    /* opts.cache: keep a copy on the phone (IndexedDB) so a refresh with no signal still shows the bills - the captain app asks for it */
+    var db = null;
+    if(opts.cache && fs.initializeFirestore && fs.persistentLocalCache){ try{ db = fs.initializeFirestore(app, { localCache: fs.persistentLocalCache(fs.persistentMultipleTabManager ? { tabManager: fs.persistentMultipleTabManager() } : {}) }); }catch(e){ db = null; } }
+    if(!db) db = fs.getFirestore(app);
+    var auth = au.getAuth(app);
     var user = await new Promise(function(ok){ var off = au.onAuthStateChanged(auth, function(u){ off(); ok(u); }); });
     if(!user){ user = (await au.signInAnonymously(auth)).user; }
     var ctx = {app: app, fs: fs, db: db, au: au, auth: auth, user: user, role: null, name: '', crewId: '', V: V};

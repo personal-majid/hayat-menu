@@ -5262,8 +5262,8 @@ function riderStrip(box, spots){
 function dockAllows(key){
   if(unlocked() || STORE.isOffice()) return true;
   var r = ME.role;
-  if(r === "captain") return ["pos","kds","wait","orders"].indexOf(key) >= 0;
-  if(r === "waiter")  return ["pos","clean"].indexOf(key) >= 0;
+  if(r === "captain") return ["pos","kds","wait","orders","captain"].indexOf(key) >= 0;
+  if(r === "waiter")  return ["pos","clean","captain"].indexOf(key) >= 0;
   if(r === "kitchen") return ["kds","clean"].indexOf(key) >= 0;
   if(r === "cleaner") return key === "clean";
   return true;
@@ -5288,7 +5288,9 @@ function officeDock(here){
     ["sim",    "sim.html",       "\u23F1",       "Service sim", "Replay our bills on the floor plan"],
     ["kds",    "kds.html",       "\uD83C\uDF73", "Kitchen screen", "Orders for each kitchen, tap Done"],
     ["wait",   "waitlist.html",  "\u23F3",       "Waitlist",    "Guests waiting, quoted time, WhatsApp"],
-    ["clean",  "clean.html",     "\uD83E\uDDF9", "Cleaning",    "Today's cleaning, overdue, staff codes"]
+    ["clean",  "clean.html",     "\uD83E\uDDF9", "Cleaning",    "Today's cleaning, overdue, staff codes"],
+    ["setup",  "setup.html",     "\uD83D\uDC65", "Staff & tables", "Staff codes, halls, tables, captain menu, UPI, trial"],
+    ["captain","captain.html",   "\uD83E\uDDD1\u200D\uD83C\uDF73", "Captain app",  "Waiters: tables, KOT, bills, UPI"]
   ];
   B = B.filter(function(b){ return dockAllows(b[0]); });
   M = M.filter(function(m){ return dockAllows(m[0]); });
