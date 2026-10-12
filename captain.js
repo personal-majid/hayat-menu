@@ -35,8 +35,8 @@ function hue(s){ var h = 0; s = String(s || ''); for(var i = 0; i < s.length; i+
 function avatar(name, cls){ return '<span class="av' + (cls ? ' ' + cls : '') + '" style="background:hsl(' + hue(name) + ' 42% 38%)">' + esc(initials(name)) + '</span>'; }
 function vib(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
 
-var ROLES = { captain:'Captain', waiter:'Waiter', cashier:'Cashier', cleaner:'Cleaner', office:'Office', kitchen:'Kitchen' };
-var APP_ROLES = ['captain', 'waiter', 'cashier', 'cleaner', 'office'];
+var ROLES = { captain:'Captain', waiter:'Waiter', runner:'Runner', cashier:'Cashier', cleaner:'Cleaner', office:'Office', kitchen:'Cook / kitchen' };
+var APP_ROLES = ['captain', 'waiter', 'runner', 'cashier', 'cleaner', 'office'];
 var REASONS = ['Customer changed mind', 'Wrong entry', 'Out of stock', 'Taking too long', 'Complimentary'];
 var CLEAN_KINDS = [['clean','🧽','Clean table'],['deep','🧼','Deep clean'],['plates','🍽️','Change plates'],['spill','💧','Spill / mess'],['water','🥤','Water / refill'],['other','✳️','Other']];
 var SHAPES = [['square','□'],['round','○'],['rect','▭']];
@@ -797,7 +797,7 @@ function adminView(){
 function staffAdmin(){
   var P = S.people.slice().sort(function(a, b){ return (a.off ? 1 : 0) - (b.off ? 1 : 0) || APP_ROLES.indexOf(a.role) - APP_ROLES.indexOf(b.role) || String(a.name).localeCompare(b.name); });
   return '<div class="card"><h2>Add a person</h2><p class="sub">Each person gets a code. Any phone works: they pick their name and type the code.</p>' +
-    '<div class="adj"><label class="f" style="margin:0">Name<input id="nName" placeholder="e.g. Rafeek" autocomplete="off"></label><label class="f" style="margin:0">Role<select id="nRole">' + ['captain','waiter','cashier','cleaner','kitchen','office'].map(function(r){ return '<option value="' + r + '">' + ROLES[r] + '</option>'; }).join('') + '</select></label>' +
+    '<div class="adj"><label class="f" style="margin:0">Name<input id="nName" placeholder="e.g. Rafeek" autocomplete="off"></label><label class="f" style="margin:0">Role<select id="nRole">' + ['captain','waiter','runner','cashier','cleaner','kitchen','office'].map(function(r){ return '<option value="' + r + '">' + ROLES[r] + '</option>'; }).join('') + '</select></label>' +
     '<label class="f" style="margin:0">Phone<input id="nPhone" inputmode="tel" placeholder="98xxxxxxxx" autocomplete="off"></label><label class="f" style="margin:0">Code (4–6 digits)<input id="nCode" inputmode="numeric" value="' + (S.newCode || (S.newCode = rcode())) + '" autocomplete="off"></label></div>' +
     '<div style="margin-top:12px"><button class="btn pri" data-a="padd" style="width:100%">+ Add ' + '</button></div></div>' +
     '<div class="card"><h2>Team · ' + P.filter(function(p){ return !p.off; }).length + ' active</h2><p class="sub">Tap a person to change role, phone or code, or to switch them off.</p><div class="list">' +
@@ -832,7 +832,7 @@ function personSheet(id){
   var p = S.people.filter(function(z){ return z.id === id; })[0]; if(!p) return;
   sheet('<h2>' + esc(p.name) + '</h2><p class="sub">' + esc(ROLES[p.role] || p.role) + '</p>' +
     '<label class="f">Name<input id="pName" value="' + esc(p.name) + '"></label>' +
-    '<label class="f">Role<select id="pRole">' + ['captain','waiter','cashier','cleaner','kitchen','office'].map(function(r){ return '<option value="' + r + '"' + ((p.role || 'office') === r ? ' selected' : '') + '>' + ROLES[r] + '</option>'; }).join('') + '</select></label>' +
+    '<label class="f">Role<select id="pRole">' + ['captain','waiter','runner','cashier','cleaner','kitchen','office'].map(function(r){ return '<option value="' + r + '"' + ((p.role || 'office') === r ? ' selected' : '') + '>' + ROLES[r] + '</option>'; }).join('') + '</select></label>' +
     '<label class="f">Phone<input id="pPhone" inputmode="tel" value="' + esc(p.phone || '') + '"></label>' +
     '<label class="f">New code <span style="text-transform:none;letter-spacing:0;font-weight:600">(leave empty to keep the old one)</span><div class="row" style="margin:0"><input id="pCode" inputmode="numeric" placeholder="4–6 digits" autocomplete="off"><button class="mini" id="pRnd">Random</button><button class="mini" id="pShow">Show current</button></div></label>' +
     '<div class="row"><button class="btn pri" id="pSave" style="flex:1">Save</button><button class="btn ' + (p.off ? '' : 'bad') + '" id="pOff">' + (p.off ? 'Switch on' : 'Switch off') + '</button></div><button class="btn bad" id="pDel" style="width:100%;margin-top:4px;min-height:40px">Remove for good</button>');
@@ -1229,7 +1229,9 @@ async function boot(){
   catch(e){ $('app').innerHTML = '<div class="login"><div class="card"><h2>Cannot connect</h2><p class="sub">' + esc(e.message || e) + '</p></div></div>'; return; }
   S.F = S.ctx.fs; S.D = S.ctx.db;
   var F = S.F, since = Date.now() - 20 * 3600e3;
-  if(S.ctx.crewId && APP_ROLES.indexOf(S.ctx.role) >= 0) S.me = { id:S.ctx.crewId, name:S.ctx.name || S.ctx.crewId, role:S.ctx.role };
+  /* resume only someone who signed in HERE on this phone - an office sign-in from the website must not open the captain app as Majid */
+  var mine = lsGet('hayat-cap-me', null);
+  if(S.ctx.crewId && APP_ROLES.indexOf(S.ctx.role) >= 0 && mine && mine.id === S.ctx.crewId) S.me = { id:S.ctx.crewId, name:S.ctx.name || S.ctx.crewId, role:S.ctx.role };
   if(S.me) S.view = S.me.role === 'cleaner' ? 'clean' : 'floor';
   var bad = function(what){ return function(err){ console.warn(what, err); }; };
   F.onSnapshot(ref('crew', '_list'), function(d){ S.people = (d.exists() && d.data().people) || []; if(!S.me) render(); }, bad('crew'));
@@ -1250,7 +1252,7 @@ async function boot(){
   setInterval(function(){ if(S.me) learn(); }, 3 * 3600e3);   /* a tablet left on for days still re-learns */
   F.onSnapshot(ref('settings', 'pos_menu'), function(d){ if(d.exists() && d.data().fams){ POSM = d.data(); if(usePos()) softRender(); } }, bad('pos_menu'));
   F.onSnapshot(ref('settings', 'pos_edits'), function(d){ POSE = d.exists() ? d.data() : {}; if(usePos()) softRender(); }, bad('pos_edits'));
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache:'none' }).catch(function(){});
 }
 window.addEventListener('DOMContentLoaded', boot);
 })();

@@ -1,6 +1,6 @@
 /* Hayat menu — offline cache.
    Bump CACHE below whenever you upload changes, so tablets pick them up. */
-const CACHE = "hayat-v258";
+const CACHE = "hayat-v260";
 const CORE = [
   "./","./index.html","./app.css","./config.js","./menu-data.js","./lang.js",
   "./assets/icons.js","./assets/qr.js","./shop.js",
@@ -12,7 +12,7 @@ const CORE = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));   // "reload": never install from the browser's 10-minute HTTP cache
 });
 
 self.addEventListener("activate", e => {
@@ -35,7 +35,8 @@ self.addEventListener("fetch", e => {
     // keep a copy of each page that loads, and when the network fails show THAT page
     // (owner.html, kds.html...) - not the menu. The menu is only the last resort.
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }).then(res => {   // no-cache = ask GitHub every time (a 304 is tiny); max-age=600 kept old pages for 10 min
+        if (res && res.redirected) return fetch(e.request);   // ".../hayat-menu" -> "/": a navigation must not get a followed redirect
         if (res && res.ok) { const c = res.clone(); caches.open(CACHE).then(k => k.put(e.request, c)); }
         return res;
       }).catch(() => caches.match(e.request, { ignoreSearch: true })
@@ -46,7 +47,7 @@ self.addEventListener("fetch", e => {
   // JS and CSS: network first, so an update always lands
   if (/\.(js|css|webmanifest)$/.test(url.pathname)) {
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request, { cache: "no-cache" }).then(res => {
         if (res && res.status === 200) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
         return res;
       }).catch(() => caches.match(e.request))

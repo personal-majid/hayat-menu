@@ -78,7 +78,7 @@
     ],
     phones:{}
   };
-  var ROLE = {cleaner:'Cleaner', waiter:'Waiter', kitchen:'Kitchen', captain:'Captain', office:'Office', cashier:'Cashier'};
+  var ROLE = {cleaner:'Cleaner', waiter:'Waiter', kitchen:'Kitchen', captain:'Captain', office:'Office', cashier:'Cashier', runner:'Runner'};
   function pad(n){ return (n < 10 ? '0' : '') + n; }
   function shopNow(ms){ var d = new Date((ms == null ? Date.now() : ms) + 5.5 * 3600e3); return d; }   /* a Date whose UTC fields are shop time */
   function bizDate(ms){ return shopNow((ms == null ? Date.now() : ms) - 5 * 3600e3).toISOString().slice(0, 10); }

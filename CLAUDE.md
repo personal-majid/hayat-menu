@@ -511,6 +511,14 @@ What that means, and what to say if it comes up:
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
 
+## v260 — Staff page in the owner app
+- Captain app resumes a person only if they signed in IN the captain app on this phone (localStorage hayat-cap-me = staff crew). An office sign-in from the website no longer opens it as Majid; everyone else sees the name picker. Test t-capt3.
+- More → 👥 Staff (day and period): add person (name, role, phone, code 4-6 digits, prefilled random), per person: role, phone, New code (prompt), Show code (works while rules are open), Switch off/on, Remove. Writes crew/{id} {name, role, code, phone, off} + crew/_list {people:[{id,name,role,phone,off}]} (same records as captain app / KDS / cleaning page). Renders without a day log.
+- Roles: captain, waiter, runner (new), cashier, cleaner, kitchen ("Cook / kitchen" - KDS), office. Captain app APP_ROLES adds runner. "Who opens what" card + captain app QR (assets/qr.js now loaded in owner.html) + copy link. Test t-staffpg.
+
+## v259 — updates show at once
+- GitHub Pages sends Cache-Control max-age=600, so the service worker's plain fetch() got the browser's 10-minute copy and a shipped version "did not install". sw.js: pages fetched with cache:"no-cache" (revalidate, 304 is cheap; a redirected navigation falls back to fetch(e.request)); JS/CSS/manifest no-cache; install uses new Request(u,{cache:"reload"}). captain.js registers with updateViaCache:'none' (index.html already did).
+
 ## v258 — counter notes decide staff food
 - isStaff: a COUNTER bill whose note is not an order word (CO / c/o / counter / cnt / parcel / take away / DM… / delivery / zomato / swiggy / online) is staff food - "viv a", "SOHAIL ALF", "tan" (Majid, 12 Oct: KOT 105 "viv a" ₹180). Not when the note has a phone number (≥6 digits) or the bill is over STAFF_MAX_CO ₹600. No note = customer. Dine bills keep the old rule (one word ≤ ₹300, a known staff name, or "staff").
 - SNAP_V 6 so month snapshots rebuild with the new split. nz(): VMENU writes the word "null" for customer name/phone - hidden in the bill sheet. Test t-staff (12 note cases).
