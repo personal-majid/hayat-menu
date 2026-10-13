@@ -52,7 +52,8 @@ input,select{font:500 16px "Jost",sans-serif;color:var(--ink);background:var(--b
 .big{position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:60} .big img{max-width:96vw;max-height:90vh;border-radius:10px}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;z-index:70;max-width:92vw}
 .rd{border:2px solid var(--accent);border-radius:14px;padding:12px;display:grid;gap:8px;background:var(--bg)} .rd.no{border-color:var(--warn)} .rd .st{font-weight:700} .rd .bar{height:6px;background:var(--soft);border-radius:4px;overflow:hidden} .rd .bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
-.rl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;border-top:1px solid var(--line);padding:7px 0} .rl .raw{font-size:12.5px;color:var(--muted)} .rl .nm{font-weight:700} .rl .amt{text-align:right;font-weight:700} .rl .qr{font-size:12.5px;color:var(--muted);text-align:right}
+.rdw{background:#f8ecd2;color:#7a4f00;border-radius:10px;padding:8px 10px;font-size:13.5px} label.rl{cursor:pointer} .rl.off{opacity:.55} .rl input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent)}
+.rl{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:2px 8px;border-top:1px solid var(--line);padding:7px 0} .rl .raw{font-size:12.5px;color:var(--muted)} .rl .nm{font-weight:700} .rl .amt{text-align:right;font-weight:700} .rl .qr{font-size:12.5px;color:var(--muted);text-align:right}
 .cf{display:inline-block;border-radius:999px;padding:0 7px;font-size:11.5px;font-weight:800;margin-left:4px} .cf.hi{background:#e3f1e6;color:#145c2c} .cf.mid{background:#f8ecd2;color:#7a4f00} .cf.new{background:#e4ecf3;color:#24506e}
 .ln.chk{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--bg))} .ln .tip.read{color:var(--warn);font-weight:600}
 .it{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0} .it small{color:var(--muted)}
@@ -87,21 +88,26 @@ async function pick(e){ const f=e.target.files&&e.target.files[0]; e.target.valu
 /* read the bill: free on this phone first, the AI reader only if unsure (and only if a reader URL is set) */
 async function readBill(){ if(!PHOTO||!window.StockRead) return; const me=PHOTO; RD={busy:true,msg:'Reading the bill…',f:0}; paintRead();
   try{ const res=await StockRead.read(PHOTO,{items:ITEMS.items,alias:ITEMS.alias,aiUrl:AIURL,suppliers:Object.values(ITEMS.sup).map(s=>s.n),onProg:(m,f)=>{ if(RD&&RD.busy){ RD.msg=m; RD.f=f; paintRead(); } }});
-    if(PHOTO!==me) return; RD={res}; }catch(e){ RD={err:e.message||String(e)}; }
+    if(PHOTO!==me) return; (res.lines||[]).forEach(l=>{ l.good=!!(l.ok&&(l.conf==null||l.conf>=75)&&(l.m.via!=='new'||l.m.score>=0.5||res.via==='ai')); l.on=l.good; }); RD={res}; }catch(e){ RD={err:e.message||String(e)}; }
   paintRead(); }
 function knownSup(name){ if(!name) return ''; let best='',bs=0; Object.values(ITEMS.sup).forEach(x=>{ const v=StockRead.phraseSim(name,x.n); if(v>bs){ bs=v; best=x.n; } }); return bs>=0.75?best:name; }
 function readCard(){ if(!RD) return ''; if(RD.busy) return `<div class="rd" id="rd"><span class="st">🔎 ${esc(RD.msg)}</span><div class="bar"><i style="width:${Math.round(100*(RD.f||0))}%"></i></div><span class="note">First time on this phone it downloads the reader (~7 MB), then it is instant.</span></div>`;
   if(RD.err) return `<div class="rd no" id="rd"><span class="st">Could not read it: ${esc(RD.err)}</span><span class="note">Enter the items below by hand.</span></div>`;
   const r=RD.res; if(!r.isBill) return `<div class="rd no" id="rd"><span class="st">🤔 This does not look like a bill</span><span class="note">${esc(r.why||'')}${r.aiError?' · AI: '+esc(r.aiError):''}. Retake the photo flat and bright, or enter the items by hand.</span><div class="row"><button class="btn" id="rdX">OK</button></div></div>`;
-  const cf=m=>m.via==='new'?'<span class="cf new">new item</span>':m.score>=0.82?'<span class="cf hi">'+Math.round(m.score*100)+'%</span>':'<span class="cf mid">check · '+Math.round(m.score*100)+'%</span>';
+  const cf=(m,l)=>!l.good?'<span class="cf mid">check</span>':m.via==='new'?'<span class="cf new">new item</span>':m.score>=0.9?'<span class="cf hi">'+Math.round(m.score*100)+'%</span>':'<span class="cf mid">check · '+Math.round(m.score*100)+'%</span>';
+  const why=l=>!l.ok?'qty × rate ≠ amount':(l.conf!=null&&l.conf<75)?'faint on the photo':'';
+  const nOn=r.lines.filter(l=>l.on).length, mism=r.total!=null&&r.totalOk===false;
   return `<div class="rd" id="rd"><span class="st">✓ Bill read · ${r.lines.length} line${r.lines.length===1?'':'s'} · ${r.via==='ai'?'read by AI':'read on this phone'}${r.via!=='ai'&&r.sure<0.7?' (unsure)':''}</span>
     <span class="note">${[r.supplier&&('Supplier: <b>'+esc(knownSup(r.supplier))+'</b>'),r.date&&('Date: '+esc(r.date)),r.billNo&&('No. '+esc(r.billNo)),r.total!=null&&('Total '+rs(r.total)+(r.totalOk===false?' <b style="color:var(--bad)">· lines add up to '+rs(r.sum)+'</b>':r.totalOk?' ✓':''))].filter(Boolean).join(' · ')}${r.aiError?' · AI not used: '+esc(r.aiError):''}</span>
-    <div>${r.lines.map(l=>`<div class="rl"><span><span class="nm">${esc(l.m.n)}</span>${cf(l.m)} <span class="note">· ${esc(l.m.c||'')}</span><br><span class="raw">read “${esc(l.raw)}”${l.m.near?' · maybe '+esc(l.m.near):''}</span></span><span><span class="amt">${rs(l.a)}</span><br><span class="qr">${l.q} ${esc(l.u)} × ${rs(l.r)}</span></span></div>`).join('')}</div>
-    <div class="row"><button class="btn pri" id="rdUse">✓ Use these ${r.lines.length} lines</button><button class="btn" id="rdX">Ignore</button></div></div>`; }
+    ${mism?`<div class="rdw">⚠ The lines add up to <b>${rs(r.sum)}</b> but the bill says <b>${rs(r.total)}</b> — some lines could not be read. Tick only what is right and type the rest${AIURL?'':' (or turn on the free AI reader in Items)'}.</div>`:''}
+    ${r.dropped?`<span class="note">${r.dropped} unclear line${r.dropped>1?'s':''} on the photo skipped (packets, labels, smudges).</span>`:''}
+    <div>${r.lines.map((l,i)=>`<label class="rl${l.on?'':' off'}"><input type="checkbox" data-rdi="${i}"${l.on?' checked':''}><span><span class="nm">${esc(l.m.n)}</span>${cf(l.m,l)} <span class="note">· ${esc(l.m.c||'')}</span><br><span class="raw">read “${esc(l.raw)}”${l.m.near?' · maybe '+esc(l.m.near):''}${why(l)?' · '+why(l):''}</span></span><span><span class="amt">${rs(l.a)}</span><br><span class="qr">${l.q} ${esc(l.u)} × ${rs(l.r)}</span></span></label>`).join('')}</div>
+    <div class="row"><button class="btn pri" id="rdUse"${nOn?'':' disabled'}>✓ Add ${nOn} ticked line${nOn===1?'':'s'}</button><button class="btn" id="rdX">Ignore</button></div></div>`; }
 function paintRead(){ const ra=$('rdAgain'); if(ra) ra.hidden=!!RD; const el=$('rd'), html=readCard(); if(el){ if(html) el.outerHTML=html; else el.remove(); } else if(html){ const h=document.querySelector('#shotCard'); if(h) h.insertAdjacentHTML('beforeend',html); } wireRead(); }
 function wireRead(){ const u=$('rdUse'), x=$('rdX'); if(x) x.onclick=()=>{ RD=null; paintRead(); };
+  document.querySelectorAll('[data-rdi]').forEach(c=>c.onchange=()=>{ RD.res.lines[+c.dataset.rdi].on=c.checked; paintRead(); });
   if(u) u.onclick=()=>{ const r=RD.res, D=DRAFT; if(r.supplier&&!D.supplier) D.supplier=knownSup(r.supplier); if(r.date&&r.date<=bizDay()) D.day=r.date; if(r.billNo&&!D.billNo) D.billNo=r.billNo; if(r.total!=null) D.billTotal=String(r.total);
-    const keep=D.lines.filter(l=>l.n); D.lines=keep.concat(r.lines.map(l=>({n:l.m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:l.m.c||'',chk:l.m.via==='new'||l.m.score<0.82?1:0,rTyped:true})));
+    const keep=D.lines.filter(l=>l.n); D.lines=keep.concat(r.lines.filter(l=>l.on).map(l=>({n:l.m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:l.m.c||'',chk:!l.good||l.m.via==='new'||l.m.score<0.9?1:0,rTyped:true})));
     saveDraft(); RD=null; render(); toast('Lines filled in — check the amber ones'); const f=document.querySelector('.ln.chk'); if(f) f.scrollIntoView({block:'center'}); }; }
 
 /* ---------- what we know: items (unit, last rate, last supplier) and each supplier's usual items ---------- */

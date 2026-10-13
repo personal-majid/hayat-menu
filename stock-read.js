@@ -92,12 +92,18 @@
     var best = null, cat = catalog(opt.items);
     cat.forEach(function(it){ var s = phraseSim(raw, it.n), via = 'name'; it.al.forEach(function(a){ var v = phraseSim(raw, a); if(v > s){ s = v; via = 'alias'; } }); if(it.own) s += 0.02;
       if(!best || s > best.score) best = {n:it.n, c:it.c, score:Math.min(1, s), via:via, raw:raw}; });
-    if(!best || best.score < 0.62){ var nm = titleCase(words(raw).join(' ') || raw); return {n:nm, c:guessCat(raw, opt.u), score:best ? best.score : 0, via:'new', raw:raw, near:best && best.score >= 0.5 ? best.n : ''}; }
+    /* a weak match NEVER swaps in one of our names: the line keeps what was written (Majid, 13 Oct: "it imports something that is not on the bill") */
+    if(!best || best.score < 0.78){ var nm = titleCase(words(raw).join(' ') || raw); return {n:nm, c:guessCat(raw, opt.u), score:best ? best.score : 0, via:'new', raw:raw, near:best && best.score >= 0.6 ? best.n : ''}; }
     return best; }
 
   /* ---------- text -> bill ---------- */
   var RX_TOTAL = /\b(grand\s*total|net\s*amount|net\s*total|total\s*amount|amount\s*payable|bill\s*amount|total|net)\b/i;
   var RX_SKIP = /\b(gst|gstin|fssai|ph|phone|mob|mobile|tel|thank|visit|cash|change|balance|cgst|sgst|igst|tax|discount|round|qty|rate|amount|particulars|item|description|sl\b|s\.no|address)\b/i;
+  /* printing that sits AROUND a bill in a real photo: packets, labels, newspaper - never a bill line */
+  var RX_JUNK = /\b(mrp|best\s*before|use\s*by|exp(iry)?|mfg|mfd|batch|lot\s*no|net\s*(wt|weight|qty)|incl(usive)?\s*of|www|http|\.com|customer\s*care|toll\s*free|ingredients|nutrition|barcode|off\b)/i;
+  /* a real item name: some word of 3+ letters with a vowel, and mostly letters (not "{1 ~ | ey") */
+  function wordy(n){ var w = String(n || '').split(/\s+/).filter(function(x){ return /^[a-z][a-z().'\/-]{2,}$/i.test(x) && /[aeiouy]/i.test(x); }); if(!w.length) return false;
+    var raw = String(n).replace(/\s+/g, ''), letters = (raw.match(/[a-z]/ig) || []).length; return letters / Math.max(1, raw.length) >= 0.6; }
   var RX_DATE = /\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})\b/;
   /* OCR look-alikes inside numbers (no lookbehind: older iPhones cannot parse it) */
   function fixNum(t){ return t.replace(/(\d)[oO](?=\d|\b)/g,'$10').replace(/(\d)[oO](?=\d|\b)/g,'$10').replace(/(\d)[lI|](?=\d)/g,'$11').replace(/(^|\s)[oO](?=\d)/g,'$10').replace(/(\d),(?=\d{3}\b)/g,'$1').replace(/(\d),(?=\d{2},)/g,'$1').replace(/(\d),(?=\d{3})/g,'$1'); }
@@ -108,24 +114,29 @@
     return out; }
   function near(a, b){ return Math.abs(a - b) <= Math.max(1.01, 0.02 * Math.abs(b)); }
   function parseLine(line){ var T = toks(line), N = T.filter(function(t){ return t.num != null; }); if(!N.length) return null;
+    var last = N[N.length - 1]; if(last.u) return null;   /* "Onion 25kg" with no amount is not a line we can trust */
+    if(!(last.num >= 1 && last.num <= 300000)) return null;
     var firstW = T.findIndex(function(t){ return t.w && /[a-z]{2,}/i.test(t.w); }); if(firstW < 0) return null;
     var a = N[N.length - 1], q = null, r = null;
     /* look for qty x rate = amount among the numbers before the amount */
     for(var i = N.length - 2; i >= 0 && !r; i--) for(var j = i - 1; j >= 0; j--){ if(near(N[j].num * N[i].num, a.num)){ q = N[j]; r = N[i]; break; } }
     if(!r && N.length >= 2){ var p = N[N.length - 2]; if(p.u || p.num < a.num / 2){ q = p; r = {num:+(a.num / (p.num || 1)).toFixed(2)}; } }
     var qi = q && q.i != null ? q.i : a.i, name = T.filter(function(t){ return t.i < qi && (t.w || t.num != null); }).map(function(t){ return t.w != null ? t.w : t.txt; }).join(' ').replace(/\s+x\s*$/i,'').replace(/[:\-–@*#|]+\s*$/,'').trim();
-    if(!/[a-z]{2,}/i.test(name)) return null;
+    if(!/[a-z]{2,}/i.test(name) || !wordy(name)) return null;
     var u = (q && q.u) || null; if(!u && q){ var after = T.find(function(t){ return t.i > q.i && t.w; }); if(after && UNITS[after.w.toLowerCase()] && (!r || after.i < (r.i || 1e9))) u = UNITS[after.w.toLowerCase()]; }
     return {raw:name, q:q ? q.num : 1, u:u || 'nos', r:r ? r.num : a.num, a:a.num, ok:!!(q && r && near(q.num * r.num, a.num))}; }
-  function parse(text){ var L = String(text || '').split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean), out = {supplier:'', date:'', billNo:'', lines:[], total:null, isBill:false, why:''};
+  /* opt.lines = [{t, c}] from the reader: each line with its confidence (unsure words already removed) */
+  function parse(text, opt){ opt = opt || {}; var CL = opt.lines && opt.lines.length ? opt.lines : null;
+    var L = CL ? CL.map(function(x){ return x.t; }) : String(text || '').split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean), out = {supplier:'', date:'', billNo:'', lines:[], total:null, isBill:false, why:'', dropped:0};
     var seenItem = false;
-    L.forEach(function(l, idx){
+    L.forEach(function(l, idx){ var lc = CL ? CL[idx].c : 90; if(RX_JUNK.test(l)){ if(/\d/.test(l)) out.dropped++; return; }
       var d = l.match(RX_DATE); if(d && !out.date){ var y = +d[3]; if(y < 100) y += 2000; if(+d[2] >= 1 && +d[2] <= 12 && +d[1] >= 1 && +d[1] <= 31) out.date = y + '-' + String(d[2]).padStart(2,'0') + '-' + String(d[1]).padStart(2,'0'); }
       var bn = l.match(/\b(?:bill|inv(?:oice)?|receipt)\s*(?:no\.?|number|#)?\s*[:#.]?\s*([A-Z0-9][A-Z0-9\-\/]{0,12})/i) || (!seenItem && l.match(/^\s*no\.?\s*[:#]?\s*(\d{1,8})\b/i)); if(bn && !out.billNo && !/^\d{1,2}[\/\-.]/.test(bn[1])) out.billNo = bn[1];
       if(RX_TOTAL.test(l) && /\d/.test(l)){ var n = toks(l).filter(function(t){ return t.num != null; }); if(n.length) out.total = n[n.length - 1].num; return; }
       var headerish = RX_DATE.test(l) || /\b\d{1,2}:\d{2}\b/.test(l) || (bn && !seenItem);   /* a date / time / bill-no line is never an item */
       var it = !headerish && (!RX_SKIP.test(l) || /\d+\s*(kg|ltr|l|pkt|nos)\b/i.test(l)) ? parseLine(l) : null;
-      if(it){ seenItem = true; out.lines.push(it); return; }
+      if(it){ if(lc < 55){ out.dropped++; return; } it.conf = Math.round(lc); seenItem = true; out.lines.push(it); return; }
+      if(!headerish && /\d/.test(l) && /[a-z]{3,}/i.test(l) && seenItem) out.dropped++;
       if(!seenItem && !out.supplier && /[a-z]{3,}/i.test(l) && !RX_SKIP.test(l) && !RX_DATE.test(l) && !/\d{5,}/.test(l) && !/\b(bill|inv|no)\b/i.test(l)) out.supplier = titleCase(l.replace(/[^a-z0-9&.' -]/gi,' ').replace(/\s+/g,' '));
     });
     var sum = out.lines.reduce(function(n, x){ return n + x.a; }, 0); out.sum = Math.round(sum * 100) / 100;
@@ -137,7 +148,8 @@
   /* how sure are we? used to decide on the AI fallback */
   function sure(p, conf){ if(!p.isBill) return 0; var s = Math.min(1, (conf || 70) / 100);
     if(p.totalOk === false) s -= 0.3; if(p.totalOk === true) s += 0.1;
-    var weak = p.lines.filter(function(l){ return !l.ok; }).length / Math.max(1, p.lines.length); s -= 0.25 * weak;
+    var weak = p.lines.filter(function(l){ return !l.ok || (l.conf || 90) < 75; }).length / Math.max(1, p.lines.length); s -= 0.3 * weak;
+    if(p.total == null) s -= 0.15; if(p.dropped) s -= Math.min(0.3, 0.06 * p.dropped);
     return Math.max(0, Math.min(1, s)); }
 
   /* ---------- the free reader (browser): bundled Tesseract, loaded only when first needed ---------- */
@@ -148,7 +160,23 @@
     if(!root.Tesseract) await loadScript(BASE + 'assets/ocr/tesseract.min.js');
     if(!WORKER){ WORKER = await root.Tesseract.createWorker('eng', 1, {workerPath:BASE + 'assets/ocr/worker.min.js', corePath:BASE + 'assets/ocr/', langPath:BASE + 'assets/ocr/', gzip:true,
       logger:function(m){ if(onProg && m && typeof m.progress === 'number') onProg(m.status || '', m.progress); }}); }
-    var r = await WORKER.recognize(img); return {text:r.data.text, conf:r.data.confidence}; }
+    var src = img; try{ src = await prep(img); }catch(e){}
+    var r = await WORKER.recognize(src), d = r.data;
+    return {text:d.text, conf:d.confidence, lines:ocrLines(d)}; }
+  /* the reader's lines with their confidence. Faint SYMBOLS / NUMBERS are dropped ("{1", "90:4.", a number read at 4%);
+     a faint WORD is kept (it may be the item name, e.g. "Inji" at 39%) but the line is then marked "check" (confidence capped at 62) */
+  function ocrLines(d){ return (d.lines || []).map(function(l){ var ws = l.words || [], hasNum = ws.some(function(w){ return w.confidence >= 60 && /\d/.test(w.text); });
+      var W = ws.filter(function(w){ return w.confidence >= 45 || (hasNum && /^[a-z]{3,}$/i.test(w.text)); });   /* faint words only survive on item lines (they may be the item name) */
+      var t = W.map(function(w){ return w.text; }).join(' ').trim(), c = W.length ? W.reduce(function(n, w){ return n + w.confidence; }, 0) / W.length : 0;
+      if(W.some(function(w){ return w.confidence < 45; })) c = Math.min(c, 62); return {t:t, c:c}; }).filter(function(x){ return x.t; }); }
+  /* a phone photo: make small text bigger, drop the colour, stretch the contrast (shadows and yellow paper read better) */
+  async function prep(dataUrl){ var im = await new Promise(function(ok, no){ var i = new Image(); i.onload = function(){ ok(i); }; i.onerror = no; i.src = dataUrl; });
+    var k = Math.max(1, Math.min(2, 1800 / Math.max(im.width, im.height))), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+    var g = c.getContext('2d'); g.drawImage(im, 0, 0, c.width, c.height); var D = g.getImageData(0, 0, c.width, c.height), a = D.data, H = new Array(256).fill(0), n = a.length / 4;
+    for(var i = 0; i < a.length; i += 4){ var y = (a[i] * 0.299 + a[i + 1] * 0.587 + a[i + 2] * 0.114) | 0; a[i] = y; H[y]++; }
+    var lo = 0, hi = 255, acc = 0; for(; lo < 255 && (acc += H[lo]) < n * 0.02; lo++); acc = 0; for(; hi > 0 && (acc += H[hi]) < n * 0.02; hi--);
+    var sc = 255 / Math.max(1, hi - lo); for(var j = 0; j < a.length; j += 4){ var v = Math.max(0, Math.min(255, (a[j] - lo) * sc)); a[j] = a[j + 1] = a[j + 2] = v; }
+    g.putImageData(D, 0, 0); return c.toDataURL('image/png'); }
   /* the AI reader: POST the photo to OUR Cloudflare Worker (it holds the key). hints help it name things our way */
   async function ai(img, url, hints){ var res = await fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({image:img, items:(hints && hints.items) || [], suppliers:(hints && hints.suppliers) || [], cats:CATS})});
     if(!res.ok) throw new Error('AI reader: ' + res.status); var j = await res.json(); if(j.error) throw new Error(j.error);
@@ -157,13 +185,13 @@
   /* the whole read: free first; the AI only if the free read is unsure (and a reader URL is set) */
   async function read(img, opt){ opt = opt || {}; var prog = opt.onProg || function(){};
     var p = null, conf = 0, via = 'free';
-    try{ prog('Reading on this phone…', 0); var o = await ocr(img, function(s, f){ prog('Reading on this phone… ' + Math.round(f * 100) + '%', f); }); conf = o.conf; p = parse(o.text); p.text = o.text; }catch(e){ p = {isBill:false, lines:[], why:'free reader failed: ' + e.message}; }
+    try{ prog('Reading on this phone…', 0); var o = await ocr(img, function(s, f){ prog('Reading on this phone… ' + Math.round(f * 100) + '%', f); }); conf = o.conf; p = parse(o.text, {lines:o.lines}); p.text = o.text; }catch(e){ p = {isBill:false, lines:[], why:'free reader failed: ' + e.message}; }
     var sc = sure(p, conf);
     if(sc < (opt.minSure || 0.7) && opt.aiUrl){ try{ prog('Asking the AI reader…', 0.9); var A = await ai(img, opt.aiUrl, {items:Object.values(opt.items || {}).map(function(i){ return i.n; }), suppliers:opt.suppliers || []}); A.sum = A.lines.reduce(function(n, l){ return n + l.a; }, 0); A.totalOk = A.total != null ? Math.abs(A.sum - A.total) <= Math.max(1.01, 0.005 * A.total) : null; p = A; via = 'ai'; sc = A.isBill ? 0.9 : 0; }catch(e){ p.aiError = e.message; } }
     p.via = via; p.sure = sc; p.conf = conf;
     (p.lines || []).forEach(function(l){ var m = match(l.name || l.raw, {items:opt.items, alias:opt.alias, u:l.u}); if(l.name && via === 'ai' && m.score < 0.82){ m = {n:titleCase(l.name), c:l.cat || guessCat(l.name, l.u), score:0.8, via:'ai', raw:l.raw}; } l.m = m; });
     return p; }
 
-  var API = {CATS:CATS, DICT:DICT, norm:norm, slug:slug, titleCase:titleCase, lev:lev, tokSim:tokSim, phraseSim:phraseSim, match:match, parse:parse, parseLine:parseLine, sure:sure, guessCat:guessCat, ocr:ocr, ai:ai, read:read};
+  var API = {CATS:CATS, DICT:DICT, norm:norm, slug:slug, titleCase:titleCase, lev:lev, tokSim:tokSim, phraseSim:phraseSim, match:match, parse:parse, ocrLines:ocrLines, parseLine:parseLine, sure:sure, guessCat:guessCat, ocr:ocr, ai:ai, read:read};
   if(typeof module !== 'undefined' && module.exports) module.exports = API; else root.StockRead = API;
 })(typeof window !== 'undefined' ? window : globalThis);
