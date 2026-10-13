@@ -191,7 +191,7 @@ setInterval(cleanBar,30000);
       Object.keys(DONE).forEach(id=>{ if(!live.has(id.split('_')[1])) delete DONE[id]; }); render(); },fail);
     const since=new Date(Date.now()-12*3600e3);
     fs.onSnapshot(fs.query(fs.collection(db,'kds'),fs.where('doneAt','>=',since)),snap=>{ snap.docs.forEach(d=>{ DONE[d.id]=d.data(); }); render(); },fail);
-    fs.onSnapshot(fs.query(fs.collection(db,'kds_state'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ snap.docs.forEach(d=>{ KST[d.id]=d.data(); }); render(); },()=>{});
+    fs.onSnapshot(fs.query(fs.collection(db,'kds_state'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ (snap&&snap.docs||[]).forEach(d=>{ KST[d.id]=d.data(); }); render(); },()=>{});
     let trialOff=null; fs.onSnapshot(fs.doc(db,'settings','captain'),d=>{ const on=!!(d.exists()&&d.data().kdsTrial); if(on===KDSTRIAL&&(trialOff||!on)) return; KDSTRIAL=on; if(trialOff){ trialOff(); trialOff=null; TRIAL=[]; }
       if(on) trialOff=fs.onSnapshot(fs.query(fs.collection(db,'trial_orders'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ TRIAL=snap.docs.map(d=>Object.assign({id:d.id},d.data())); render(); },()=>{}); render(); },()=>{});
     fs.onSnapshot(fs.doc(db,'cleanplan','main'),d=>{ CPLAN=d.exists()&&d.data().tasks?Object.assign({},HayatClean.DEFAULT_PLAN,d.data()):HayatClean.DEFAULT_PLAN; cleanBar(); },()=>{});

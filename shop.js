@@ -5264,7 +5264,7 @@ function dockAllows(key){
   var r = ME.role;
   if(r === "captain") return ["pos","kds","wait","orders","captain"].indexOf(key) >= 0;
   if(r === "waiter")  return ["pos","clean","captain"].indexOf(key) >= 0;
-  if(r === "kitchen") return ["kds","clean"].indexOf(key) >= 0;
+  if(r === "kitchen") return ["kds","clean","stock"].indexOf(key) >= 0;
   if(r === "cleaner") return key === "clean";
   return true;
 }
@@ -5290,6 +5290,7 @@ function officeDock(here){
     ["wait",   "waitlist.html",  "\u23F3",       "Waitlist",    "Guests waiting, quoted time, WhatsApp"],
     ["clean",  "clean.html",     "\uD83E\uDDF9", "Cleaning",    "Today's cleaning, overdue, staff codes"],
     ["setup",  "setup.html",     "\uD83D\uDC65", "Staff & tables", "Staff codes, halls, tables, captain menu, UPI, trial"],
+    ["stock",  "stock.html",     "\uD83D\uDCE6", "Stock buys",  "Photo of a supplier bill \u2192 stock purchase (not VMENU)"],
     ["captain","captain.html",   "\uD83E\uDDD1\u200D\uD83C\uDF73", "Captain app",  "Waiters: tables, KOT, bills, UPI"]
   ];
   B = B.filter(function(b){ return dockAllows(b[0]); });

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><meta name="theme-color" content="#2F5A74"><title>Hayat Stock</title>
+<!-- Purchases for STOCK, entered from a photo of the supplier bill (camera or upload).
+     Its own collections only: stock_buys, stock_photos, settings/stock_items.
+     It never writes VMENU's vm_* data - spends and profit keep coming from VMENU;
+     the owner page only COMPARES the two. -->
+<script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<script src="hayat-auth.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Jost:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#F5F4EF;--card:#FFFFFF;--ink:#1F2328;--muted:#5F6770;--line:#DDDAD2;--soft:#ECEAE3;--accent:#2F5A74;--good:#2E7D5B;--warn:#A8812F;--bad:#C2362C}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--bg:#121518;--card:#1B1F23;--ink:#E7E5E0;--muted:#9AA2AA;--line:#2E343A;--soft:#242A2F;--accent:#8DB8D3;--good:#5FB38A;--warn:#D2A85A;--bad:#E0675D} }
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 "Jost",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;gap:10px;align-items:center}
+header h1{margin:0;font:600 26px "Cormorant Garamond",Georgia,serif} header .sp{flex:1}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--muted);white-space:nowrap;background:var(--card)}
+.wrap{max-width:760px;margin:0 auto;padding:12px 14px 120px;display:grid;gap:12px}
+nav.tabs{display:flex;gap:4px;background:var(--soft);border-radius:12px;padding:4px}
+nav.tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:600 15px "Jost",sans-serif;padding:10px 6px;border-radius:9px;cursor:pointer}
+nav.tabs button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+h2{margin:0;font:600 12px "Jost",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.note{color:var(--muted);font-size:13px;margin:0}
+input,select{font:500 16px "Jost",sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0;width:100%}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 14px;font:600 15px "Jost",sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff} .btn.warn{color:var(--bad)} .btn:disabled{opacity:.5}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.shot{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shot label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:96px;border:2px dashed var(--line);border-radius:14px;cursor:pointer;font-weight:700;font-size:16px;background:var(--bg)}
+.shot label span{font-size:30px} .shot input{display:none}
+.pv{display:flex;gap:10px;align-items:center} .pv img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in}
+.sups{display:flex;gap:6px;flex-wrap:wrap} .sups button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font:600 14px "Jost",sans-serif;color:var(--ink);cursor:pointer}
+.sups button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.ln{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:6px;border:1px solid var(--line);border-radius:12px;padding:8px;background:var(--bg)}
+.ln .f{display:grid;grid-template-columns:2.2fr 1fr .9fr 1.1fr 1.2fr;gap:6px}
+@media (max-width:560px){ .ln .f{grid-template-columns:1fr 1fr 1fr} .ln .f .nm{grid-column:1/-1} }
+.ln small{display:block;font-size:12px;color:var(--muted);margin:0 0 2px 2px}
+.ln .x{border:0;background:transparent;font-size:18px;color:var(--muted);cursor:pointer;align-self:start}
+.ln .tip{grid-column:1/-1;font-size:12.5px;color:var(--muted)} .ln .tip.up{color:var(--bad);font-weight:700} .ln .tip.dn{color:var(--good);font-weight:700}
+.tot{display:grid;grid-template-columns:1fr 1fr;gap:8px} .tot .k{background:var(--soft);border-radius:12px;padding:10px} .tot b{display:block;font-size:24px}
+.tot .k.bad{background:#f6d9d6;color:#7a1f18} .tot .k.ok{background:#e3f1e6;color:#145c2c}
+.savebar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;justify-content:center;z-index:6}
+.savebar[hidden]{display:none} .savebar .btn{flex:1;max-width:360px;font-size:17px;padding:14px}
+.day{display:grid;gap:8px} .day>h3{margin:6px 2px 0;font:700 15px "Jost",sans-serif;display:flex;justify-content:space-between}
+.bill{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;display:grid;gap:6px;cursor:pointer}
+.bill .top{display:flex;justify-content:space-between;gap:8px} .bill .top b{font-size:17px} .bill .sub{font-size:13px;color:var(--muted)}
+.bill table{width:100%;border-collapse:collapse;font-size:14px} .bill td{padding:4px 2px;border-top:1px solid var(--line)} .r{text-align:right}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:700;background:var(--soft)} .pill.up{background:#f6d9d6;color:#7a1f18} .pill.miss{background:#f8ecd2;color:#7a4f00}
+.big{position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:60} .big img{max-width:96vw;max-height:90vh;border-radius:10px}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;z-index:70;max-width:92vw}
+.it{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0} .it small{color:var(--muted)}
+.it .b6{border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--bg);font-weight:700;cursor:pointer} .it .b6.on{background:var(--good);color:#fff;border-color:var(--good)}
+</style></head><body>
+<header><h1>📦 Stock</h1><span class="chip" id="who">…</span><span class="sp"></span><span class="chip" id="net">connecting…</span></header>
+<main class="wrap" id="app"><div class="note">Loading…</div></main>
+<div class="savebar" id="savebar" hidden><button class="btn" id="clr">Clear</button><button class="btn pri" id="save">Save bill</button></div>
+<script>
+const $=id=>document.getElementById(id), esc=HayatAuth.esc;
+const ROLES=['office','cashier','kitchen'], UNITS=['kg','nos','L','g','pkt','box','tray','bag','tin','bottle','cyl','bundle'];
+const BIG6=[['chicken (whole)','kg'],['rice','kg'],['oil','L'],['fish','kg'],['beef','kg'],['gas cylinder','cyl']];
+const slug=s=>String(s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'x';
+const nice=s=>String(s||'').trim().replace(/\s+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+const rs=n=>'₹'+Math.round(+n||0).toLocaleString('en-IN');
+const num=v=>{ const x=parseFloat(String(v).replace(/,/g,'')); return isFinite(x)?x:0; };
+const bizDay=(t=Date.now())=>{ const d=new Date(t-5*3600e3); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const dayName=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+function toast(m){ let t=$('toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); } t.textContent=m; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>t.hidden=true,2600); }
+let CTX=null, TAB='new', ITEMS={items:{},sup:{}}, BUYS=[], DRAFT=null, PHOTO=null, OPEN=null, DEL=null;
+const lsGet=(k,d)=>{ try{ return JSON.parse(localStorage.getItem(k))||d; }catch(e){ return d; } }, lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+function fresh(){ return {day:bizDay(),supplier:'',billNo:'',billTotal:'',note:'',lines:[{n:'',q:'',u:'kg',r:'',a:''}]}; }
+function saveDraft(){ lsSet('hayat-stock-draft',{d:DRAFT,at:Date.now()}); }
+(function(){ const x=lsGet('hayat-stock-draft',null); DRAFT=x&&Date.now()-x.at<12*3600e3?x.d:fresh(); })();
+
+/* ---------- photo: camera or upload, shrunk to ~1400px JPEG so one bill is ~150-300 KB ---------- */
+async function shrink(file){ const img=await new Promise((ok,no)=>{ const u=URL.createObjectURL(file), i=new Image(); i.onload=()=>{ URL.revokeObjectURL(u); ok(i); }; i.onerror=no; i.src=u; });
+  const k=Math.min(1,1400/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height); let q=.62, d=c.toDataURL('image/jpeg',q); while(d.length>700000&&q>.3){ q-=.08; d=c.toDataURL('image/jpeg',q); } return d; }
+async function pick(e){ const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return; if(!/^image\//.test(f.type)){ toast('Please pick a photo (JPG / PNG)'); return; }
+  try{ PHOTO=await shrink(f); render(); toast('Photo added'); }catch(err){ toast('Could not read that photo'); } }
+
+/* ---------- what we know: items (unit, last rate, last supplier) and each supplier's usual items ---------- */
+function known(n){ return ITEMS.items[slug(n)]||null; }
+function lastLines(sup){ const s=ITEMS.sup[slug(sup)]; if(!s||!s.items) return []; return s.items.map(k=>ITEMS.items[k]).filter(Boolean).map(it=>({n:it.n,q:'',u:it.u||'kg',r:it.r!=null?String(it.r):'',a:''})); }
+function lineTip(l){ const it=known(l.n); const r=num(l.r)||(num(l.q)?num(l.a)/num(l.q):0); if(!it||!it.r||!r) return it?`<div class="tip">${it.s?'last from '+esc(it.s)+' · ':''}${it.r?rs(it.r)+'/'+esc(it.u||''):''}</div>`:(l.n?'<div class="tip">new item - it will be remembered</div>':'');
+  const ch=(r-it.r)/it.r; if(Math.abs(ch)<0.05) return `<div class="tip">same as last time · ${rs(it.r)}/${esc(it.u||'')}</div>`;
+  return `<div class="tip ${ch>0?'up':'dn'}">${ch>0?'▲':'▼'} ${Math.round(Math.abs(ch)*100)}% vs last time (${rs(it.r)}/${esc(it.u||'')}${it.s?' from '+esc(it.s):''})</div>`; }
+const lineAmt=l=>num(l.a)||num(l.q)*num(l.r);
+const sumLines=()=>DRAFT.lines.reduce((n,l)=>n+lineAmt(l),0);
+
+function render(){ const A=$('app'); if(!CTX) return;
+  $('savebar').hidden=TAB!=='new';
+  const tabs=`<nav class="tabs">${[['new','＋ New bill'],['bills','Bills'],['items','Items']].map(t=>`<button aria-pressed="${TAB===t[0]}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
+  if(TAB==='new') A.innerHTML=tabs+newView(); else if(TAB==='bills') A.innerHTML=tabs+billsView(); else A.innerHTML=tabs+itemsView();
+  wire(); }
+function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,12), tot=sumLines(), bt=num(D.billTotal), diff=bt?tot-bt:0;
+  return `<div class="card"><h2>1 · Photo of the bill</h2>
+    ${PHOTO?`<div class="pv"><img src="${PHOTO}" id="pvImg" alt="bill photo"><div class="row"><span class="note">Photo ready · ${Math.round(PHOTO.length*0.75/1024)} KB</span><button class="btn warn" id="pvDel">Remove</button></div></div>`:''}
+    <div class="shot"><label><span>📷</span>Camera<input type="file" accept="image/*" capture="environment" id="cam"></label><label><span>🖼</span>Upload<input type="file" accept="image/*" id="upl"></label></div>
+    <p class="note">The photo is kept with the bill as proof. Reading it automatically can be added later.</p></div>
+  <div class="card"><h2>2 · Supplier &amp; date</h2>
+    ${sups.length?`<div class="sups">${sups.map(s=>`<button data-sup="${esc(s.n)}" class="${slug(s.n)===slug(D.supplier)?'on':''}">${esc(s.n)}</button>`).join('')}</div>`:''}
+    <div class="row"><input id="sup" list="supL" placeholder="Supplier name" value="${esc(D.supplier)}" style="flex:1 1 180px"><input id="day" type="date" value="${esc(D.day)}" max="${bizDay()}" style="flex:0 0 160px"></div>
+    <datalist id="supL">${Object.values(ITEMS.sup).map(s=>`<option value="${esc(s.n)}">`).join('')}</datalist>
+    <div class="row"><input id="bno" placeholder="Bill no. (optional)" value="${esc(D.billNo)}" style="flex:1">${D.supplier&&lastLines(D.supplier).length&&!D.lines.some(l=>l.n)?`<button class="btn" id="usual">↺ Their usual items</button>`:''}</div></div>
+  <div class="card"><h2>3 · Items on the bill</h2>
+    <datalist id="itL">${Object.values(ITEMS.items).map(i=>`<option value="${esc(i.n)}">`).join('')}</datalist>
+    ${D.lines.map((l,i)=>`<div class="ln" data-i="${i}"><div class="f">
+      <label class="nm"><small>Item</small><input data-k="n" list="itL" value="${esc(l.n)}" placeholder="e.g. Chicken (whole)" autocomplete="off"></label>
+      <label><small>Qty</small><input data-k="q" inputmode="decimal" value="${esc(l.q)}" placeholder="0"></label>
+      <label><small>Unit</small><select data-k="u">${UNITS.map(u=>`<option${u===l.u?' selected':''}>${u}</option>`).join('')}</select></label>
+      <label><small>Rate ₹</small><input data-k="r" inputmode="decimal" value="${esc(l.r)}" placeholder="per unit"></label>
+      <label><small>Amount ₹</small><input data-k="a" inputmode="decimal" value="${esc(l.a)}" placeholder="${num(l.q)&&num(l.r)?Math.round(num(l.q)*num(l.r)):'auto'}"></label>
+      ${lineTip(l)}</div><button class="x" data-del="${i}" aria-label="remove line">✕</button></div>`).join('')}
+    <button class="btn" id="addLn">＋ Add item</button></div>
+  <div class="card"><h2>4 · Check the total</h2><div class="tot"><div class="k"><small>Items add up to</small><b id="sumT">${rs(tot)}</b></div>
+    <div class="k ${bt?(Math.abs(diff)<=1?'ok':'bad'):''}" id="btBox"><small>Total on the bill</small><input id="bt" inputmode="decimal" value="${esc(D.billTotal)}" placeholder="type it to check"><span id="btNote" class="note">${bt?(Math.abs(diff)<=1?'✓ matches':(diff>0?'items are '+rs(diff)+' more':'items are '+rs(-diff)+' less — an item missing?')):''}</span></div></div>
+    <input id="note" placeholder="Note (optional)" value="${esc(D.note)}"></div>`; }
+function billsView(){ if(!BUYS.length) return '<div class="card"><p class="note">No bills yet. Use ＋ New bill.</p></div>';
+  const by={}; BUYS.forEach(b=>(by[b.day]=by[b.day]||[]).push(b)); const days=Object.keys(by).sort().reverse();
+  return days.map(d=>{ const L=by[d].sort((a,b)=>b.at-a.at); return `<div class="day"><h3><span>${esc(dayName(d))}</span><span>${rs(L.reduce((n,b)=>n+(b.total||0),0))}</span></h3>${L.map(b=>{ const open=OPEN===b.id;
+    return `<div class="bill" data-open="${esc(b.id)}"><div class="top"><span><b>${esc(b.supplier||'—')}</b>${b.billNo?' <span class="note">#'+esc(b.billNo)+'</span>':''}</span><b>${rs(b.total)}</b></div>
+      <div class="sub">${(b.lines||[]).length} item${(b.lines||[]).length===1?'':'s'} · ${esc((b.by&&b.by.name)||'')} · ${new Date(b.at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}${b.photo?' · 📷':' · <span class="pill miss">no photo</span>'}${b.billTotal&&Math.abs(b.billTotal-b.total)>1?' · <span class="pill up">bill says '+rs(b.billTotal)+'</span>':''}</div>
+      ${open?`<table>${(b.lines||[]).map(l=>`<tr><td>${esc(l.n)}</td><td class="r">${l.q} ${esc(l.u||'')}</td><td class="r">${l.r?rs(l.r):''}</td><td class="r"><b>${rs(l.a)}</b></td></tr>`).join('')}</table>
+        ${b.note?`<div class="note">📝 ${esc(b.note)}</div>`:''}<div class="row">${b.photo?`<button class="btn" data-photo="${esc(b.photo)}">📷 See photo</button>`:''}${CTX.role==='office'?`<button class="btn warn" data-rm="${esc(b.id)}">${DEL===b.id?'Tap again to delete':'Delete'}</button>`:''}</div>`:''}</div>`; }).join('')}</div>`; }).join(''); }
+function itemsView(){ const L=Object.entries(ITEMS.items).sort((a,b)=>(+!!b[1].big-+!!a[1].big)||a[1].n.localeCompare(b[1].n));
+  return `<div class="card"><h2>Items we buy · ${L.length}</h2><p class="note"><b>Big 6</b> = the few items that are most of the cost. They get counted at closing (next step).</p>
+    ${L.map(([k,i])=>`<div class="it"><span><b>${esc(i.n)}</b><br><small>${i.r?rs(i.r)+'/'+esc(i.u||''):'no rate yet'}${i.s?' · '+esc(i.s):''}${i.at?' · '+esc(dayName(bizDay(i.at))):''}</small></span><span class="note">${esc(i.u||'')}</span><button class="b6${i.big?' on':''}" data-big="${esc(k)}">${i.big?'★ Big 6':'☆'}</button></div>`).join('')||'<p class="note">Items appear here after the first bill.</p>'}</div>`; }
+
+function wire(){ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; OPEN=null; DEL=null; render(); window.scrollTo(0,0); });
+  if(TAB==='new'){ $('cam').onchange=pick; $('upl').onchange=pick; const pd=$('pvDel'); if(pd) pd.onclick=()=>{ PHOTO=null; render(); }; const pi=$('pvImg'); if(pi) pi.onclick=()=>zoom(PHOTO);
+    const set=(k,v)=>{ DRAFT[k]=v; saveDraft(); };
+    $('sup').oninput=e=>set('supplier',e.target.value); $('sup').onchange=()=>render(); $('day').onchange=e=>set('day',e.target.value||bizDay()); $('bno').oninput=e=>set('billNo',e.target.value); $('note').oninput=e=>set('note',e.target.value);
+    $('bt').oninput=e=>{ set('billTotal',e.target.value); totals(); };
+    document.querySelectorAll('[data-sup]').forEach(b=>b.onclick=()=>{ DRAFT.supplier=b.dataset.sup; if(!DRAFT.lines.some(l=>l.n)) DRAFT.lines=lastLines(DRAFT.supplier).concat([]); if(!DRAFT.lines.length) DRAFT.lines=[fresh().lines[0]]; saveDraft(); render(); });
+    const us=$('usual'); if(us) us.onclick=()=>{ DRAFT.lines=lastLines(DRAFT.supplier); saveDraft(); render(); };
+    $('addLn').onclick=()=>{ DRAFT.lines.push({n:'',q:'',u:'kg',r:'',a:''}); saveDraft(); render(); const L=document.querySelectorAll('.ln'); const last=L[L.length-1]; if(last){ last.scrollIntoView({block:'center'}); last.querySelector('[data-k="n"]').focus(); } };
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ DRAFT.lines.splice(+b.dataset.del,1); if(!DRAFT.lines.length) DRAFT.lines=[fresh().lines[0]]; saveDraft(); render(); });
+    document.querySelectorAll('.ln [data-k]').forEach(inp=>{ const i=+inp.closest('.ln').dataset.i, k=inp.dataset.k;
+      /* never redraw the form while someone is typing in it: update this line in place (a redraw stole the next box's focus and lost the qty) */
+      const upd=()=>{ const l=DRAFT.lines[i], el=inp.closest('.ln'); l[k]=k==='u'?inp.value:inp.value;
+        if(k==='n'){ const it=known(inp.value); if(it){ if(it.u){ l.u=it.u; const u=el.querySelector('[data-k="u"]'); if(u) u.value=it.u; } if(!l.r&&it.r){ l.r=String(it.r); const r=el.querySelector('[data-k="r"]'); if(r) r.value=l.r; } } }
+        if(k==='a'&&num(l.q)&&num(l.a)&&!l.rTyped){ l.r=String(+(num(l.a)/num(l.q)).toFixed(2)); const r=el.querySelector('[data-k="r"]'); if(r) r.value=l.r; } if(k==='r') l.rTyped=!!inp.value;
+        const old=el.querySelector('.tip'), html=lineTip(l); if(old) old.outerHTML=html||'<div class="tip"></div>'; else if(html) el.querySelector('.f').insertAdjacentHTML('beforeend',html);
+        saveDraft(); totals(); };
+      inp.oninput=upd; inp.onchange=upd; }); }
+  if(TAB==='bills'){ document.querySelectorAll('[data-open]').forEach(b=>b.onclick=e=>{ if(e.target.closest('button')) return; OPEN=OPEN===b.dataset.open?null:b.dataset.open; DEL=null; render(); });
+    document.querySelectorAll('[data-photo]').forEach(b=>b.onclick=async()=>{ try{ const d=await CTX.fs.getDoc(CTX.fs.doc(CTX.db,'stock_photos',b.dataset.photo)); if(d.exists()) zoom(d.data().d); else toast('Photo not found'); }catch(e){ toast('Could not load the photo'); } });
+    document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.rm; if(DEL!==id){ DEL=id; render(); return; } DEL=null; try{ const x=BUYS.find(z=>z.id===id); await CTX.fs.deleteDoc(CTX.fs.doc(CTX.db,'stock_buys',id)); if(x&&x.photo) await CTX.fs.deleteDoc(CTX.fs.doc(CTX.db,'stock_photos',x.photo)).catch(()=>{}); toast('Deleted'); }catch(e){ toast('Could not delete'); } }); }
+  if(TAB==='items') document.querySelectorAll('[data-big]').forEach(b=>b.onclick=async()=>{ const k=b.dataset.big, it=ITEMS.items[k]; if(!it) return; try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'settings','stock_items'),{items:{[k]:Object.assign({},it,{big:!it.big})}},{merge:true}); }catch(e){ toast('Could not save'); } });
+}
+function totals(){ const tot=sumLines(), bt=num(DRAFT.billTotal), diff=bt?tot-bt:0, s=$('sumT'), bx=$('btBox'), nt=$('btNote'); if(s) s.textContent=rs(tot);
+  if(bx){ bx.className='k '+(bt?(Math.abs(diff)<=1?'ok':'bad'):''); nt.textContent=bt?(Math.abs(diff)<=1?'✓ matches':(diff>0?'items are '+rs(diff)+' more':'items are '+rs(-diff)+' less — an item missing?')):''; }
+  document.querySelectorAll('.ln').forEach(el=>{ const l=DRAFT.lines[+el.dataset.i]; const a=el.querySelector('[data-k="a"]'); if(a&&!a.value) a.placeholder=num(l.q)&&num(l.r)?Math.round(num(l.q)*num(l.r)):'auto'; }); }
+function zoom(src){ const w=document.createElement('div'); w.className='big'; w.innerHTML=`<img src="${src}" alt="bill">`; w.onclick=()=>w.remove(); document.body.appendChild(w); }
+
+let SAVING=false;
+async function save(){ if(SAVING) return; const D=DRAFT, L=D.lines.map(l=>({n:nice(l.n),q:num(l.q),u:l.u||'',r:num(l.r)||(num(l.q)?+(num(l.a)/num(l.q)).toFixed(2):0),a:Math.round(lineAmt(l)*100)/100})).filter(l=>l.n&&(l.q||l.a));
+  if(!nice(D.supplier)){ toast('Pick or type the supplier'); $('sup').focus(); return; } if(!L.length){ toast('Add at least one item with qty or amount'); return; }
+  const bad=D.lines.find(l=>l.n&&!(num(l.q)||num(l.a))); if(bad){ toast('“'+nice(bad.n)+'” needs a qty or amount'); return; }
+  SAVING=true; $('save').disabled=true; $('save').textContent='Saving…';
+  const fs=CTX.fs, db=CTX.db, id=bizDay().replace(/-/g,'')+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), tot=Math.round(L.reduce((n,l)=>n+l.a,0)*100)/100, sup=nice(D.supplier);
+  try{ if(PHOTO) await fs.setDoc(fs.doc(db,'stock_photos',id),{d:PHOTO,at:Date.now(),buy:id});
+    await fs.setDoc(fs.doc(db,'stock_buys',id),{v:1,day:D.day||bizDay(),at:Date.now(),by:{id:CTX.crewId||'',name:CTX.name||''},supplier:sup,billNo:String(D.billNo||'').trim(),lines:L,total:tot,billTotal:num(D.billTotal)||null,note:String(D.note||'').trim(),photo:PHOTO?id:null,src:'stock'});
+    const it={}; L.forEach(l=>{ const k=slug(l.n), old=ITEMS.items[k]||{}; it[k]={n:l.n,u:l.u,r:l.r||old.r||null,s:sup,at:Date.now(),big:!!old.big}; });
+    await fs.setDoc(fs.doc(db,'settings','stock_items'),{items:it,sup:{[slug(sup)]:{n:sup,items:L.map(l=>slug(l.n)),at:Date.now()}}},{merge:true});
+    toast('Saved · '+sup+' · '+rs(tot)); DRAFT=fresh(); PHOTO=null; saveDraft(); render(); window.scrollTo(0,0);
+  }catch(e){ toast('Could not save — check the signal and try again'); }
+  SAVING=false; const s=$('save'); if(s){ s.disabled=false; s.textContent='Save bill'; } }
+
+(async function boot(){
+  try{ CTX=await HayatAuth.start({cache:true}); }catch(e){ $('app').innerHTML='<div class="card"><p class="note">'+esc(e.message||e)+'</p></div>'; return; }
+  const go=()=>{ $('who').textContent=(CTX.name||'staff')+' · '+CTX.role; $('net').textContent='live';
+    const fs=CTX.fs, db=CTX.db;
+    fs.onSnapshot(fs.doc(db,'settings','stock_items'),d=>{ const x=d.exists()?d.data():{}; ITEMS={items:x.items||{},sup:x.sup||{}};
+      BIG6.forEach(([n,u])=>{ const k=slug(n); if(!ITEMS.items[k]) ITEMS.items[k]={n:nice(n),u,big:true}; }); if(TAB!=='new'||!document.activeElement||document.activeElement.tagName!=='INPUT') render(); },()=>{});
+    const since=bizDay(Date.now()-45*864e5);
+    fs.onSnapshot(fs.query(fs.collection(db,'stock_buys'),fs.where('day','>=',since)),q=>{ BUYS=q.docs.map(d=>Object.assign({id:d.id},d.data())); if(TAB==='bills') render(); },()=>{ $('net').textContent='offline'; });
+    $('save').onclick=save; $('clr').onclick=()=>{ DRAFT=fresh(); PHOTO=null; saveDraft(); render(); };
+    render(); };
+  if(CTX.role&&ROLES.includes(CTX.role)) go();
+  else { $('who').textContent='sign in'; HayatAuth.form($('app'),CTX,ROLES,()=>go(),'Office, cashier or kitchen. Once per phone.'); }
+})();
+</script>
+</body></html>

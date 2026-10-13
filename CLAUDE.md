@@ -511,6 +511,19 @@ What that means, and what to say if it comes up:
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
 
+## v271 — Live: time since the last NEW customer and the last bill paid
+- lastGap() at the top of New orders (Live): "🚶 Last new customer · n min ago · hh:mm · where · ₹" (latest createdAt of a non-staff bill - add-ons never count) and "🧾 Last bill paid" (latest settledAt). Ticks every 20 s ([data-since]). "usually one every ~N min now" = 60 / average bills in this clock hour on the last 4 same weekdays (OHS b); amber when the gap is >2x usual (and >=6 min), red >3x (and >=10 min). Test t-live (8).
+
+## v270 — Stock buys page (stock.html): bill photo -> stock purchase, apart from VMENU
+- stock.html, own page (office / cashier / kitchen; HayatAuth form). Tabs ＋ New bill · Bills · Items. Linked from the admin drawer (shop.js officeDock "📦 Stock buys"; dockAllows lets kitchen open it). In sw CORE.
+- New bill: 📷 Camera (input capture=environment) or 🖼 Upload -> shrink() to <=1400px JPEG (~150-700 KB); supplier chips (recent first) or type; date (business day, 05:00 cut); lines Item / Qty / Unit / Rate / Amount (amount auto = qty x rate; typing an amount back-fills the rate); "↺ Their usual items" / tapping a supplier chip pre-fills that supplier's items with last rates; per-line tip: last rate + supplier, "▲ 10% vs last time"; Items add up vs Total on the bill (✓ matches / ₹X less - an item missing?). Draft kept in localStorage (hayat-stock-draft, 12 h) - refresh-safe. Lines update IN PLACE while typing (a full redraw stole the next box's focus and lost the qty).
+- Writes ONLY: stock_buys/{yyyymmdd-id} {v,day,at,by{id,name},supplier,billNo,lines[{n,q,u,r,a}],total,billTotal,note,photo,src:'stock'}, stock_photos/{id} {d:dataURL,at,buy}, settings/stock_items {items:{slug:{n,u,r,s,at,big}}, sup:{slug:{n,items:[slug],at}}} (merge). NEVER vm_* or orders (test checks every write path).
+- Big 6 seeded (chicken (whole), rice, oil, fish, beef, gas cylinder) as big:true; Items tab toggles ★ Big 6.
+- Bills tab: last 45 days by day with day totals, 📷 / "no photo" / "bill says ₹X" flags, tap = lines + See photo (full screen) + Delete (office, second tap confirms - no dialogs).
+- Next: Big-6 closing count + AvT on the owner page; compare stock_buys vs VMENU purchases (matched / not in VMENU / no photo / ₹ differs); AI bill reading via a Cloudflare Worker (key never in the app).
+- kds.html: kds_state snapshot tolerates a missing docs array (the pos-flow test fake returned a doc shape and the screen crashed - real bug since v264).
+- Tests: capt/t-stock.mjs (18); repo tests login / counter / pos-flow ALL GREEN (run with a shim that sets executablePath); t-kds 15.
+
 ## v269 — captain search: always visible, always escapable
 - Bill view dock: a real search bar (.sfake "🔍 Search to add dishes", tap = focus #q) + "＋ Menu" instead of a tiny 🔍 icon (Majid could not find search).
 - While typing: "Done" (.qdone) replaces ‹ (which used to leave the table mid-search). srchDone(): clears, drops the keyboard, back to the bill when nothing waits to be sent, else stays on the menu. Esc = Done. Focus pushes a 'search' history step (HIST.srch) so phone Back closes the search first; blur with an empty box removes the step (no dead Back); ‹ leaving the table pops search + order together (history.go(-n)).
