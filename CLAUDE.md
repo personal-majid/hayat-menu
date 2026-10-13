@@ -511,6 +511,16 @@ What that means, and what to say if it comes up:
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
 
+## v269 — captain search: always visible, always escapable
+- Bill view dock: a real search bar (.sfake "🔍 Search to add dishes", tap = focus #q) + "＋ Menu" instead of a tiny 🔍 icon (Majid could not find search).
+- While typing: "Done" (.qdone) replaces ‹ (which used to leave the table mid-search). srchDone(): clears, drops the keyboard, back to the bill when nothing waits to be sent, else stays on the menu. Esc = Done. Focus pushes a 'search' history step (HIST.srch) so phone Back closes the search first; blur with an empty box removes the step (no dead Back); ‹ leaving the table pops search + order together (history.go(-n)).
+- ux event search_done {back}. Test capt/t-capt5.mjs (10); t-capt 39, t-capt2 37, t-capt3 3, t-capt4 18, t-setup 16, t-kds 15 green.
+
+## v268 — captain and rider apps no longer share a scope
+- captain.webmanifest scope "captain", rider.webmanifest scope "rider" (both were "./", the whole site, same as the menu). On a phone with Hayat Rider installed, Chrome treated captain.html as part of the Rider app ("Open in Hayat Rider" / installed into it). Scopes are URL-prefix matches, so "captain" covers captain.html only, "rider" covers rider.html only. ids unchanged (hayat-captain, hayat-rider). Checked with CDP Page.getAppManifest: no errors.
+- Phones that already have the wrong install: uninstall Hayat Rider (and any wrong Captain icon), open captain.html in Chrome -> Install app; rider.html -> Install app.
+- The menu manifest stays scope "./" (customers' installs untouched).
+
 ## v267 — Today lab · proof lines · top boxes only on Live/Sales · page titles
 - todayLab() (Live, today only; replaces likeToday there): "Today · how it will end". Ways: F app forecast (fcToday neutral; past days fcLive on fcHours masked to minute v), S days like today so far (tmMatch on hours < now, tmKeep filter, top TMR.n) -> so far + their nrev after v, R last 4 same weekdays + today (so far + their rest), B last 4 same weekdays totals. tdBacktest(v): each way replayed at the SAME clock time on the last 30 finished days (cache per 15-min slot + filter + INDEX size). Best = lowest miss with n>=8, ★ row; proof box (.tmproof, amber .rough + "use as a guide" when miss >15%).
 - Real-data check (index to 9 Oct, pay-time hours): no single way wins all day - 13:00 weekday rest best (~18%), 16-19:00 similar any-day (~12%), 21:00 similar same-weekday (~9%). Growth-adjusting similar days fixed the bias but not the miss - NOT added.

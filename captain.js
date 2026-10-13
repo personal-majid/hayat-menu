@@ -827,10 +827,10 @@ function orderDock(){
   var btn = D.length ? '<button class="kob' + (kon ? ' on' : '') + '" data-a="kopt" aria-label="KOT note and kitchens">✎<small>note</small></button><button class="btn pri" data-a="kot"' + (SENDING[t.id] ? ' disabled' : '') + '>' + (SENDING[t.id] ? 'Sending…' : (S.draft[t.id] && S.draft[t.id].kopt && S.draft[t.id].kopt.flags.indexOf('hold') >= 0 ? '⏸ Hold' : 'Send KOT')) + ' · ' + draftCount(t.id) + '</button>' : o ? (o.dueAt ? '<button class="btn pri" data-a="pay">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due">🧾 Due bill</button>') : '<button class="btn pri" disabled>Send KOT</button>';
   var bar = '<div class="ordbar"><button class="tray" data-a="billsheet"><span><b>' + rs(tot) + '</b><small>' + n + ' item' + (n === 1 ? '' : 's') + (D.length ? ' · ' + draftCount(t.id) + ' not sent' : '') + ' · bill ▴</small></span></button>' + btn + '</div>';
   if(md === 'bill' && o) return '<div class="dock" id="dock" data-mode="bill">' + sugHtml(t) +
-    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><button class="addbtn" data-a="omode" data-m="menu">＋ Add items</button><button class="srch" data-a="omode" data-m="search" aria-label="search dishes">🔍</button></div>' +
+    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><button class="sfake" data-a="omode" data-m="search" aria-label="search dishes to add">🔍 <span>Search to add dishes</span></button><button class="addbtn sm" data-a="omode" data-m="menu" aria-label="add from the menu">＋ Menu</button></div>' +
     '<div class="ordbar">' + (o.dueAt ? '<button class="btn acc" data-a="due" style="flex:none">🖨 Again</button><button class="btn pri" data-a="pay" style="flex:1">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due" style="flex:1">🧾 Due bill · ' + rs(money(o).total) + '</button>') + '</div></div>';
   return '<div class="dock" id="dock" data-mode="menu">' + sresHtml(t) + sugHtml(t) + catsHtml() +
-    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><div class="sbox"><input id="q" type="search" placeholder="Search dishes · try cmf" value="' + esc(S.q) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">' + (S.q ? '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>' : '') + '</div></div>' + bar + '</div>';
+    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><div class="sbox"><input id="q" type="search" placeholder="Search dishes · try cmf" value="' + esc(S.q) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">' + (S.q ? '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>' : '') + '</div><button class="qdone" data-a="qdone" aria-label="close the search">Done</button></div>' + bar + '</div>';
 }
 /* redraw everything EXCEPT the search box, so the keyboard stays up while dishes are added */
 function orderRefresh(){
@@ -993,9 +993,15 @@ function settingsAdmin(){
 /* ---------------- sheets ---------------- */
 var HIST = { skip:0 };
 function pushHist(kind){ try{ history.pushState({ cap:kind }, ''); }catch(e){} }
+/* leave the search: clear it, drop the keyboard, go back to the bill (or the menu if items wait to be sent) */
+function srchDone(fromBack){ var t = curTable(), qi = $('q'); S.q = ''; if(qi){ qi.value = ''; qi.blur(); } document.body.classList.remove('typing');
+  if(!fromBack && HIST.srch){ HIST.srch = false; if(history.state && history.state.cap === 'search'){ HIST.skip++; history.back(); } }
+  ux('search_done', { back:!!fromBack });
+  if(t && openOrder(t) && !draftCount(t.id)){ setMode(t, 'bill'); render(); window.scrollTo(0, 0); } else if(S.view === 'order') orderRefresh(); dockSize(); }
 addEventListener('popstate', function(){
   if(HIST.skip){ HIST.skip--; return; }
   if($('scrim')){ closeSheet(true); return; }
+  if(HIST.srch){ HIST.srch = false; srchDone(true); return; }   /* phone Back: close the search, stay on the table */
   if(S.view === 'order'){ S.view = 'floor'; S.q = ''; render(); }
 });
 function sheet(html, side){
@@ -1442,7 +1448,8 @@ document.addEventListener('click', function(e){
   if(a === 'pin'){ pinKey(el.dataset.k); return; }
   if(a === 'rolef'){ S.roleF = el.dataset.r; render(); return; }
   if(a === 'me'){ meSheet(); return; }
-  if(a === 'nav'){ var leaving = S.view === 'order'; S.view = el.dataset.v; S.q = ''; if(leaving && history.state && history.state.cap === 'order'){ HIST.skip++; history.back(); } window.scrollTo(0, 0); render(); return; }
+  if(a === 'nav'){ var leaving = S.view === 'order', top = history.state && history.state.cap, n = leaving ? (top === 'search' ? 2 : top === 'order' ? 1 : 0) : 0; S.view = el.dataset.v; S.q = ''; HIST.srch = false; if(n){ HIST.skip++; history.go(-n); } window.scrollTo(0, 0); render(); return; }
+  if(a === 'qdone'){ srchDone(false); return; }
   if(a === 'space'){ S.space = el.dataset.s; render(); return; }
   if(a === 'sppick'){ S.pickSp = (mySpaces() || []).slice(); S.view = 'spaces'; render(); return; }
   if(a === 'sptog'){ S.pickSp = S.pickSp || (mySpaces() || []).slice(); var si = S.pickSp.indexOf(el.dataset.s); if(si >= 0) S.pickSp.splice(si, 1); else S.pickSp.push(el.dataset.s); vib(6); render(); return; }
@@ -1533,9 +1540,10 @@ document.addEventListener('input', function(e){
 });
 /* tapping a result must not take the focus off the search box (the keyboard would drop and the dock jump) */
 ['pointerdown', 'mousedown'].forEach(function(ev){ document.addEventListener(ev, function(e){ if(e.target.closest('#sres, #snack') && document.activeElement && document.activeElement.id === 'q') e.preventDefault(); }); });
-document.addEventListener('focusin', function(e){ if(e.target.id === 'q'){ document.body.classList.add('typing'); dockSize(); } });
-document.addEventListener('focusout', function(e){ if(e.target.id === 'q') setTimeout(function(){ if(document.activeElement && document.activeElement.id === 'q') return; document.body.classList.remove('typing'); dockSize(); }, 120); });
-document.addEventListener('keydown', function(e){ if(e.key === 'Enter' && e.target.id === 'q'){ e.preventDefault(); var b = S.best, t = curTable(); if(!b || !t) return;
+document.addEventListener('focusin', function(e){ if(e.target.id === 'q'){ document.body.classList.add('typing'); if(!HIST.srch){ HIST.srch = true; pushHist('search'); } dockSize(); } });
+document.addEventListener('focusout', function(e){ if(e.target.id === 'q') setTimeout(function(){ if(document.activeElement && document.activeElement.id === 'q') return; document.body.classList.remove('typing');
+    if(!S.q && HIST.srch){ HIST.srch = false; if(history.state && history.state.cap === 'search'){ HIST.skip++; history.back(); } }   /* nothing typed: no extra Back step left behind */ dockSize(); }, 120); });
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && e.target.id === 'q'){ e.preventDefault(); srchDone(false); return; } if(e.key === 'Enter' && e.target.id === 'q'){ e.preventDefault(); var b = S.best, t = curTable(); if(!b || !t) return;
   if(b.chs.length === 1 || b.x.ch.length === 1){ addAndSnack(t, b.x, b.chs[0] || 0, 1, 'enter'); S.q = ''; var q = $('q'); if(q){ q.value = ''; q.focus(); } orderRefresh(); } else toast('Pick a size for ' + esc(b.x.name), '', b.x.ch.map(function(c){ return short(c.label); }).join(' · ')); } });
 
 async function saveCfg(p){

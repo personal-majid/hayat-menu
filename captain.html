@@ -367,6 +367,10 @@ body.typing .dock .sugs,body.typing .dock .cats,body.typing .dock .catnav,body.t
 .szb button i{position:absolute;top:-7px;right:-5px;padding:0 6px}
 .addbtn{flex:1;min-height:48px;border-radius:14px;background:var(--card);border:1.5px dashed var(--pri);color:var(--pri);font-weight:800;font-size:16px}
 .srch{width:48px;height:48px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:19px;flex:none}
+.sfake{flex:1;min-width:0;height:48px;border-radius:14px;background:var(--card);border:1.5px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 14px;font-size:16px;text-align:left;color:var(--muted)} .sfake span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.addbtn.sm{flex:none;padding:0 14px;font-size:15px}
+.qdone{display:none;flex:none;height:48px;padding:0 16px;border-radius:14px;border:0;background:var(--pri);color:#fff;font-weight:800;font-size:16px}
+body.typing .srow .qdone{display:block} body.typing .srow .back{display:none}
 .backbill{width:100%;margin:0 0 10px;min-height:44px;border-radius:12px;background:var(--billwash);border:1px solid color-mix(in srgb,var(--bill) 40%,transparent);color:var(--ink);font-weight:800;text-align:left;padding:0 14px}
 .bsum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .bsum div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 12px;box-shadow:var(--shadow)}
