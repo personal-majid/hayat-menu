@@ -57,6 +57,7 @@ var S = {
 };
 window.CAPTAIN = S;   /* tests + console */
 window.CAPTAIN_MENU = function(){ return BYID; };
+window.CAPTAIN_COMFORT = function(){ return comfortHtml.apply(null, arguments); };   /* tests: the Comfort report on made-up events */
 
 function ref(c, id){ return S.F.doc(S.D, c, id); }
 /* TRIAL: bills, cleaning and table locks live in trial_* collections, apart from the website's real orders.
@@ -741,7 +742,9 @@ function billHtml(t){
    (what was ordered, when, the total) - the waiter usually comes back to check, bill or pay.
    "＋ Add items" or 🔍 switches to dishes; sending a KOT goes back to the bill. */
 function wide(){ return innerWidth >= 900; }
-function omode(t){ if(wide()) return 'menu'; if(draftCount(t.id)) return 'menu'; var m = (S.omodes || {})[t.id]; if(m) return m; return openOrder(t) ? 'bill' : 'menu'; }
+function omode(t){ if(wide()) return 'menu'; var m = (S.omodes || {})[t.id]; if(m) return m; if(draftCount(t.id)) return 'menu'; return openOrder(t) ? 'bill' : 'menu'; }
+/* Back is ONE step: typing -> menu (srchDone), menu with a bill or unsent items -> the bill, bill -> tables */
+function backToBill(t){ return t && !wide() && (openOrder(t) || draftCount(t.id)) && omode(t) !== 'bill'; }
 function setMode(t, m){ S.omodes = S.omodes || {}; S.omodes[t.id] = m; }
 function orderView(){
   var t = curTable(); if(!t){ S.view = 'floor'; return floorView(); }
@@ -751,11 +754,13 @@ function orderView(){
   var head = '<div class="ohead"><div class="tt"><b>Table ' + esc(t.name) + '</b><small>' + sub + '</small></div>' +
     '<div class="pax"><button data-a="pax" data-d="-1" aria-label="fewer guests">−</button><span>👥 ' + (pax || '–') + '</span><button data-a="pax" data-d="1" aria-label="more guests">+</button></div><button class="more" data-a="tmenu" aria-label="table options">⋯</button></div>';
   var banner = s.st === 'clean' ? '<div class="card" style="border-color:var(--clean);background:var(--cleanwash)"><b>' + kindIc(s.c.kind) + ' ' + esc(kindName(s.c.kind)) + '</b> asked ' + agoT(s.c.at) + ' by ' + esc(s.c.by) + (s.c.status === 'taken' ? ' · <b>' + esc(s.c.takenBy) + '</b> is on it' : '') + '<div class="row" style="margin-top:8px;display:flex;gap:8px"><button class="btn" data-a="cdone" data-id="' + esc(s.c.id) + '">✓ Table is clean</button></div></div>' : '';
+  var Dn = draftOf(t.id);
+  if(md === 'bill' && !o && Dn.length) return '<div class="bview">' + head + banner + newCard(t, Dn) + '<div class="card muted" style="text-align:center">Nothing has gone to the kitchen yet · check the items, then <b>Send KOT</b> below</div></div>';
   if(md === 'bill' && o){
     var m = money(o), L = live(o), byK = {};
     (o.kots || []).filter(function(k){ return k.kind === 'kot'; }).forEach(function(k){ byK[k.n] = k; });
     var status = o.dueAt ? '<span class="badge2 b-bill">bill given ' + ago(o.dueAt) + ' ago</span>' : '<span class="badge2 b-eat">eating · KOT ' + (o.kotN || 1) + '</span>';
-    return '<div class="bview">' + head + banner +
+    return '<div class="bview">' + head + banner + progHtml(o) + (Dn.length ? newCard(t, Dn) : '') +
       '<div class="bsum"><div><small>Bill</small><b>' + rs(m.total) + '</b></div><div><small>Items</small><b>' + L.reduce(function(n, l){ return n + l.q; }, 0) + '</b></div><div><small>Last KOT</small><b>' + ago(lastK) + '</b></div></div>' +
       '<div class="card bcard"><div class="bhd2">' + status + '<span class="muted" style="font-size:12.5px">tap a dish to remove it</span></div>' +
       L.map(function(l){ var r = (l.rounds || []).filter(function(z){ return z.n !== 'void'; }).map(function(z){ return z.n; }).filter(function(v, i, a){ return a.indexOf(v) === i; });
@@ -765,10 +770,38 @@ function orderView(){
       '<div class="card klist"><div class="sec-t" style="margin:0 0 6px">Kitchen</div>' + (o.kots || []).filter(function(k){ return k.kind === 'kot'; }).map(function(k){ var ks = kotState(o, k), self = (k.lines || []).every(function(l){ return l.station === 'none'; });
         return '<div class="krow"><b>KOT ' + k.n + '</b><span>' + hm(k.at) + ' · ' + (k.lines || []).reduce(function(n, l){ return n + l.q; }, 0) + ' items' + (k.note ? ' · “' + esc(k.note) + '”' : '') + '</span>' +
           (k.hold && !k.fireAt ? '<button class="btn acc" data-a="fire" data-n="' + k.n + '" style="min-height:38px">🔥 Fire</button>' : self ? '<span class="kst">🥤 you bring</span>' : '<span class="kst ' + (ks ? ks.s : '') + '">' + (ks && ks.txt ? ks.txt : k.fireAt ? '🔥 fired ' + ago(k.fireAt) : 'sent') + '</span>') + '</div>'; }).join('') + '</div>' +
-      (function(){ var n = billNudge(t, o); return n ? '<div class="card">' + n + '</div>' : ''; })() + '</div>';
+      (function(){ var n = billNudge(t, o); return n ? '<div class="card">' + n + '</div>' : ''; })() +
+      '<button class="histb" data-a="hist">🕘 Everything on this bill · ' + histEvents(o).length + ' steps</button></div>';
   }
   return '<div class="ord"><div>' + head + banner + (o && !wide() ? '<button class="backbill" data-a="omode" data-m="bill">🧾 Back to the bill · ' + rs(money(o).total) + '</button>' : '') + '<div id="items">' + itemsHtml(t) + '</div></div><aside class="billcol" id="billcol">' + billHtml(t) + '</aside></div>';
 }
+/* the life of a bill in one line: where it is now, and when each step happened */
+function progHtml(o){
+  var K = (o.kots || []).filter(function(k){ return k.kind === 'kot'; }), food = K.filter(function(k){ return !(k.lines || []).every(function(l){ return l.station === 'none'; }); });
+  var st = food.map(function(k){ return kotState(o, k); }), known = st.some(Boolean);
+  var cook = st.some(function(x){ return x && (x.s === 'cooking' || x.s === 'ready'); }), ready = food.length > 0 && st.every(function(x){ return x && x.s === 'ready'; });
+  var S6 = [['🪑','Seated',o.at,true,false],['📝','KOT ' + (o.kotN || K.length || 1),K.length ? K[K.length - 1].at : 0,K.length > 0,false],['🍳','Cooking',0,cook || ready,!known],['✅','Ready',0,ready,!known],['🧾','Bill',o.dueAt,!!o.dueAt,false],['💰','Paid',o.paidAt,!!o.paid,false]];
+  var cur = -1; for(var i = 0; i < S6.length; i++){ if(!S6[i][3] && !S6[i][4]){ cur = i; break; } }
+  return '<div class="prog" aria-label="bill progress">' + S6.map(function(s, i){ return '<div class="ps' + (s[3] ? ' done' : '') + (i === cur ? ' cur' : '') + (s[4] && !s[3] ? ' unk' : '') + '"><i>' + s[0] + '</i><b>' + s[1] + '</b><small>' + (s[2] ? hm(s[2]) : i === cur ? 'next' : s[4] && !s[3] ? 'no screen' : '') + '</small></div>'; }).join('') + '</div>'; }
+/* items picked but not sent: on top, amber, with − / ＋, so nothing is forgotten before Send KOT */
+function newCard(t, D){
+  return '<div class="card nsent"><div class="bhd2"><span class="badge2 b-new">🆕 Not sent yet · ' + draftCount(t.id) + '</span><button class="lnk" data-a="kopt">✎ note · kitchens</button></div>' +
+    D.map(function(l){ return '<div class="bl new"><div class="step"><button data-a="dq" data-k="' + esc(l.k) + '" data-d="-1" aria-label="one less">−</button><span>' + l.q + '</span><button data-a="dq" data-k="' + esc(l.k) + '" data-d="1" aria-label="one more">+</button></div><span class="n" data-a="note" data-k="' + esc(l.k) + '" role="button">' + esc(l.name) + '<small>' + esc([l.label, l.note ? '“' + l.note + '”' : ''].filter(Boolean).join(' · ') || 'tap to add a note') + '</small></span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join('') +
+    '<div class="btot"><div class="g"><span>New</span><span>+' + rs(linesTotal(D)) + '</span></div></div></div>'; }
+/* every step of a bill, oldest first: seated, each KOT, fire, voids, moves, bill printed, paid */
+function histEvents(o){
+  var E = [], who2 = function(b){ return typeof b === 'string' ? b : (b && (b.name || b.id)) || ''; }, its = function(L){ return (L || []).map(function(l){ return l.q + '× ' + l.name + (l.label ? ' ' + short(l.label) : ''); }).join(', '); };
+  E.push({ at:o.at, ic:'🪑', t:'Seated' + (o.pax ? ' · 👥 ' + o.pax : ''), by:who2(o.by) });
+  (o.kots || []).forEach(function(k){
+    if(k.kind === 'kot'){ E.push({ at:k.at, ic:'📝', t:'KOT ' + k.n + ' · ' + its(k.lines) + (k.note ? ' · “' + k.note + '”' : '') + (k.hold ? ' · ⏸ held' : ''), by:who2(k.by) }); if(k.fireAt) E.push({ at:k.fireAt, ic:'🔥', t:'KOT ' + k.n + ' fired', by:who2(k.fireBy) }); }
+    else if(k.kind === 'cancel' && !(o.edits || []).some(function(e){ return Math.abs((e.at || 0) - (k.at || 0)) < 3000; })) E.push({ at:k.at, ic:'✂', t:'Cancelled · ' + its(k.lines) + (k.reason ? ' (' + k.reason + ')' : ''), by:who2(k.by) }); });
+  (o.edits || []).forEach(function(e){ E.push({ at:e.at, ic:'✂', t:(e.void ? 'Removed ' : 'Changed ') + e.item + (e.label ? ' ' + short(e.label) : '') + ' · ' + e.from + ' → ' + e.to + (e.reason ? ' (' + e.reason + ')' : ''), by:who2(e.by) }); });
+  (o.moves || []).forEach(function(m){ E.push({ at:m.at, ic:'↔', t:'Moved ' + m.from + ' → ' + m.to, by:who2(m.by) }); });
+  if(o.dueAt) E.push({ at:o.dueAt, ic:'🧾', t:'Bill printed' + (o.dueCount > 1 ? ' · ' + o.dueCount + ' times' : ''), by:who2(o.dueBy) });
+  if(o.paidAt) E.push({ at:o.paidAt, ic:'💰', t:'Paid ' + rs(o.paidAmt || o.total || 0) + (o.payMode ? ' · ' + o.payMode : ''), by:who2(o.paidBy) });
+  return E.filter(function(e){ return e.at; }).sort(function(a, b){ return a.at - b.at; }); }
+function histSheet(o){ var E = histEvents(o);
+  sheet('<h2>Table ' + esc(o.table || '') + ' · everything</h2><p class="sub">' + E.length + ' steps · oldest first</p><div class="hist">' + E.map(function(e){ return '<div class="he"><i>' + e.ic + '</i><span><b>' + esc(e.t) + '</b><small>' + hm(e.at) + ' · ' + agoT(e.at) + (e.by ? ' · ' + esc(e.by) : '') + '</small></span></div>'; }).join('') + '</div>'); ux('hist', { n:E.length }); }
 function billNudge(t, o){
   if(!o || o.dueAt) return ''; var have = inBill(t); if(Object.keys(have).some(function(id){ return isDessert(BYID[id]); })) return '';
   var ds = IDX.filter(isDessert).sort(function(a, b){ return (b.q || 0) - (a.q || 0); }).slice(0, 2); if(!ds.length) return '';
@@ -826,18 +859,22 @@ function orderDock(){
   var kon = D.length && S.draft[t.id] && S.draft[t.id].kopt && (S.draft[t.id].kopt.flags.length || S.draft[t.id].kopt.note || S.draft[t.id].kopt.off.length);
   var btn = D.length ? '<button class="kob' + (kon ? ' on' : '') + '" data-a="kopt" aria-label="KOT note and kitchens">✎<small>note</small></button><button class="btn pri" data-a="kot"' + (SENDING[t.id] ? ' disabled' : '') + '>' + (SENDING[t.id] ? 'Sending…' : (S.draft[t.id] && S.draft[t.id].kopt && S.draft[t.id].kopt.flags.indexOf('hold') >= 0 ? '⏸ Hold' : 'Send KOT')) + ' · ' + draftCount(t.id) + '</button>' : o ? (o.dueAt ? '<button class="btn pri" data-a="pay">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due">🧾 Due bill</button>') : '<button class="btn pri" disabled>Send KOT</button>';
   var bar = '<div class="ordbar"><button class="tray" data-a="billsheet"><span><b>' + rs(tot) + '</b><small>' + n + ' item' + (n === 1 ? '' : 's') + (D.length ? ' · ' + draftCount(t.id) + ' not sent' : '') + ' · bill ▴</small></span></button>' + btn + '</div>';
-  if(md === 'bill' && o) return '<div class="dock" id="dock" data-mode="bill">' + sugHtml(t) +
+  if(md === 'bill' && (o || D.length)) return '<div class="dock" id="dock" data-mode="bill">' + sugHtml(t) +
     '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><button class="sfake" data-a="omode" data-m="search" aria-label="search dishes to add">🔍 <span>Search to add dishes</span></button><button class="addbtn sm" data-a="omode" data-m="menu" aria-label="add from the menu">＋ Menu</button></div>' +
-    '<div class="ordbar">' + (o.dueAt ? '<button class="btn acc" data-a="due" style="flex:none">🖨 Again</button><button class="btn pri" data-a="pay" style="flex:1">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due" style="flex:1">🧾 Due bill · ' + rs(money(o).total) + '</button>') + '</div></div>';
-  return '<div class="dock" id="dock" data-mode="menu">' + sresHtml(t) + sugHtml(t) + catsHtml() +
-    '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><div class="sbox"><input id="q" type="search" placeholder="Search dishes · try cmf" value="' + esc(S.q) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">' + (S.q ? '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>' : '') + '</div><button class="qdone" data-a="qdone" aria-label="close the search">Done</button></div>' + bar + '</div>';
+    (D.length ? bar : '<div class="ordbar">' + (o.dueAt ? '<button class="btn acc" data-a="due" style="flex:none">🖨 Again</button><button class="btn pri" data-a="pay" style="flex:1">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due" style="flex:1">🧾 Due bill · ' + rs(money(o).total) + '</button>') + '</div>') + '</div>';
+  return '<div class="dock" id="dock" data-mode="menu">' + sresHtml(t) + sugHtml(t) + catsHtml() + tray2(t, D) +
+    '<div class="srow"><button class="back" data-a="oback" data-v="floor" aria-label="' + (backToBill(t) ? 'back to the bill' : 'back to tables') + '">‹</button><div class="sbox"><input id="q" type="search" placeholder="Search dishes · try cmf" value="' + esc(S.q) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">' + (S.q ? '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>' : '') + '</div><button class="qdone" data-a="qdone" aria-label="close the search">Done</button></div>' + bar + '</div>';
 }
+/* while typing, the full tray hides to make room - this one line keeps "what have I picked" in sight */
+function tray2(t, D){ if(!D.length) return ''; var L = D.slice(-2).reverse().map(function(l){ return esc(l.name) + (l.q > 1 ? ' ×' + l.q : ''); }).join(', ');
+  return '<button class="tray2" id="tray2" data-a="billsheet"><span class="c">🆕 ' + draftCount(t.id) + '</span><span class="l">' + L + (D.length > 2 ? '…' : '') + '</span><b>' + rs(linesTotal(D)) + ' ▴</b></button>'; }
 /* redraw everything EXCEPT the search box, so the keyboard stays up while dishes are added */
 function orderRefresh(){
   var t = curTable(), d = $('dock'); if(S.view !== 'order' || !t || !d || d.dataset.mode !== (omode(t) === 'bill' && openOrder(t) ? 'bill' : 'menu')) return render();
   var main = $('main'); if(main){ var y = window.scrollY; main.innerHTML = orderView(); window.scrollTo(0, y); }
   var tmp = document.createElement('div'); tmp.innerHTML = orderDock(); var nd = tmp.firstChild;
-  ['sres', 'sugs', 'cats'].forEach(function(id){ var old = $(id), nw = nd.querySelector('#' + id); if(old && nw) old.replaceWith(nw); else if(old && !nw) old.remove(); else if(!old && nw){ var anchor = id === 'sres' ? d.firstChild : (id === 'sugs' ? ($('cats') || d.querySelector('.srow')) : d.querySelector('.srow')); d.insertBefore(nw, anchor); } });
+  ['sres', 'sugs', 'cats', 'tray2'].forEach(function(id){ var old = $(id), nw = nd.querySelector('#' + id); if(old && nw) old.replaceWith(nw); else if(old && !nw) old.remove(); else if(!old && nw){ var anchor = id === 'sres' ? d.firstChild : (id === 'sugs' ? ($('cats') || $('tray2') || d.querySelector('.srow')) : d.querySelector('.srow')); d.insertBefore(nw, anchor); } });
+  var bk = d.querySelector('.srow .back'); if(bk && bk.dataset.a === 'oback') bk.setAttribute('aria-label', backToBill(t) ? 'back to the bill' : 'back to tables');
   var ob = d.querySelector('.ordbar'), nb = nd.querySelector('.ordbar'); if(ob && nb) ob.replaceWith(nb);
   var sb = d.querySelector('.sbox'), cx = sb && sb.querySelector('.qx2'); if(sb){ if(S.q && !cx) sb.insertAdjacentHTML('beforeend', '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>'); else if(!S.q && cx) cx.remove(); }
   if(S.refresh) try{ S.refresh(); }catch(e){}
@@ -1002,7 +1039,7 @@ addEventListener('popstate', function(){
   if(HIST.skip){ HIST.skip--; return; }
   if($('scrim')){ closeSheet(true); return; }
   if(HIST.srch){ HIST.srch = false; srchDone(true); return; }   /* phone Back: close the search, stay on the table */
-  if(S.view === 'order'){ S.view = 'floor'; S.q = ''; render(); }
+  if(S.view === 'order'){ var bt = curTable(); if(backToBill(bt)){ setMode(bt, 'bill'); S.q = ''; pushHist('order'); ux('back', { to:'bill', phone:1 }); render(); window.scrollTo(0, 0); return; } S.view = 'floor'; S.q = ''; render(); }
 });
 function sheet(html, side){
   closeSheet(); pushHist('sheet');
@@ -1338,6 +1375,25 @@ async function uxEvents(sid){ if(UXV.ev[sid]) return UXV.ev[sid]; var L = [];
   for(var n = 0; n < 200; n++){ var d = await S.F.getDoc(ref('ux_events', sid + '_' + String(n).padStart(4, '0'))); if(!d.exists()) break; L = L.concat(d.data().ev || []); }
   UXV.ev[sid] = L; return L; }
 function med(a){ if(!a.length) return null; var b = a.slice().sort(function(x, y){ return x - y; }); return b[Math.floor(b.length / 2)]; }
+/* 🩺 Comfort report: what troubled staff most, ranked. Score = how often x how bad (an error or a rage tap hurts more than a dead tap).
+   Every line says what happened, how often, and what to try - so the next round of fixes starts from the top. */
+function comfortHtml(E, zero, deadSpots, errTop, kots){
+  var P = [], add = function(sc, ic, t, why, fix){ if(sc > 0) P.push({ s:sc, ic:ic, t:t, why:why, fix:fix }); };
+  var nm = function(id){ return (BYID[id] && BYID[id].name) || id || '?'; }, sess = function(L){ return L.map(function(e){ return e.sid; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).length; };
+  Object.keys(zero).forEach(function(q){ add(zero[q] * 3, '🔍', 'Searched “' + q + '” · found nothing', zero[q] + '×', 'add it as a dish or a short name in Setup → Menu'); });
+  var rg = {}; E.filter(function(e){ return e.e === 'rage'; }).forEach(function(e){ var k = (e.on || 'nothing') + (e.v ? ' · ' + e.v : ''); (rg[k] = rg[k] || []).push(e); });
+  Object.keys(rg).forEach(function(k){ add(rg[k].length * 4, '😤', 'Tapped again and again on “' + k + '”', rg[k].length + '× in ' + sess(rg[k]) + ' session(s)', 'it looked dead or slow - make it react at once or make it bigger'); });
+  Object.keys(deadSpots).forEach(function(k){ if(deadSpots[k] >= 2) add(deadSpots[k] * 1.5, '👆', 'Taps on nothing: “' + k + '”', deadSpots[k] + '×', 'people expect this to be a button'); });
+  var un = {}; E.filter(function(e){ return e.e === 'undo'; }).forEach(function(e){ un[e.id] = (un[e.id] || 0) + 1; });
+  Object.keys(un).forEach(function(id){ if(un[id] >= 2) add(un[id] * 2, '↩', 'Undo after adding ' + nm(id), un[id] + '×', 'wrong size or a look-alike dish next to it'); });
+  Object.keys(errTop).forEach(function(m){ add(errTop[m] * 5, '⚠️', 'Error: ' + m, errTop[m] + '×', 'fix first - staff saw a failure'); });
+  /* searched, then closed the search without adding anything */
+  var bo = 0, by = {}; E.forEach(function(e){ if(e.e === 'search'){ by[e.sid] = e; } else if(e.e === 'add'){ delete by[e.sid]; } else if(e.e === 'search_done' && by[e.sid]){ bo++; delete by[e.sid]; } });
+  if(bo >= 2) add(bo * 1.5, '🚪', 'Searched, then gave up', bo + '×', 'check the “found nothing” list and the best match shown');
+  var slow = kots.filter(function(k){ return (k.ms || 0) > 90000; }); if(slow.length) add(slow.length * 1.5, '⏱', 'Slow orders: first dish → KOT over 90 s', slow.length + ' of ' + kots.length + ' KOTs', 'look at those sessions step by step below');
+  P.sort(function(a, b){ return b.s - a.s; });
+  return '<div class="card"><h2>🩺 Comfort report · what troubles staff most</h2><p class="sub">Ranked from real use (last 7 days). Fix the top one, then check again next week.</p>' +
+    (P.length ? '<div class="list">' + P.slice(0, 8).map(function(p, i){ return '<div class="li" style="cursor:default"><span class="tico">' + (i + 1) + '</span><span class="n">' + p.ic + ' ' + esc(p.t) + '<small>' + esc(p.why) + ' · try: ' + esc(p.fix) + '</small></span></div>'; }).join('') + '</div>' : '<p class="sub">Nothing troubling yet ✓ — no dead or rage taps, no failed searches, no errors.</p>') + '</div>'; }
 function usageAdmin(){
   if(!UXV.sess){ uxLoad(); return '<div class="card"><h2>Usage</h2><p class="sub">Loading the last 7 days…</p></div>'; }
   var S2 = UXV.sess, E = [].concat.apply([], S2.map(function(s){ return (UXV.ev[s.sid] || []).map(function(e){ return Object.assign({ sid:s.sid, who:s.who }, e); }); }));
@@ -1351,7 +1407,7 @@ function usageAdmin(){
   var deadSpots = {}; dead.forEach(function(d){ var k = d.v + ' · ' + (d.txt || '(empty)'); deadSpots[k] = (deadSpots[k] || 0) + 1; });
   var top = function(o, n){ return Object.keys(o).sort(function(a, b){ return o[b] - o[a]; }).slice(0, n || 6); };
   var dl = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ sessions:S2, events:UXV.ev }));
-  return '<div class="card"><h2>Usage · last 7 days</h2><p class="sub">' + S2.length + ' sessions · ' + [].concat(S2.map(function(s){ return s.who; })).filter(function(v, i, a){ return a.indexOf(v) === i; }).length + ' people · ' + E.length + ' events</p>' +
+  return comfortHtml(E, zero, deadSpots, errTop, kots) + '<div class="card"><h2>Usage · last 7 days</h2><p class="sub">' + S2.length + ' sessions · ' + [].concat(S2.map(function(s){ return s.who; })).filter(function(v, i, a){ return a.indexOf(v) === i; }).length + ' people · ' + E.length + ' events</p>' +
     '<div class="sum" style="grid-template-columns:repeat(3,1fr)"><div><small>Order → KOT</small><b>' + (tK ? Math.round(tK / 1000) + 's' : '—') + '</b></div><div><small>Pay sheet</small><b>' + (tP ? Math.round(tP / 1000) + 's' : '—') + '</b></div><div><small>Taps / dish</small><b>' + (adds.length ? (taps.length / adds.length).toFixed(1) : '—') + '</b></div>' +
     '<div><small>Dead taps</small><b>' + pct(dead.length, taps.length + dead.length) + '</b></div><div><small>Rage taps</small><b>' + rage.length + '</b></div><div><small>Undo</small><b>' + pct(undo.length, adds.length) + '</b></div></div>' +
     '<table class="tbl"><tr><th>Dishes added by</th><th class="r">n</th></tr>' + top(by, 8).map(function(k){ return '<tr><td>' + esc(k) + '</td><td class="r">' + by[k] + ' · ' + pct(by[k], adds.length) + '</td></tr>'; }).join('') + '</table>' +
@@ -1448,8 +1504,10 @@ document.addEventListener('click', function(e){
   if(a === 'pin'){ pinKey(el.dataset.k); return; }
   if(a === 'rolef'){ S.roleF = el.dataset.r; render(); return; }
   if(a === 'me'){ meSheet(); return; }
+  if(a === 'oback'){ var bt = curTable(); if(backToBill(bt)){ setMode(bt, 'bill'); S.q = ''; ux('back', { to:'bill' }); render(); window.scrollTo(0, 0); return; } a = 'nav'; }
   if(a === 'nav'){ var leaving = S.view === 'order', top = history.state && history.state.cap, n = leaving ? (top === 'search' ? 2 : top === 'order' ? 1 : 0) : 0; S.view = el.dataset.v; S.q = ''; HIST.srch = false; if(n){ HIST.skip++; history.go(-n); } window.scrollTo(0, 0); render(); return; }
   if(a === 'qdone'){ srchDone(false); return; }
+  if(a === 'hist'){ var ho = curTable() && openOrder(curTable()); if(ho) histSheet(ho); return; }
   if(a === 'space'){ S.space = el.dataset.s; render(); return; }
   if(a === 'sppick'){ S.pickSp = (mySpaces() || []).slice(); S.view = 'spaces'; render(); return; }
   if(a === 'sptog'){ S.pickSp = S.pickSp || (mySpaces() || []).slice(); var si = S.pickSp.indexOf(el.dataset.s); if(si >= 0) S.pickSp.splice(si, 1); else S.pickSp.push(el.dataset.s); vib(6); render(); return; }
