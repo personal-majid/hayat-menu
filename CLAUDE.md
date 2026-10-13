@@ -511,6 +511,13 @@ What that means, and what to say if it comes up:
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
 
+## v267 — Today lab · proof lines · top boxes only on Live/Sales · page titles
+- todayLab() (Live, today only; replaces likeToday there): "Today · how it will end". Ways: F app forecast (fcToday neutral; past days fcLive on fcHours masked to minute v), S days like today so far (tmMatch on hours < now, tmKeep filter, top TMR.n) -> so far + their nrev after v, R last 4 same weekdays + today (so far + their rest), B last 4 same weekdays totals. tdBacktest(v): each way replayed at the SAME clock time on the last 30 finished days (cache per 15-min slot + filter + INDEX size). Best = lowest miss with n>=8, ★ row; proof box (.tmproof, amber .rough + "use as a guide" when miss >15%).
+- Real-data check (index to 9 Oct, pay-time hours): no single way wins all day - 13:00 weekday rest best (~18%), 16-19:00 similar any-day (~12%), 21:00 similar same-weekday (~9%). Growth-adjusting similar days fixed the bias but not the miss - NOT added.
+- Tomorrow card: Live only (removed from Sales), same proof box + ★; tmFilt() shared chips + a line saying what the filter means (TM_FN). TMR.topen = Today full analysis.
+- Top boxes (kpis) only on Live (floor) and Sales. pgHead(): every day page starts with its name + date + what it shows (PG_N); Live/Sales carry "🔍 Similar days".
+- Tests t-v267 (16); t-v255 / t-tmr updated for the new layout.
+
 ## v266 — live hours by KOT time · alert popups swipe / clear all
 - rparts(r,v): a bill split by WHEN each part was ordered (items[].kotAt), scaled to the bill's money (paid total or running sum). hbucket, Sales-by-hour unpaid stack, hourCompare, running total (runLine + AFT) and the replay curve (rpCurve) use it, so an ADD-ON counts in the hour it was ordered (before, the whole bill sat in the hour the table opened, so the current hour did not move). Bill COUNTS stay at createdAt. History hours (ohOf / settings/ohours) are unchanged (whole bill at createdAt).
 - bh(ts): no time -> -1 (a bill without createdAt used to land in 00:00).
