@@ -511,6 +511,12 @@ What that means, and what to say if it comes up:
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
 
+## v266 — live hours by KOT time · alert popups swipe / clear all
+- rparts(r,v): a bill split by WHEN each part was ordered (items[].kotAt), scaled to the bill's money (paid total or running sum). hbucket, Sales-by-hour unpaid stack, hourCompare, running total (runLine + AFT) and the replay curve (rpCurve) use it, so an ADD-ON counts in the hour it was ordered (before, the whole bill sat in the hour the table opened, so the current hour did not move). Bill COUNTS stay at createdAt. History hours (ohOf / settings/ohours) are unchanged (whole bill at createdAt).
+- bh(ts): no time -> -1 (a bill without createdAt used to land in 00:00).
+- Current hour bar: "now ₹X" label (b.unl.curl) above the forecast box = paid + unpaid so far, so a new bill visibly moves it.
+- Alert popups (alToast): tap = open bill, ✕ (32px) or swipe sideways = dismiss (8px slop, >30% width or quick flick; short drag snaps back and does not count as a tap), "✕ Clear all (n)" pill when 2+, timer pauses while touched/hovered, max 3 on phone / 4 on PC (oldest slides away), reduced-motion respected. Tests t-live (6), t-alswipe (9).
+
 ## v265 — replay video runs to closing · NOW marker · dotted forecast
 - recDraw (GIF + WhatsApp MP4): today no longer stops at the current time — it plays on the forecast to closing like ▶ Play. Fixed "NOW hh:mm" pill + dashed amber line at c.fcFrom, shaded forecast zone, line dotted after now, clock amber with a FORECAST pill, row "n bills + forecast", footer "dotted = forecast".
 - Replay screen: race chart gets the same fixed now line (line.nowfix, text.nowt, rect.fczone); clock "· forecast"; card "~₹" + "forecast after hh:mm"; By hour: forecast part of today's bar dashed/hatched (.fcbar), table "~₹"; Bills feed skips forecast steps (p[2]) with a note.
