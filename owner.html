@@ -278,6 +278,7 @@ body.rpopen{overflow:hidden} body.rpopen #dock{display:none}
 svg.race{width:100%;height:300px;display:block} svg.race .gl{stroke:var(--line2);stroke-dasharray:4 5;stroke-width:1;vector-effect:non-scaling-stroke} svg.race .gt{fill:var(--muted);font-size:13px;font-weight:600}
 svg.race .ln{fill:none;stroke-width:3;vector-effect:non-scaling-stroke;stroke-linejoin:round} svg.race .ln.base{stroke-width:4.5} svg.race .ghost{fill:none;stroke-width:2;opacity:.25;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
 svg.race .now{stroke:var(--ink,#241811);stroke-width:1.5;opacity:.45;vector-effect:non-scaling-stroke}
+svg.race .nowfix{stroke:#B07A1E;stroke-width:2.5;stroke-dasharray:6 5;vector-effect:non-scaling-stroke} svg.race .nowt{fill:#8A5A00;font-size:13px;font-weight:800} svg.race .fczone{fill:#c0882c;opacity:.09} svg.race .fcl{stroke-dasharray:2 7;stroke-linecap:round} .rpbars .bar.fcbar{background:repeating-linear-gradient(45deg,rgba(192,136,44,.12) 0 4px,rgba(192,136,44,.38) 4px 8px)!important;border:1.5px dashed;border-bottom:0} .rpcard .d.fc{background:#f8ecd2;color:#8a5a00}
 .bars.rpbars{height:240px} .ghostbar{background:transparent!important;border:1.5px dashed;border-bottom:0;opacity:.35;width:100%}
 .rpfeed{display:grid;gap:10px;overflow-x:auto} .rpfeed .fr{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums} .rpfeed .fr.new{background:color-mix(in srgb,var(--s8,#c0882c) 14%,transparent);border-radius:6px;padding:5px 6px}
 tr.cur td{background:color-mix(in srgb,var(--pri) 10%,transparent);font-weight:700}
@@ -485,7 +486,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v264';
+const BOARD='v265';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -1590,8 +1591,8 @@ function rpCurve(d){ const doc=rpDoc(d); if(!doc) return null; const n=Object.ke
   const M=pts.map(p=>p[0]), S=[]; let s=0; pts.forEach(p=>{ s+=p[1]; S.push(s); });
   return RP.cur[d]={n,M,S,pts,total:s,approx,fcFrom,at:Date.now()}; }
 function rpAt(c,v){ if(!c||!c.M.length) return 0; let lo=0,hi=c.M.length; while(lo<hi){ const m=(lo+hi)>>1; if(c.M[m]<=v) lo=m+1; else hi=m; } return lo?c.S[lo-1]:0; }
-function rpBillsAt(c,v){ if(!c) return 0; let n=0; for(const m of c.M){ if(m<=v) n++; else break; } return n; }
-function rpHours(c,v){ const H=Array(24).fill(0); if(c) c.pts.forEach(p=>{ if(p[0]<=v){ const i=Math.min(23,Math.floor(p[0]/60)); H[i]+=p[1]; } }); return H; }
+function rpBillsAt(c,v){ if(!c) return 0; let n=0; for(let i=0;i<c.M.length;i++){ if(c.M[i]>v) break; if(!(c.pts[i]&&c.pts[i][2])) n++; } return n; }   /* forecast steps are not bills */
+function rpHours(c,v,fo){ const H=Array(24).fill(0); if(c) c.pts.forEach(p=>{ if(p[0]<=v&&(!fo||p[2])){ const i=Math.min(23,Math.floor(p[0]/60)); H[i]+=p[1]; } }); return H; }
 function asOf(doc,v,fn){ const n=NOW, t=TCUT; TCUT=v; NOW=Math.min(Date.now(),dayStartMs(doc.day)+v*60000); try{ return withDoc(doc,fn); } finally{ NOW=n; TCUT=t; } }
 function rpOpenAt(doc,v){ if(!doc) return {n:0,v:0}; return asOf(doc,v,()=>{ const o=recs().filter(r=>r.status!=='settled'&&r.status!=='void'&&r.status!=='cancelled'); return {n:o.length,v:o.reduce((a,r)=>a+(r.total||0),0)}; }); }
 /* the activity window: first to last bill of any running day, whole hours */
@@ -1631,16 +1632,16 @@ function rpPicker(){
 }
 function rpTick(){
   const b=$('rpBody'); if(!b) return; const v=rpV(), L=rpList();
-  const lab=$('rpLab'); if(lab) lab.textContent=rpClock(v); const big=$('rpClockBig'); if(big) big.textContent=rpClock(v)+(TCUT==null&&DAY===bizToday()?' · live':'');
+  const lab=$('rpLab'); if(lab) lab.textContent=rpClock(v); const big=$('rpClockBig'); if(big) { const c0=DAY===bizToday()?rpCurve(DAY):null; big.textContent=rpClock(v)+(TCUT==null&&DAY===bizToday()?' · live':(c0&&c0.fcFrom!=null&&v>c0.fcFrom?' · forecast':'')); }
   const r=$('rpRange'); if(r&&!RP.drag) r.value=Math.round(v); const p=$('rpPlay'); if(p) p.textContent=RP.playing?'⏸':'▶';
   const C=L.map(d=>rpCurve(d)); if(C.some(c=>!c)){ b.innerHTML='<div class="card wide"><div class="note">Loading days…</div></div>'; return; }
   const base=rpAt(C[0],v);
   /* score cards: one per day, on the same clock */
   const cards=`<div class="rpcards">${L.map((d,k)=>{ const c=C[k], m=rpAt(c,v), n=rpBillsAt(c,v), last30=m-rpAt(c,v-30), o=rpOpenAt(rpDoc(d),v);
       const dlt=k&&m?Math.round(100*(base-m)/m):null;
-      return `<div class="rpcard" style="--c:${RP_COLS[k]}"><small><i></i>${esc(rpName(d))}</small><b>${rs(m)}</b>
-        <em>${k?(dlt==null?'':`<span class="d ${dlt>=0?'up':'dn'}">${L[0]===bizToday()?'today':'1st'} ${dlt>=0?'+':''}${dlt}%</span>`):'by '+rpClock(v)}</em>
-        <div class="rpm">${c.approx?'<span>from hourly totals</span>':`<span>${n} bills</span><span>avg ${rs(n?m/n:0)}</span>`}<span>last 30 min ${rs(last30)}</span>${o.n?`<span>open ${o.n} · ${rs(o.v)}</span>`:''}${d!==bizToday()?`<span>ended ${rs(c.total)}</span>`:''}</div></div>`; }).join('')}</div>`;
+      return `<div class="rpcard" style="--c:${RP_COLS[k]}"><small><i></i>${esc(rpName(d))}</small><b>${c.fcFrom!=null&&v>c.fcFrom?'~':''}${rs(m)}</b>
+        <em>${k?(dlt==null?'':`<span class="d ${dlt>=0?'up':'dn'}">${L[0]===bizToday()?'today':'1st'} ${dlt>=0?'+':''}${dlt}%</span>`):(c.fcFrom!=null&&v>c.fcFrom?`<span class="d fc">forecast after ${rpClock(c.fcFrom)}</span>`:'by '+rpClock(v))}</em>
+        <div class="rpm">${c.approx?'<span>from hourly totals</span>':`<span>${n} bills</span><span>avg ${rs(n?rpAt(c,c.fcFrom!=null?Math.min(v,c.fcFrom):v)/n:0)}</span>`}<span>last 30 min ${rs(last30)}</span>${o.n?`<span>open ${o.n} · ${rs(o.v)}</span>`:''}${d!==bizToday()?`<span>ended ${rs(c.total)}</span>`:''}</div></div>`; }).join('')}</div>`;
   const fa=fcAt(L[0],v), pc=(f,a)=>a?`<span class="d ${Math.abs(f/a-1)<=0.1?'up':'dn'}">${f>=a?'+':''}${Math.round(100*(f/a-1))}%</span>`:'';
   const fstrip=fa?`<div class="rpfc"><span class="rpfch">Forecast made at ${rpClock(v)}</span>
     <span><small>Next hour</small><b>${rs(fa.n1)}</b>${fa.r1!=null?`<em>real ${rs(fa.r1)} ${pc(fa.n1,fa.r1)}</em>`:''}</span>
@@ -1774,21 +1775,22 @@ function rpRace(L,C,v){
   const path=(c,a,b2)=>{ let d=`M${X(a)},${Yp(rpAt(c,a))}`; let last=rpAt(c,a); c.pts.forEach((p,i)=>{ if(p[0]>a&&p[0]<=b2){ d+=` L${X(p[0])},${Yp(last)} L${X(p[0])},${Yp(c.S[i])}`; last=c.S[i]; } }); d+=` L${X(b2)},${Yp(last)}`; return d; };
   const end=(d,c)=>d===bizToday()&&!(c&&c.fcFrom!=null)?Math.min(x1,rpNowMin()):x1;
   const lines=C.map((c,k)=>{ const e=end(L[k],c), cv=Math.min(v,e); const fF=c.fcFrom; return (L[k]!==bizToday()&&v<e?`<path d="${path(c,cv,e)}" class="ghost" style="stroke:${RP_COLS[k]}"/>`:'')+(fF!=null?`<path d="${path(c,x0,Math.min(cv,fF))}" class="ln base" style="stroke:${RP_COLS[k]}"/>`+(cv>fF?`<path d="${path(c,fF,cv)}" class="ln base fcl" style="stroke:${RP_COLS[k]}"/>`:'')+(v<e?`<path d="${path(c,Math.max(cv,fF),e)}" class="ghost fcl" style="stroke:${RP_COLS[k]}"/>`:''):`<path d="${path(c,x0,cv)}" class="ln${k?'':' base'}" style="stroke:${RP_COLS[k]}"/>`)+`<circle cx="${X(cv)}" cy="${Yp(rpAt(c,cv))}" r="${k?5:7}" style="fill:${RP_COLS[k]}"/>`; }).join('');
+  const fF0=C[0]&&C[0].fcFrom, nowfix=fF0!=null&&fF0>=x0&&fF0<=x1?(v>fF0?`<rect x="${X(fF0)}" y="${padT}" width="${Math.max(0,X(v)-X(fF0))}" height="${ih}" class="fczone"/>`:'')+`<line x1="${X(fF0)}" x2="${X(fF0)}" y1="${padT}" y2="${padT+ih}" class="nowfix"/><text x="${X(fF0)+6}" y="${padT+14}" class="nowt">now ${rpClock(fF0)}</text>`:'';
   return `<div class="card wide"><h2>Running total <span class="n">faint line = how that day finished · today after now = forecast (dashed)</span></h2>
-    <svg class="race" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${g}<line x1="${X(v)}" x2="${X(v)}" y1="${padT}" y2="${padT+ih}" class="now"/>${lines}</svg></div>`;
+    <svg class="race" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${g}${nowfix}<line x1="${X(v)}" x2="${X(v)}" y1="${padT}" y2="${padT+ih}" class="now"/>${lines}</svg></div>`;
 }
 /* hour bars of every day, grown only up to the clock; one scale for the whole day so bars never jump */
 function rpHourBars(L,C,v){
   const [x0,x1]=rpSpan(), lo=Math.floor(x0/60), hi=Math.max(lo,Math.ceil(x1/60)-1), n=hi-lo+1;
-  const full=C.map(c=>rpHours(c,1440)), now=C.map(c=>rpHours(c,v)); const Y=yscale(Math.max(1,...full.flatMap(H=>H.slice(lo,hi+1))));
-  return `<div class="card wide"><h2>By hour <span class="n">bars grow as the clock runs · faint = rest of that day</span></h2>
-    <div class="bars axed rpbars" style="grid-template-columns:repeat(${n},1fr)">${Y.html}${Array.from({length:n},(_,j)=>{ const i=lo+j; return `<div class="grp" style="grid-template-columns:repeat(${L.length},1fr)">${L.map((d,k)=>{ const a=now[k][i], f=full[k][i]; return `<div class="bc"><div class="bar ghostbar" style="height:${d===bizToday()?0:Math.max(0,100*f/Y.top)}%;border-color:${RP_COLS[k]}"></div><div class="bar" style="position:absolute;left:0;right:0;bottom:0;height:${a?Math.max(2,100*a/Y.top):0}%;background:${RP_COLS[k]}" data-t="${esc(rpName(d))} ${hlabel(i)}:00 ${rs(a)}${f>a?' of '+rs(f):''}"></div></div>`; }).join('')}</div>`; }).join('')}</div>${hx(lo,hi)}
-    <div class="scroll"><table style="margin-top:10px"><tr><th>Hour</th>${L.map((d,k)=>`<th class="r" style="color:${RP_COLS[k]}">${esc(rpName(d))}</th>`).join('')}</tr>${Array.from({length:n},(_,j)=>lo+j).filter(i=>i*60<=v).map(i=>`<tr${Math.floor(v/60)===i?' class="cur"':''}><td>${hlabel(i)}–${hlabel(i+1)}</td>${now.map(H=>`<td class="r">${H[i]?rs(H[i]):'—'}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
+  const full=C.map(c=>rpHours(c,1440)), now=C.map(c=>rpHours(c,v)), fcp=C.map(c=>c&&c.fcFrom!=null?rpHours(c,v,1):null); const Y=yscale(Math.max(1,...full.flatMap(H=>H.slice(lo,hi+1))));
+  return `<div class="card wide"><h2>By hour <span class="n">bars grow as the clock runs · faint = rest of that day · dashed = forecast</span></h2>
+    <div class="bars axed rpbars" style="grid-template-columns:repeat(${n},1fr)">${Y.html}${Array.from({length:n},(_,j)=>{ const i=lo+j; return `<div class="grp" style="grid-template-columns:repeat(${L.length},1fr)">${L.map((d,k)=>{ const a=now[k][i], f=full[k][i], fc=fcp[k]?fcp[k][i]:0, ra=a-fc; return `<div class="bc"><div class="bar ghostbar" style="height:${d===bizToday()?0:Math.max(0,100*f/Y.top)}%;border-color:${RP_COLS[k]}"></div><div class="bar" style="position:absolute;left:0;right:0;bottom:0;height:${ra>0?Math.max(2,100*ra/Y.top):0}%;background:${RP_COLS[k]}" data-t="${esc(rpName(d))} ${hlabel(i)}:00 ${rs(a)}${f>a?' of '+rs(f):''}"></div>${fc>0?`<div class="bar fcbar" style="position:absolute;left:0;right:0;bottom:${Math.max(0,100*ra/Y.top)}%;height:${Math.max(2,100*fc/Y.top)}%;border-color:${RP_COLS[k]}" data-t="${esc(rpName(d))} ${hlabel(i)}:00 forecast ${rs(fc)}"></div>`:''}</div>`; }).join('')}</div>`; }).join('')}</div>${hx(lo,hi)}
+    <div class="scroll"><table style="margin-top:10px"><tr><th>Hour</th>${L.map((d,k)=>`<th class="r" style="color:${RP_COLS[k]}">${esc(rpName(d))}</th>`).join('')}</tr>${Array.from({length:n},(_,j)=>lo+j).filter(i=>i*60<=v).map(i=>`<tr${Math.floor(v/60)===i?' class="cur"':''}><td>${hlabel(i)}–${hlabel(i+1)}</td>${now.map((H,k)=>`<td class="r">${H[i]?(fcp[k]&&fcp[k][i]?'~':'')+rs(H[i]):'—'}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
 }
 /* bills as they come in, newest on top, each day in its own column */
 function rpFeed(L,C,v){
-  return `<div class="rpfeed" style="grid-template-columns:repeat(${L.length},minmax(150px,1fr))">${L.map((d,k)=>{ const c=C[k]; if(c.approx) return `<div class="card"><h2 style="color:${RP_COLS[k]}">${esc(rpName(d))}</h2><div class="note">Bills of this day are not loaded — only hourly totals.</div></div>`; const got=c.pts.filter(p=>p[0]<=v).slice(-12).reverse();
-    return `<div class="card"><h2 style="color:${RP_COLS[k]}">${esc(rpName(d))}</h2>${got.map((p,i)=>`<div class="fr${v-p[0]<=10?' new':''}"><span>${rpClock(p[0])}</span><b>${rs(p[1])}</b></div>`).join('')||'<div class="note">No bills yet</div>'}</div>`; }).join('')}</div>`;
+  return `<div class="rpfeed" style="grid-template-columns:repeat(${L.length},minmax(150px,1fr))">${L.map((d,k)=>{ const c=C[k]; if(c.approx) return `<div class="card"><h2 style="color:${RP_COLS[k]}">${esc(rpName(d))}</h2><div class="note">Bills of this day are not loaded — only hourly totals.</div></div>`; const got=c.pts.filter(p=>p[0]<=v&&!p[2]).slice(-12).reverse(), fnote=c.fcFrom!=null&&v>c.fcFrom?`<div class="note">After ${rpClock(c.fcFrom)} it is forecast — no bills yet.</div>`:'';
+    return `<div class="card"><h2 style="color:${RP_COLS[k]}">${esc(rpName(d))}</h2>${fnote}${got.map((p,i)=>`<div class="fr${v-p[0]<=10?' new':''}"><span>${rpClock(p[0])}</span><b>${rs(p[1])}</b></div>`).join('')||'<div class="note">No bills yet</div>'}</div>`; }).join('')}</div>`;
 }
 /* the floor of one day as it stood at the clock */
 function rpTables(L,v,two,part){
@@ -1843,7 +1845,7 @@ function recVideoType(){ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.
 
 /* one frame of the replay at minute v */
 function recDraw(ctx,W,H,v,L,C,span,logo){
-  const s=W/720, x0=span[0], x1=span[1], live=d=>d===bizToday();
+  const s=W/720, x0=span[0], x1=span[1], live=d=>d===bizToday(), fF0=C[0]&&C[0].fcFrom!=null?C[0].fcFrom:null, isF=fF0!=null&&v>fF0;
   ctx.save(); ctx.scale(s,s); const w=720, h=H/s;
   ctx.fillStyle='#F5F0E4'; ctx.fillRect(0,0,w,h);
   ctx.strokeStyle='#B8975A'; ctx.lineWidth=2; ctx.strokeRect(14,14,w-28,h-28); ctx.lineWidth=.8; ctx.strokeRect(20,20,w-40,h-40);
@@ -1853,7 +1855,9 @@ function recDraw(ctx,W,H,v,L,C,span,logo){
   else { ctx.fillStyle='#1B1A17'; ctx.font='700 48px "Cormorant Garamond",serif'; ctx.textAlign='center'; ctx.fillText('Hayat',w/2,y+44); y+=62; }
   ctx.textAlign='center'; ctx.fillStyle='#7E6535'; ctx.font='600 20px Outfit,sans-serif';
   ctx.fillText(('DAY REPLAY · '+rpWd(L[0])+' '+(+L[0].slice(8))+' '+new Date(L[0]+'T12:00:00').toLocaleString('en',{month:'short'})).toUpperCase().split('').join(String.fromCharCode(8202)),w/2,y+18); y+=30;
-  ctx.fillStyle='#1B1A17'; ctx.font='800 76px Outfit,sans-serif'; ctx.fillText(rpClock(v),w/2,y+70); y+=92;
+  ctx.fillStyle=isF?'#8A5A00':'#1B1A17'; ctx.font='800 76px Outfit,sans-serif'; ctx.fillText(rpClock(v),w/2,y+70);
+  if(isF){ const cw=ctx.measureText(rpClock(v)).width; ctx.font='800 15px Outfit,sans-serif'; const t='FORECAST', tw=ctx.measureText(t).width, px=Math.min(w-40-tw-16,w/2+cw/2+12); ctx.fillStyle='#B07A1E'; recRound(ctx,px,y+30,tw+16,24,8); ctx.fill(); ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.fillText(t,px+8,y+47); ctx.textAlign='center'; }
+  y+=92;
   /* one row per day: dot, name, money so far, bills */
   const rh=L.length>3?44:54;
   L.forEach((d,k)=>{ const c=C[k], m=rpAt(c,v), n=rpBillsAt(c,v), col=recCol(RP_COLS[k]), ry=y+k*rh;
@@ -1862,7 +1866,7 @@ function recDraw(ctx,W,H,v,L,C,span,logo){
     ctx.fillStyle=col; ctx.beginPath(); ctx.arc(64,ry+(rh-8)/2,8,0,7); ctx.fill();
     ctx.textAlign='left'; ctx.fillStyle='#1B1A17'; ctx.font=(k?'600 ':'700 ')+(rh>50?24:21)+'px Outfit,sans-serif'; ctx.fillText(rpName(d),84,ry+(rh-8)/2+8);
     ctx.textAlign='right'; ctx.font='800 '+(rh>50?30:26)+'px Outfit,sans-serif'; ctx.fillText(rs(m),w-60,ry+(rh-8)/2+10);
-    ctx.fillStyle='#6F6758'; ctx.font='600 16px Outfit,sans-serif'; ctx.fillText(c.approx?'hourly':n+' bills',w-60-ctx.measureText(rs(m)).width*1.9-14,ry+(rh-8)/2+7); });
+    ctx.fillStyle='#6F6758'; ctx.font='600 16px Outfit,sans-serif'; ctx.fillText(c.approx?'hourly':(c.fcFrom!=null&&v>c.fcFrom?n+' bills + forecast':n+' bills'),w-60-ctx.measureText(rs(m)).width*1.9-14,ry+(rh-8)/2+7); });
   y+=L.length*rh+16;
   /* running-total race */
   const padL=86, padR=46, top=y+10, bot=h-100, iw=w-padL-padR, ih=bot-top;
@@ -1874,15 +1878,21 @@ function recDraw(ctx,W,H,v,L,C,span,logo){
   ctx.textAlign='center'; ctx.fillStyle='#6F6758'; const stepH=(x1-x0)>720?180:120;
   for(let m=Math.ceil(x0/60)*60; m<=x1; m+=stepH) ctx.fillText(hlabel(m/60)+':00',X(m),bot+22);
   const path=(c,a,b2)=>{ ctx.beginPath(); let last=rpAt(c,a); ctx.moveTo(X(a),Yp(last)); c.pts.forEach((p,i)=>{ if(p[0]>a&&p[0]<=b2){ ctx.lineTo(X(p[0]),Yp(last)); ctx.lineTo(X(p[0]),Yp(c.S[i])); last=c.S[i]; } }); ctx.lineTo(X(b2),Yp(last)); };
-  const ends=L.map(d=>live(d)?Math.min(x1,rpNowMin()):x1);
+  const ends=L.map((d,k)=>live(d)&&C[k].fcFrom==null?Math.min(x1,rpNowMin()):x1);
   C.forEach((c,k)=>{ const col=recCol(RP_COLS[k]); if(!live(L[k])&&v<ends[k]){ ctx.globalAlpha=.22; ctx.strokeStyle=col; ctx.lineWidth=3; path(c,Math.min(v,ends[k]),ends[k]); ctx.stroke(); ctx.globalAlpha=1; } });
   /* now line */
+  if(fF0!=null&&fF0>=x0&&fF0<=x1){ const xn=X(fF0); if(isF){ ctx.fillStyle='rgba(192,136,44,.10)'; ctx.fillRect(xn,top,X(v)-xn,bot-top); }   /* fixed NOW marker; after it = forecast */
+    ctx.strokeStyle='#B07A1E'; ctx.lineWidth=2.5; ctx.setLineDash([6,5]); ctx.beginPath(); ctx.moveTo(xn,top-4); ctx.lineTo(xn,bot); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font='800 17px Outfit,sans-serif'; const lab='NOW '+rpClock(fF0), tw=ctx.measureText(lab).width, lx=Math.max(padL,Math.min(w-padR-tw-16,xn-tw/2-8));
+    ctx.fillStyle='#B07A1E'; recRound(ctx,lx,top-30,tw+16,24,8); ctx.fill(); ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.fillText(lab,lx+8,top-12);
+    if(isF&&X(v)-xn>90){ ctx.fillStyle='#8A5A00'; ctx.font='700 14px Outfit,sans-serif'; ctx.fillText('forecast →',xn+8,top+18); } }
   ctx.strokeStyle='rgba(27,26,23,.4)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X(v),top); ctx.lineTo(X(v),bot); ctx.stroke();
-  for(let k=C.length-1;k>=0;k--){ const c=C[k], col=recCol(RP_COLS[k]), cv=Math.min(v,ends[k]); ctx.strokeStyle=col; ctx.lineWidth=k?3.5:5; ctx.lineJoin='round'; path(c,x0,cv); ctx.stroke();
+  for(let k=C.length-1;k>=0;k--){ const c=C[k], col=recCol(RP_COLS[k]), cv=Math.min(v,ends[k]); ctx.strokeStyle=col; ctx.lineWidth=k?3.5:5; ctx.lineJoin='round'; const fF=c.fcFrom;
+    if(fF!=null&&cv>fF){ path(c,x0,fF); ctx.stroke(); ctx.setLineDash([3,9]); ctx.lineCap='round'; path(c,fF,cv); ctx.stroke(); ctx.setLineDash([]); ctx.lineCap='butt'; } else { path(c,x0,cv); ctx.stroke(); }
     ctx.fillStyle=col; ctx.beginPath(); ctx.arc(X(cv),Yp(rpAt(c,cv)),k?6:8,0,7); ctx.fill(); }
   /* foot */
   ctx.fillStyle='#7E6535'; ctx.font='600 16px Outfit,sans-serif'; ctx.textAlign='left'; ctx.fillText('Hayat · fish & mandi',40,h-40);
-  ctx.textAlign='right'; ctx.fillStyle='#6F6758'; ctx.fillText(L.length>1?'faint line = how that day finished':'running total',w-40,h-40);
+  ctx.textAlign='right'; ctx.fillStyle='#6F6758'; ctx.fillText(fF0!=null?(L.length>1?'faint = how it ended · dotted = forecast':'dotted = forecast after now'):(L.length>1?'faint line = how that day finished':'running total'),w-40,h-40);
   ctx.restore();
 }
 function recRound(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }

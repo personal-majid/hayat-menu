@@ -511,6 +511,11 @@ What that means, and what to say if it comes up:
 - rpCurve(): bills at ORDER time incl. unpaid; for today, after now the forecast (F.rest) is added as quarter-hour points (flag p[2]=1, c.fcFrom). Cached 5 s for today. rpEnd() today = closing on the forecast, so Simulate / Replay play and slide to the end of the day; today's line is dashed (.fcl) after now.
 - Still to do (part 2): blended forecaster (weekday level, similar-days, trend) weighted by 30-day backtest scores; bills forecast from OHS b once enough days have it.
 
+## v265 — replay video runs to closing · NOW marker · dotted forecast
+- recDraw (GIF + WhatsApp MP4): today no longer stops at the current time — it plays on the forecast to closing like ▶ Play. Fixed "NOW hh:mm" pill + dashed amber line at c.fcFrom, shaded forecast zone, line dotted after now, clock amber with a FORECAST pill, row "n bills + forecast", footer "dotted = forecast".
+- Replay screen: race chart gets the same fixed now line (line.nowfix, text.nowt, rect.fczone); clock "· forecast"; card "~₹" + "forecast after hh:mm"; By hour: forecast part of today's bar dashed/hatched (.fcbar), table "~₹"; Bills feed skips forecast steps (p[2]) with a note.
+- rpBillsAt counts real bills only (forecast quarter-hour steps were counted as bills). rpHours(c,v,fo) fo = forecast only. Test /home/claude/t-v265.mjs (10).
+
 ## v263-v264 — table cards, guests, KOT notes, kitchens, hold & fire, out of stock, kitchen-screen states
 - Table cards: seat diagram (seatSvg: one dot per chair, filled per guest) instead of the shape outline; busy tables show "👥 4/6 · Rafeek" (shortName ≤7 chars). Opening a free table asks "how many guests?" (guestSheet, 1-12 / Skip). Replay sets guests from the bill (₹350 each) when VMENU has none.
 - KOT options (✎ next to Send KOT, kopt kept in the draft): flags Urgent / No rush / Serve hot / Starters first / Serve together / Parcel / Hold + typed note → kot.note, kot.flags, kot.pri, kot.hold, kot.skip (kitchens switched off). Kitchens auto from station(); NO KOT dishes listed as "🥤 You bring" (also a toast after sending). Item-note chips: less spicy/salt/sugar, no sugar/ice/onion/garlic, well done, kids portion, allergy, parcel, serve first/later/hot.
