@@ -292,9 +292,19 @@ function sendPrint(job){
   return S.F.addDoc(col('print_jobs'), clean(Object.assign({}, job, { done:false, tries:0, by:S.me ? S.me.name : '', sentAt:Date.now() })))
     .then(function(){ return true; }).catch(function(e){ toast('Printer job not sent', 'bad', esc(e && e.message || e)); return false; });
 }
+/* item notes ("less spicy") are their OWN field on the bill line (never printed on the customer's bill).
+   Kitchen tickets + KDS lines carry: label = size + "NOTE: …" (old print agents / old kitchen screens still show it),
+   base = the size alone, note = the note (new agent + KDS draw it bold). */
+function lab0(l){ return l.base != null ? l.base : (l.label || ''); }
+function kLab(l){ var b = lab0(l); return l.note ? (b ? b + ' · ' : '') + 'NOTE: ' + l.note : b; }
+function kLine(l){ return clean({ k:l.k, name:l.name, label:kLab(l), base:l.note ? lab0(l) : undefined, note:l.note || undefined, q:l.q, station:station(l) }); }
+function noteChip(n){ return n ? '<span class="lnote">📝 ' + esc(n) + '</span>' : ''; }
+function rcls(n){ return typeof n === 'number' || /^\d+$/.test(n) ? ' r' + (((+n - 1) % 6 + 6) % 6 + 1) : ''; }
+/* what the kitchen ticket's note box says: the table's note + this KOT's note */
+function tkNote(o, extra){ return [o.note, extra].filter(Boolean).join(' · '); }
 function printKot(o, lines, round, cancel, reason, skip){
   if(!canPrint() || cfg('printKot', !isTrial()) === false) return Promise.resolve(false);
-  var by = {}; lines.forEach(function(l){ if(l.q > 0){ var st = l.station || station(l); if(st === 'none') return; (by[st] = by[st] || []).push({ k:l.k, id:l.id, name:l.name, label:l.label || '', q:l.q, price:l.price }); } });
+  var by = {}; lines.forEach(function(l){ if(l.q > 0){ var st = l.station || station(l); if(st === 'none') return; (by[st] = by[st] || []).push(clean({ k:l.k, id:l.id, name:l.name, label:kLab(l), base:l.note ? lab0(l) : undefined, note:l.note || undefined, q:l.q, price:l.price })); } });
   var order = kitchens().map(function(k){ return k.key; }); Object.keys(by).forEach(function(k){ if(order.indexOf(k) < 0) order.push(k); });
   var tickets = order.filter(function(k){ return by[k]; })
     .filter(function(k){ return !skip || skip.indexOf(k) < 0; })
@@ -355,7 +365,7 @@ async function sendKot(tid){
   var t = tableById(tid); if(!t) return;
   if(SENDING[tid]) return;                       /* a double tap must not send twice */
   var taken = draftOf(tid).filter(function(l){ return l.q > 0; }).map(function(l){ return { k:l.k, q:l.q }; });
-  var adds = draftOf(tid).filter(function(l){ return l.q > 0; }).map(function(l){ return clean({ k:l.k, id:l.id, name:l.name, label:l.note ? (l.label ? l.label + ' · ' : '') + l.note : l.label, price:l.price, q:l.q, vn:l.vn || undefined, kit:l.kit || undefined }); });
+  var adds = draftOf(tid).filter(function(l){ return l.q > 0; }).map(function(l){ return clean({ k:l.k, id:l.id, name:l.name, label:l.label, note:l.note || undefined, price:l.price, q:l.q, vn:l.vn || undefined, kit:l.kit || undefined }); });
   if(!adds.length){ toast('Nothing new to send', 'bad'); return; }
   if(!S.online){ toast('No internet', 'bad', 'the KOT needs internet to reach the kitchen'); return; }
   /* a send id saved WITH the draft: if the phone refreshes mid-send and the waiter taps again, the bill
@@ -377,7 +387,7 @@ async function sendKot(tid){
           table:t.name, tableId:t.id, space:t.space, section:t.spaceName, pax:(S.draft[tid] && S.draft[tid].pax) || null,
           by:me, byRole:S.me.role, crew:S.me.id, custUid:(S.ctx.user && S.ctx.user.uid) || '', day:bizDay(now),
           lines:adds.map(function(a){ return Object.assign({}, a, { at:now, by:me, rounds:[{ n:1, q:a.q, at:now, by:me }] }); }),
-          kots:[kx({ n:1, kind:'kot', at:now, by:me, sid:sid, lines:adds.map(function(a){ return { k:a.k, name:a.name, label:a.label || '', q:a.q, station:station(a) }; }) })],
+          kots:[kx({ n:1, kind:'kot', at:now, by:me, sid:sid, lines:adds.map(kLine) })], note:(S.draft[tid] && S.draft[tid].onote) || undefined,
           kotN:1, edits:[], total:linesTotal(adds), discount:null, tip:0, trial:isTrial() });
         tx.set(nr, o); tx.set(lockRef, { oid:id, at:now, table:t.name }); round = 1;
         return o;
@@ -387,8 +397,9 @@ async function sendKot(tid){
       adds.forEach(function(a){ var l = lines.filter(function(z){ return z.k === a.k; })[0];
         if(l){ l.q += a.q; l.rounds.push({ n:round, q:a.q, at:now, by:me }); }
         else lines.push(Object.assign({}, a, { at:now, by:me, rounds:[{ n:round, q:a.q, at:now, by:me }] })); });
-      var kots = (cur.kots || []).concat([kx({ n:round, kind:'kot', at:now, by:me, sid:sid, lines:adds.map(function(a){ return { k:a.k, name:a.name, label:a.label || '', q:a.q, station:station(a) }; }) })]);
-      var patch = clean({ lines:lines, kots:kots, kotN:round, total:money(Object.assign({}, cur, { lines:lines })).total, editedAt:now, dueAt:null });
+      var kots = (cur.kots || []).concat([kx({ n:round, kind:'kot', at:now, by:me, sid:sid, lines:adds.map(kLine) })]);
+      var dn = S.draft[tid] && S.draft[tid].onote;   /* a table note typed before the first KOT, when another phone opened the bill first */
+      var patch = clean({ lines:lines, kots:kots, kotN:round, total:money(Object.assign({}, cur, { lines:lines })).total, editedAt:now, dueAt:null, note:!cur.note && dn ? dn : undefined });
       tx.update(r, patch); if(!lk.exists() || lk.data().oid !== oid) tx.set(lockRef, { oid:oid, at:now, table:t.name });
       return Object.assign({}, cur, patch, { id:oid });
     });
@@ -398,11 +409,11 @@ async function sendKot(tid){
   S.orders[saved.id] = saved; setMode(t, 'bill');
   bumpPop(adds); ux('kot', { round:round, items:adds.reduce(function(n, a){ return n + a.q; }, 0), ms:dd && dd.at ? Date.now() - dd.at : undefined, dup:dup || undefined });
   /* take off only what was sent - dishes tapped while it was sending stay in the draft */
-  var d = S.draft[tid]; if(d){ delete d.sid; delete d.kopt; taken.forEach(function(x){ var l = d.lines.filter(function(z){ return z.k === x.k; })[0]; if(l) l.q -= x.q; }); d.lines = d.lines.filter(function(l){ return l.q > 0; }); if(!d.lines.length) delete S.draft[tid]; saveDraft(); }
+  var d = S.draft[tid]; if(d){ delete d.sid; delete d.kopt; delete d.onote; taken.forEach(function(x){ var l = d.lines.filter(function(z){ return z.k === x.k; })[0]; if(l) l.q -= x.q; }); d.lines = d.lines.filter(function(l){ return l.q > 0; }); if(!d.lines.length) delete S.draft[tid]; saveDraft(); }
   if(dup){ toast('Already sent ✓', 'good', 'this KOT reached the kitchen before the phone refreshed'); render(); return; }
   var selfL = adds.filter(function(a){ return station(a) === 'none'; });
-  var printed = kHold ? false : await printKot(Object.assign({}, saved, { note:kNote || saved.note }), adds, round, false, '', ko.off);
-  if(selfL.length) setTimeout(function(){ toast('🥤 You bring: ' + selfL.map(function(l){ return l.q + '× ' + esc(l.name) + (l.label ? ' ' + esc(short(l.label)) : ''); }).join(', '), '', 'no kitchen ticket for these'); }, 900);
+  var printed = kHold ? false : await printKot(Object.assign({}, saved, { note:tkNote(saved, kNote) }), adds, round, false, '', ko.off);
+  if(selfL.length) setTimeout(function(){ toast('🥤 You bring: ' + selfL.map(function(l){ return l.q + '× ' + esc(l.name) + (l.label ? ' ' + esc(short(l.label)) : '') + (l.note ? ' (' + esc(l.note) + ')' : ''); }).join(', '), '', 'no kitchen ticket for these'); }, 900);
   toast((kHold ? '⏸ KOT ' + round + ' on hold · ' : 'KOT ' + round + ' sent · ') + adds.reduce(function(n, a){ return n + a.q; }, 0) + ' item' + (adds.length > 1 || adds[0].q > 1 ? 's' : ''), 'good', esc(t.name) + (printed ? ' · printing in the kitchen' : canPrint() ? '' : ' · kitchen printer not set up'));
   vib([12, 40, 12]);
   render();
@@ -428,7 +439,7 @@ async function voidLine(oid, k, qty, reason){
       var l = lines.filter(function(z){ return z.k === k; })[0]; if(!l || l.q <= 0) throw new Error('already removed');
       qty = Math.min(qty, l.q); var from = l.q; l.q -= qty; l.rounds.push({ n:'void', q:-qty, at:now, by:me, reason:reason });
       out.n = cur.kotN || 1; out.l = Object.assign({}, l, { q:qty });
-      return { lines:lines, kots:(cur.kots || []).concat([{ n:out.n, kind:'cancel', at:now, by:me, reason:reason, lines:[{ k:l.k, name:l.name, label:l.label || '', q:qty, station:station(l) }] }]),
+      return { lines:lines, kots:(cur.kots || []).concat([{ n:out.n, kind:'cancel', at:now, by:me, reason:reason, lines:[Object.assign(kLine(l), { q:qty })] }]),
         edits:(cur.edits || []).concat([{ at:now, by:me, item:l.name, label:l.label || '', from:from, to:l.q, reason:reason, void:l.q === 0 }]),
         total:money(Object.assign({}, cur, { lines:lines })).total, editedAt:now };
     });
@@ -450,23 +461,156 @@ async function dueBill(oid){
 }
 
 async function markPaid(oid, P, shown){
-  var now = Date.now(), o, m;
+  var now = Date.now(), me = who(), o, m, res = {};
   try{
     o = await txOrder(oid, function(cur){
       m = money(cur, { discount:P.discount, tip:P.tip });
-      if(shown != null && m.pay !== shown) throw new Error('the bill changed to ' + rs(m.pay) + ' - check it and take the money again');
-      var pays = P.mode === 'split' ? P.split.filter(function(x){ return x.amt > 0; }) : [{ mode:P.mode, amt:m.pay }];
-      return { discount:P.discount || null, tip:m.tip, total:m.total, paid:true, payMode:P.mode, paidAt:now, paidBy:who(), paidCrew:S.me.id, paidAmt:m.pay !== m.total ? m.pay : null,
-        pays:pays, tendered:P.mode === 'cash' && P.tendered ? P.tendered : null, change:P.mode === 'cash' && P.tendered > m.pay ? P.tendered - m.pay : null,
-        status:'delivered', dueAt:cur.dueAt || now, log:(cur.log || []).concat([{ s:'delivered', at:now, by:who(), paid:m.pay }]) };
+      var prev = (cur.pays || []).slice(), got = gotSoFar(cur), bal = m.pay - got;
+      if(shown != null && bal !== shown) throw new Error('the bill changed - ' + rs(bal) + ' is left to pay now · check it and take the money again');
+      if(bal < 0) throw new Error(rs(got) + ' is already paid, more than the new total ' + rs(m.pay) + ' - lower the discount or undo a payment');
+      var stamp = function(x){ return clean(Object.assign({ at:now, by:me, crew:S.me.id }, x)); };
+      var adds = P.mode === 'split' ? P.split.filter(function(x){ return x.amt > 0; }).map(function(x){ return stamp({ mode:x.mode, amt:x.amt }); })
+        : P.mode === 'credit' ? [stamp({ mode:'credit', amt:bal, party:P.party, phone:P.phone || undefined })]
+        : [stamp({ mode:P.mode, amt:Math.min(bal, P.amt > 0 ? P.amt : bal), ref:P.ref || undefined })];
+      var take = adds.reduce(function(n, x){ return n + x.amt; }, 0);
+      if(P.mode === 'credit' && !(P.party && P.party.length >= 2)) throw new Error('write who is taking the credit');
+      if(bal > 0 && !take) throw new Error('nothing to take');
+      if(take > bal) throw new Error('that is more than the ' + rs(bal) + ' left to pay');
+      var pays = prev.concat(adds), base = { discount:P.discount || null, tip:m.tip, total:m.total, pays:pays, editedAt:now };
+      res.take = take; res.left = bal - take;
+      if(take < bal){ res.part = true; return Object.assign(base, { partAt:now, log:(cur.log || []).concat([{ s:'part', at:now, by:me, paid:take, left:bal - take }]) }); }
+      var modes = pays.map(function(x){ return x.mode; }).filter(function(v, i, a){ return a.indexOf(v) === i; }), cr = pays.filter(function(x){ return x.mode === 'credit'; }), crAmt = cr.reduce(function(n, x){ return n + x.amt; }, 0);
+      var cash = adds.length === 1 && adds[0].mode === 'cash' ? adds[0].amt : 0;
+      return Object.assign(base, { paid:true, payMode:modes.length === 1 ? modes[0] : 'split', paidAt:now, paidBy:me, paidCrew:S.me.id, paidAmt:m.pay !== m.total ? m.pay : null,
+        tendered:cash && P.tendered ? P.tendered : null, change:cash && P.tendered > cash ? P.tendered - cash : null,
+        credit:crAmt ? { party:cr[0].party, phone:cr[0].phone || null, amt:crAmt, at:now, by:me, recv:[] } : null, creditOpen:crAmt ? true : null,
+        status:'delivered', dueAt:cur.dueAt || now, log:(cur.log || []).concat([{ s:'delivered', at:now, by:me, paid:take }]) });
     });
   }catch(e){ fail('Payment not saved', e); return false; }
   S.orders[oid] = o;
+  if(res.part){ toast('Part paid ✓ ' + rs(res.take) + ' · ' + payWord(P.mode), 'good', rs(res.left) + ' still on ' + esc(o.table ? 'Table ' + o.table : 'the bill')); vib([20, 60, 20]); return 'part'; }
+  if(o.credit){ S.credit = S.credit || {}; S.credit[oid] = o; }
   if(P.cleanAfter && o.tableId) await requestClean(o.tableId, 'clean', 'normal', 'after bill', true);
-  toast('Paid ✓ ' + rs(m.pay) + ' · ' + payWord(P.mode), 'good', esc(o.table || '') + (P.cleanAfter ? ' · cleaner called' : ''));
+  toast(P.mode === 'credit' ? '📒 ' + rs(res.take) + ' on credit · ' + esc(P.party) : 'Paid ✓ ' + rs(res.take) + ' · ' + payWord(P.mode), 'good', esc(o.table || '') + (P.cleanAfter ? ' · cleaner called' : ''));
   vib([20, 60, 20]);
   return true;
 }
+/* ---------------- payments v2 (Majid, 14 Oct 2026) ----------------
+   o.pays on an OPEN bill = money taken so far (part payments); the bill closes the moment they add up to the total.
+   Credit = the rest goes in the credit book (name + phone) and the table is freed; money for it comes in later (Bills → Credit).
+   Every payment line: {mode, amt, at, by, crew, ref?, party?, phone?}. Undo (10 min, or office/cashier any time) and refunds are logged, never erased. */
+function gotSoFar(o){ return (o.pays || []).reduce(function(n, p){ return n + (+p.amt || 0); }, 0); }
+function balanceOf(o, m){ m = m || money(o); return o.paid ? 0 : m.pay - gotSoFar(o); }
+function partPaid(o){ return !o.paid && (o.pays || []).length > 0; }
+function credRecv(c){ return ((c && c.recv) || []).reduce(function(n, r){ return n + (+r.amt || 0); }, 0); }
+function credOut(o){ var c = o && o.credit; return c ? Math.max(0, (+c.amt || 0) - credRecv(c)) : 0; }
+function refundOf(o){ return (o.refunds || []).reduce(function(n, r){ return n + (+r.amt || 0); }, 0); }
+function normPhone(v){ var d = String(v || '').replace(/\D/g, ''); if(d.length === 12 && d.indexOf('91') === 0) d = d.slice(2); if(d.length === 11 && d[0] === '0') d = d.slice(1); return d; }
+function phoneOk(v){ var d = normPhone(v); return !d || /^[6-9]\d{9}$/.test(d); }
+function bossRole(){ return S.me && (S.me.role === 'office' || S.me.role === 'cashier' || S.me.role === 'owner'); }
+function canUndo(o){ return !!(o && o.paid && o.status === 'delivered' && !credRecv(o.credit) && !refundOf(o) && (bossRole() || Date.now() - (o.paidAt || 0) < 10 * 60e3)); }
+/* people who took credit before (open book + this week's bills), for one-tap picking */
+function creditParties(){ var seen = {}; Object.values(S.credit || {}).concat(Object.values(S.orders || {})).forEach(function(o){ var c = o.credit; if(!c || !c.party) return; var k = norm(c.party); if(!seen[k] || (c.at || 0) > seen[k].at) seen[k] = { party:c.party, phone:c.phone || '', at:c.at || 0, out:0 }; });
+  Object.values(S.credit || {}).forEach(function(o){ var k = o.credit && norm(o.credit.party); if(k && seen[k]) seen[k].out += credOut(o); });
+  return Object.values(seen).sort(function(a, b){ return b.at - a.at; }); }
+/* any change to a CLOSED bill (undo, refund, credit received) - its own transaction, so two phones can't both do it */
+function txClosed(oid, fn){
+  var r = ref(C_('orders'), oid);
+  return S.F.runTransaction(S.D, async function(tx){
+    var sn = await tx.get(r); if(!sn.exists()) throw new Error('bill not found');
+    var cur = Object.assign({}, sn.data(), { id:oid }); var patch = await fn(cur, tx); tx.update(r, clean(patch)); return Object.assign({}, cur, clean(patch));
+  });
+}
+async function undoPay(oid, reason){
+  var now = Date.now(), me = who(), o;
+  try{ o = await txClosed(oid, async function(cur, tx){
+      if(!cur.paid || cur.status !== 'delivered') throw new Error('this bill is not paid');
+      if(credRecv(cur.credit)) throw new Error('money for this credit already came in - it can’t be undone');
+      if(refundOf(cur)) throw new Error('a refund was given on this bill - it can’t be undone');
+      if(!bossRole() && now - (cur.paidAt || 0) >= 10 * 60e3) throw new Error('older than 10 minutes - ask the office');
+      if(cur.mode === 'dinein' && cur.tableId){ var lr = ref(C_('tablelock'), cur.tableId), lk = await tx.get(lr);
+        if(lk.exists() && lk.data().oid && lk.data().oid !== oid){ var ot = await tx.get(ref(C_('orders'), lk.data().oid)); if(ot.exists() && !closed(ot.data())) throw new Error('Table ' + cur.table + ' has a new bill now - undo is blocked so the two don’t mix'); }
+        tx.set(lr, { oid:oid, at:now, table:cur.table }); }
+      return { paid:false, status:'accepted', payMode:null, paidAt:null, paidBy:null, paidCrew:null, paidAmt:null, tendered:null, change:null, pays:[], credit:null, creditOpen:null, editedAt:now,
+        undone:(cur.undone || []).concat([{ at:now, by:me, reason:reason, payMode:cur.payMode || '', pays:cur.pays || [], credit:cur.credit || null, paidAt:cur.paidAt || 0, paidBy:cur.paidBy || '' }]),
+        log:(cur.log || []).concat([{ s:'unpaid', at:now, by:me, reason:reason }]) }; }); }
+  catch(e){ fail('Not undone', e); return false; }
+  S.orders[oid] = o; if(S.credit) delete S.credit[oid]; ux('undopay', { reason:reason });
+  toast('↩ Payment undone', 'good', esc(o.table ? 'Table ' + o.table + ' is open again' : 'bill is open again')); render(); return true;
+}
+async function refundPay(oid, amt, mode, reason){
+  var now = Date.now(), me = who(), o;
+  try{ o = await txClosed(oid, function(cur){
+      if(!cur.paid) throw new Error('this bill is not paid');
+      var room = (cur.pays || []).filter(function(p){ return p.mode !== 'credit'; }).reduce(function(n, p){ return n + (+p.amt || 0); }, 0) + credRecv(cur.credit) - refundOf(cur);
+      if(!(amt > 0)) throw new Error('enter the amount given back'); if(amt > room) throw new Error('only ' + rs(room) + ' was paid in money on this bill');
+      return { refunds:(cur.refunds || []).concat([{ amt:amt, mode:mode, reason:reason, at:now, by:me, crew:S.me.id }]), editedAt:now, log:(cur.log || []).concat([{ s:'refund', at:now, by:me, amt:amt, mode:mode, reason:reason }]) }; }); }
+  catch(e){ fail('Refund not saved', e); return false; }
+  S.orders[oid] = o; ux('refund', { amt:amt, mode:mode }); toast('Refund saved · ' + rs(amt) + ' ' + payWord(mode), 'good', esc(reason)); render(); return true;
+}
+async function creditIn(oid, amt, mode, refv){
+  var now = Date.now(), me = who(), o, done = false;
+  try{ o = await txClosed(oid, function(cur){
+      var c = cur.credit; if(!c) throw new Error('no credit on this bill'); var out = Math.max(0, (+c.amt || 0) - credRecv(c));
+      if(!out) throw new Error('already fully paid');
+      if(!(amt > 0)) throw new Error('enter the amount'); if(amt > out) throw new Error('only ' + rs(out) + ' is due on this bill');
+      var c2 = Object.assign({}, c, { recv:(c.recv || []).concat([clean({ amt:amt, mode:mode, ref:refv || undefined, at:now, by:me, crew:S.me.id })]) }); done = amt === out; if(done) c2.closedAt = now;
+      return { credit:c2, creditOpen:done ? null : true, editedAt:now, log:(cur.log || []).concat([{ s:'credit-in', at:now, by:me, amt:amt, mode:mode }]) }; }); }
+  catch(e){ fail('Not saved', e); return false; }
+  S.orders[oid] = o; if(S.credit){ if(done) delete S.credit[oid]; else S.credit[oid] = o; }
+  ux('creditin', { amt:amt, mode:mode, done:done }); toast('📒 ' + rs(amt) + ' received · ' + esc(o.credit.party), 'good', done ? 'this credit is cleared ✓' : rs(credOut(o)) + ' still due'); vib([20, 60, 20]); render(); return true;
+}
+/* the open credit book, grouped by person, oldest first */
+function creditView(){
+  var L = Object.values(S.credit || {}).filter(function(o){ return credOut(o) > 0; }), G = {};
+  L.forEach(function(o){ var k = norm(o.credit.party); (G[k] = G[k] || { party:o.credit.party, phone:o.credit.phone || '', bills:[], out:0 }); G[k].bills.push(o); G[k].out += credOut(o); if(o.credit.phone) G[k].phone = o.credit.phone; });
+  var P = Object.values(G).sort(function(a, b){ return b.out - a.out; }), tot = P.reduce(function(n, p){ return n + p.out; }, 0);
+  if(!P.length) return '<div class="empty"><b>📒</b>Nobody owes money. Credit given at payment shows here until it is paid.</div>';
+  return '<div class="sum" style="grid-template-columns:repeat(2,1fr)"><div class="crs"><small>Owed to us</small><b>' + rs(tot) + '</b></div><div><small>People</small><b>' + P.length + '</b></div></div><div class="list">' +
+    P.map(function(p){ var old = Math.min.apply(null, p.bills.map(function(o){ return o.credit.at || o.paidAt || 0; })), days = Math.floor((Date.now() - old) / 864e5);
+      return '<div class="cred"><div class="ch"><b>' + esc(p.party) + '</b><span class="co">' + rs(p.out) + '</span></div><small>' + p.bills.length + ' bill' + (p.bills.length > 1 ? 's' : '') + ' · oldest ' + (days ? days + ' day' + (days > 1 ? 's' : '') + ' ago' : 'today') + (p.phone ? ' · <a href="tel:' + esc(p.phone) + '">📞 ' + esc(p.phone) + '</a>' : '') + '</small>' +
+        p.bills.sort(function(a, b){ return (a.credit.at || 0) - (b.credit.at || 0); }).map(function(o){ var c = o.credit, r = credRecv(c);
+          return '<div class="cb"><span>' + esc(o.mode === 'dinein' ? 'Table ' + (o.table || '') : (o.token ? 'T' + o.token : o.id)) + ' · ' + new Date(c.at || o.paidAt || 0).toLocaleDateString('en-IN', { day:'numeric', month:'short' }) + (r ? ' · got ' + rs(r) + ' of ' + rs(c.amt) : '') + '</span><button class="btn pri" data-a="crin" data-id="' + esc(o.id) + '">Receive ' + rs(credOut(o)) + '</button></div>'; }).join('') + '</div>'; }).join('') + '</div>';
+}
+function creditInSheet(oid){
+  var o = (S.credit || {})[oid] || S.orders[oid]; if(!o || !o.credit) return; var out = credOut(o), P = { mode:'cash', amt:String(out), ref:'' };
+  sheet('<div id="ciBody"></div>');
+  var draw = function(){ var a = Math.round(+P.amt || 0);
+    $('ciBody').innerHTML = '<h2>📒 ' + esc(o.credit.party) + '</h2><p class="sub">' + rs(out) + ' due on ' + esc(o.mode === 'dinein' ? 'Table ' + o.table : o.id) + (o.credit.phone ? ' · ' + esc(o.credit.phone) : '') + '</p>' +
+      '<div class="seg pm">' + [['cash','💵','Cash'],['upi','📱','UPI'],['card','💳','Card']].map(function(x){ return '<button class="' + (P.mode === x[0] ? 'on' : '') + '" data-cm="' + x[0] + '"><span>' + x[1] + '</span>' + x[2] + '</button>'; }).join('') + '</div>' +
+      '<label class="f">Amount received<input id="ciAmt" inputmode="numeric" value="' + esc(P.amt) + '"></label>' + (P.mode !== 'cash' ? '<label class="f">Ref / UTR (optional)<input id="ciRef" value="' + esc(P.ref) + '" maxlength="24" autocomplete="off"></label>' : '') +
+      '<p class="muted" style="font-size:12.5px;margin:4px 2px 10px">' + (a && a < out ? rs(out - a) + ' will stay in the book.' : 'Clears this bill from the book.') + '</p>' +
+      '<button class="btn pri" id="ciGo" style="width:100%"' + (a > 0 && a <= out ? '' : ' disabled') + '>✓ ' + rs(a) + ' received</button>';
+    document.querySelectorAll('[data-cm]').forEach(function(b){ b.onclick = function(){ P.mode = b.dataset.cm; draw(); }; });
+    var ai = $('ciAmt'); ai.oninput = function(){ P.amt = ai.value.replace(/\D/g, '').slice(0, 7); var v = +P.amt || 0, g = $('ciGo'); g.disabled = !(v > 0 && v <= out); g.textContent = v > out ? 'More than ' + rs(out) + ' is due' : '✓ ' + rs(v) + ' received'; };
+    var ri = $('ciRef'); if(ri) ri.oninput = function(){ P.ref = ri.value.trim(); };
+    $('ciGo').onclick = async function(){ var v = Math.round(+P.amt || 0); this.disabled = true; if(await creditIn(oid, v, P.mode, P.ref)) closeSheet(); else this.disabled = false; };
+  };
+  draw();
+}
+/* a paid bill: what happened, and the two ways back (undo / refund) */
+function paidSheet(oid){
+  var o = S.orders[oid] || (S.credit || {})[oid]; if(!o) return;
+  var pays = (o.pays && o.pays.length ? o.pays : [{ mode:o.payMode, amt:o.paidAmt || o.total, at:o.paidAt, by:o.paidBy }]);
+  sheet('<h2>' + esc(o.mode === 'dinein' ? 'Table ' + o.table : (o.token ? 'Token ' + o.token : o.id)) + ' · paid ✓</h2><p class="sub">' + rs(money(o).pay) + ' · ' + hm(o.paidAt) + (o.paidBy ? ' · ' + esc(o.paidBy) : '') + '</p>' +
+    '<div class="plist">' + pays.map(function(p){ return '<div class="pl"><span class="pm-' + esc(p.mode) + '">' + esc(payWord(p.mode)) + '</span><span>' + (p.at ? hm(p.at) : '') + (p.by ? ' · ' + esc(shortName(p.by)) : '') + (p.ref ? ' · ref ' + esc(p.ref) : '') + (p.party ? ' · ' + esc(p.party) : '') + '</span><b>' + rs(p.amt) + '</b></div>'; }).join('') +
+      (o.credit ? '<div class="pl"><span class="pm-credit">Credit</span><span>' + (credOut(o) ? rs(credOut(o)) + ' still due' : 'cleared ✓') + '</span><b>' + rs(credRecv(o.credit)) + ' in</b></div>' : '') +
+      (o.refunds || []).map(function(r){ return '<div class="pl ref"><span>Refund</span><span>' + hm(r.at) + ' · ' + esc(r.reason) + '</span><b>−' + rs(r.amt) + '</b></div>'; }).join('') + '</div>' +
+    '<div class="opts" style="grid-template-columns:1fr">' +
+      (canUndo(o) ? '<button class="opt" id="pdUndo"><span class="e">↩</span>Undo this payment<small style="display:block;color:var(--muted);font-weight:600">wrong mode or wrong table · the bill opens again</small></button>' : '<div class="muted" style="font-size:12.5px;padding:4px 2px">' + (credRecv(o.credit) ? 'Credit money already came in, so it can’t be undone.' : refundOf(o) ? 'A refund was given.' : 'Undo is open for 10 minutes · after that the office can.') + '</div>') +
+      (bossRole() ? '<button class="opt" id="pdRef"><span class="e">💸</span>Give money back (refund)</button>' : '') + '</div><button class="btn" id="pdX" style="width:100%">Close</button>');
+  $('pdX').onclick = closeSheet;
+  var u = $('pdUndo'); if(u) u.onclick = function(){ reasonSheet('Undo payment · ' + rs(money(o).pay), 'The bill opens again on its table, then take the money the right way.', function(r){ undoPay(oid, r); }); };
+  var rf = $('pdRef'); if(rf) rf.onclick = function(){ refundSheet(o); };
+}
+function refundSheet(o){
+  var mode = 'cash', amt = 0;
+  reasonSheet('Refund · ' + (o.table ? 'Table ' + o.table : o.id), 'Money given back to the guest. Logged, the bill stays paid.', function(r){ refundPay(o.id, amt, mode, r); },
+    '<label class="f">Amount given back<input id="rfAmt" inputmode="numeric" placeholder="₹" maxlength="7"></label><div class="seg" style="margin:6px 0 10px">' + [['cash','Cash'],['upi','UPI'],['card','Card']].map(function(x, i){ return '<button type="button" class="' + (i ? '' : 'on') + '" data-rfm="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>');
+  var ra = $('rfAmt'); ra.oninput = function(){ ra.value = ra.value.replace(/\D/g, ''); amt = Math.round(+ra.value || 0); };
+  document.querySelectorAll('[data-rfm]').forEach(function(b){ b.onclick = function(){ mode = b.dataset.rfm; document.querySelectorAll('[data-rfm]').forEach(function(x){ x.classList.toggle('on', x === b); }); }; });
+}
+
 function payWord(m){ return { cash:'Cash', upi:'UPI', card:'Card', split:'Split', credit:'Credit' }[m] || m; }
 
 async function moveTable(oid, toId){
@@ -658,11 +802,11 @@ function tableCard(t, s){
   if(s.st === 'free'){ tag = 'Free'; }
   if(s.st === 'eat'){ var lk = (s.o.kots || []).filter(function(k){ return k.kind === 'kot'; }).slice(-1)[0], kst = lk ? kotState(s.o, lk) : null, held = (s.o.kots || []).some(function(k){ return k.hold && !k.fireAt; });
     tag = kst && kst.s === 'ready' ? '✅ Ready' : kst && kst.s === 'cooking' ? '🍳 Cooking' : held ? '⏸ Hold' : 'Eating'; tm = ago(s.o.at) + ' · KOT ' + (s.o.kotN || 1); tv = rs(s.m.total); }
-  if(s.st === 'bill'){ tag = 'Bill'; tm = 'billed ' + ago(s.o.dueAt); tv = rs(s.m.total); }
+  if(s.st === 'bill'){ tag = partPaid(s.o) ? 'Part paid' : 'Bill'; tm = 'billed ' + ago(s.o.dueAt); tv = rs(partPaid(s.o) ? balanceOf(s.o, s.m) : s.m.total); }
   if(s.st === 'clean'){ tag = kindIc(s.c.kind) + ' ' + (s.c.status === 'taken' ? 'on it' : 'clean'); tm = kindName(s.c.kind) + ' · ' + ago(s.c.at); }
   /* who is at it: guests (of seats) + the waiter, short name */
   var who = s.o ? '<span class="ts"><b class="px">👥 ' + (pax || '?') + '<i>/' + t.seats + '</i></b>' + (s.o.by ? ' · <b>' + esc(shortName(s.o.by)) + '</b>' : '') + '</span>' : '<span class="ts">' + t.seats + ' seats' + (pax ? ' · 👥' + pax + ' waiting' : '') + '</span>';
-  return '<button class="tb ' + s.st + (s.c && s.c.urgency === 'urgent' ? ' urgent' : '') + '" data-a="table" data-lp="table" data-t="' + esc(t.id) + '"><span class="tag">' + tag + '</span><span class="tn">' + esc(t.name) + '</span>' + who +
+  return '<button class="tb ' + s.st + (s.c && s.c.urgency === 'urgent' ? ' urgent' : '') + '" data-a="table" data-lp="table" data-t="' + esc(t.id) + '"' + (s.o && s.o.note ? ' title="📌 ' + esc(s.o.note) + '"' : '') + '><span class="tag">' + tag + '</span><span class="tn">' + esc(t.name) + (s.o && s.o.note ? '<i class="tpin" aria-label="has a table note">📌</i>' : '') + '</span>' + who +
     (tv ? '<span class="tv">' + tv + '</span>' : '') + (tm ? '<span class="tm">' + esc(tm) + '</span>' : '') + (dc ? '<span class="dr">' + dc + ' not sent</span>' : seatSvg(t, s.o ? pax : 0)) + '</button>';
 }
 
@@ -720,8 +864,8 @@ function billHtml(t){
   var s = tstate(t), o = s.o, D = draftOf(t.id), L = o ? live(o) : [];
   var dsum = linesTotal(D), m = o ? money(o) : { sub:0, off:0, total:0 };
   var rows = '';
-  if(L.length){ rows += '<div class="bgrp">Sent to kitchen</div>' + L.map(function(l){ var r = (l.rounds || []).filter(function(z){ return z.n !== 'void'; }).map(function(z){ return z.n; }).filter(function(v, i, a){ return a.indexOf(v) === i; }); return '<div class="bl" data-a="void" data-k="' + esc(l.k) + '" role="button"><span class="qx">' + l.q + '×</span><span class="n">' + esc(l.name) + (r.length > 1 || (r[0] && r[0] > 1) ? r.map(function(v){ return '<span class="rnd">K' + v + '</span>'; }).join('') : '') + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join(''); }
-  if(D.length){ rows += '<div class="bgrp new">New · not sent yet</div>' + D.map(function(l){ return '<div class="bl new"><div class="step"><button data-a="dq" data-k="' + esc(l.k) + '" data-d="-1" aria-label="one less">−</button><span>' + l.q + '</span><button data-a="dq" data-k="' + esc(l.k) + '" data-d="1" aria-label="one more">+</button></div><span class="n" data-a="note" data-k="' + esc(l.k) + '" role="button">' + esc(l.name) + '<small>' + esc([l.label, l.note ? '“' + l.note + '”' : ''].filter(Boolean).join(' · ') || 'tap to add a note') + '</small></span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join(''); }
+  if(L.length){ rows += '<div class="bgrp">Sent to kitchen</div>' + L.map(function(l){ var r = (l.rounds || []).filter(function(z){ return z.n !== 'void'; }).map(function(z){ return z.n; }).filter(function(v, i, a){ return a.indexOf(v) === i; }); return '<div class="bl sent' + rcls(r[r.length - 1] || 1) + '" data-a="line" data-k="' + esc(l.k) + '" role="button"><span class="qx">' + l.q + '×</span><span class="n">' + esc(l.name) + (r.length > 1 || (r[0] && r[0] > 1) ? r.map(function(v){ return '<span class="rnd' + rcls(v) + '">K' + v + '</span>'; }).join('') : '') + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + noteChip(l.note) + '</span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join(''); }
+  if(D.length){ rows += '<div class="bgrp new">New · not sent yet</div>' + D.map(function(l){ return '<div class="bl new"><div class="step"><button data-a="dq" data-k="' + esc(l.k) + '" data-d="-1" aria-label="one less">−</button><span>' + l.q + '</span><button data-a="dq" data-k="' + esc(l.k) + '" data-d="1" aria-label="one more">+</button></div><span class="n" data-a="note" data-k="' + esc(l.k) + '" role="button">' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + (l.note ? noteChip(l.note) : '<span class="lnote add">📝 add note</span>') + '</span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join(''); }
   if(!rows) rows = '<div class="empty" style="padding:26px 10px"><b>🍽️</b>Tap dishes to start the order.</div>';
   var tot = '<div class="btot">' + (o && m.off ? '<div><span>Subtotal</span><span>' + rs(m.sub) + '</span></div><div><span>' + esc(offLabel(o)) + '</span><span>−' + rs(m.off) + '</span></div>' : '') +
     (D.length && o ? '<div class="muted"><span>On the bill</span><span>' + rs(m.total) + '</span></div><div class="muted"><span>New</span><span>+' + rs(dsum) + '</span></div>' : '') +
@@ -732,10 +876,10 @@ function billHtml(t){
     if(ds.length) nudge = '<div class="nudge"><small>Before the bill · something sweet?</small>' + ds.map(function(x){ var i = topChoice(x); return '<button class="sug" data-a="sug" data-id="' + esc(x.id) + '" data-i="' + i + '" data-q="1">+ <b>' + esc(x.name) + '</b><small>' + rs(x.ch[i].price) + '</small></button>'; }).join('') + '</div>'; } }
   var acts = '<div class="bact">';
   if(D.length) acts += '<button class="btn wide" data-a="kopt" style="min-height:42px;font-size:14px">✎ Note · kitchens · hold' + (S.draft[t.id] && S.draft[t.id].kopt && (S.draft[t.id].kopt.flags.length || S.draft[t.id].kopt.note) ? ' <b>(' + esc(kotNoteText(S.draft[t.id].kopt) || 'hold') + ')</b>' : '') + '</button><button class="btn pri wide" data-a="kot"' + (SENDING[t.id] ? ' disabled' : '') + '>' + (SENDING[t.id] ? 'Sending…' : 'Send KOT') + ' · ' + draftCount(t.id) + ' item' + (draftCount(t.id) > 1 ? 's' : '') + '</button><button class="btn wide" data-a="dclear" style="min-height:40px;font-size:13px">Clear new items</button>';
-  else if(o){ acts += '<button class="btn acc" data-a="due">' + (o.dueAt ? '🖨 Bill again' : '🧾 Due bill') + '</button><button class="btn pri" data-a="pay">Pay ' + rs(m.total) + '</button>'; }
+  else if(o){ acts += '<button class="btn acc" data-a="due">' + (o.dueAt ? '🖨 Bill again' : '🧾 Due bill') + '</button><button class="btn pri" data-a="pay">Pay ' + rs(partPaid(o) ? balanceOf(o, m) : m.total) + '</button>'; }
   else acts += '<div class="why">Add dishes, then Send KOT. Nothing reaches the kitchen until you send.</div>';
   acts += '</div>';
-  return '<div class="bhd"><b>Bill · ' + esc(t.name) + '</b>' + (o ? '<span class="badge2 ' + (o.dueAt ? 'b-bill' : 'b-eat') + '">' + (o.dueAt ? 'bill given' : 'KOT ' + (o.kotN || 1)) + '</span>' : '') + '</div><div class="blines">' + rows + '</div>' + tot + nudge + acts;
+  return onoteHtml(t, o, true) + '<div class="bhd"><b>Bill · ' + esc(t.name) + '</b>' + (o ? '<span class="badge2 ' + (o.dueAt ? 'b-bill' : 'b-eat') + '">' + (o.dueAt ? 'bill given' : 'KOT ' + (o.kotN || 1)) + '</span>' : '') + '</div><div class="blines">' + rows + '</div>' + tot + nudge + acts;
 }
 /* ---------------- two modes on a phone ----------------
    A NEW table opens on quick-pick dishes. A table that already has a bill opens on the BILL
@@ -755,20 +899,20 @@ function orderView(){
     '<div class="pax"><button data-a="pax" data-d="-1" aria-label="fewer guests">−</button><span>👥 ' + (pax || '–') + '</span><button data-a="pax" data-d="1" aria-label="more guests">+</button></div><button class="more" data-a="tmenu" aria-label="table options">⋯</button></div>';
   var banner = s.st === 'clean' ? '<div class="card" style="border-color:var(--clean);background:var(--cleanwash)"><b>' + kindIc(s.c.kind) + ' ' + esc(kindName(s.c.kind)) + '</b> asked ' + agoT(s.c.at) + ' by ' + esc(s.c.by) + (s.c.status === 'taken' ? ' · <b>' + esc(s.c.takenBy) + '</b> is on it' : '') + '<div class="row" style="margin-top:8px;display:flex;gap:8px"><button class="btn" data-a="cdone" data-id="' + esc(s.c.id) + '">✓ Table is clean</button></div></div>' : '';
   var Dn = draftOf(t.id);
-  if(md === 'bill' && !o && Dn.length) return '<div class="bview">' + head + banner + newCard(t, Dn) + '<div class="card muted" style="text-align:center">Nothing has gone to the kitchen yet · check the items, then <b>Send KOT</b> below</div></div>';
+  if(md === 'bill' && !o && Dn.length) return '<div class="bview">' + head + banner + onoteHtml(t, null) + newCard(t, Dn) + '<div class="card muted" style="text-align:center">Nothing has gone to the kitchen yet · check the items, then <b>Send KOT</b> below</div></div>';
   if(md === 'bill' && o){
     var m = money(o), L = live(o), byK = {};
     (o.kots || []).filter(function(k){ return k.kind === 'kot'; }).forEach(function(k){ byK[k.n] = k; });
     var status = o.dueAt ? '<span class="badge2 b-bill">bill given ' + ago(o.dueAt) + ' ago</span>' : '<span class="badge2 b-eat">eating · KOT ' + (o.kotN || 1) + '</span>';
-    return '<div class="bview">' + head + banner + progHtml(o) + (Dn.length ? newCard(t, Dn) : '') +
-      '<div class="bsum"><div><small>Bill</small><b>' + rs(m.total) + '</b></div><div><small>Items</small><b>' + L.reduce(function(n, l){ return n + l.q; }, 0) + '</b></div><div><small>Last KOT</small><b>' + ago(lastK) + '</b></div></div>' +
-      '<div class="card bcard"><div class="bhd2">' + status + '<span class="muted" style="font-size:12.5px">tap a dish to remove it</span></div>' +
+    return '<div class="bview">' + head + banner + onoteHtml(t, o) + progHtml(o) + (Dn.length ? newCard(t, Dn) : '') +
+      '<div class="bsum"><div><small>' + (partPaid(o) ? 'Left to pay' : 'Bill') + '</small><b>' + rs(partPaid(o) ? balanceOf(o, m) : m.total) + '</b>' + (partPaid(o) ? '<em class="pp">paid ' + rs(gotSoFar(o)) + ' of ' + rs(m.pay) + '</em>' : '') + '</div><div><small>Items</small><b>' + L.reduce(function(n, l){ return n + l.q; }, 0) + '</b></div><div><small>Last KOT</small><b>' + ago(lastK) + '</b></div></div>' +
+      '<div class="card bcard"><div class="bhd2">' + status + '<span class="muted" style="font-size:12.5px">tap a dish · note or remove</span></div>' +
       L.map(function(l){ var r = (l.rounds || []).filter(function(z){ return z.n !== 'void'; }).map(function(z){ return z.n; }).filter(function(v, i, a){ return a.indexOf(v) === i; });
-        return '<div class="bl" data-a="void" data-k="' + esc(l.k) + '" role="button"><span class="qx">' + l.q + '×</span><span class="n">' + esc(l.name) + r.map(function(v){ return '<span class="rnd">K' + v + (byK[v] ? ' ' + hm(byK[v].at) : '') + '</span>'; }).join('') + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join('') +
+        return '<div class="bl sent' + rcls(r[r.length - 1] || 1) + '" data-a="line" data-k="' + esc(l.k) + '" role="button"><span class="qx">' + l.q + '×</span><span class="n">' + esc(l.name) + r.map(function(v){ return '<span class="rnd' + rcls(v) + '">K' + v + (byK[v] ? ' ' + hm(byK[v].at) : '') + '</span>'; }).join('') + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + noteChip(l.note) + '</span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join('') +
       (m.off ? '<div class="bl"><span></span><span class="n">' + esc(offLabel(o)) + '</span><span class="a">−' + rs(m.off) + '</span></div>' : '') +
       '<div class="btot"><div class="g"><span>Total</span><span>' + rs(m.total) + '</span></div></div></div>' +
       '<div class="card klist"><div class="sec-t" style="margin:0 0 6px">Kitchen</div>' + (o.kots || []).filter(function(k){ return k.kind === 'kot'; }).map(function(k){ var ks = kotState(o, k), self = (k.lines || []).every(function(l){ return l.station === 'none'; });
-        return '<div class="krow"><b>KOT ' + k.n + '</b><span>' + hm(k.at) + ' · ' + (k.lines || []).reduce(function(n, l){ return n + l.q; }, 0) + ' items' + (k.note ? ' · “' + esc(k.note) + '”' : '') + '</span>' +
+        return '<div class="krow"><b class="kn' + rcls(k.n) + '">KOT ' + k.n + '</b><span>' + hm(k.at) + ' · ' + (k.lines || []).reduce(function(n, l){ return n + l.q; }, 0) + ' items' + (k.note ? ' · “' + esc(k.note) + '”' : '') + '</span>' +
           (k.hold && !k.fireAt ? '<button class="btn acc" data-a="fire" data-n="' + k.n + '" style="min-height:38px">🔥 Fire</button>' : self ? '<span class="kst">🥤 you bring</span>' : '<span class="kst ' + (ks ? ks.s : '') + '">' + (ks && ks.txt ? ks.txt : k.fireAt ? '🔥 fired ' + ago(k.fireAt) : 'sent') + '</span>') + '</div>'; }).join('') + '</div>' +
       (function(){ var n = billNudge(t, o); return n ? '<div class="card">' + n + '</div>' : ''; })() +
       '<button class="histb" data-a="hist">🕘 Everything on this bill · ' + histEvents(o).length + ' steps</button></div>';
@@ -786,16 +930,16 @@ function progHtml(o){
 /* items picked but not sent: on top, amber, with − / ＋, so nothing is forgotten before Send KOT */
 function newCard(t, D){
   return '<div class="card nsent"><div class="bhd2"><span class="badge2 b-new">🆕 Not sent yet · ' + draftCount(t.id) + '</span><button class="lnk" data-a="kopt">✎ note · kitchens</button></div>' +
-    D.map(function(l){ return '<div class="bl new"><div class="step"><button data-a="dq" data-k="' + esc(l.k) + '" data-d="-1" aria-label="one less">−</button><span>' + l.q + '</span><button data-a="dq" data-k="' + esc(l.k) + '" data-d="1" aria-label="one more">+</button></div><span class="n" data-a="note" data-k="' + esc(l.k) + '" role="button">' + esc(l.name) + '<small>' + esc([l.label, l.note ? '“' + l.note + '”' : ''].filter(Boolean).join(' · ') || 'tap to add a note') + '</small></span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join('') +
+    D.map(function(l){ return '<div class="bl new"><div class="step"><button data-a="dq" data-k="' + esc(l.k) + '" data-d="-1" aria-label="one less">−</button><span>' + l.q + '</span><button data-a="dq" data-k="' + esc(l.k) + '" data-d="1" aria-label="one more">+</button></div><span class="n" data-a="note" data-k="' + esc(l.k) + '" role="button">' + esc(l.name) + (l.label ? '<small>' + esc(l.label) + '</small>' : '') + (l.note ? noteChip(l.note) : '<span class="lnote add">📝 add note</span>') + '</span><span class="a">' + rs(l.q * l.price) + '</span></div>'; }).join('') +
     '<div class="btot"><div class="g"><span>New</span><span>+' + rs(linesTotal(D)) + '</span></div></div></div>'; }
 /* every step of a bill, oldest first: seated, each KOT, fire, voids, moves, bill printed, paid */
 function histEvents(o){
-  var E = [], who2 = function(b){ return typeof b === 'string' ? b : (b && (b.name || b.id)) || ''; }, its = function(L){ return (L || []).map(function(l){ return l.q + '× ' + l.name + (l.label ? ' ' + short(l.label) : ''); }).join(', '); };
+  var E = [], who2 = function(b){ return typeof b === 'string' ? b : (b && (b.name || b.id)) || ''; }, its = function(L){ return (L || []).map(function(l){ var b = lab0(l); return l.q + '× ' + l.name + (b ? ' ' + short(b) : '') + (l.note ? ' (“' + l.note + '”)' : ''); }).join(', '); };
   E.push({ at:o.at, ic:'🪑', t:'Seated' + (o.pax ? ' · 👥 ' + o.pax : ''), by:who2(o.by) });
   (o.kots || []).forEach(function(k){
     if(k.kind === 'kot'){ E.push({ at:k.at, ic:'📝', t:'KOT ' + k.n + ' · ' + its(k.lines) + (k.note ? ' · “' + k.note + '”' : '') + (k.hold ? ' · ⏸ held' : ''), by:who2(k.by) }); if(k.fireAt) E.push({ at:k.fireAt, ic:'🔥', t:'KOT ' + k.n + ' fired', by:who2(k.fireBy) }); }
     else if(k.kind === 'cancel' && !(o.edits || []).some(function(e){ return Math.abs((e.at || 0) - (k.at || 0)) < 3000; })) E.push({ at:k.at, ic:'✂', t:'Cancelled · ' + its(k.lines) + (k.reason ? ' (' + k.reason + ')' : ''), by:who2(k.by) }); });
-  (o.edits || []).forEach(function(e){ E.push({ at:e.at, ic:'✂', t:(e.void ? 'Removed ' : 'Changed ') + e.item + (e.label ? ' ' + short(e.label) : '') + ' · ' + e.from + ' → ' + e.to + (e.reason ? ' (' + e.reason + ')' : ''), by:who2(e.by) }); });
+  (o.edits || []).forEach(function(e){ if(e.kind === 'note'){ E.push({ at:e.at, ic:'📝', t:(e.item ? 'Note on ' + e.item : 'Table note') + ': ' + (e.from ? '“' + e.from + '”' : '—') + ' → ' + (e.to ? '“' + e.to + '”' : 'removed'), by:who2(e.by) }); return; } E.push({ at:e.at, ic:'✂', t:(e.void ? 'Removed ' : 'Changed ') + e.item + (e.label ? ' ' + short(e.label) : '') + ' · ' + e.from + ' → ' + e.to + (e.reason ? ' (' + e.reason + ')' : ''), by:who2(e.by) }); });
   (o.moves || []).forEach(function(m){ E.push({ at:m.at, ic:'↔', t:'Moved ' + m.from + ' → ' + m.to, by:who2(m.by) }); });
   if(o.dueAt) E.push({ at:o.dueAt, ic:'🧾', t:'Bill printed' + (o.dueCount > 1 ? ' · ' + o.dueCount + ' times' : ''), by:who2(o.dueBy) });
   if(o.paidAt) E.push({ at:o.paidAt, ic:'💰', t:'Paid ' + rs(o.paidAmt || o.total || 0) + (o.payMode ? ' · ' + o.payMode : ''), by:who2(o.paidBy) });
@@ -861,7 +1005,7 @@ function orderDock(){
   var bar = '<div class="ordbar"><button class="tray" data-a="billsheet"><span><b>' + rs(tot) + '</b><small>' + n + ' item' + (n === 1 ? '' : 's') + (D.length ? ' · ' + draftCount(t.id) + ' not sent' : '') + ' · bill ▴</small></span></button>' + btn + '</div>';
   if(md === 'bill' && (o || D.length)) return '<div class="dock" id="dock" data-mode="bill">' + sugHtml(t) +
     '<div class="srow"><button class="back" data-a="nav" data-v="floor" aria-label="back to tables">‹</button><button class="sfake" data-a="omode" data-m="search" aria-label="search dishes to add">🔍 <span>Search to add dishes</span></button><button class="addbtn sm" data-a="omode" data-m="menu" aria-label="add from the menu">＋ Menu</button></div>' +
-    (D.length ? bar : '<div class="ordbar">' + (o.dueAt ? '<button class="btn acc" data-a="due" style="flex:none">🖨 Again</button><button class="btn pri" data-a="pay" style="flex:1">Pay ' + rs(money(o).total) + '</button>' : '<button class="btn acc" data-a="due" style="flex:1">🧾 Due bill · ' + rs(money(o).total) + '</button>') + '</div>') + '</div>';
+    (D.length ? bar : '<div class="ordbar">' + (o.dueAt || partPaid(o) ? '<button class="btn acc" data-a="due" style="flex:none">🖨 ' + (o.dueAt ? 'Again' : 'Bill') + '</button><button class="btn pri" data-a="pay" style="flex:1">Pay ' + rs(balanceOf(o)) + (partPaid(o) ? ' · rest' : '') + '</button>' : '<button class="btn acc" data-a="due" style="flex:1">🧾 Due bill · ' + rs(money(o).total) + '</button>') + '</div>') + '</div>';
   return '<div class="dock" id="dock" data-mode="menu">' + sresHtml(t) + sugHtml(t) + catsHtml() + tray2(t, D) +
     '<div class="srow"><button class="back" data-a="oback" data-v="floor" aria-label="' + (backToBill(t) ? 'back to the bill' : 'back to tables') + '">‹</button><div class="sbox"><input id="q" type="search" placeholder="Search dishes · try cmf" value="' + esc(S.q) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">' + (S.q ? '<button class="qx2" data-a="qclr" aria-label="clear">✕</button>' : '') + '</div><button class="qdone" data-a="qdone" aria-label="close the search">Done</button></div>' + bar + '</div>';
 }
@@ -920,15 +1064,21 @@ function qtySheet(t, x, i){
 function billsView(){
   var all = Object.values(S.orders).sort(function(a, b){ return (b.at || 0) - (a.at || 0); });
   var open = all.filter(function(o){ return !closed(o); }), paid = all.filter(function(o){ return o.paid && bizDay(o.paidAt || o.at) === bizDay(); });
-  var byMode = {}; paid.forEach(function(o){ (o.pays && o.pays.length ? o.pays : [{ mode:o.payMode, amt:o.paidAmt || o.total }]).forEach(function(p){ byMode[p.mode] = (byMode[p.mode] || 0) + (+p.amt || 0); }); });
+  /* money that came in TODAY, by mode: payments (incl. part payments on open bills), credit received, minus refunds. Credit given is not money. */
+  var byMode = {}, today = bizDay(), addM = function(md, a){ byMode[md] = (byMode[md] || 0) + a; };
+  all.concat(Object.values(S.credit || {}).filter(function(o){ return !S.orders[o.id]; })).forEach(function(o){
+    (o.pays && o.pays.length ? o.pays : o.paid ? [{ mode:o.payMode, amt:o.paidAmt || o.total, at:o.paidAt }] : []).forEach(function(p){ if(bizDay(p.at || o.paidAt || o.at) === today) addM(p.mode, +p.amt || 0); });
+    ((o.credit && o.credit.recv) || []).forEach(function(r){ if(bizDay(r.at) === today) addM(r.mode, +r.amt || 0); });
+    (o.refunds || []).forEach(function(r){ if(bizDay(r.at) === today) addM(r.mode, -(+r.amt || 0)); }); });
+  var credN = Object.values(S.credit || {}).filter(function(o){ return credOut(o) > 0; }).length;
   var tips = paid.reduce(function(n, o){ return n + (+o.tip || 0); }, 0);
   var row = function(o){ var m = money(o), where = o.mode === 'dinein' ? (o.table || 'Dine') : o.token ? 'T' + o.token : (o.mode || 'order');
-    var st = o.paid ? '<span class="badge2 b-paid">paid · ' + esc(payWord(o.payMode)) + '</span>' : o.dueAt ? '<span class="badge2 b-bill">bill given</span>' : '<span class="badge2 b-eat">eating</span>';
+    var st = o.paid ? '<span class="badge2 b-paid">paid · ' + esc(payWord(o.payMode)) + '</span>' + (credOut(o) ? '<span class="badge2 b-cred">📒 owes ' + rs(credOut(o)) + '</span>' : '') + (o.refunds && o.refunds.length ? '<span class="badge2 b-bill">refund</span>' : '') : partPaid(o) ? '<span class="badge2 b-part">part paid · ' + rs(balanceOf(o)) + ' left</span>' : o.dueAt ? '<span class="badge2 b-bill">bill given</span>' : '<span class="badge2 b-eat">eating</span>';
     return '<button class="li" data-a="openo" data-id="' + esc(o.id) + '"><span class="tico">' + esc(String(where).slice(0, 4)) + '</span><span class="n">' + esc(o.mode === 'dinein' ? 'Table ' + where : where) + ' ' + st + '<small>' + hm(o.at) + ' · ' + ago(o.at) + ' · ' + live(o).reduce(function(n, l){ return n + l.q; }, 0) + ' items' + (o.by ? ' · ' + esc(o.by) : '') + (o.source && o.source !== 'captain' ? ' · ' + esc(o.source) : '') + '</small></span><span class="v">' + rs(o.paid ? (o.paidAmt || m.total) : m.total) + (o.tip ? '<small>+' + rs(o.tip) + ' tip</small>' : '') + '</span></button>'; };
-  var tabs = '<div class="seg" style="margin-bottom:12px"><button class="' + (S.billsTab === 'open' ? 'on' : '') + '" data-a="btab" data-t="open">Open · ' + open.length + '</button><button class="' + (S.billsTab === 'paid' ? 'on' : '') + '" data-a="btab" data-t="paid">Paid today · ' + paid.length + '</button></div>';
-  var body = S.billsTab === 'open'
+  var tabs = '<div class="seg" style="margin-bottom:12px"><button class="' + (S.billsTab === 'open' ? 'on' : '') + '" data-a="btab" data-t="open">Open · ' + open.length + '</button><button class="' + (S.billsTab === 'paid' ? 'on' : '') + '" data-a="btab" data-t="paid">Paid today · ' + paid.length + '</button><button class="' + (S.billsTab === 'credit' ? 'on' : '') + '" data-a="btab" data-t="credit">📒 Credit' + (credN ? ' · ' + credN : '') + '</button></div>';
+  var body = S.billsTab === 'credit' ? creditView() : S.billsTab === 'open'
     ? (open.length ? '<div class="sum" style="grid-template-columns:repeat(3,1fr)"><div><small>Open</small><b>' + open.length + '</b></div><div><small>Running</small><b>' + rs(open.reduce(function(n, o){ return n + money(o).total; }, 0)) + '</b></div><div><small>Bill given</small><b>' + open.filter(function(o){ return o.dueAt; }).length + '</b></div></div><div class="list">' + open.map(row).join('') + '</div>' : '<div class="empty"><b>✨</b>No open bills.</div>')
-    : '<div class="sum" style="grid-template-columns:repeat(4,1fr)"><div><small>Cash</small><b>' + rs(byMode.cash || 0) + '</b></div><div><small>UPI</small><b>' + rs(byMode.upi || 0) + '</b></div><div><small>Card</small><b>' + rs(byMode.card || 0) + '</b></div><div><small>Tips</small><b>' + rs(tips) + '</b></div></div>' + (paid.length ? '<div class="list">' + paid.map(row).join('') + '</div>' : '<div class="empty"><b>🧾</b>Nothing paid yet today.</div>');
+    : '<div class="sum" style="grid-template-columns:repeat(4,1fr)"><div><small>Cash</small><b>' + rs(byMode.cash || 0) + '</b></div><div><small>UPI</small><b>' + rs(byMode.upi || 0) + '</b></div><div><small>Card</small><b>' + rs(byMode.card || 0) + '</b></div><div><small>Tips</small><b>' + rs(tips) + '</b></div></div>' + (byMode.credit ? '<p class="muted" style="font-size:12.5px;margin:-4px 2px 10px">📒 ' + rs(byMode.credit) + ' given on credit today (not in the money above)</p>' : '') + (paid.length ? '<div class="list">' + paid.map(row).join('') + '</div>' : '<div class="empty"><b>🧾</b>Nothing paid yet today.</div>');
   return '<h1 class="pg">Bills</h1>' + tabs + body;
 }
 
@@ -1068,9 +1218,9 @@ function meSheet(){
 function tableMenu(){
   var t = curTable(); if(!t) return; var s = tstate(t), o = s.o;
   sheet('<h2>Table ' + esc(t.name) + '</h2><p class="sub">' + esc(t.spaceName) + ' · ' + t.seats + ' seats</p><div class="opts" style="grid-template-columns:1fr">' +
-    '<button class="opt" id="tmClean"><span class="e">🧹</span>Call cleaner</button>' +
+    '<button class="opt" id="tmNote"><span class="e">📌</span>' + ((o && o.note) || (S.draft[t.id] && S.draft[t.id].onote) ? 'Change the table note' : 'Note for this table') + '</button><button class="opt" id="tmClean"><span class="e">🧹</span>Call cleaner</button>' +
     (o ? '<button class="opt" id="tmMove"><span class="e">↔️</span>Move to another table</button><button class="opt" id="tmBill"><span class="e">🧾</span>' + (o.dueAt ? 'Print bill again' : 'Due bill') + '</button><button class="opt" id="tmCancel" style="color:var(--bad)"><span class="e">⛔</span>Cancel the whole bill</button>' : '') + '</div>');
-  $('tmClean').onclick = function(){ cleanSheet(t.id); };
+  $('tmClean').onclick = function(){ cleanSheet(t.id); }; $('tmNote').onclick = function(){ onoteSheet(); };
   if(o){ $('tmMove').onclick = function(){ moveSheet(o); }; $('tmBill').onclick = function(){ closeSheet(); dueBill(o.id); };
     $('tmCancel').onclick = function(){ reasonSheet('Cancel bill · Table ' + t.name, 'Every cooked item gets a cancel ticket.', function(r){ cancelBill(o.id, r); }); }; }
 }
@@ -1111,14 +1261,70 @@ function voidSheet(k){
   var upd = function(){ var e = $('rsQty'); e.textContent = q; e.dataset.v = q; };
   $('vqm').onclick = function(){ q = Math.max(1, q - 1); upd(); }; $('vqp').onclick = function(){ q = Math.min(l.q, q + 1); upd(); };
 }
+var QUICK_ITEM = ['Less spicy', 'Extra spicy', 'Less salt', 'No sugar', 'Less sugar', 'No ice', 'No onion', 'No garlic', 'Extra mayo', 'Well done', 'Kids portion', 'Allergy - ask', 'Parcel', 'Serve first', 'Serve later', 'Serve hot'];
+var QUICK_TABLE = ['Birthday', 'VIP', 'Regular guest', 'Allergy - ask', 'Kids at the table', 'In a hurry', 'Split the bill', 'Parcel the rest', 'Elderly guest', 'Complaint earlier'];
+function noteMax(v){ return String(v || '').replace(/\s+/g, ' ').trim().slice(0, 120); }
+/* the table's own note (birthday, VIP, allergy…): on top of the bill, on every kitchen ticket + screen from now on */
+function onoteHtml(t, o, slim){ var n = (o && o.note) || (!o && S.draft[t.id] && S.draft[t.id].onote) || ''; if(!n) return '';
+  return '<button class="onote' + (slim ? ' slim' : '') + '" data-a="onote" type="button"><span class="e">📌</span><b>' + esc(n) + '</b><small>edit</small></button>'; }
+function onoteSheet(){
+  var t = curTable(); if(!t) return; var o = openOrder(t), cur = (o && o.note) || (S.draft[t.id] && S.draft[t.id].onote) || '';
+  sheet('<h2>📌 Note for Table ' + esc(t.name) + '</h2><p class="sub">Shows on top of this bill, and on every kitchen ticket + screen from now on. Not printed on the customer’s bill.</p><div class="quick">' + QUICK_TABLE.map(function(x){ return '<button data-nq="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div><label class="f">Note<input id="ntTxt" value="' + esc(cur) + '" maxlength="120" autocomplete="off"></label><div class="row" style="display:flex;gap:8px">' + (cur ? '<button class="btn" id="ntDel" style="flex:1">Remove</button>' : '') + '<button class="btn pri" id="ntGo" style="flex:2">Save note</button></div>');
+  quickWire();
+  var save = async function(v){ v = noteMax(v); closeSheet(); if(v === cur) return;
+    if(!o){ S.draft[t.id] = S.draft[t.id] || { lines:[] }; if(v) S.draft[t.id].onote = v; else delete S.draft[t.id].onote; if(!S.draft[t.id].lines.length && !S.draft[t.id].onote && !S.draft[t.id].pax) delete S.draft[t.id]; saveDraft(); toast(v ? '📌 Table note saved' : 'Table note removed', 'good', v ? 'goes to the kitchen with the first KOT' : ''); render(); return; }
+    var now = Date.now();
+    try{ var o2 = await txOrder(o.id, function(c){ return { note:v || null, edits:(c.edits || []).concat([{ kind:'note', at:now, by:who(), item:'', from:c.note || '', to:v }]), editedAt:now }; }); S.orders[o.id] = o2; }
+    catch(e){ fail('Note not saved', e); return; }
+    ux('onote', { set:!!v }); toast(v ? '📌 Table note saved' : 'Table note removed', 'good', 'on the kitchen screen at once' + (canPrint() ? ' · printed tickets show it from the next KOT' : '')); render(); };
+  $('ntGo').onclick = function(){ save($('ntTxt').value); }; if($('ntDel')) $('ntDel').onclick = function(){ save(''); };
+  $('ntTxt').onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); save(this.value); } };
+}
+function quickWire(){ document.querySelectorAll('[data-nq]').forEach(function(b){ b.onclick = function(){ var i = $('ntTxt'), v = i.value.trim(), q = b.dataset.nq; if(v.toLowerCase().indexOf(q.toLowerCase()) >= 0) return; i.value = noteMax(v ? v + ', ' + q.toLowerCase() : q); vib(6); }; }); }
+/* tap a SENT dish: change its kitchen note, or remove it */
+function lineSheet(k){
+  var t = curTable(), o = t && openOrder(t); if(!o) return; var l = live(o).filter(function(z){ return z.k === k; })[0]; if(!l) return;
+  sheet('<h2>' + esc(l.name) + '</h2><p class="sub">' + l.q + ' on the bill' + (l.label ? ' · ' + esc(l.label) : '') + (l.note ? ' · 📝 ' + esc(l.note) : '') + '</p><div class="opts" style="grid-template-columns:1fr">' +
+    '<button class="opt" id="lsNote"><span class="e">📝</span>' + (l.note ? 'Change the note' : 'Add a note for the kitchen') + '</button>' +
+    '<button class="opt" id="lsVoid" style="color:var(--bad)"><span class="e">✂</span>Remove from the bill</button></div>');
+  $('lsNote').onclick = function(){ sentNoteSheet(o, l); }; $('lsVoid').onclick = function(){ voidSheet(k); };
+}
+function sentNoteSheet(o, l){
+  var cur = l.note || '';
+  sheet('<h2>📝 Note · ' + esc(l.name) + '</h2><p class="sub">Already sent: the kitchen screen updates at once' + (canPrint() ? '; the printed ticket does not — tell the kitchen too' : '') + '.</p><div class="quick">' + QUICK_ITEM.map(function(x){ return '<button data-nq="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div><label class="f">Note<input id="ntTxt" value="' + esc(cur) + '" maxlength="120" autocomplete="off"></label><div class="row" style="display:flex;gap:8px">' + (cur ? '<button class="btn" id="ntDel" style="flex:1">Remove note</button>' : '') + '<button class="btn pri" id="ntGo" style="flex:2">Save note</button></div>');
+  quickWire();
+  var save = async function(v){ v = noteMax(v); closeSheet(); if(v === cur) return; var now = Date.now();
+    try{ var o2 = await txOrder(o.id, function(c){
+        var lines = (c.lines || []).map(function(z){ return z.k === l.k ? Object.assign({}, z, { note:v || null }) : z; });
+        if(!lines.some(function(z){ return z.k === l.k && z.q > 0; })) throw new Error('that dish is no longer on the bill');
+        var kots = (c.kots || []).map(function(kt){ if(kt.kind !== 'kot' || !(kt.lines || []).some(function(z){ return z.k === l.k; })) return kt;
+          return Object.assign({}, kt, { lines:kt.lines.map(function(z){ return z.k === l.k ? Object.assign(kLine(Object.assign({}, z, { base:lab0(z), note:v })), { q:z.q }) : z; }) }); });
+        return { lines:lines, kots:kots, edits:(c.edits || []).concat([{ kind:'note', at:now, by:who(), item:l.name, label:lab0(l), from:cur, to:v }]), editedAt:now }; });
+      S.orders[o.id] = o2; }
+    catch(e){ fail('Note not saved', e); return; }
+    ux('lnote', { sent:true, set:!!v }); toast(v ? '📝 Note saved' : 'Note removed', 'good', 'kitchen screen updated' + (canPrint() ? ' · tell the kitchen, the printed ticket is unchanged' : '')); render(); };
+  $('ntGo').onclick = function(){ save($('ntTxt').value); }; if($('ntDel')) $('ntDel').onclick = function(){ save(''); };
+  $('ntTxt').onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); save(this.value); } };
+}
 function noteSheet(k){
   var t = curTable(); var d = S.draft[t.id]; var l = d && d.lines.filter(function(z){ return z.k === k; })[0]; if(!l) return;
-  var quick = ['Less spicy', 'Extra spicy', 'Less salt', 'No sugar', 'Less sugar', 'No ice', 'No onion', 'No garlic', 'Extra mayo', 'Well done', 'Kids portion', 'Allergy - ask', 'Parcel', 'Serve first', 'Serve later', 'Serve hot'];
-  sheet('<h2>Note for the kitchen</h2><p class="sub">' + esc(l.name) + (l.label ? ' · ' + esc(l.label) : '') + '</p><div class="quick">' + quick.map(function(x){ return '<button data-nq="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div><label class="f">Note<input id="ntTxt" value="' + esc(l.note || '') + '" autocomplete="off"></label><button class="btn pri" id="ntGo" style="width:100%">Save note</button>');
-  document.querySelectorAll('[data-nq]').forEach(function(b){ b.onclick = function(){ var v = $('ntTxt').value.trim(); $('ntTxt').value = v ? v + ', ' + b.dataset.nq.toLowerCase() : b.dataset.nq; }; });
-  $('ntGo').onclick = function(){ var v = $('ntTxt').value.trim(); l.note = v; l.k = l.id + '|' + l.label + (v ? '|' + v : '');
-    var same = d.lines.filter(function(z){ return z !== l && z.k === l.k; })[0]; if(same){ same.q += l.q; d.lines = d.lines.filter(function(z){ return z !== l; }); }
+  var n = l.q > 1 && !l.note ? l.q : 0, part = n ? 1 : l.q;   /* 2 or more of the same dish: the note can be for just some of them */
+  sheet('<h2>📝 Note for the kitchen</h2><p class="sub">' + esc(l.name) + (l.label ? ' · ' + esc(l.label) : '') + '</p>' +
+    (n ? '<div class="seg" id="ntFor"><button data-nf="1" class="on">Just 1</button>' + (n > 2 ? '<button data-nf="' + (n - 1) + '">' + (n - 1) + ' of ' + n + '</button>' : '') + '<button data-nf="' + n + '">All ' + n + '</button></div>' : '') +
+    '<div class="quick">' + QUICK_ITEM.map(function(x){ return '<button data-nq="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div><label class="f">Note<input id="ntTxt" value="' + esc(l.note || '') + '" maxlength="120" autocomplete="off"></label><div class="row" style="display:flex;gap:8px">' + (l.note ? '<button class="btn" id="ntDel" style="flex:1">Remove note</button>' : '') + '<button class="btn pri" id="ntGo" style="flex:2">Save note</button></div>');
+  quickWire();
+  document.querySelectorAll('[data-nf]').forEach(function(b){ b.onclick = function(){ part = +b.dataset.nf; document.querySelectorAll('[data-nf]').forEach(function(x){ x.classList.toggle('on', x === b); }); }; });
+  var save = function(v){ v = noteMax(v);
+    var key = l.id + '|' + l.label + (v ? '|' + v : ''), q = Math.min(part || l.q, l.q);
+    if(key !== l.k){
+      var same = d.lines.filter(function(z){ return z !== l && z.k === key; })[0];
+      if(q >= l.q){ if(same){ same.q += l.q; d.lines = d.lines.filter(function(z){ return z !== l; }); } else { l.note = v; l.k = key; } }
+      else { l.q -= q; if(same) same.q += q; else d.lines.splice(d.lines.indexOf(l) + 1, 0, Object.assign({}, l, { q:q, note:v, k:key })); }
+      ux('lnote', { sent:false, set:!!v, q:q });
+    }
     saveDraft(); closeSheet(); render(); };
+  $('ntGo').onclick = function(){ save($('ntTxt').value); }; if($('ntDel')) $('ntDel').onclick = function(){ save(''); };
+  $('ntTxt').onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); save(this.value); } };
 }
 
 /* ---------------- pay: our own keypad, so the phone keyboard never covers the bill ----------------
@@ -1133,32 +1339,40 @@ function notes(pay){ /* exact, then the notes people really hand over */ var v =
 function paySheet(oid){
   var o = S.orders[oid]; if(!o) return;
   var payT0 = Date.now(); ux('payopen', { oid:oid });
-  var P = { mode:cfg('payDefault', 'cash'), field:'recv', recv:'', dtype:(o.discount && o.discount.type) || 'amt', dval:o.discount && o.discount.value ? String(o.discount.value) : '', tip:o.tip ? String(o.tip) : '', split:['', '', ''], confirm:false, details:false, cleanAfter:cfg('cleanAfter', true) !== false };
+  var P = { mode:cfg('payDefault', 'cash'), field:'recv', recv:'', amt:'', ref:'', party:'', phone:'', dtype:(o.discount && o.discount.type) || 'amt', dval:o.discount && o.discount.value ? String(o.discount.value) : '', tip:o.tip ? String(o.tip) : '', split:['', '', ''], confirm:false, details:false, cleanAfter:cfg('cleanAfter', true) !== false };
   var keep = lsGet('hayat-cap-pay', null);   /* what was typed survives a refresh / an accidental close for 15 min */
   if(keep && keep.oid === oid && Date.now() - keep.at < 15 * 60e3 && keep.P) Object.assign(P, keep.P, { confirm:false });
+  if(o.paid){ paidSheet(oid); return; }
   if(P.mode !== 'cash' && P.field === 'recv') P.field = '';
   sheet('<div id="payBody" data-oid="' + esc(oid) + '"></div>');
   var sig0 = '', M = null;
   var cur = function(){ return S.orders[oid] || o; };
   var calc = function(){ var d = +P.dval > 0 ? { type:P.dtype, value:+P.dval } : null; return money(cur(), { discount:d, tip:Math.round(+P.tip || 0) }); };
-  var fieldVal = function(f){ return f === 'recv' ? P.recv : f === 'disc' ? P.dval : f === 'tip' ? P.tip : /^sp/.test(f) ? P.split[+f.slice(2)] : ''; };
-  var setField = function(f, v){ if(f === 'recv') P.recv = v; else if(f === 'disc'){ P.dval = v; if(P.dtype === 'pct' && +v > 100) P.dval = '100'; } else if(f === 'tip') P.tip = v; else if(/^sp/.test(f)) P.split[+f.slice(2)] = v; };
+  var fieldVal = function(f){ return f === 'amt' ? P.amt : f === 'recv' ? P.recv : f === 'disc' ? P.dval : f === 'tip' ? P.tip : /^sp/.test(f) ? P.split[+f.slice(2)] : ''; };
+  var setField = function(f, v){ if(f === 'amt') P.amt = v; else if(f === 'recv') P.recv = v; else if(f === 'disc'){ P.dval = v; if(P.dtype === 'pct' && +v > 100) P.dval = '100'; } else if(f === 'tip') P.tip = v; else if(/^sp/.test(f)) P.split[+f.slice(2)] = v; };
   var draw = function(){
-    o = cur(); var m = M = calc(), L = live(o), sp = P.split.map(function(x){ return Math.round(+x || 0); }), spSum = sp.reduce(function(a, b){ return a + b; }, 0), left = m.pay - spSum;
-    var sg = [P.mode, P.dval, P.dtype, P.tip, P.split.join(','), m.pay].join('|'); if(sg !== sig0){ if(sig0) P.confirm = false; sig0 = sg; }
-    var recv = Math.round(+P.recv || 0), upiAmt = P.mode === 'split' ? sp[1] : m.pay, link = (P.mode === 'upi' || (P.mode === 'split' && sp[1] > 0)) ? upiLink(upiAmt, o) : '';
+    o = cur(); if(o.paid){ paidSheet(oid); return; } var m = M = calc(), L = live(o), got = gotSoFar(o), bal = m.pay - got, sp = P.split.map(function(x){ return Math.round(+x || 0); }), spSum = sp.reduce(function(a, b){ return a + b; }, 0), left = bal - spSum;
+    var amtNow = P.mode === 'upi' || P.mode === 'card' ? Math.min(Math.max(0, bal), Math.round(+P.amt || 0) || Math.max(0, bal)) : bal, partNow = amtNow < bal;
+    var sg = [P.mode, P.dval, P.dtype, P.tip, P.split.join(','), m.pay, P.amt, got].join('|'); if(sg !== sig0){ if(sig0) P.confirm = false; sig0 = sg; }
+    var recv = Math.round(+P.recv || 0), upiAmt = P.mode === 'split' ? sp[1] : amtNow, link = (P.mode === 'upi' || (P.mode === 'split' && sp[1] > 0)) ? upiLink(upiAmt, o) : '';
     var where = o.mode === 'dinein' ? 'Table ' + esc(o.table) : esc(o.token ? 'Token ' + o.token : o.id);
     var pill = function(f, lab, val){ return '<button class="fpill' + (P.field === f ? ' on' : '') + '" data-pf="' + f + '"><small>' + lab + '</small><b>' + val + '</b></button>'; };
-    var h = '<div class="payhd"><div><h2>' + where + '</h2><p class="sub" style="margin:0">' + L.reduce(function(n, l){ return n + l.q; }, 0) + ' items · ' + (o.kotN || 1) + ' KOT' + ((o.kotN || 1) > 1 ? 's' : '') + (o.dueCount ? ' · bill printed' : '') + ' · <a href="#" id="pDet">' + (P.details ? 'hide items ▴' : 'items ▾') + '</a></p></div><div class="hero"><small>To pay</small><b>' + rs(m.pay) + '</b></div></div>' +
+    var h = '<div class="payhd"><div><h2>' + where + '</h2><p class="sub" style="margin:0">' + L.reduce(function(n, l){ return n + l.q; }, 0) + ' items · ' + (o.kotN || 1) + ' KOT' + ((o.kotN || 1) > 1 ? 's' : '') + (o.dueCount ? ' · bill printed' : '') + ' · <a href="#" id="pDet">' + (P.details ? 'hide items ▴' : 'items ▾') + '</a></p></div><div class="hero"><small>' + (got ? 'Left to pay' : 'To pay') + '</small><b>' + rs(Math.max(0, bal)) + '</b></div></div>' +
+      (got ? '<div class="plist so">' + (o.pays || []).map(function(x){ return '<div class="pl"><span class="pm-' + esc(x.mode) + '">' + esc(payWord(x.mode)) + '</span><span>paid ' + hm(x.at) + (x.by ? ' · ' + esc(shortName(x.by)) : '') + (x.ref ? ' · ref ' + esc(x.ref) : '') + '</span><b>' + rs(x.amt) + '</b></div>'; }).join('') + '</div>' : '') +
+      (bal < 0 ? '<div class="chg bad sm"><small>Paid more than the new total</small><b>' + rs(-bal) + '</b></div>' : '') +
       (P.details ? '<div class="rcpt">' + L.map(function(l){ return '<div class="rl"><span>' + l.q + '× ' + esc(l.name) + (l.label ? ' <small class="muted">' + esc(l.label) + '</small>' : '') + '</span><span>' + rs(l.q * l.price) + '</span></div>'; }).join('') + '<div class="rl muted"><span>Bill</span><span>' + rs(m.sub) + '</span></div></div>' : '') +
-      '<div class="maths">' + rs(m.sub) + (m.off ? ' <span class="good">− ' + rs(m.off) + (P.dtype === 'pct' ? ' (' + P.dval + '%)' : '') + '</span>' : '') + (m.tip ? ' + tip ' + rs(m.tip) : '') + ' = <b>' + rs(m.pay) + '</b></div>' +
+      '<div class="maths">' + rs(m.sub) + (m.off ? ' <span class="good">− ' + rs(m.off) + (P.dtype === 'pct' ? ' (' + P.dval + '%)' : '') + '</span>' : '') + (m.tip ? ' + tip ' + rs(m.tip) : '') + ' = <b>' + rs(m.pay) + '</b>' + (got ? ' <span class="muted">− paid ' + rs(got) + '</span>' : '') + '</div>' +
       '<div class="frow">' + pill('disc', 'Discount', m.off ? (P.dtype === 'pct' ? P.dval + '%' : rs(m.off)) : '—') + pill('tip', 'Tip', m.tip ? rs(m.tip) : '—') + '</div>' +
-      '<div class="seg pm">' + [['cash','💵','Cash'],['upi','📱','UPI'],['card','💳','Card'],['split','➗','Split']].map(function(x){ return '<button class="' + (P.mode === x[0] ? 'on' : '') + '" data-pm="' + x[0] + '"><span>' + x[1] + '</span>' + x[2] + '</button>'; }).join('') + '</div>';
+      '<div class="seg pm">' + [['cash','💵','Cash'],['upi','📱','UPI'],['card','💳','Card'],['credit','📒','Credit'],['split','➗','Split']].map(function(x){ return '<button class="' + (P.mode === x[0] ? 'on' : '') + '" data-pm="' + x[0] + '"><span>' + x[1] + '</span>' + x[2] + '</button>'; }).join('') + '</div>';
     if(P.mode === 'cash'){
       h += '<button class="recv' + (P.field === 'recv' ? ' on' : '') + '" data-pf="recv"><small>Cash received</small><b>' + (recv ? rs(recv) : '<span class="muted">tap a note or type</span>') + '</b></button>' +
-        (recv ? (recv >= m.pay ? '<div class="chg ok"><small>Give back</small><b>' + rs(recv - m.pay) + '</b></div>' : '<div class="chg bad"><small>Still short</small><b>' + rs(m.pay - recv) + '</b></div>') : '');
+        (recv ? (recv >= bal ? '<div class="chg ok"><small>Give back</small><b>' + rs(recv - bal) + '</b></div>' : '<div class="chg bad"><small>Still short</small><b>' + rs(bal - recv) + '</b></div><button class="btn part" id="pPart">Take ' + rs(recv) + ' now · ' + rs(bal - recv) + ' stays on the bill</button>') : '');
     }
-    if(P.mode === 'card') h += '<div class="cardmsg">Take <b>' + rs(m.pay) + '</b> on the card machine, then tap below.</div>';
+    if(P.mode === 'upi' || P.mode === 'card') h += '<div class="frow">' + pill('amt', partNow ? 'Paying now · part' : 'Amount', rs(amtNow) + (partNow ? ' <small class="muted">of ' + rs(bal) + '</small>' : '')) + '<label class="fpill ref"><small>Ref / UTR · optional</small><input id="pRef" value="' + esc(P.ref) + '" maxlength="24" autocomplete="off" placeholder="last digits"></label></div>';
+    if(P.mode === 'card') h += '<div class="cardmsg">Take <b>' + rs(amtNow) + '</b> on the card machine, then tap below.</div>';
+    if(P.mode === 'credit'){ var CP = creditParties().slice(0, 6);
+      h += '<div class="credbox"><label class="f">Who is taking credit<input id="pParty" value="' + esc(P.party) + '" maxlength="40" autocomplete="off" placeholder="name or company"></label>' + (CP.length ? '<div class="quick">' + CP.map(function(c){ return '<button data-cp="' + esc(c.party) + '" data-ph="' + esc(c.phone) + '">' + esc(c.party) + (c.out ? ' · owes ' + rs(c.out) : '') + '</button>'; }).join('') + '</div>' : '') +
+        '<label class="f">Phone · optional<input id="pPhone" value="' + esc(P.phone) + '" inputmode="tel" maxlength="18" autocomplete="off" placeholder="10 digits"></label><p class="muted" id="pPhErr" style="font-size:12.5px;margin:0 2px">' + rs(Math.max(0, bal)) + ' goes in the credit book · the table is freed · take the money later in Bills → Credit.</p></div>'; }
     if(P.mode === 'split') h += '<div class="splits">' + ['Cash', 'UPI', 'Card'].map(function(lab, i){ return '<button class="recv sm' + (P.field === 'sp' + i ? ' on' : '') + '" data-pf="sp' + i + '"><small>' + lab + '</small><b>' + (sp[i] ? rs(sp[i]) : '—') + '</b></button>'; }).join('') + '</div><div class="chg ' + (left === 0 ? 'ok' : 'bad') + ' sm"><small>' + (left === 0 ? 'Adds up' : left > 0 ? 'Still to split' : 'Too much') + '</small><b>' + (left === 0 ? '✓' : rs(Math.abs(left))) + '</b></div>';
     if(link && !P.field) h += '<div class="qrbox"><img alt="UPI QR" src="' + window.qrSvg(link, 340) + '"><div><div class="upi">SCAN · ANY UPI APP</div><b>' + rs(upiAmt) + '</b><small>' + esc(cfg('upi', '') || (C.upi || {}).id) + '</small><small>amount is filled in</small></div></div>';
     else if((P.mode === 'upi') && !link && !P.field) h += '<div class="card" style="background:var(--accwash);border-color:var(--acc);margin:10px 0">No UPI ID yet.' + ' Owner app → More → Setup → Settings.' + '</div>';
@@ -1166,24 +1380,26 @@ function paySheet(oid){
       var qk = P.field === 'recv' ? notes(m.pay).map(function(v){ return '<button data-qv="' + v + '">' + (v === m.pay ? 'Exact ' : '') + rs(v) + '</button>'; }).join('')
         : P.field === 'disc' ? '<span class="dt"><button class="' + (P.dtype === 'amt' ? 'on' : '') + '" data-dt="amt">₹</button><button class="' + (P.dtype === 'pct' ? 'on' : '') + '" data-dt="pct">%</button></span>' + [5, 10, 15, 20].map(function(v){ return '<button data-qd="' + v + '">' + v + '%</button>'; }).join('') + (m.sub % 10 ? '<button data-qro="1">Round off ' + rs(m.sub % 10) + '</button>' : '') + '<button data-qv="">None</button>'
         : P.field === 'tip' ? [10, 20, 50, 100].map(function(v){ return '<button data-qv="' + v + '">' + rs(v) + '</button>'; }).join('') + '<button data-qru="1">Round up</button><button data-qv="">None</button>'
-        : /^sp/.test(P.field) ? '<button data-qrest="1">Rest ' + rs(Math.max(0, left + (sp[+P.field.slice(2)] || 0))) + '</button><button data-qv="">0</button>' : '';
+        : P.field === 'amt' ? '<button data-qv="">Full ' + rs(Math.max(0, bal)) + '</button>' + (bal >= 200 ? '<button data-qv="' + Math.round(bal / 2) + '">Half ' + rs(Math.round(bal / 2)) + '</button>' : '') : /^sp/.test(P.field) ? '<button data-qrest="1">Rest ' + rs(Math.max(0, left + (sp[+P.field.slice(2)] || 0))) + '</button><button data-qv="">0</button>' : '';
       h += '<div class="quick">' + qk + '</div><div class="kpad">' + ['1','2','3','4','5','6','7','8','9','00','0','⌫'].map(function(k){ return '<button data-k="' + k + '">' + k + '</button>'; }).join('') + '</div>' +
         (P.field !== 'recv' ? '<button class="btn" data-kdone="1" style="width:100%;margin-top:8px;min-height:44px">Done</button>' : '');
     }
     if(o.mode === 'dinein') h += '<button class="opt cl' + (P.cleanAfter ? ' on' : '') + '" id="pCl"><span class="e">' + (P.cleanAfter ? '✅' : '⬜') + '</span>Call the cleaner after payment</button>';
-    var short_ = (P.mode === 'cash' && recv && recv < m.pay) || (P.mode === 'split' && left !== 0) || (m.total === 0 && m.sub > 0);
-    h += '<div class="payact">' + (o.paid ? '<button class="btn" id="pX" style="flex:1">Close · paid</button>' : '<button class="btn" id="pPrint" style="flex:none" aria-label="print bill">🖨</button><button class="btn ' + (P.confirm ? 'acc' : 'pri') + '" id="pGo" style="flex:1"' + (short_ ? ' disabled' : '') + '>' + (m.total === 0 && m.sub > 0 ? 'Total is ₹0 · check the discount' : P.confirm ? 'Yes, ' + rs(upiAmt) + ' arrived in UPI ✓' : '✓ Money received · ' + rs(m.pay)) + '</button>') + '</div>' +
-      (o.paid ? '' : '<p class="muted" style="font-size:12px;text-align:center;margin:6px 0 0">' + (P.confirm ? 'Check the UPI app shows success, then tap again.' : 'Tap only after the money is with you.') + '</p>');
-    var b = $('payBody'); if(!b) return; b.innerHTML = h; bind(m, left, sp);
-    if(!o.paid) lsSet('hayat-cap-pay', { oid:oid, at:Date.now(), P:{ mode:P.mode, field:P.field, recv:P.recv, dtype:P.dtype, dval:P.dval, tip:P.tip, split:P.split, cleanAfter:P.cleanAfter } });
+    var short_ = (P.mode === 'cash' && recv && recv < bal) || (P.mode === 'split' && left !== 0) || (m.total === 0 && m.sub > 0) || bal < 0 || (P.mode === 'credit' && !(P.party.trim().length >= 2 && phoneOk(P.phone)));
+    h += '<div class="payact">' + (o.paid ? '<button class="btn" id="pX" style="flex:1">Close · paid</button>' : '<button class="btn" id="pPrint" style="flex:none" aria-label="print bill">🖨</button><button class="btn ' + (P.confirm ? 'acc' : 'pri') + '" id="pGo" style="flex:1"' + (short_ ? ' disabled' : '') + '>' + (m.total === 0 && m.sub > 0 ? 'Total is ₹0 · check the discount' : P.confirm ? 'Yes, ' + rs(upiAmt) + ' arrived in UPI ✓' : P.mode === 'credit' ? '📒 Put ' + rs(Math.max(0, bal)) + ' on credit' : partNow ? '✓ Take ' + rs(amtNow) + ' now · ' + rs(bal - amtNow) + ' left' : '✓ Money received · ' + rs(Math.max(0, bal))) + '</button>') + '</div>' +
+      (o.paid ? '' : '<p class="muted" style="font-size:12px;text-align:center;margin:6px 0 0">' + (P.confirm ? 'Check the UPI app shows success, then tap again.' : P.mode === 'credit' ? 'Only for people the owner trusts · logged with your name.' : 'Tap only after the money is with you.') + '</p>');
+    var b = $('payBody'); if(!b) return; b.innerHTML = h; bind(m, left, sp, bal, amtNow);
+    if(!o.paid) lsSet('hayat-cap-pay', { oid:oid, at:Date.now(), P:{ mode:P.mode, field:P.field, recv:P.recv, amt:P.amt, ref:P.ref, party:P.party, phone:P.phone, dtype:P.dtype, dval:P.dval, tip:P.tip, split:P.split, cleanAfter:P.cleanAfter } });
+    wireInputs(bal);
   };
-  var bind = function(m, left, sp){
+  var bind = function(m, left, sp, bal, amtNow){
     var q = function(sel, fn){ document.querySelectorAll('#payBody ' + sel).forEach(function(e){ e.onclick = function(ev){ ev.preventDefault(); fn(e); draw(); }; }); };
     q('#pDet', function(){ P.details = !P.details; });
     q('[data-pf]', function(e){ P.field = P.field === e.dataset.pf && e.dataset.pf !== 'recv' ? '' : e.dataset.pf; });
-    q('[data-pm]', function(e){ P.mode = e.dataset.pm; P.field = P.mode === 'cash' ? 'recv' : P.mode === 'split' ? 'sp0' : ''; if(P.mode === 'split' && !P.split.some(Boolean)) P.split = ['', '', '']; });
+    q('[data-pm]', function(e){ P.mode = e.dataset.pm; P.amt = ''; P.field = P.mode === 'cash' ? 'recv' : P.mode === 'split' ? 'sp0' : ''; if(P.mode === 'split' && !P.split.some(Boolean)) P.split = ['', '', '']; });
     q('[data-k]', function(e){ var f = P.field, v = fieldVal(f), k = e.dataset.k; v = k === '⌫' ? v.slice(0, -1) : (v + k).replace(/^0+(?=\d)/, '').slice(0, 7); setField(f, v); vib(5); });
     q('[data-qv]', function(e){ setField(P.field, e.dataset.qv); if(P.field !== 'recv' && P.field.indexOf('sp') !== 0) P.field = ''; });
+    q('[data-cp]', function(e){ P.party = e.dataset.cp; P.phone = e.dataset.ph || P.phone; });
     q('[data-qd]', function(e){ P.dtype = 'pct'; P.dval = e.dataset.qd; P.field = ''; });
     q('[data-dt]', function(e){ P.dtype = e.dataset.dt; if(P.dtype === 'pct' && +P.dval > 100) P.dval = ''; });
     q('[data-qro]', function(){ P.dtype = 'amt'; P.dval = String(m.sub % 10); P.field = ''; });
@@ -1193,17 +1409,26 @@ function paySheet(oid){
     q('#pCl', function(){ P.cleanAfter = !P.cleanAfter; });
     var x = $('pX'); if(x) x.onclick = closeSheet;
     var pr = $('pPrint'); if(pr) pr.onclick = async function(){ var d = +P.dval > 0 ? { type:P.dtype, value:+P.dval } : null; try{ await txOrder(oid, function(){ return { discount:d, tip:Math.round(+P.tip || 0) }; }); }catch(e){} closeSheet(); dueBill(oid); };
+    var pp = $('pPart'); if(pp) pp.onclick = async function(){ pp.disabled = true; S.refresh = null; var d = +P.dval > 0 ? { type:P.dtype, value:+P.dval } : null, r0 = Math.round(+P.recv || 0);
+      var ok = await markPaid(oid, { mode:'cash', discount:d, tip:Math.round(+P.tip || 0), tendered:r0, amt:r0, cleanAfter:false }, M.pay - gotSoFar(cur())); ux('pay', { mode:'cash', part:true, ok:!!ok, amt:r0 });
+      if(ok){ P.recv = ''; lsSet('hayat-cap-pay', null); closeSheet(); render(); } else { pp.disabled = false; S.refresh = refresh; } };
     var go = $('pGo'); if(go) go.onclick = async function(){
       var needs = P.mode === 'upi' || (P.mode === 'split' && sp[1] > 0);
       if(needs && !P.confirm){ P.confirm = true; vib(15); draw(); return; }
       go.disabled = true; S.refresh = null;
       var d = +P.dval > 0 ? { type:P.dtype, value:+P.dval } : null;
-      var PP = { mode:P.mode, discount:d, tip:Math.round(+P.tip || 0), tendered:P.mode === 'cash' ? Math.round(+P.recv || 0) : 0, split:[{ mode:'cash', amt:sp[0] }, { mode:'upi', amt:sp[1] }, { mode:'card', amt:sp[2] }], cleanAfter:P.cleanAfter };
-      var ok = await markPaid(oid, PP, m.pay); ux('pay', { mode:P.mode, ok:!!ok, ms:Date.now() - payT0, amt:m.pay, tip:PP.tip || undefined, disc:PP.discount ? PP.discount.value + PP.discount.type : undefined }); if(ok){ lsSet('hayat-cap-pay', null); closeSheet(); if(S.view === 'order') S.view = 'floor'; render(); } else { go.disabled = false; S.refresh = refresh; }
+      var PP = { mode:P.mode, discount:d, tip:Math.round(+P.tip || 0), tendered:P.mode === 'cash' ? Math.round(+P.recv || 0) : 0, amt:P.mode === 'upi' || P.mode === 'card' ? amtNow : 0, ref:P.ref.trim(), party:P.party.trim().replace(/\s+/g, ' '), phone:normPhone(P.phone), split:[{ mode:'cash', amt:sp[0] }, { mode:'upi', amt:sp[1] }, { mode:'card', amt:sp[2] }], cleanAfter:P.cleanAfter };
+      var ok = await markPaid(oid, PP, bal); ux('pay', { mode:P.mode, ok:!!ok, ms:Date.now() - payT0, amt:m.pay, tip:PP.tip || undefined, disc:PP.discount ? PP.discount.value + PP.discount.type : undefined }); if(ok){ lsSet('hayat-cap-pay', null); closeSheet(); if(ok !== 'part' && S.view === 'order') S.view = 'floor'; render(); } else { go.disabled = false; S.refresh = refresh; }
     };
   };
+  var wireInputs = function(bal){
+    var rf = $('pRef'); if(rf) rf.oninput = function(){ P.ref = rf.value; keepP(); };
+    var pt = $('pParty'), ph = $('pPhone'), g = $('pGo'), err = $('pPhErr');
+    var chk = function(){ if(!g) return; var okN = P.party.trim().length >= 2, okP = phoneOk(P.phone); g.disabled = !(okN && okP) || bal < 0; if(err){ err.style.color = okP ? '' : 'var(--bad)'; err.textContent = okP ? rs(Math.max(0, bal)) + ' goes in the credit book · the table is freed · take the money later in Bills → Credit.' : 'Phone: 10 digits starting 6–9, or leave it empty.'; } };
+    if(pt) pt.oninput = function(){ P.party = pt.value; chk(); keepP(); }; if(ph) ph.oninput = function(){ P.phone = ph.value; chk(); keepP(); }; if(pt) chk(); };
+  var keepP = function(){ lsSet('hayat-cap-pay', { oid:oid, at:Date.now(), P:{ mode:P.mode, field:P.field, recv:P.recv, amt:P.amt, ref:P.ref, party:P.party, phone:P.phone, dtype:P.dtype, dval:P.dval, tip:P.tip, split:P.split, cleanAfter:P.cleanAfter } }); };
   var lastSig = '';
-  var refresh = function(){ var c = S.orders[oid]; if(!c) return; var sg = JSON.stringify([c.lines, c.paid, c.dueCount]); if(lastSig && sg !== lastSig) toast('This bill changed on another phone', '', 'the screen is updated'); if(sg !== lastSig){ var first = !lastSig; lastSig = sg; if(!first) draw(); } };
+  var refresh = function(){ var c = S.orders[oid]; if(!c) return; var sg = JSON.stringify([c.lines, c.paid, c.dueCount, c.pays, c.discount]); if(lastSig && sg !== lastSig) toast('This bill changed on another phone', '', 'the screen is updated'); if(sg !== lastSig){ var first = !lastSig; lastSig = sg; if(!first) draw(); } };
   draw(); refresh(); S.refresh = refresh;
 }
 
@@ -1450,7 +1675,8 @@ async function fireKot(oid, n){
   catch(e){ fail('Not fired', e); return; }
   S.orders[oid] = o; ux('fire', { n:n });
   var full = L.map(function(l){ var src = (o.lines || []).filter(function(z){ return z.k === l.k; })[0] || {}; return Object.assign({}, src, l); });
-  var p = await printKot(Object.assign({}, o, { note:'FIRE NOW' }), full, n, false);
+  var kk0 = (o.kots || []).filter(function(k){ return k.kind === 'kot' && String(k.n) === String(n); })[0] || {};
+  var p = await printKot(Object.assign({}, o, { note:'FIRE NOW' + (tkNote(o, kk0.note) ? ' · ' + tkNote(o, kk0.note) : '') }), full, n, false);
   toast('🔥 KOT ' + n + ' fired', 'good', p ? 'printing in the kitchen' : 'the kitchen screen shows it now'); render();
 }
 
@@ -1538,6 +1764,8 @@ document.addEventListener('click', function(e){
   if(a === 'dclear' && t){ delete S.draft[t.id]; saveDraft(); closeSheet(); render(); return; }
   if(a === 'note' && t){ noteSheet(el.dataset.k); return; }
   if(a === 'void' && t){ voidSheet(el.dataset.k); return; }
+  if(a === 'line' && t){ lineSheet(el.dataset.k); return; }
+  if(a === 'onote' && t){ onoteSheet(); return; }
   if(a === 'kot' && t){ closeSheet(); sendKot(t.id); return; }
   if(a === 'due' && t){ var o = openOrder(t); closeSheet(); if(o) dueBill(o.id); return; }
   if(a === 'pay' && t){ var o2 = openOrder(t); closeSheet(); if(o2) paySheet(o2.id); return; }
@@ -1545,6 +1773,7 @@ document.addEventListener('click', function(e){
   if(a === 'pax' && t){ var o3 = openOrder(t); var cur = (o3 && o3.pax) || (S.draft[t.id] && S.draft[t.id].pax) || 0; setPax(t.id, (cur || (+el.dataset.d > 0 ? 0 : 2)) + (+el.dataset.d)); return; }
   if(a === 'tmenu'){ tableMenu(); return; }
   if(a === 'btab'){ S.billsTab = el.dataset.t; render(); return; }
+  if(a === 'crin'){ creditInSheet(el.dataset.id); return; }
   if(a === 'openo'){ var oo = S.orders[el.dataset.id]; if(!oo) return; closeSheet(); if(oo.mode === 'dinein' && !closed(oo) && oo.tableId && tableById(oo.tableId)){ S.table = oo.tableId; S.view = 'order'; render(); } else paySheet(oo.id); return; }
   if(a === 'ctake'){ cleanStep(el.dataset.id, 'taken'); return; }
   if(a === 'cdone'){ cleanStep(el.dataset.id, 'done'); return; }
@@ -1665,6 +1894,7 @@ async function boot(){
     var o = {}; snap.forEach(function(d){ o[d.id] = Object.assign({ id:d.id }, d.data()); }); S.orders = o; softRender();
     if(!S.payBack){ S.payBack = true; var pk = lsGet('hayat-cap-pay', null); if(pk && S.me && Date.now() - pk.at < 10 * 60e3 && o[pk.oid] && !closed(o[pk.oid]) && !$('scrim')) paySheet(pk.oid); }   /* back where the waiter was */
   }, bad('orders')));
+  subs.push(F.onSnapshot(F.query(col(C_('orders')), F.where('creditOpen', '==', true)), function(snap){ var o = {}; snap.forEach(function(d){ o[d.id] = Object.assign({ id:d.id }, d.data()); }); S.credit = o; softRender(); }, function(){}));
   subs.push(F.onSnapshot(F.query(col(C_('cleanreq')), F.where('at', '>=', since)), function(snap){
     var c = {}; snap.forEach(function(d){ c[d.id] = Object.assign({ id:d.id }, d.data()); }); S.clean = c; onClean(); softRender(); }, bad('cleanreq'))); };
   S.relisten = listen; listen(); if(!SETUP) kdsWatch(); setInterval(listen, 6 * 3600e3);   /* the window moves on a tablet left running for days */

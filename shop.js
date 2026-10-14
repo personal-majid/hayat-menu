@@ -5291,6 +5291,7 @@ function officeDock(here){
     ["clean",  "clean.html",     "\uD83E\uDDF9", "Cleaning",    "Today's cleaning, overdue, staff codes"],
     ["setup",  "setup.html",     "\uD83D\uDC65", "Staff & tables", "Staff codes, halls, tables, captain menu, UPI, trial"],
     ["stock",  "stock.html",     "\uD83D\uDCE6", "Stock buys",  "Photo of a supplier bill \u2192 stock purchase (not VMENU)"],
+    ["planner","planner.html",   "\uD83D\uDCD0", "Space planner", "Rooms, restaurant, kitchen \u00b7 2D + 3D"],
     ["captain","captain.html",   "\uD83E\uDDD1\u200D\uD83C\uDF73", "Captain app",  "Waiters: tables, KOT, bills, UPI"]
   ];
   B = B.filter(function(b){ return dockAllows(b[0]); });

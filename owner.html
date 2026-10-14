@@ -440,6 +440,36 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
 .shrow b{text-align:right;font-size:17px} .shb{height:14px;background:var(--soft);border-radius:7px;position:relative;overflow:hidden;display:block} .shb i{position:absolute;top:0;bottom:0;left:0;border-radius:7px} .shb i.rg{background:rgba(192,136,44,.28);z-index:0} .shb i:not(.rg){z-index:1} .shb i.md{width:4px;background:#8A5E16;border-radius:2px}
 .shmore{margin-top:8px} .shmore summary{cursor:pointer;font-weight:700;color:var(--muted)}
 @media (max-width:640px){ .shrow{grid-template-columns:1fr auto} .shrow .shb{grid-column:1/-1;order:3} }
+/* v277: one clean first screen - the rest folds into More ▾ */
+details.moreg{grid-column:1/-1;margin:4px 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+details.moreg>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:14px}
+details.moreg>summary::-webkit-details-marker{display:none} details.moreg>summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:transform .2s}
+details.moreg[open]>summary::after{transform:rotate(180deg)} details.moreg>summary small{color:var(--muted);font-size:12.5px}
+details.moreg>summary:hover{background:var(--soft)} details.moreg>summary:focus-visible{outline:2px solid var(--line2)}
+details.moreg>.grid,details.moreg>.kpis{padding:0 10px 10px} details.moreg.kmore{margin:0 0 14px} details.moreg.kmore>.kpis{margin:0}
+.outseg{grid-column:1/-1;display:flex;gap:4px;background:var(--soft2);border-radius:12px;padding:4px;margin:0 0 -4px}
+.outseg button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;padding:9px 6px;border-radius:9px;cursor:pointer} .outseg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* v276: averages early + 🔍 find (from the menu) */
+.avstrip{margin:0 0 14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.avh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 8px;font-weight:600} .avh small{font-weight:400;color:var(--muted);font-size:12.5px}
+.avg4{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px}
+.avc{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:10px;background:var(--soft);min-width:0}
+.avc:hover,.avc:focus-visible{background:var(--soft2);outline:2px solid var(--line2)} .avc small{color:var(--muted);font-size:12px} .avc b{font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap} .avc em{font-style:normal;color:var(--muted);font-size:12px}
+.avc .up{color:var(--good)} .avc .dn{color:var(--bad)} .avc.big b{font-size:19px} .avc b span{font-size:12px;font-weight:600}
+#dock .dsh .dshr{display:flex;gap:6px;align-items:center} #findBtn{display:inline-flex;align-items:center;justify-content:center}
+#fbar{position:fixed;left:0;right:0;top:var(--toph,52px);z-index:60;padding:8px 10px;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+#fbar[hidden]{display:none}
+#fbar .fin,#fbar #fother{pointer-events:auto;width:100%;max-width:640px}
+#fbar .fin{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:4px 4px 4px 10px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+#fbar .fic{color:var(--muted);display:inline-flex} #fq{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:16px;padding:8px 4px;outline:none} #fq::-webkit-search-cancel-button{display:none}
+#fct{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;padding:0 4px} #fct.no{color:var(--bad)}
+#fbar .fb{border:0;background:transparent;color:var(--ink);width:38px;height:38px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer} #fbar .fb:hover{background:var(--soft2)} #fbar .fb:disabled{opacity:.3;cursor:default}
+#fother{margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.12)} #fother:empty{display:none}
+#fother small{width:100%;color:var(--muted);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 4px}
+#fother button{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:6px 11px;font:inherit;font-size:13.5px;cursor:pointer} #fother button b{font-weight:600}
+body.finding #main{padding-top:calc(var(--fbh,60px) + 4px)} mark.fhl{scroll-margin:calc(var(--toph,52px) + var(--fbh,60px) + 12px) 0 calc(var(--dockh,80px) + 12px);background:#ffe27a;color:#1B1A17;border-radius:3px;padding:0 1px} mark.fhl.fcur{background:#ff9a3d;outline:2px solid #c45a00;box-shadow:0 0 0 4px rgba(255,154,61,.35)}
+.fpulse{animation:fpulse 1.3s ease-out} @keyframes fpulse{0%{box-shadow:0 0 0 0 rgba(255,154,61,.75)}100%{box-shadow:0 0 0 14px rgba(255,154,61,0)}}
+@media (prefers-reduced-motion:reduce){ .fpulse{animation:none} }
 </style>
 </head>
 <body>
@@ -461,7 +491,7 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
 <div class="wrap" id="main"><div class="note">Loading…</div></div>
 <div id="dock">
   <div id="dockSheet" hidden>
-    <div class="dsh"><b>Go to</b><button class="dn sm" id="dockSheetX" aria-label="close">✕</button></div>
+    <div class="dsh"><b>Go to</b><span class="dshr"><button class="dn sm" id="findBtn" type="button" aria-label="find on this page" title="find on this page"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button><button class="dn sm" id="dockSheetX" aria-label="close">✕</button></span></div>
     <div class="drow" id="dockMore"></div>
     <div class="dsh"><b>Period</b></div>
     <div class="drow range" id="dockRange">
@@ -470,6 +500,8 @@ td.cg{color:#2E7D4F;font-weight:700} td.ca{color:#A8701A;font-weight:700} td.cr{
   </div>
   <nav class="drow" id="dockTabs"></nav>
 </div>
+
+<div id="fbar" hidden role="search"><div class="fin"><span class="fic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></span><input id="fq" type="search" placeholder="Find on this page…" autocomplete="off" enterkeyhint="search" aria-label="find"><span id="fct" aria-live="polite"></span><button class="fb" id="fup" type="button" aria-label="previous match"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button><button class="fb" id="fdn" type="button" aria-label="next match"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><button class="fb" id="fx" type="button" aria-label="close find"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="fother"></div></div>
 
 <script>
 (function(){
@@ -486,7 +518,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v275';
+const BOARD='v278';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -558,19 +590,19 @@ function kpis(){
   const box1b=live?`<div class="kpi tb tbU click" data-tab="bills"><small>Unpaid now · ${open.filter(r=>r.kind!=='staff').length} open</small><b class="ua">${rs(unreal)}</b>${yUn!=null?`<div class="tbr"><span class="${unreal>=yUn?'up':'dn'}">${unreal>=yUn?'▲':'▼'} ${rs(Math.abs(unreal-yUn))} <small>vs yesterday this time (${rs(yUn)})</small></span></div>`:''}
     <div class="ugrid">${ukind.map(x=>`<span class="${x.k}${x.v?'':' z'}"><i></i>${x.l}<b>${x.v?kfmt(x.v):'—'}</b><small>${x.n||''}</small></span>`).join('')}</div></div>`:'';
   const box2=!live?'':F?`<div class="kpi tb tb2 click" id="fcTile" title="tap for how it is worked out"><small>Forecast today${F.scn?' · '+FC_SCN_N[F.scn].toLowerCase():''}${F.why?' · '+esc(F.why):''} <button type="button" class="fcgear" id="fcGear" title="outlook, closing time, pre-booking, hide">⚙</button></small><b>${rs(fT)}</b>
-    <div class="tbr"><span>+${rs(restV)} <small>still to come</small></span><span class="mut">next hour ${rs(F.next)}${PB.add?' · pre-booked '+rs(PB.add):''}</span></div></div>`
+    <div class="tbr"><span>+${rs(restV)} <small>still to come</small></span><span class="mut">next 10 min ${rs(n10)} · next hour ${rs(F.next)}${PB.add?' · pre-booked '+rs(PB.add):''}</span></div></div>`
     :`<div class="kpi click fcoff" id="fcOnTile" title="show the forecast"><small>Forecast</small><b>◔ Show</b><em>today, tomorrow · bills · next 10 min</em></div>`;
   const box3=`<div class="kpi tb tb3"><small>Bills${live?' · paid + unpaid':''}</small><b>${nb}${fBills!=null?`<span class="of"> → ~${fBills}</span>`:''}</b>
     <div class="tbr"><span>avg ${rs(abNow)}${fAb?` <small>→ ~${rs(fAb)}</small>`:''}</span><span class="mut">${open.filter(r=>r.status==='due').length} bill printed, unpaid</span></div></div>`;
   const box4=F?`<div class="kpi tb tb4"><small>Next 10 minutes</small><b>${rs(n10)}</b><div class="tbr"><span>about ${b10<0.5?'0–1 bill':Math.max(1,Math.round(b10))+(b10>=1.5?' bills':' bill')}</span><span class="mut">${restV>0?'then '+rs(Math.max(0,F.next))+' next hour':'closing soon'}</span></div></div>`:'';
-  return `<div class="kpis top4">${box1}${box1b}${box2}${box3}${box4}${live?tmCard():''}</div>
+  void box4; return `<div class="kpis top4">${box1}${box1b}${box2}${box3}</div>
   ${live&&FC&&FCSET.open?`<div class="fcset">${scnBar()}</div>`:''}${live&&FC?`<div class="fcline">${trfHint()}</div>`:''}
-  <div class="kpis">
+  ${avgStrip()}<details class="moreg kmore" data-mg="kpi2"${MOREG.kpi2?' open':''}><summary><b>More numbers</b><small>seats · table time · cash / card · paid out</small></summary><div class="kpis">
     <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
     <div class="kpi click" data-tab="buy" title="open purchases & payments"><small>Paid out</small><b>${rs(DOC.paidOut||0)}</b><em>${DOC.paymentCount||0} entries${DOC.draftTotal?' · <b>'+rs(DOC.draftTotal)+' being entered</b>':''}${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
-  </div>`;
+  </div></details>`;
 }
 let FCSET={open:false};
 function avg(xs){ return xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null; }
@@ -697,7 +729,7 @@ function unrealized(){
   const tot=O.reduce((n,r)=>n+sum(r),0), max=Math.max(1,...Object.values(g).map(x=>x.v));
   if(!tot) return '';
   const state=r=>r.kind==='delivery'?(r.dispatchAt?'out · left '+hm(r.dispatchAt)+(r.rider?' · '+r.rider:''):r.status==='due'?'billed · with rider':'cooking'):r.status==='due'?'bill printed, unpaid':(r.foodReady||0)+'/'+(r.items||[]).length+' ready';
-  return `<div class="card"><h2>Unrealized sales <span class="n">${rs(tot)} · ${O.length} open</span></h2><div class="mini">${[['dine','On tables'],['counter','At the counter'],['delivery','Out for delivery'],['staff','Staff (by remark)']].filter(([k])=>k!=='staff'||g.staff.n).map(([k,l])=>`<div class="mrow"><span>${l} <small style="color:var(--muted)">${g[k].n}</small></span><div class="b" style="width:${100*g[k].v/max}%"></div><span class="v">${rs(g[k].v)}</span></div>`).join('')}</div>${O.length?`<div class="olist">${O.map(r=>{ const age=mins(r.createdAt,tsNow())||0, h=Math.round(120*Math.max(0,1-age/40)); return `<div class="oo${age<10?' new':''}" style="--h:${h}" data-drill="${esc(r.key)}"><div class="ag">${age}<small>min</small></div><div class="w"><b><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span> ${esc(r.table||(r.token?'T'+r.token:'KOT '+r.kot))}${r.waiter?' · '+esc(r.waiter):''}</b><small>${hm(r.createdAt)} · ${state(r)}${r.remarks?' · “'+esc(r.remarks)+'”':''}</small></div><div class="v">${rs(sum(r))}</div></div>`; }).join('')}</div>`:'<div class="note">Everything is paid.</div>'}</div>`;
+  return `<div class="card"><h2>Ordered · not paid yet <span class="n">${rs(tot)} · ${O.length} open</span></h2><div class="mini">${[['dine','On tables'],['counter','At the counter'],['delivery','Out for delivery'],['staff','Staff (by remark)']].filter(([k])=>k!=='staff'||g.staff.n).map(([k,l])=>`<div class="mrow"><span>${l} <small style="color:var(--muted)">${g[k].n}</small></span><div class="b" style="width:${100*g[k].v/max}%"></div><span class="v">${rs(g[k].v)}</span></div>`).join('')}</div>${O.length?`<div class="olist">${O.map(r=>{ const age=mins(r.createdAt,tsNow())||0, h=Math.round(120*Math.max(0,1-age/40)); return `<div class="oo${age<10?' new':''}" style="--h:${h}" data-drill="${esc(r.key)}"><div class="ag">${age}<small>min</small></div><div class="w"><b><span class="pill ${esc(r.kind)}">${esc(r.kind)}</span> ${esc(r.table||(r.token?'T'+r.token:'KOT '+r.kot))}${r.waiter?' · '+esc(r.waiter):''}</b><small>${hm(r.createdAt)} · ${state(r)}${r.remarks?' · “'+esc(r.remarks)+'”':''}</small></div><div class="v">${rs(sum(r))}</div></div>`; }).join('')}</div>`:'<div class="note">Everything is paid.</div>'}</div>`;
 }
 /* every rupee knocked off a bill, and who did it */
 function discounts(){
@@ -1138,9 +1170,9 @@ const LAB_M={
   wd4:{name:'Same weekday · average of last 4',f:(d,h)=>mean(sameWd(h,d,4).map(nrev))},
   wom:{name:'Weekday × week of month',f:(d,h)=>{ const F=ptForecast(d,true); return F?F.total:null; }},
   app:{name:'Current app forecast',f:(d)=>{ try{ const M=fcModel(d,FC_BEST||'trim'); return M?M.plan:null; }catch(e){ return null; } }},
-  hw:{name:'Holt-Winters (weekly)',f:(d)=>LAB.hw?LAB.hw[d]:null},
+  hw:{name:'Weekly rhythm',f:(d)=>LAB.hw?LAB.hw[d]:null},
   knn:{name:'Similar situation days',f:(d,h)=>{ const t=dayTags(d); const c=sameWd(h,d,26).map(x=>{ const u=dayTags(x); let s=0; ['pay','monthend','hol','eve','after','longwk','ramadan','school','exams','gulf','match'].forEach(k=>{ if(u.F[k]!==t.F[k]) s+=k==='hol'||k==='ramadan'?3:1; }); if(u.wk!==t.wk) s+=0.5; return {x,s}; }).sort((a,b)=>a.s-b.s||(b.x>a.x?1:-1)).slice(0,5); if(c.length<3) return null; return med(c.map(o=>nrev(o.x))); }},
-  ridge:{name:'Signals model (regression)',f:(d,h)=>{ const base=mean(sameWd(h,d,4).map(nrev)); if(!base) return null; const B=LAB.coef(h); if(!B) return null; const x=[1].concat(labX(d)); return base*Math.exp(x.reduce((s,v,i)=>s+v*B[i],0)); }},
+  ridge:{name:'Signals (weather, salary days…)',f:(d,h)=>{ const base=mean(sameWd(h,d,4).map(nrev)); if(!base) return null; const B=LAB.coef(h); if(!B) return null; const x=[1].concat(labX(d)); return base*Math.exp(x.reduce((s,v,i)=>s+v*B[i],0)); }},
 };
 let LAB={res:null,key:'',hw:null,coefCache:{},busy:false,view:'day',sel:null};
 LAB.coef=function(h,drop){ const k=h.length+'|'+(h[h.length-1]||'')+'|'+(drop||[]).join(','); if(LAB.coefCache[k]!==undefined) return LAB.coefCache[k]; const rows=ridgeRows(h,drop); const B=rows.length>=28?ridgeFit(rows,3):null; LAB.coefCache[k]=B; return B; };
@@ -1602,7 +1634,10 @@ function rpCurve(d){ const doc=rpDoc(d); if(!doc) return null; const n=Object.ke
   if(RP.cur[d]&&RP.cur[d].n===n&&(d!==bizToday()||Date.now()-RP.cur[d].at<5000)) return RP.cur[d];
   const st=dayStartMs(d), pts=Object.values(doc.records||{}).filter(r=>(r.status==='settled'||((r.status==='open'||r.status==='due')&&r.kind!=='staff'))&&(r.createdAt||r.settledAt)).flatMap(r=>rparts(r).map(([t,a])=>[(T(t).getTime()-st)/60000,a])).filter(p=>p[0]>=0&&p[0]<=1440).sort((a,b)=>a[0]-b[0]);   /* order time (add-ons at their KOT), unpaid too */
   /* today: after "now" the forecast takes over (quarter-hour steps), so the race can run to closing */
-  let fcFrom=null; if(d===bizToday()&&FC){ const F=fcToday(); if(F){ fcFrom=rpNowMin(); const day=bizToday(); for(let h=F.nowH;h<24;h++){ const v=F.rest[h]||0; if(!(v>0)) continue; const op=openPart(day,h); const a0=h===F.nowH?Math.max(fcFrom,h*60):h*60, a1=h*60+op; if(a1<=a0) continue; const k=Math.max(1,Math.round((a1-a0)/15)); for(let q=0;q<k;q++) pts.push([a0+(a1-a0)*(q+0.5)/k,v/k,1]); } } }
+  /* the forecast is ALWAYS the one made right now (not at the replay clock, which may be hours back), and starts after the last real bill */
+  let fcFrom=null; if(d===bizToday()&&FC){ const n0=NOW, t0=TCUT; let F=null; try{ TCUT=null; NOW=Date.now(); F=fcToday(); }catch(e){ F=null; } finally{ NOW=n0; TCUT=t0; }
+    if(F){ fcFrom=Math.max(rpNowMin(),pts.length?Math.ceil(pts[pts.length-1][0]):0); const day=bizToday(); for(let h=F.nowH;h<24;h++){ const v=F.rest[h]||0; if(!(v>0)) continue; const op=openPart(day,h); const a0=Math.max(fcFrom,h*60), a1=h*60+op; if(a1<=a0) continue; const k=Math.max(1,Math.round((a1-a0)/15)); for(let q=0;q<k;q++) pts.push([a0+(a1-a0)*(q+0.5)/k,v/k,1]); } } }
+  pts.sort((a,b)=>a[0]-b[0]);   /* one time order for everything: the lines and the minute look-ups depend on it */
   /* a day whose bills are not on this device yet: spread its hourly totals (from the index) across each hour */
   let approx=false; if(!pts.length&&INDEX[d]&&INDEX[d].hours){ approx=true; INDEX[d].hours.forEach((v,h)=>{ if(v>0) for(let q=0;q<4;q++) pts.push([h*60+7.5+15*q,v/4]); }); }
   const M=pts.map(p=>p[0]), S=[]; let s=0; pts.forEach(p=>{ s+=p[1]; S.push(s); });
@@ -1611,7 +1646,7 @@ function rpAt(c,v){ if(!c||!c.M.length) return 0; let lo=0,hi=c.M.length; while(
 function rpBillsAt(c,v){ if(!c) return 0; let n=0; for(let i=0;i<c.M.length;i++){ if(c.M[i]>v) break; if(!(c.pts[i]&&c.pts[i][2])) n++; } return n; }   /* forecast steps are not bills */
 function rpHours(c,v,fo){ const H=Array(24).fill(0); if(c) c.pts.forEach(p=>{ if(p[0]<=v&&(!fo||p[2])){ const i=Math.min(23,Math.floor(p[0]/60)); H[i]+=p[1]; } }); return H; }
 function asOf(doc,v,fn){ const n=NOW, t=TCUT; TCUT=v; NOW=Math.min(Date.now(),dayStartMs(doc.day)+v*60000); try{ return withDoc(doc,fn); } finally{ NOW=n; TCUT=t; } }
-function rpOpenAt(doc,v){ if(!doc) return {n:0,v:0}; return asOf(doc,v,()=>{ const o=recs().filter(r=>r.status!=='settled'&&r.status!=='void'&&r.status!=='cancelled'); return {n:o.length,v:o.reduce((a,r)=>a+(r.total||0),0)}; }); }
+function rpOpenAt(doc,v){ if(!doc) return {n:0,v:0}; return asOf(doc,v,()=>{ const o=recs().filter(r=>r.status!=='settled'&&r.status!=='void'&&r.status!=='cancelled'); return {n:o.length,v:o.reduce((a,r)=>a+(r.total||sum(r)||0),0)}; }); }   /* open bills have no total yet: count what is on them */
 /* the activity window: first to last bill of any running day, whole hours */
 function rpSpan(){ let lo=1440,hi=0; rpList().forEach(d=>{ const c=rpCurve(d); if(c&&c.M.length){ lo=Math.min(lo,c.M[0]); hi=Math.max(hi,c.M[c.M.length-1]); } }); if(hi<=lo) return [300,1080]; return [Math.max(0,Math.floor(lo/60)*60),Math.min(1440,Math.ceil(hi/60+0.01)*60)]; }
 
@@ -1659,8 +1694,10 @@ function rpTick(){
       return `<div class="rpcard" style="--c:${RP_COLS[k]}"><small><i></i>${esc(rpName(d))}</small><b>${c.fcFrom!=null&&v>c.fcFrom?'~':''}${rs(m)}</b>
         <em>${k?(dlt==null?'':`<span class="d ${dlt>=0?'up':'dn'}">${L[0]===bizToday()?'today':'1st'} ${dlt>=0?'+':''}${dlt}%</span>`):(c.fcFrom!=null&&v>c.fcFrom?`<span class="d fc">forecast after ${rpClock(c.fcFrom)}</span>`:'by '+rpClock(v))}</em>
         <div class="rpm">${c.approx?'<span>from hourly totals</span>':`<span>${n} bills</span><span>avg ${rs(n?rpAt(c,c.fcFrom!=null?Math.min(v,c.fcFrom):v)/n:0)}</span>`}<span>last 30 min ${rs(last30)}</span>${o.n?`<span>open ${o.n} · ${rs(o.v)}</span>`:''}${d!==bizToday()?`<span>ended ${rs(c.total)}</span>`:''}</div></div>`; }).join('')}</div>`;
-  const fa=fcAt(L[0],v), pc=(f,a)=>a?`<span class="d ${Math.abs(f/a-1)<=0.1?'up':'dn'}">${f>=a?'+':''}${Math.round(100*(f/a-1))}%</span>`:'';
-  const fstrip=fa?`<div class="rpfc"><span class="rpfch">Forecast made at ${rpClock(v)}</span>
+  /* after "now" on today the clock is in the future: show the live forecast (made now), read from the clock onward - not a forecast "made" at a time that has not come */
+  const c0=C[0], fut=L[0]===bizToday()&&c0&&c0.fcFrom!=null&&v>c0.fcFrom;
+  const fa=fut?{n1:Math.round(rpAt(c0,v+60)-rpAt(c0,v)),n2:Math.round(rpAt(c0,v+120)-rpAt(c0,v)),total:Math.round(c0.total),r1:null,r2:null,real:null,live:true}:fcAt(L[0],v), pc=(f,a)=>a?`<span class="d ${Math.abs(f/a-1)<=0.1?'up':'dn'}">${f>=a?'+':''}${Math.round(100*(f/a-1))}%</span>`:'';
+  const fstrip=fa?`<div class="rpfc"><span class="rpfch">${fa.live?`Forecast made now (${rpClock(c0.fcFrom)}) · from ${rpClock(v)}`:`Forecast made at ${rpClock(v)}`}</span>
     <span><small>Next hour</small><b>${rs(fa.n1)}</b>${fa.r1!=null?`<em>real ${rs(fa.r1)} ${pc(fa.n1,fa.r1)}</em>`:''}</span>
     <span><small>Next 2 hours</small><b>${rs(fa.n2)}</b>${fa.r2!=null?`<em>real ${rs(fa.r2)} ${pc(fa.n2,fa.r2)}</em>`:''}</span>
     <span><small>Day close</small><b>${rs(fa.total)}</b>${fa.real!=null?`<em>real ${rs(fa.real)} ${pc(fa.total,fa.real)}</em>`:''}</span>
@@ -2798,7 +2835,7 @@ function tmCardBig(){ if(!INDEX||!Object.keys(INDEX).length) return '';
   const fC=[['dow','Same weekday'],['all','Any day'],['same','Same situation']].map(f=>`<button class="chip${TMR.f===f[0]?' on':''}" data-tmf="${f[0]}">${f[1]}</button>`).join('')+`<span style="width:8px"></span>`+[5,10,15].map(n=>`<button class="chip${TMR.n===n?' on':''}" data-tmn="${n}">top ${n}</button>`).join('');
   const head=best?`<div class="tmbest"><small>Best way · ${esc(best[1])}</small><b>${rs(best[2].med)}</b><em>likely ${rs(best[2].p25)} – ${rs(best[2].p75)}${act!=null?` · <b>actual ${rs(act)}</b>`:''}</em>
     <div class="tmproof${best[3].mape>.15?' rough':''}">${best[3].mape>.15?'⚠ Rough — use as a guide. ':'✓ '}Proof: replayed on each of the last <b>${best[3].n} days</b> (using only what was known the evening before), it missed by <b>${pc(best[3].mape)}</b> on average${Math.abs(best[3].bias)>=.03?` and guessed ${best[3].bias>0?'high':'low'} by ${pc(Math.abs(best[3].bias))}`:''}; the real day fell inside its range <b>${pc(best[3].hit)}</b> of the time.</div></div>`:'';
-  const tbl=`<div class="scroll"><table class="tmt"><tr><th>Method</th><th class="r">Median</th><th class="r">Average</th><th class="r">Spread (SD)</th><th class="r">Middle 50%</th><th class="r">Low – high</th><th class="r">Days</th><th class="r">Off by · last 30</th><th class="r">Inside range</th></tr>
+  const tbl=`<div class="scroll"><table class="tmt"><tr><th>Method</th><th class="r">Middle day</th><th class="r">Average</th><th class="r">Swing</th><th class="r">Usual range</th><th class="r">Low – high</th><th class="r">Days</th><th class="r">Off by · last 30</th><th class="r">Inside range</th></tr>
     ${meth.map(([k,n,st,bt])=>`<tr${best&&best[0]===k?' class="on"':''}><td>${best&&best[0]===k?'★ ':''}${esc(n)}</td><td class="r"><b>${rs(st.med)}</b></td><td class="r">${st.mean!=null?rs(st.mean):'—'}</td><td class="r">${st.sd!=null?'±'+rs(st.sd)+' <span class="n">('+pc(st.cv)+')</span>':'—'}</td><td class="r">${rs(st.p25)} – ${rs(st.p75)}</td><td class="r">${st.min!=null?rs(st.min)+' – '+rs(st.max):'—'}</td><td class="r">${st.n}</td><td class="r">${bt?pc(bt.mape)+' <span class="n">'+(bt.bias>=0?'+':'')+pc(bt.bias)+'</span>':'—'}</td><td class="r">${bt?pc(bt.hit):'—'}</td></tr>`).join('')}</table></div>`;
   const lst=`<h3 class="ssh">Days like ${live?'today so far':esc(rpName(DAY))} · and the day after</h3><div class="scroll"><table class="tmt"><tr><th>Day</th><th class="r">Match</th><th class="r">That day</th><th>Next day</th><th class="r">Next day sold</th><th class="r">Change</th></tr>
     ${L.map(x=>{ const same=rpWd(x.nd)===tw, ch=(x.nv-x.v)/x.v; return `<tr><td><a href="#" data-day="${x.d}">${esc(rpName(x.d))}</a>${dayTags(x.d).L.length?' <span class="n">'+esc(dayTags(x.d).L.join(', '))+'</span>':''}</td><td class="r">${Math.round(100*x.m)}%</td><td class="r">${rs(x.v)}</td><td>${esc(rpName(x.nd))} ${same?'<span class="pill counter">✓ '+tw+'</span>':''}</td><td class="r"><b>${rs(x.nv)}</b></td><td class="r ${ch<0?'dn':'up'}">${ch>=0?'+':''}${pc(ch)}</td></tr>`; }).join('')||'<tr><td colspan="6" class="n">No days found - try Any day.</td></tr>'}</table></div>`;
@@ -2809,7 +2846,7 @@ function tmCardBig(){ if(!INDEX||!Object.keys(INDEX).length) return '';
     const up=[], dn=[]; for(let i=h0;i<=h1;i++){ up.push(x(i)+','+y(hi[i])); dn.unshift(x(i)+','+y(lo[i])); }
     band=`<h3 class="ssh">Tomorrow hour by hour · last ${HH.length} ${tw}s</h3><svg viewBox="0 0 ${W} ${Hh}" class="tmsvg" role="img" aria-label="hourly sales band"><polygon points="${up.concat(dn).join(' ')}" class="tmb"/><polyline points="${Array.from({length:n},(_,k)=>x(h0+k)+','+y(md[h0+k])).join(' ')}" class="tml"/>${Array.from({length:n},(_,k)=>h0+k).filter(i=>(i-h0)%2===0).map(i=>`<text x="${x(i)}" y="${Hh-2}" text-anchor="middle">${hlabel(i)}</text>`).join('')}</svg>
       <p class="note">Line = median hour · shaded = middle 50% of ${tw}s. Busiest: ${(()=>{ let m=h0; for(let i=h0;i<=h1;i++) if(md[i]>md[m]) m=i; return hlabel(m)+':00 · about '+rs(md[m]); })()}.</p>`; }
-  const key=`<p class="note"><b>Median</b> = the middle day (half sold more, half less) · <b>SD</b> = how much days swing (small % = steady) · <b>Middle 50%</b> = the usual range · <b>Off by</b> = average miss when this method was replayed on each of the last 30 days, using only what it knew the evening before (the small ± shows if it guesses high or low) · <b>Inside range</b> = how often the real day fell inside its middle 50%.</p>`;
+  const key=`<p class="note"><b>Middle day</b> = half the days sold more, half less · <b>Swing</b> = how much days differ (small % = steady) · <b>Usual range</b> = where the middle half of days fall · <b>Off by</b> = average miss when this method was replayed on each of the last 30 days, using only what it knew the evening before (the small ± shows if it guesses high or low) · <b>Inside range</b> = how often the real day fell inside its middle 50%.</p>`;
   return `<div class="card wide tmr"><h2>Tomorrow · ${esc(rpName(t))} <span class="n"><a href="#" id="tmOpen">${TMR.open?'▴ less':'▾ full analysis'}</a></span></h2>${head}
     ${TMR.open?`${tmFilt()}${tbl}${key}${lst}${band}`:`${!best&&sA?`<div class="tmbest"><small>Days like today → next day</small><b>${rs(sA.med)}</b><em>usually ${rs(sA.p25)} – ${rs(sA.p75)}</em></div>`:''}${band}`}</div>`; }
 /* ===== TODAY LAB: how today will end, five ways, each REPLAYED at this same clock time on the last 30 days ===== */
@@ -3144,13 +3181,12 @@ function period(){
   const pay=S.pay||{purchase:0,salary:0,expense:0,receipt:0,byParty:{},list:[]}, exp=S.expenses??S.paidOut, net=S.net??(S.sales-exp);
   const k=`<div class="kpis">
     <div class="kpi"><small>Sales</small><b>${rs(S.sales)}</b><em>${S.days} days · ${S.bills} bills${dd(S.sales,prev.rev)} vs previous ${prev.n} days</em></div>${(()=>{ if(!FC||!S.partial) return ''; const F=fcToday(); const today=F?F.total:(INDEX[bizToday()]||{}).rev||0; let rest=0,n=0; const end=PER.to>=bizToday()?ymd(new Date(+PER.from.slice(0,4),+PER.from.slice(5,7),0,12)):PER.to; for(let d=ymd(new Date(new Date(bizToday()+'T12:00:00').getTime()+864e5)); d<=end; d=ymd(new Date(new Date(d+'T12:00:00').getTime()+864e5))){ const pl=fcDay(d); if(pl){ rest+=pl; n++; } } const soFar=S.sales-((S.byDay[bizToday()]||{}).rev||0); return `<div class="kpi"><small>Forecast · ${esc(PER.label)} end</small><b>${rs(soFar+today+rest)}</b><em>so far ${rs(soFar)} + today ${rs(today)} + ${n} days ${rs(rest)}</em></div>`; })()}
-    <div class="kpi"><small>Avg / day</small><b>${rs(S.avgDay)}</b><em>prev ${rs(prev.n?prev.rev/prev.n:0)}${dd(S.avgDay,prev.n?prev.rev/prev.n:0)}</em></div>
-    <div class="kpi"><small>Avg bill</small><b>${rs(S.bills?S.sales/S.bills:0)}</b><em>${Math.round(S.bills/Math.max(1,S.days))} bills/day${dd(S.bills,prev.bills)}</em></div>
     <div class="kpi click" data-ptab="money"><small>Expenses</small><b>${rs(exp)}</b><em class="rows"><span>Goods <b>${rs(pay.purchase)}</b></span><span>Salary <b>${rs(pay.salary)}</b></span><span>Other <b>${rs(pay.expense)}</b></span></em></div>
     <div class="kpi"><small>Net</small><b class="${net>=0?'up':'dn'}">${rs(net)}</b><em>${S.sales?Math.round(100*net/S.sales)+'% margin':''} · prev ${rs(prev.rev-prev.out)}</em></div>
+    </div><details class="moreg kmore" data-mg="pkpi2"${MOREG.pkpi2?' open':''}><summary><b>More numbers</b><small>discounts · staff food · voids</small></summary><div class="kpis">
     <div class="kpi click" data-ptab="money"><small>Discounts</small><b>${rs(S.disc.total)}</b><em>${S.disc.list.length} bills · ${S.sales?(100*S.disc.total/(S.sales+S.disc.total)).toFixed(1):0}% of gross</em></div>
     <div class="kpi click" data-ptab="people"><small>Staff food</small><b>${rs(S.staff.menu)}</b><em>${S.staff.list.length} bills · paid ${rs(S.staff.total)}</em></div>
-    <div class="kpi click" data-ptab="voids"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill ${rs(S.voids.afterBill.v)}</em></div></div>`;
+    <div class="kpi click" data-ptab="voids"><small>Voids</small><b>${rs(S.voids.total)}</b><em>${S.voids.list.length} · after bill ${rs(S.voids.afterBill.v)}</em></div></div></details>`;
   const tabs='';
   const days=Object.keys(S.byDay).sort(), maxD=yscale(Math.max(1,...days.map(x=>S.byDay[x].rev))).top;
   const byDay=`<div class="card wide"><h2>Sales by day <span class="n">click a day to open it</span></h2><div class="bars axed" style="grid-template-columns:repeat(${days.length},1fr)">${ygrid(maxD)}${days.map(x=>`<div class="bar click" data-day="${x}" style="height:${Math.max(2,100*S.byDay[x].rev/maxD)}%" data-t="${x.slice(5)} ${rs(S.byDay[x].rev)} · ${S.byDay[x].bills} bills"></div>`).join('')}</div><div class="hx axed" style="grid-template-columns:repeat(${days.length},1fr)">${days.map((x,i)=>i%(days.length>16?2:1)?'<span></span>':'<span>'+x.slice(8)+'</span>').join('')}</div></div>`;
@@ -3169,7 +3205,7 @@ function period(){
   const voidBy={}; Object.entries(S.voids.by).forEach(([kk,x])=>voidBy[kk]={n:x.n,v:x.v});
   const V=PER.V, W=fn=>V?withDoc(V,fn):'';
   let body='';
-  if(PTAB==='overview') body=ssCard(PER.from,PER.to)+byDay+weekCard()+ssMonths()+mini('By type',S.kinds)+mini('By section',S.sections)+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends();
+  if(PTAB==='overview') body=ssCard(PER.from,PER.to)+byDay+weekCard()+mini('By type',S.kinds)+mini('By section',S.sections)+moreG('pover','More analysis','months · slow hours · week of month · big orders · trends'+(V?' · hours':''),ssMonths()+W(()=>hourly()+closures())+slowSlots(PER.from,PER.to)+womMatrix()+lgCard()+trends());
   else if(PTAB==='people') body=W(()=>waiters()+upsell()+tables())+mini('Discounts · by person',S.disc.by)+mini('Staff food · by person (menu price)',staffBy)+mini('Voids · by person',voidBy)+staffCard+discCard;
   else if(PTAB==='items') body=(V?W(()=>items()):items(S.items||{}))+fcostCard(V?itemsOf(V.records):(S.items||{}),S.spend,{from:PER.from,to:PER.to})+juiceCard(V?itemsOf(V.records):(S.items||{}),S.spend&&S.spend.byDay)+chickenCard(S,V);
   else if(PTAB==='money'){ const sp=S.spend||{byItem:{},byCat:{},byDay:{},total:0};
@@ -3180,7 +3216,7 @@ function period(){
     body=expDaily(pay,P,sp)+spDupCard()+spendExplorer(sp)+salaryCard(pay,P,sp)+spCompare(sp)+(Object.keys(partyBy).length>1?mini('Expenses · by who was paid',partyBy):'');   /* discounts live on People */ }
   else if(PTAB==='cash') body=cashPeriod();
   else body=mini('Voids · by person',voidBy)+voidCard;
-  return bar+k+tabs+`<div class="grid">${body}</div>`;
+  return bar+perAvg(S,prev)+k+tabs+`<div class="grid">${body}</div>`;
 }
 /* ---- analysis: which hours and which days run slow, against their own normal ---- */
 function normalHour(day,h){ /* typical value of this weekday-hour: median of the last 8 same weekdays before `day` */
@@ -3316,7 +3352,102 @@ function placeDay(){ const t=document.querySelector('.tday'), dk=$('dock'), top=
   const narrow=matchMedia('(max-width:640px)').matches;
   if(narrow&&t.parentElement!==dk) dk.insertBefore(t,$('dockTabs'));
   else if(!narrow&&t.parentElement!==top) top.insertBefore(t,top.querySelector('h1').nextSibling); }
+
+/* ---- averages a day, early on Live + Sales (Majid, 14 Oct 2026): full days BEFORE the shown day; tap opens that span ---- */
+/* "More ▾": every page shows what matters first; the rest of its cards fold here, open state remembered (Majid, 14 Oct 2026) */
+let MOREG={}; try{ MOREG=JSON.parse(localStorage.getItem('hayat-more')||'{}')||{}; }catch(e){ MOREG={}; }
+function moreG(key,title,what,html){ if(!html||!String(html).trim()) return ''; return `<details class="moreg" data-mg="${key}"${MOREG[key]?' open':''}><summary><b>${title}</b><small>${esc(what)}</small></summary><div class="grid">${html}</div></details>`; }
+function moreWire(){ $$('details.moreg').forEach(d=>d.ontoggle=()=>{ MOREG[d.dataset.mg]=d.open; try{ localStorage.setItem('hayat-more',JSON.stringify(MOREG)); }catch(e){} if(d.open){ try{ fitTables(); }catch(e){} } }); }
+/* Live: ONE outlook card - today (how it will end) | tomorrow */
+let OUTT='today'; try{ OUTT=localStorage.getItem('hayat-out')||'today'; }catch(e){}
+function outlook(){ if(DAY!==bizToday()) return ''; const a=todayLab(), b=tmCardBig(); if(!a&&!b) return ''; const t=!a?'tom':!b?'today':OUTT;
+  const seg=a&&b?`<div class="outseg wide" role="tablist"><button type="button" role="tab" data-out="today" class="${t==='today'?'on':''}" aria-selected="${t==='today'}">☀️ Today · how it ends</button><button type="button" role="tab" data-out="tom" class="${t==='tom'?'on':''}" aria-selected="${t==='tom'}">🌙 Tomorrow</button></div>`:'';
+  return seg+(t==='today'?a:b); }
+function outWire(){ $$('[data-out]').forEach(b=>b.onclick=()=>{ OUTT=b.dataset.out; try{ localStorage.setItem('hayat-out',OUTT); }catch(e){} render(); }); }
+function avgWin(a,b){ const L=Object.keys(INDEX).filter(d=>d>=a&&d<=b&&(INDEX[d].rev||0)>0), v=L.reduce((n,d)=>n+(INDEX[d].rev||0),0), bl=L.reduce((n,d)=>n+(INDEX[d].bills||0),0); return {n:L.length,avg:L.length?v/L.length:0,ab:bl?v/bl:0}; }
+function avgStrip(){
+  const live=DAY===bizToday(), y=addDays(DAY,-1), x=new Date(DAY+'T12:00:00'), mon=addDays(DAY,-((x.getDay()+6)%7)), m1=DAY.slice(0,8)+'01';
+  const W=[['This week',mon,y],['This month',m1,y],['Last 30 days',addDays(DAY,-30),y]].map(w=>Object.assign(avgWin(w[1],w[2]),{l:w[0],go:(w[1]>y?DAY:w[1])+'|'+DAY+'|'+w[0]}));
+  const sw=Object.keys(INDEX).filter(d=>d<DAY&&(INDEX[d].rev||0)>0&&rpWd(d)===rpWd(DAY)).sort().slice(-4);
+  W.push({l:'Last '+sw.length+' '+rpWd(DAY)+'s',n:sw.length,avg:sw.length?sw.reduce((n,d)=>n+(INDEX[d].rev||0),0)/sw.length:0,tab:'similar'});
+  /* what today is compared with: the forecast (live, forecast on) or the day's own sales (a past day) */
+  let tv=null, tl=''; if(live){ const F=FC?fcToday():null; if(F){ tv=F.total+preToday().add; tl='today’s forecast'; } }
+  else { tv=DOC?stats(DOC).rev:((INDEX[DAY]||{}).rev||0); tl=rpName(DAY); }
+  const pc=a=>{ if(tv==null||!a) return ''; const d=Math.round(100*(tv-a)/a); return ` <span class="${d>=0?'up':'dn'}">${d>=0?'▲':'▼'}${Math.abs(d)}%</span>`; };
+  if(!W.some(w=>w.n)) return '';
+  const cells=W.filter(w=>w.n||!w.tab).map(w=>`<button type="button" class="avc" ${w.tab?`data-tab="${w.tab}"`:`data-avgo="${w.go}"`} title="open ${esc(w.l.toLowerCase())}"><small>${esc(w.l)}</small>${w.n?`<b>${rs(w.avg)}${pc(w.avg)}</b><em>${w.n} day${w.n===1?'':'s'}${w.ab?' · '+rs(w.ab)+'/bill':''}</em>`:`<b>—</b><em>no full day yet</em>`}</button>`).join('');
+  return `<div class="avstrip"><div class="avh">📊 Average a day <small>full days before ${live?'today':esc(rpName(DAY))}${tv!=null?' · ▲▼ = '+esc(tl)+' '+rs(tv)+' against each':''}</small></div><div class="avg4">${cells}</div></div>`; }
+/* ---- the same, first thing on a month / week / range ---- */
+function perAvg(S,prev){
+  const t=bizToday(), days=Object.keys(S.byDay||{}).filter(d=>(S.byDay[d].rev||0)>0&&d!==t).sort(), cut=S.byDay&&S.byDay[t]&&S.byDay[t].rev>0;
+  if(!days.length) return '';
+  const v=d=>S.byDay[d].rev||0, tot=days.reduce((n,d)=>n+v(d),0), bl=days.reduce((n,d)=>n+(S.byDay[d].bills||0),0), avg=tot/days.length;
+  const we=d=>{ const g=new Date(d+'T12:00:00').getDay(); return g===0||g===6; }, A=L=>L.length?L.reduce((n,d)=>n+v(d),0)/L.length:null;
+  const wk=days.filter(d=>!we(d)), wn=days.filter(we), best=days.reduce((a,d)=>v(d)>v(a)?d:a), low=days.reduce((a,d)=>v(d)<v(a)?d:a);
+  const pa=prev&&prev.n?prev.rev/prev.n:null, dp=pa?Math.round(100*(avg-pa)/pa):null;
+  const c=(l,b,e,attr,cls)=>`<button type="button" class="avc${cls?' '+cls:''}" ${attr||''}><small>${l}</small><b>${b}</b><em>${e}</em></button>`;
+  return `<div class="avstrip"><div class="avh">📊 Averages <small>${days.length} full day${days.length===1?'':'s'}${cut?' · today left out until it closes':''}</small></div><div class="avg4">
+    ${c('Avg / day',rs(avg)+(dp!=null?` <span class="${dp>=0?'up':'dn'}">${dp>=0?'▲':'▼'}${Math.abs(dp)}%</span>`:''),pa?'previous '+rs(pa)+'/day':'nothing earlier','data-ptab="overview"','big')}
+    ${c('Avg bill',rs(bl?tot/bl:0),Math.round(bl/days.length)+' bills a day')}
+    ${wk.length?c('Mon – Fri',rs(A(wk)),wk.length+' day'+(wk.length===1?'':'s')):''}${wn.length?c('Sat – Sun',rs(A(wn)),wn.length+' day'+(wn.length===1?'':'s')):''}
+    ${days.length>1?c('Best day',rs(v(best)),esc(rpName(best)),`data-day="${best}"`)+c('Slowest day',rs(v(low)),esc(rpName(low)),`data-day="${low}"`):''}</div></div>`; }
+function avgWire(){ $$('[data-avgo]').forEach(b=>b.onclick=()=>{ const [a,z,l]=b.dataset.avgo.split('|'); MODE='period'; PTAB='overview'; window.scrollTo(0,0); loadPeriod(a,z,l); }); }
+
+/* ---- 🔍 Find: opened from the menu only. Every match on the page is marked; ↑ ↓ (Enter) walks them, scrolls there and pulses it;
+   matches on other pages are listed under the bar and open that page at the match (Majid, 14 Oct 2026) ---- */
+const FIND={open:false,q:'',i:0,jump:false};
+let FSEEN={}; try{ FSEEN=JSON.parse(localStorage.getItem('hayat-find')||'{}')||{}; }catch(e){ FSEEN={}; }
+const fKey=()=>MODE==='period'?'p:'+PTAB:'t:'+TAB;
+const FPN={overview:'Sales',money:'Spends',cash:'Cash & bank',items:'Items',people:'People',voids:'Voids'};
+function fName(k){ const t=k.slice(2); return k[0]==='p'?(FPN[t]||t)+' · period':(PG_N[t]||[t])[0]; }
+function fLearn(){ const m=$('main'); if(!m||!m.querySelector('.card,.kpi')) return; const k=fKey();
+  const L=[...new Set($$('h2,.kpi>small,.avc>small',m).map(h=>{ const c=h.cloneNode(true); c.querySelectorAll('.n,button,select,input,mark').forEach(x=>x.remove()); return c.textContent.replace(/\s+/g,' ').trim(); }).filter(s=>s&&s.length<=48&&/[a-z]{3}/i.test(s)))].slice(0,60);
+  if(L.length&&JSON.stringify(FSEEN[k])!==JSON.stringify(L)){ FSEEN[k]=L; try{ localStorage.setItem('hayat-find',JSON.stringify(FSEEN)); }catch(e){} } }
+function fClear(){ $$('#main mark.fhl').forEach(x=>{ const p=x.parentNode; if(!p) return; p.replaceChild(document.createTextNode(x.textContent),x); p.normalize(); }); $$('#main .fpulse').forEach(x=>x.classList.remove('fpulse')); }
+function fMarks(q){ const m=$('main'); if(!m||!q) return []; const ql=q.toLowerCase(), N=[];
+  const w=document.createTreeWalker(m,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.toLowerCase().includes(ql)&&!n.parentElement.closest('script,style,textarea,select,option,svg')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
+  while(w.nextNode()) N.push(w.currentNode);
+  N.forEach(n=>{ const t=n.nodeValue, tl=t.toLowerCase(), f=document.createDocumentFragment(); let a=0, i;
+    while((i=tl.indexOf(ql,a))>=0){ if(i>a) f.appendChild(document.createTextNode(t.slice(a,i))); const k=document.createElement('mark'); k.className='fhl'; k.textContent=t.slice(i,i+ql.length); f.appendChild(k); a=i+ql.length; }
+    if(a<t.length) f.appendChild(document.createTextNode(t.slice(a))); n.parentNode.replaceChild(f,n); });
+  /* only what can be shown: visible now, or inside a closed <details> that opens on the way */
+  return $$('mark.fhl',m).filter(x=>x.getClientRects().length||x.closest('details:not([open])')); }
+function fOthers(q){ const o=$('fother'); if(!o) return; const ql=q.toLowerCase(); if(ql.length<2){ o.innerHTML=''; return; }
+  const here=fKey(), seen={};
+  Object.keys(PG_N).forEach(t=>{ seen['t:'+t]=[PG_N[t][0],PG_N[t][1]]; }); Object.keys(FPN).forEach(t=>{ seen['p:'+t]=[FPN[t]]; });
+  Object.entries(FSEEN).forEach(([k,L])=>{ seen[k]=(seen[k]||[]).concat(L||[]); });
+  const R=[]; Object.entries(seen).forEach(([k,L])=>{ if(k===here) return; const hit=L.find(s=>s&&s.toLowerCase().includes(ql)); if(hit) R.push([k,hit]); });
+  R.sort((a,b)=>(a[0][0]===here[0]?0:1)-(b[0][0]===here[0]?0:1));
+  o.innerHTML=R.length?`<small>On other pages</small>`+R.slice(0,8).map(([k,h])=>`<button type="button" data-fgo="${esc(k)}"><b>${esc(fName(k))}</b>${h.toLowerCase()!==fName(k).toLowerCase()?' · '+esc(h):''}</button>`).join(''):'';
+  $$('[data-fgo]',o).forEach(b=>b.onclick=()=>fGo(b.dataset.fgo)); }
+function fGo(k){ const t=k.slice(2); FIND.i=0; FIND.jump=true; window.scrollTo(0,0);
+  if(k[0]==='p'){ PTAB=t; if(MODE!=='period'||!PER.from){ MODE='period'; const p=periodPresets()[2]; loadPeriod(p[1],p[2],p[0]); return; } MODE='period'; }
+  else { MODE='day'; TAB=t; if(t==='cmp'&&!WEEK) loadWeek(); }
+  render(); }
+function fShow(scroll){ const M=$$('#main mark.fhl').filter(x=>x.getClientRects().length||x.closest('details:not([open])')), ct=$('fct'), n=M.length;
+  if(n&&FIND.i>=n) FIND.i=0; if(FIND.i<0) FIND.i=n-1;
+  M.forEach((x,i)=>x.classList.toggle('fcur',i===FIND.i));
+  if(ct){ ct.textContent=FIND.q.length<1?'':n?(FIND.i+1)+' / '+n:'none here'; ct.classList.toggle('no',!!FIND.q&&!n); }
+  $('fup').disabled=$('fdn').disabled=n<2;
+  const cur=M[FIND.i]; if(!cur||!scroll) return n;
+  for(let d=cur.closest('details:not([open])');d;d=d.parentElement&&d.parentElement.closest('details:not([open])')) d.open=true;
+  cur.scrollIntoView({block:'center',inline:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});
+  const box=cur.closest('tr,.kpi,.avc,.card'); if(box){ box.classList.remove('fpulse'); void box.offsetWidth; box.classList.add('fpulse'); }
+  return n; }
+function fRun(scroll){ fClear(); if(!FIND.open) return; const q=FIND.q; if(q) fMarks(q); const n=fShow(scroll); fOthers(q); return n; }
+/* after every render: learn this page's headings, keep the marks (live updates re-draw the page) */
+function fAfter(){ try{ fLearn(); if(!FIND.open) return; const n=fRun(FIND.jump); if(FIND.jump&&n) FIND.jump=false; }catch(e){} }
+function fOpen(){ FIND.open=true; const b=$('fbar'); b.hidden=false; document.body.classList.add('finding'); document.documentElement.style.setProperty('--fbh',(b.querySelector('.fin').offsetHeight+12)+'px'); $('dockSheet').hidden=true; dockH(); const q=$('fq'); q.value=FIND.q; fRun(false); setTimeout(()=>{ q.focus(); q.select(); },30); }
+function fClose(){ FIND.open=false; FIND.jump=false; $('fbar').hidden=true; document.body.classList.remove('finding'); fClear(); }
+function findWire(){
+  $('findBtn').onclick=e=>{ e.stopPropagation(); fOpen(); };
+  const q=$('fq'); let tm=null;
+  q.oninput=()=>{ clearTimeout(tm); tm=setTimeout(()=>{ FIND.q=q.value.trim(); FIND.i=0; fRun(true); },120); };
+  q.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); FIND.i+=e.shiftKey?-1:1; fShow(true); } else if(e.key==='Escape'){ e.preventDefault(); fClose(); } };
+  $('fdn').onclick=()=>{ FIND.i++; fShow(true); }; $('fup').onclick=()=>{ FIND.i--; fShow(true); }; $('fx').onclick=fClose;
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&FIND.open&&document.activeElement!==q) fClose(); }); }
 function dockWire(){
+  findWire();
   window.addEventListener('resize',()=>{ placeDay(); dockH(); });
   document.body.appendChild($('calPop'));   /* out of the blurred top bar, which would pin a fixed box to itself */
   $('fcChip').onclick=()=>{ FC=!FC; try{ localStorage.setItem('hayat-fc',FC?'on':'off'); }catch(e){} render(); };
@@ -3406,13 +3537,13 @@ function render(){ tabCarry();
   NOW=Math.max(Date.now(), DOC&&DOC.updatedAt?T(DOC.updatedAt).getTime():0);
   { const cut=cutTs(); if(cut!=null&&MODE==='day'&&cut<NOW) NOW=cut; }
   const m=$('main');
-  if(!DOC&&MODE==='day'){ m.innerHTML=DAY===bizToday()?dayStart():'<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; document.body.classList.remove('period'); dock(); wireDayStart(); return; }
+  if(!DOC&&MODE==='day'){ m.innerHTML=DAY===bizToday()?dayStart():'<div class="note">No day log for '+esc(DAY)+' yet. Is the shop PC running <b>Hayat Day Log</b>?</div>'; document.body.classList.remove('period'); dock(); wireDayStart(); fAfter(); return; }
   const live=DAY===bizToday();
   document.body.classList.toggle('period',MODE==='period');
   if(MODE==='period'){ m.innerHTML=(PTAB==='money'||PTAB==='cash'?`<div class="subnav">${[['money','Spends'],['cash','Cash & bank']].map(t=>`<button type="button" class="${PTAB===t[0]?'on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`:'')+period()+`<div class="note">board ${BOARD}</div>`; }
   else m.innerHTML=((TAB==='floor'||TAB==='sales')?kpis():'')+pgHead()+subNav()+
-    (TAB==='sales'?`<div class="grid">${hourly()}${runLine()}${billsCard()}</div>${SL.open&&TCUT!=null?`<div class="note sltag">⏱ showing the day as of <b>${tcutLabel()}</b> · <a href="#" id="slTog">back to now</a></div>`:''}<div class="grid">${pace()}${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); const T=R.reduce((n,r)=>n+r.v,0); return topItems(R,T)+catCard(R,T); })()}${closures()}${breakdown()}${waiters()}${upsell()}${tables()}${voids()}${discounts()}</div>`:
-     TAB==='floor'?`<div class="grid">${newOrders()}${unrealized()}${floor()}${trafficCard()}${live?todayLab():likeToday()}${live?alerts():''}${tmCardBig()}${kitchens()}</div>`:
+    (TAB==='sales'?`<div class="grid">${hourly()}${runLine()}${billsCard()}</div>${SL.open&&TCUT!=null?`<div class="note sltag">⏱ showing the day as of <b>${tcutLabel()}</b> · <a href="#" id="slTog">back to now</a></div>`:''}<div class="grid">${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); const T=R.reduce((n,r)=>n+r.v,0); return topItems(R,T); })()}</div>${moreG('sales','More on this day','by section · type · payment · pace · bill times · waiters · upselling · tables · voids · discounts',breakdown()+pace()+closures()+waiters()+upsell()+tables()+voids()+discounts())}`:
+     TAB==='floor'?`<div class="grid">${newOrders()}${live?alerts():''}${unrealized()}${floor()}${outlook()}${kitchens()}</div>${moreG('live','More on Live','road traffic',trafficCard())}`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${daySpendCard(DOC,DAY)}${drafts()}${payments()}${purchases()}</div>`:
      TAB==='patterns'?patterns():
@@ -3456,6 +3587,7 @@ function render(){ tabCarry();
   const cd=$('cmpDay'); if(cd) cd.onchange=()=>pickCompare(cd.value);
   $$('[data-cmp]').forEach(b=>b.onclick=()=>pickCompare(b.dataset.cmp));
   const q=$('q'); if(q){ q.oninput=()=>{ Q=q.value.trim().toLowerCase(); const pos=q.selectionStart; render(); const q2=$('q'); q2.focus(); q2.setSelectionRange(pos,pos); }; }
+  avgWire(); moreWire(); outWire(); fAfter();
 }
 
 let unsub=null;

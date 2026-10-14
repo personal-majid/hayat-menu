@@ -55,6 +55,7 @@ main{padding:12px 14px 40px}
 .recent button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:4px 10px;font-size:14px}
 dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;max-width:420px}
 dialog label{display:flex;gap:10px;align-items:center;font-size:17px;padding:6px 0}
+.inote{display:block;margin-top:3px;font-style:normal;font-weight:900;font-size:.92em;color:#7a3d00;background:#ffe9b8;border-radius:6px;padding:2px 7px;width:fit-content;max-width:100%} .knote.onote{background:#e8f1ff;color:#123}
 </style></head><body>
 <header>
   <h1>🍳 <span id="stName">Kitchen</span></h1>
@@ -114,16 +115,17 @@ function webOpen(){ const out=[], now=Date.now();
   /* captain-app TRIAL orders show only when Setup → Settings → "Show trial orders on the kitchen screen" is on */
   for(const o of WEB.concat(KDSTRIAL?TRIAL:[])){ if(!o.kots||!o.kots.length||(o.noKds&&!o.trial)) continue; const gone=o.status==='delivered'||o.status==='cancelled';
     const items=[]; o.kots.forEach(k=>{ if(gone&&!(k.kind==='cancel'&&now-(k.at||0)<45*60000)) return; (k.lines||[]).forEach(l=>{ if(l.station==='none') return;   /* bottled drinks: the waiter brings them */
-      items.push({n:kesc(l.name+(l.label?' ('+l.label+')':'')),q:+l.q||0,t:k.at,cancel:k.kind==='cancel',reason:kesc(k.reason||''),round:k.n,note:kesc(k.note||''),hold:!!(k.hold&&!k.fireAt),fire:k.fireAt||0,pri:k.pri||''}); }); });
+      const lb=l.note&&l.base!=null?l.base:l.label;   /* new captain lines: base = size, note = the cook's note (old lines: note inside label) */
+      items.push({n:kesc(l.name+(lb?' ('+lb+')':'')),nt:kesc(l.note||''),q:+l.q||0,t:k.at,cancel:k.kind==='cancel',reason:kesc(k.reason||''),round:k.n,note:kesc(k.note||''),hold:!!(k.hold&&!k.fireAt),fire:k.fireAt||0,pri:k.pri||''}); }); });
     if(!items.length) continue;
-    out.push({invoiceId:'w'+kesc(o.id),orderAt:o.at,items,table:kesc(o.table||''),section:o.mode==='dinein'?kesc(o.section||''):'',type:o.mode==='dinein'?'':'Parcel',token:kesc(o.token||''),taker:kesc(String(o.by||'').replace(/^SIM · /,'')),pax:o.pax||0,trial:!!o.trial,web:true,src:o.source||''}); }
+    out.push({invoiceId:'w'+kesc(o.id),orderAt:o.at,items,table:kesc(o.table||''),section:o.mode==='dinein'?kesc(o.section||''):'',type:o.mode==='dinein'?'':'Parcel',token:kesc(o.token||''),taker:kesc(String(o.by||'').replace(/^SIM · /,'')),pax:o.pax||0,trial:!!o.trial,web:true,src:o.source||'',onote:kesc(o.note||'')}); }
   return out; }
 function tickets(){ const mine=new Set(stations()), out=[];
   for(const o of OPEN.concat(webOpen())){ const base=tms(o.orderAt), groups={};
     for(const it of o.items||[]){ const st=station(it.n).filter(s=>mine.has(s)); if(!st.length) continue;
       const t=tms(it.t)||base; const k=String(Math.round((t||0)/60000))+(o.web&&it.round!=null&&!it.cancel?'r'+it.round:'')+(it.cancel?'c':'');   /* web/captain: one card per KOT round, even two rounds in the same minute */ (groups[k]=groups[k]||{t,items:[],st:new Set(),cancel:!!it.cancel,reason:it.reason||'',round:it.round,note:it.note||'',hold:!!it.hold,fire:it.fire||0,pri:it.pri||''}).items.push(it); st.forEach(s=>groups[k].st.add(s)); }
     const ks=Object.keys(groups).sort(); ks.forEach((k,idx)=>{ const g=groups[k], id=ST.screen+'_'+o.invoiceId+'_'+k;
-      const mg={}; g.items.forEach(it=>{ const n=String(it.n).trim(); (mg[n]=mg[n]||{n,q:0}).q+=(+it.q||1); }); g.items=Object.values(mg);
+      const mg={}; g.items.forEach(it=>{ const n=String(it.n).trim(), nt=it.nt||'', key=n+'|'+nt; (mg[key]=mg[key]||{n,nt,q:0}).q+=(+it.q||1); }); g.items=Object.values(mg);   /* "less spicy" stays its own line */
       if(DONE[id]) return; out.push({id,inv:o.invoiceId,round:k,addon:!g.cancel&&(idx>0||(g.t&&base&&g.t-base>60000)),t:g.t,items:g.items,st:[...g.st],o,cancel:g.cancel,reason:g.reason,kotN:g.round,note:g.note,hold:g.hold,fire:g.fire,pri:g.pri}); }); }
   /* urgent first, held KOTs last, then oldest first */
   return out.sort((a,b)=>((b.pri==='urgent')-(a.pri==='urgent'))||((a.hold?1:0)-(b.hold?1:0))||((a.t||0)-(b.t||0))); }
@@ -140,8 +142,8 @@ function render(){ const now=Date.now(), T=tickets();
       return '<div class="tk '+(k.cancel?'cx':held?'hold':c)+(k.pri==='urgent'?' urg':'')+(o.trial?' trial':'')+'"><div class="hd"><span class="tb">'+where+'</span><span class="age">'+Math.floor(age)+'′</span></div>'
         +'<div class="who">'+(o.taker?'👤 '+o.taker:'')+(o.pax?' · 👥 '+o.pax:'')+'</div>'
         +'<div class="tags">'+(o.trial?'<span class="tag tr">TRIAL · practice</span>':'')+(k.pri==='urgent'?'<span class="tag ur">⚡ URGENT</span>':k.pri==='norush'?'<span class="tag">🐢 no rush</span>':'')+(held?'<span class="tag hl">⏸ HOLD · wait for fire</span>':'')+(k.fire&&!held?'<span class="tag ur">🔥 FIRE NOW</span>':'')+(k.cancel?'<span class="tag cx">✕ CANCEL'+(k.reason?' · '+k.reason:'')+'</span>':'')+(par?'<span class="tag par">Parcel · pack it</span>':'')+(k.addon?'<span class="tag add">+ Add-on</span>':'')+'<span class="tag">KOT'+(k.kotN&&!k.cancel?' #'+k.kotN:'')+' '+(k.t?hm(k.t):'')+'</span>'+(o.web&&!o.src.match(/captain|sim/)?'<span class="tag">counter</span>':'')+'</div>'
-        +(k.note?'<div class="knote">📝 '+k.note+'</div>':'')
-        +'<ul class="it">'+k.items.map((it,i)=>{ const x=strike.has(k.id+'#'+i); return '<li class="'+(x?'x':'')+'" data-s="'+k.id+'#'+i+'"><span class="q">'+(it.q||1)+'×</span><span>'+it.n+'</span></li>'; }).join('')+'</ul>'
+        +(o.onote?'<div class="knote onote">📌 '+o.onote+'</div>':'')+(k.note?'<div class="knote">📝 '+k.note+'</div>':'')
+        +'<ul class="it">'+k.items.map((it,i)=>{ const x=strike.has(k.id+'#'+i); return '<li class="'+(x?'x':'')+'" data-s="'+k.id+'#'+i+'"><span class="q">'+(it.q||1)+'×</span><span>'+it.n+(it.nt?'<em class="inote">📝 '+it.nt+'</em>':'')+'</span></li>'; }).join('')+'</ul>'
         +'<div class="ft">'+(held?'<span>waiting for the waiter to fire</span>':ks.prepAt?'<span class="tmr">🔥 cooking <b>'+mmss(now-ks.prepAt)+'</b> / '+Math.round(prep)+' min</span>':ks.acceptAt?'<span class="tmr">👍 in queue <b>'+mmss(now-ks.acceptAt)+'</b></span><button class="st go" data-st="prep" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">🔥 Start</button>':'<span>target '+Math.round(prep)+' min</span><button class="st" data-st="acc" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">👍 Accept</button><button class="st go" data-st="prep" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">🔥 Start</button>')
         +(held?'':'<button class="done" data-id="'+k.id+'" data-inv="'+k.inv+'" data-r="'+k.round+'">✓ Ready</button>')+'</div></div>'; }).join('')+'</div>'+recentHtml();
   $('main').querySelectorAll('li[data-s]').forEach(li=>li.onclick=()=>{ const s=li.dataset.s; strike.has(s)?strike.delete(s):strike.add(s); sessionStorage.setItem('kds-x',JSON.stringify([...strike])); li.classList.toggle('x'); });

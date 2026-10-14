@@ -267,8 +267,15 @@ def draw_kot(job: dict, ticket: dict, idx: int, total: int, width: int):
         q = int(l.get("q", 1) or 1)
         n += q
         s.text(f"{'-' if ticket.get('cancel') else ''}{q} ×  {l.get('name', '')}", 34, True, gap=0)
-        if l.get("label"):
-            s.text(str(l["label"]), 22, False, x=54, gap=2)
+        # new captain lines: base = the size, note = the cook's note (label still holds both, for old agents)
+        note = str(l.get("note") or "").strip()
+        lab = l.get("base") if note and l.get("base") is not None else l.get("label")
+        if note and lab and "NOTE:" in str(lab):
+            lab = str(lab).split("NOTE:")[0].rstrip(" ·")
+        if lab:
+            s.text(str(lab), 22, False, x=54, gap=2)
+        if note:
+            s.text("NOTE: " + note.upper(), 26, True, x=54, gap=2)
         s.space(8)
     if o.get("note"):
         s.space(4)

@@ -429,6 +429,45 @@ input[type=search]::-webkit-search-cancel-button,input[type=search]::-webkit-sea
 .cgrid button span{font-size:28px} .cgrid button b{font-size:13px;text-align:center;line-height:1.15} .cgrid button small{font-size:11px;color:var(--muted);font-weight:700}
 .cgrid button.on{border-color:var(--pri);background:color-mix(in srgb,var(--pri) 10%,var(--card))}
 .dock .sugs{min-height:48px;align-items:center} .sugph{color:var(--muted);font-size:12.5px;font-weight:600;padding-left:4px}
+
+/* v277: notes you can't miss + a little colour (rounds, totals) */
+.lnote{display:inline-flex;align-items:center;gap:3px;margin:4px 4px 0 0;padding:2px 8px;border-radius:999px;background:var(--accwash);color:#7a4d0b;border:1px solid color-mix(in srgb,var(--acc) 45%,transparent);font-size:12px;font-weight:800;line-height:1.35;white-space:normal;word-break:break-word}
+.lnote.add{background:transparent;border-style:dashed;color:var(--muted);font-weight:700}
+.onote{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;width:100%;margin:0 0 10px;padding:10px 12px;border-radius:14px;background:var(--accwash);border:1px solid color-mix(in srgb,var(--acc) 55%,transparent);border-left:5px solid var(--acc);color:var(--ink)}
+.onote b{flex:1;font-size:14.5px;line-height:1.3;word-break:break-word} .onote small{color:var(--muted);font-weight:700;font-size:12px} .onote .e{font-size:16px}
+.onote.slim{margin:8px 10px 0;width:calc(100% - 20px);padding:7px 10px} .onote:focus-visible{outline:2px solid var(--acc)}
+.tpin{font-style:normal;font-size:12px;margin-left:3px;vertical-align:2px}
+.r1{--rc:#1E6FA8;--rw:#E0EDF8} .r2{--rc:#178A7A;--rw:#DDF3EF} .r3{--rc:#7B5CC4;--rw:#EEE8FA} .r4{--rc:#C27C12;--rw:#FBEFD9} .r5{--rc:#C2456F;--rw:#FBE4EC} .r6{--rc:#2F8F5B;--rw:#E3F2E8}
+.rnd[class*=" r"]{background:var(--rw);color:var(--rc)}
+.bl.sent{border-left:4px solid var(--rc,var(--line));padding-left:10px}
+.bl.sent .qx{background:var(--rw,var(--bg2));color:var(--rc,var(--ink))}
+.kn[class*=" r"],b.kn.r1,b.kn.r2,b.kn.r3,b.kn.r4,b.kn.r5,b.kn.r6{color:var(--rc)}
+.bsum div:nth-child(1){background:linear-gradient(180deg,var(--freewash),var(--card));border-color:color-mix(in srgb,var(--free) 35%,var(--line))} .bsum div:nth-child(1) b{color:var(--free)}
+.bsum div:nth-child(2){background:linear-gradient(180deg,var(--eatwash),var(--card));border-color:color-mix(in srgb,var(--eat) 35%,var(--line))} .bsum div:nth-child(2) b{color:var(--eat)}
+.bsum div:nth-child(3){background:linear-gradient(180deg,var(--billwash),var(--card));border-color:color-mix(in srgb,var(--bill) 35%,var(--line))} .bsum div:nth-child(3) b{color:var(--bill)}
+.bgrp:not(.new){color:var(--eat)}
+.btot .g span:last-child{color:var(--pri)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lnote{color:#F2C27A} :root:not([data-theme="light"]) .r1,:root:not([data-theme="light"]) .r2,:root:not([data-theme="light"]) .r3,:root:not([data-theme="light"]) .r4,:root:not([data-theme="light"]) .r5,:root:not([data-theme="light"]) .r6{--rw:color-mix(in srgb,var(--rc) 22%,#18221F)}
+ :root:not([data-theme="light"]) .r1{--rc:#5AA9E6} :root:not([data-theme="light"]) .r2{--rc:#4FC7B5} :root:not([data-theme="light"]) .r3{--rc:#A98BF0} :root:not([data-theme="light"]) .r4{--rc:#E6A43A} :root:not([data-theme="light"]) .r5{--rc:#F07DA4} :root:not([data-theme="light"]) .r6{--rc:#4FC283}}
+:root[data-theme="dark"] .lnote{color:#F2C27A}
+:root[data-theme="dark"] .r1{--rc:#5AA9E6} :root[data-theme="dark"] .r2{--rc:#4FC7B5} :root[data-theme="dark"] .r3{--rc:#A98BF0} :root[data-theme="dark"] .r4{--rc:#E6A43A} :root[data-theme="dark"] .r5{--rc:#F07DA4} :root[data-theme="dark"] .r6{--rc:#4FC283}
+:root[data-theme="dark"] .r1,:root[data-theme="dark"] .r2,:root[data-theme="dark"] .r3,:root[data-theme="dark"] .r4,:root[data-theme="dark"] .r5,:root[data-theme="dark"] .r6{--rw:color-mix(in srgb,var(--rc) 22%,#18221F)}
+
+/* v277: payments v2 - part paid, credit book, refs, undo */
+.seg.pm button{min-width:0;font-size:13px;padding:0 2px} .seg.pm{gap:2px}
+.b-part{background:var(--accwash);color:#8a5a00} .b-cred{background:var(--cleanwash);color:var(--clean);margin-left:4px}
+.plist{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 10px;background:var(--card)} .plist.so{background:var(--freewash);border-color:color-mix(in srgb,var(--free) 35%,var(--line))}
+.pl{display:grid;grid-template-columns:66px 1fr auto;gap:10px;align-items:center;padding:8px 12px;border-top:1px dashed var(--line);font-size:13.5px} .pl:first-child{border-top:0} .pl b{font-variant-numeric:tabular-nums} .pl.ref b{color:var(--bad)}
+.pl>span:first-child{justify-self:start;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--bg2)}
+.pm-cash{background:var(--freewash)!important;color:var(--free)} .pm-upi{background:var(--eatwash)!important;color:var(--eat)} .pm-card{background:var(--billwash)!important;color:var(--bill)} .pm-credit{background:var(--cleanwash)!important;color:var(--clean)}
+.btn.part{width:100%;margin:8px 0 2px;min-height:46px;background:var(--accwash);border:1.5px dashed var(--acc);color:var(--ink);font-weight:800}
+.fpill.ref{cursor:text} .fpill.ref input{border:0;background:transparent;font:inherit;font-size:16px;font-weight:700;color:var(--ink);padding:2px 0;outline:none;width:100%;min-width:0}
+.credbox{background:var(--cleanwash);border:1.5px solid color-mix(in srgb,var(--clean) 40%,transparent);border-radius:16px;padding:10px 12px;margin:0 0 10px} .credbox .quick{margin:6px 0 4px}
+.bsum em.pp{display:block;font-style:normal;font-size:11.5px;font-weight:700;color:var(--muted)}
+.cred{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--clean);border-radius:14px;padding:10px 12px;box-shadow:var(--shadow)} .cred .ch{display:flex;justify-content:space-between;gap:8px;align-items:baseline} .cred .ch b{font-size:16px} .cred .co{font-weight:800;color:var(--clean);font-size:18px;font-variant-numeric:tabular-nums}
+.cred>small{display:block;color:var(--muted);font-size:12.5px;margin:2px 0 6px} .cred a{color:var(--eat);font-weight:700;text-decoration:none}
+.cb{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px dashed var(--line);font-size:13px} .cb .btn{min-height:38px;padding:0 12px;font-size:13px;white-space:nowrap}
+.sum .crs b{color:var(--clean)}
 </style>
 </head>
 <body>
