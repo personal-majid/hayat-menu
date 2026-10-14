@@ -1,10 +1,10 @@
 /* Hayat menu — offline cache.
    Bump CACHE below whenever you upload changes, so tablets pick them up. */
-const CACHE = "hayat-v278";
+const CACHE = "hayat-v279";
 const CORE = [
   "./","./index.html","./app.css","./config.js","./menu-data.js","./lang.js",
   "./assets/icons.js","./assets/qr.js","./shop.js",
-  "./rider.webmanifest","./rider.html","./captain.html","./captain.js","./setup.html","./stock.html","./stock-read.js","./planner.html","./planner.js","./planner3d.js","./captain.webmanifest","./hayat-auth.js","./print.html","./assets/logo.png","./assets/mark.png",
+  "./rider.webmanifest","./rider.html","./captain.html","./captain.js","./setup.html","./stock.html","./stock-read.js","./planner.html","./planner.js","./planner3d.js","./planner-models.js","./captain.webmanifest","./hayat-auth.js","./print.html","./assets/logo.png","./assets/mark.png",
   "./assets/icon-192.png","./assets/icon-512.png","./manifest.webmanifest",
   "./fonts/cormorant-600.woff2","./fonts/cormorant-700.woff2","./fonts/cormorant-500i.woff2",
   "./fonts/manrope-400.woff2","./fonts/manrope-600.woff2","./fonts/manrope-800.woff2",
