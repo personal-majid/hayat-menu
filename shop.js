@@ -1764,6 +1764,25 @@ function paintCallFab(){
 }
 
 /* ---------- the floating cart button ----------------------- */
+/* v282: how long it usually takes, from the shop to this pin (shop.prepMin + ~3 min a km) */
+function etaRange(lat, lng){
+  var prep = (((window.CONFIG || {}).shop) || {}).prepMin || 25;
+  var km = (typeof lat === "number" && typeof lng === "number") ? kmFrom(lat, lng) : 3;
+  var lo = Math.round((prep + km * 3) / 5) * 5; if(lo < 25) lo = 25;
+  return [lo, lo + 10];
+}
+function etaLine(lat, lng){ var e = etaRange(lat, lng); return ((typeof L === "string" && L === "ml") ? "\u0D38\u0D3E\u0D27\u0D3E\u0D30\u0D23 " : "Usually ") + e[0] + "\u2013" + e[1] + " min"; }
+/* the floating cart button must never sit on the row you just added to */
+document.addEventListener("click", function(e){
+  var t = e.target && e.target.closest && e.target.closest("button.add,[data-row] button,.mqty button");
+  if(!t) return;
+  setTimeout(function(){
+    var f = el("cartfab"); if(!f || f.hidden) return;
+    var row = t.closest(".msize,.mrow,[data-row]") || t, r = row.getBoundingClientRect(), fr = f.getBoundingClientRect();
+    if(r.bottom > fr.top - 10) window.scrollBy({ top: r.bottom - fr.top + 18, behavior: "smooth" });
+  }, 60);
+}, true);
+
 function paintFab(){
   paintCallFab();
   var f = el("cartfab");
@@ -2445,6 +2464,23 @@ function catBlock(c){
   '</section>';
 }
 
+/* v282: the first visit explains itself - three steps, how long, how to pay. Once. */
+function welcomeCard(mine){
+  var seen = false; try{ seen = localStorage.getItem("hayat_welcome") === "1"; }catch(e){}
+  if(seen || (mine && mine.length)) return "";
+  var e = etaRange(), km = homeRadiusKm();
+  return '<div class="welcome" id="welcome">' +
+    '<div class="wlh"><b>Welcome to Hayat</b><button class="wlx" id="wlX" aria-label="Got it">\u2715</button></div>' +
+    '<ol class="wlsteps">' +
+      '<li><i>1</i><span><b>Pick your dishes</b><small>Tap <em>Choose</em>, then <em>Add</em></small></span></li>' +
+      '<li><i>2</i><span><b>Your number and where</b><small>A map pin brings the rider to your door</small></span></li>' +
+      '<li><i>3</i><span><b>We cook, a rider brings it</b><small>Follow it live on the map</small></span></li>' +
+    '</ol>' +
+    '<div class="wlfacts"><span>\uD83D\uDD52 ' + e[0] + '\u2013' + e[1] + ' min</span><span>\uD83D\uDCB5 Cash or UPI on delivery</span><span>\uD83D\uDEF5 Around ' + km + ' km</span></div>' +
+    '<button class="shopbtn small" id="wlGo">Show me the menu</button>' +
+  '</div>';
+}
+
 function viewLanding(main){
   var st   = openNow();
   var mine = STORE.myOrders();
@@ -2479,6 +2515,7 @@ function viewLanding(main){
 
       (hits === null
         ? /* the normal page */
+          welcomeCard(mine) +
           '<button class="mcall" id="ldCall">' +
             '<span class="mcalli">☎</span>' +
             '<span><b>Order food</b><small>Give us your number, we call you back</small></span>' +
@@ -2513,6 +2550,11 @@ function viewLanding(main){
 
   var call = el("ldCall"); if(call) call.onclick = function(){ location.hash = "#/quick"; };
 
+  (function(){ var w = el("welcome"); if(!w) return;
+    var done = function(){ try{ localStorage.setItem("hayat_welcome", "1"); }catch(e){} w.remove(); };
+    el("wlX").onclick = done;
+    el("wlGo").onclick = function(){ done(); var c = main.querySelector("[data-cat]"); if(c){ c.click(); c.scrollIntoView({ behavior:"smooth", block:"start" }); } };
+  })();
   main.querySelectorAll("[data-cat]").forEach(function(b){
     b.onclick = function(){
       var id = b.dataset.cat;
@@ -2734,7 +2776,8 @@ function viewCheckout(main){
         :
           '<textarea class="fld" id="coAddr" name="street-address" autocomplete="street-address" rows="2" ' +
             'placeholder="House, landmark, area (optional)">' + esc(CO_DRAFT.text || "") + '</textarea>' +
-          '<button class="linky findpin" id="coFind">Find this address on the map</button>' +
+          '<div class="pinrow"><button class="linky findpin" id="coGps">\uD83D\uDCCD Use where I am now</button>' +
+          '<button class="linky findpin" id="coFind">Find this address on the map</button></div>' +
           '<button class="spotcard' + (PIN ? " set" : "") + '" id="coSpot">' +
             '<span class="spi">📍</span>' +
             '<span class="spt"><b id="coSpotT">' + (PIN ? "Pin set" : "Drop a pin") + '</b>' +
@@ -2768,6 +2811,17 @@ function viewCheckout(main){
     });
     var bp = el("coBackPick");
     if(bp) bp.onclick = function(){ CO_NEWADDR = false; viewCheckout(main); };
+    var gp = el("coGps");
+    if(gp) gp.onclick = function(){
+      gp.textContent = "Finding you\u2026";
+      askGps().then(function(pos){
+        if(!pos || !pos.coords){ gp.textContent = "Location is off \u2014 drop a pin instead"; return; }
+        PIN = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        var T = el("coSpotT"), S = el("coSpotS"), sp = el("coSpot");
+        if(T) T.textContent = "Pin set"; if(S) S.textContent = "Where you are now"; if(sp) sp.classList.add("set");
+        gp.textContent = "\u2713 Pinned where you are"; try{ mountMap(PIN); }catch(e){}
+      });
+    };
     var fb = el("coFind");
     if(fb) fb.onclick = function(){
       var t = el("coAddr").value.trim();
@@ -2829,6 +2883,11 @@ function viewCheckout(main){
           '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
       }).join("") + '</div>' +
       '<div class="total"><span>Total · pay on delivery</span><b>' + rupee(cartTotal()) + '</b></div>' +
+      '<p class="coeta">\uD83D\uDD52 ' + esc(etaLine(a.lat, a.lng)) + ' \u00b7 cash or UPI to the rider</p>' +
+      (a.lat == null
+        ? '<div class="nopin"><b>No map pin yet</b><small>The rider will have to call you for the way.</small>' +
+          '<button class="shopbtn small" id="coPinNow">\uD83D\uDCCD Add where I am now</button></div>'
+        : '') +
       '<input class="fld" id="coNote" placeholder="A note for the rider (optional)">' +
       '<button class="shopbtn big" id="coGo">' + (AMEND ? "Update the order" : "Place the order") + '</button>' +
       '<button class="linky center" data-go="#/cart">Back to the cart</button>');
@@ -2836,6 +2895,15 @@ function viewCheckout(main){
     el("coChange").onclick = function(){ CO_STEP = 2; CO_NEWADDR = false; viewCheckout(main); };
     el("coWho").onclick = function(){ CO_STEP = 1; viewCheckout(main); };
     el("coGo").onclick = function(){ send(me.name || "", me.phone, a); };
+    var pn = el("coPinNow");
+    if(pn) pn.onclick = function(){
+      pn.disabled = true; pn.textContent = "Finding you\u2026";
+      askGps().then(function(pos){
+        if(!pos || !pos.coords){ pn.disabled = false; pn.textContent = "Location is off \u2014 change address to drop a pin"; return; }
+        a.lat = pos.coords.latitude; a.lng = pos.coords.longitude; PIN = { lat:a.lat, lng:a.lng }; CO_ADDR = a;
+        viewCheckout(main);
+      });
+    };
   }
 
   /* ---- one way out ---------------------------------------- */
@@ -3128,6 +3196,12 @@ function viewOrder(main, id){
         '<span class="tt">' + (hit ? when(hit.at) : "") + '</span></div>';
     }).join("") + '</div>' +
 
+    (at < FLOW.indexOf("delivered") && o.status !== "cancelled" && !isLater(o)
+      ? '<p class="coeta">\uD83D\uDD52 Expected around <b>' + esc(when(o.at + etaRange(o.lat, o.lng)[1] * 60000)) + '</b> \u00b7 ' + esc(etaLine(o.lat, o.lng)) + '</p>'
+      : '') +
+    (o.status === "delivered" && !riderApp()
+      ? '<a class="shopbtn rateup" href="' + esc(base() + "?guest#/review") + '">Enjoy! How was it? \u2605</a>'
+      : '') +
     (rider && at >= 2
       ? '<div class="ridercard"><div><b>' + esc(rider.name) + '</b><small>Your rider</small></div>' +
         callBtn(rider.phone, "Call", "callbtn") + '</div>'
@@ -3170,9 +3244,6 @@ function viewOrder(main, id){
     noteThread(o, "Anything we should know? Gate code, landmark\u2026") +
     (o.status === "placed" && (o.lines || []).length
       ? '<button class="shopbtn ghost" id="obChange">Change this order</button>'
-      : '') +
-    (o.status === "delivered" && !riderApp()
-      ? '<a class="shopbtn" href="' + esc(base() + "?guest#/review") + '">How was it? \u2605</a>'
       : '') +
     (canCancel
       ? '<button class="shopbtn ghost danger" id="obCancel">Cancel this order</button>'
@@ -4873,7 +4944,7 @@ function readTraffic(){
 function trafficStrip(box){
   var old = box.querySelector(".trafstrip"); if(old) old.remove();
   if(!trafficKey()) return;
-  var open = false; try{ open = localStorage.getItem("hayat_trafopen") === "1"; }catch(e){}
+  var open = false; try{ open = localStorage.getItem("hayat_trafopen2") === "1"; }catch(e){}
   var pts = TRAF.pts || [];
   var bad = pts.filter(function(p){ return p.state === "jam" || p.state === "closed"; });
   var slow = pts.filter(function(p){ return p.state === "slow"; });
@@ -4882,24 +4953,23 @@ function trafficStrip(box){
            : slow.length ? "slow at " + slow[0].n
            : pts.every(function(p){ return p.fail; }) ? "no data"
            : "all clear";
-  var cls = bad.length ? "s-jam" : slow.length ? "s-slow" : pts.length ? "s-clear" : "s-none";
+  var cls = bad.length ? "s-jam" : slow.length ? "s-slow" : (pts.length && !pts.every(function(p){ return p.fail; })) ? "s-clear" : "s-none";
   var d = document.createElement("div"); d.className = "trafstrip " + cls + (open ? " open" : "");
   d.innerHTML =
-    '<button class="trpill" title="NH966 Malappuram \u2192 Perinthalmanna">' +
-      '<span class="trh">NH966</span> <span class="trword">' + esc(word) + '</span>' +
-      '<span class="trchev">' + (open ? "\u2039" : "\u203A") + '</span></button>' +
+    '<button class="mtpill trpill" aria-expanded="' + open + '" title="NH966 Malappuram \u2192 Perinthalmanna \u00b7 click to ' + (open ? "close" : "open") + '">' +
+      '<span class="mtic">\uD83D\uDEA6</span><b class="trh">NH966</b> <span class="trword">' + esc(word) + '</span>' +
+      '<span class="mtchev">' + (open ? "\u25B4" : "\u25BE") + '</span></button>' +
     (open && pts.length
       ? '<div class="trpts">' + pts.map(function(p){
           return '<span class="trp s-' + (p.state || "none") + '" title="' + esc(p.n) + (p.now != null ? " \u00b7 " + p.now + " of " + p.free + " km/h" : "") + '">' +
-            esc(p.n) + ' <b>' + (p.now != null ? p.now : "?") + '</b></span>';
-        }).join('<span class="trarrow">\u2192</span>') + '</div>'
+            esc(p.n) + ' <b>' + (p.now != null ? p.now + '<small> km/h</small>' : '\u2014') + '</b></span>';
+        }).join('') + '</div>'
       : '');
   d.querySelector(".trpill").onclick = function(){
-    try{ localStorage.setItem("hayat_trafopen", open ? "0" : "1"); }catch(e){}
-    trafficStrip(box);
+    try{ localStorage.setItem("hayat_trafopen2", open ? "0" : "1"); if(!open) localStorage.setItem("hayat_ridopen", "0"); }catch(e){}
+    trafficStrip(box); if(!open && box._spots && box.querySelector(".riderstrip.open")) riderStrip(box, box._spots);
   };
-  ["mousedown","touchstart","dblclick","wheel"].forEach(function(t){ d.addEventListener(t, function(e){ e.stopPropagation(); }, { passive:true }); });
-  box.appendChild(d);
+  mapTop(box).appendChild(d);
 }
 function trafficLayer(LF, map){
   var key = trafficKey(); if(!key) return;
@@ -5217,39 +5287,67 @@ function ridersOnMap(orders){
 
 /* The strip on the map: every rider with a job, in one line each,
    whether or not they could be drawn. Tapping a row goes to them. */
+/* v281: riders and traffic used to cover the map. Now they are two small
+   pills in one row under the tabs; each opens its short list on a click
+   and remembers it on this device. Closed, they say only what matters:
+   how many riders, and whether any of them needs a look. */
+function mapTop(box){
+  var t = box.querySelector(".maptop");
+  if(!t){
+    t = document.createElement("div"); t.className = "maptop";
+    ["mousedown","touchstart","dblclick","wheel","click"].forEach(function(k){
+      t.addEventListener(k, function(e){ e.stopPropagation(); }, { passive:true });
+    });
+    box.appendChild(t);
+  }
+  /* under the floating tab bar, however tall it wraps to today */
+  try{
+    var bar = box.closest(".console").querySelector(".conbar");
+    if(bar) t.style.top = Math.round(bar.getBoundingClientRect().bottom - box.getBoundingClientRect().top + 8) + "px";
+  }catch(e){}
+  return t;
+}
+function riderShort(s){
+  if(!s.at) return s.jobs.some(function(o){ return o.status === "on_way" || o.rAt; }) ? "not sharing" : "not opened yet";
+  if(s.own) return "seen " + s.fresh.txt + " · before job";
+  if(s.fresh.state === "live") return "moving";
+  return "seen " + s.fresh.txt;
+}
 function riderStrip(box, spots){
-  var old = box.querySelector(".riderstrip");
+  box._spots = spots;   /* so the traffic pill can close this list */
+  var top = mapTop(box), old = top.querySelector(".riderstrip");
   if(old) old.remove();
   if(!spots.length) return;
+  var open = false; try{ open = localStorage.getItem("hayat_ridopen") === "1"; }catch(e){}
+  var shorts = spots.map(riderShort), none = spots.filter(function(s){ return !s.at; }).length,
+      quiet = spots.filter(function(s){ return s.at && (s.own || s.fresh.state !== "live"); }).length,
+      cnt = function(t){ return shorts.filter(function(x){ return x === t; }).length; };
+  var sum = cnt("not sharing") ? cnt("not sharing") + " not sharing" : cnt("not opened yet") ? cnt("not opened yet") + " not opened" : quiet ? quiet + " quiet" : "all moving";
   var d = document.createElement("div");
-  d.className = "riderstrip";
-  d.innerHTML = spots.map(function(s){
-    var k = !s.at ? "none" : s.own ? "cold" : s.fresh.state;
-    return '<button class="rsrow f-' + k + '" data-rs="' + esc(s.id) + '">' +
-      '<span class="rdot"></span>' +
-      '<span class="rsname">' + esc(shortName(s.name)) + '</span>' +
-      '<span class="rsline">' + esc(s.line) + '</span>' +
-      '<span class="rsjobs">' + s.jobs.map(function(o){ return esc(o.id); }).join(", ") + '</span>' +
-    '</button>';
-  }).join("");
+  d.className = "riderstrip" + (open ? " open" : "") + (none ? " s-bad" : quiet ? " s-warn" : " s-ok");
+  d.innerHTML =
+    '<button class="mtpill rspill" data-rsx aria-expanded="' + open + '" title="Riders with a job · click to ' + (open ? "close" : "open") + '">' +
+      '<span class="mtic">🏍</span><b>' + spots.length + (spots.length === 1 ? " rider" : " riders") + '</b>' +
+      '<span class="mtsum">' + esc(sum) + '</span><span class="mtchev">' + (open ? "▴" : "▾") + '</span></button>' +
+    (open ? '<div class="mtlist">' + spots.map(function(s){
+      var k = !s.at ? "none" : s.own ? "cold" : s.fresh.state;
+      return '<button class="rsrow f-' + k + '" data-rs="' + esc(s.id) + '" title="' + esc(s.name + " · " + s.line + " · " + s.jobs.map(function(o){ return o.id; }).join(", ")) + '">' +
+        '<span class="rdot"></span><span class="rsname">' + esc(shortName(s.name)) + '</span>' +
+        '<span class="rsline">' + esc(riderShort(s)) + '</span>' +
+        '<span class="rsjobs">' + s.jobs.length + (s.jobs.length === 1 ? " job" : " jobs") + '</span></button>';
+    }).join("") + '</div>' : '');
   d.addEventListener("click", function(e){
+    if(e.target.closest("[data-rsx]")){
+      try{ localStorage.setItem("hayat_ridopen", open ? "0" : "1"); if(!open) localStorage.setItem("hayat_trafopen2", "0"); }catch(x){}
+      riderStrip(box, spots); if(!open && box.querySelector(".trafstrip.open")) trafficStrip(box); return;
+    }
     var b = e.target.closest("[data-rs]"); if(!b) return;
     var s = spots.filter(function(x){ return x.id === b.getAttribute("data-rs"); })[0];
     if(!s) return;
     if(s.lat && AMAP){ AMAP.setView([s.lat, s.lng], Math.max(AMAP.getZoom(), 15)); return; }
     location.hash = "#/admin/o/" + s.jobs[0].id;
   });
-  /* Leaflet must not take these taps as a drag on the map */
-  ["mousedown","touchstart","dblclick","wheel"].forEach(function(t){
-    d.addEventListener(t, function(e){ e.stopPropagation(); }, { passive:true });
-  });
-  box.appendChild(d);
-  /* under the floating tab bar, however tall it wraps to today */
-  try{
-    var bar = box.closest(".console").querySelector(".conbar");
-    if(bar) d.style.top = Math.round(bar.getBoundingClientRect().bottom -
-                                     box.getBoundingClientRect().top + 10) + "px";
-  }catch(e){}
+  top.insertBefore(d, top.firstChild);
 }
 
 /* One dock on every office screen, in the same order, the
@@ -5280,6 +5378,7 @@ function officeDock(here){
   ];
   /* the rest live in a drawer, so the dock fits any screen */
   var M = [
+    ["hub",    "hub.html",       "\u2302",       "All apps",    "Every page and its link, in one place"],
     ["cash",   "#/admin/cash",   "\uD83D\uDCB5", "Drawer",      "Float, cash in and out, close the day"],
     ["menu",   "#/admin/menu",   "\uD83C\uDF7D", "Menu",        "Import, arrange, hide dishes"],
     ["google", "#/admin/google", "G",             "Google",      "Reviews and the business profile"],

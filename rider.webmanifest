@@ -7,8 +7,8 @@
   "scope": "rider",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#EDF2DD",
-  "theme_color": "#243510",
+  "background_color": "#F5F0E4",
+  "theme_color": "#F5F0E4",
   "icons": [
     {
       "src": "assets/icon-192.png",

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>All apps · Hayat</title>
+<meta name="theme-color" content="#1B1A17">
+<link rel="icon" href="assets/icon-192.png">
+<script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<script src="hayat-auth.js"></script>
+<script src="nav.js"></script>
+<script src="assets/qr.js"></script>
+<style>
+:root{--bg:#F5F0E4;--card:#FBF8F1;--ink:#1B1A17;--muted:#6F6758;--line:rgba(27,26,23,.12);--line2:rgba(27,26,23,.24);--pri:#1B1A17;--onpri:#F5F0E4;--acc:#B8975A;--soft:rgba(27,26,23,.05);--soft2:rgba(27,26,23,.09);--good:#2f8f5b;
+  --g-sell:#d9772b;--g-kitchen:#c0392b;--g-money:#2f6aa8;--g-menu:#7a4bb0;--g-hotel:#2f8f5b;--g-setup:#6f6758}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171512;--card:#211e1a;--ink:#F5F0E4;--muted:#B5AC9A;--line:rgba(245,240,228,.12);--line2:rgba(245,240,228,.24);--pri:#F5F0E4;--onpri:#1B1A17;--soft:rgba(245,240,228,.05);--soft2:rgba(245,240,228,.1);--g-sell:#f0914a;--g-kitchen:#e8665a;--g-money:#5aa9e6;--g-menu:#b08be0;--g-hotel:#5cc48a;--g-setup:#b5ac9a}}
+:root[data-theme="dark"]{--bg:#171512;--card:#211e1a;--ink:#F5F0E4;--muted:#B5AC9A;--line:rgba(245,240,228,.12);--line2:rgba(245,240,228,.24);--pri:#F5F0E4;--onpri:#1B1A17;--soft:rgba(245,240,228,.05);--soft2:rgba(245,240,228,.1);--g-sell:#f0914a;--g-kitchen:#e8665a;--g-money:#5aa9e6;--g-menu:#b08be0;--g-hotel:#5cc48a;--g-setup:#b5ac9a}
+*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer} a{color:inherit} [hidden]{display:none!important}
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.tr{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#f0b54a,#d9772b);display:grid;place-items:center;color:#1d1610;font-weight:800;font-size:20px;flex:none}
+h1{margin:0;font-size:18px;font-weight:800;line-height:1.1} h1 small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+.sp{flex:1}
+.q{flex:1 1 260px;max-width:460px;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:0 12px}
+.q input{flex:1;border:0;background:transparent;font:inherit;font-size:15px;font-weight:600;color:var(--ink);padding:10px 0;outline:0;min-width:0} .q kbd{font:700 11px ui-monospace,monospace;color:var(--muted);border:1px solid var(--line2);border-radius:6px;padding:2px 6px}
+.seg{display:inline-flex;background:var(--soft2);border-radius:11px;padding:3px} .seg button{border:0;background:transparent;border-radius:8px;padding:7px 12px;font-weight:800;font-size:13px;color:var(--muted)} .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.who{font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:14px 16px 60px}
+.rec{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none} .rec::-webkit-scrollbar{display:none}
+.rc{flex:none;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px 6px 8px;text-decoration:none;font-weight:800;font-size:13.5px} .rc i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--soft2)}
+.lab{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.grp{margin-top:18px} .gh{display:flex;align-items:center;gap:10px;margin:0 0 10px} .gh b{font-size:16px} .gh i{font-style:normal;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:16px;background:color-mix(in srgb,var(--gc) 16%,transparent)} .gh small{color:var(--muted);font-weight:700;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.tile{position:relative;display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-left:4px solid var(--gc);background:var(--card);border-radius:14px;padding:12px 12px 10px;text-decoration:none;min-height:86px;transition:transform .12s,box-shadow .12s}
+a.tile:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(0,0,0,.1)} a.tile:focus-visible{outline:2px solid var(--gc);outline-offset:2px}
+.tile .ic{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:21px;background:color-mix(in srgb,var(--gc) 14%,transparent);color:var(--gc);font-weight:800}
+.tile .tx{min-width:0;flex:1} .tile b{display:block;font-size:15px} .tile span{display:block;font-size:12.5px;color:var(--muted);line-height:1.35;margin-top:1px}
+.tile code{display:inline-block;margin-top:6px;font:600 11.5px ui-monospace,monospace;color:var(--muted);background:var(--soft);border-radius:6px;padding:1px 6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .act{position:absolute;right:8px;top:8px;display:flex;gap:4px;opacity:0;transition:opacity .12s} .tile:hover .act,.tile:focus-within .act{opacity:1}
+.tile .act button{border:1px solid var(--line2);background:var(--bg);border-radius:8px;width:30px;height:28px;padding:0;font-size:13px}
+.tile.soon{opacity:.55;border-style:dashed;border-left-style:solid} .tile.dim{display:none}
+.tile mark{background:color-mix(in srgb,var(--gc) 30%,transparent);color:inherit;border-radius:3px}
+.roles{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px} .roles em{font-style:normal;font-size:10.5px;font-weight:800;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px}
+table.map{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line);font-size:13.5px}
+table.map th,table.map td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top} table.map th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--soft)}
+table.map td.g{border-left:4px solid var(--gc);font-weight:800;white-space:nowrap} table.map a{font-weight:800;text-decoration:none} table.map code{font:600 12px ui-monospace,monospace}
+table.map tr.dim{display:none}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.foot{margin-top:28px;font-size:12.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.qrbox{position:fixed;inset:0;z-index:50;background:rgba(15,13,10,.5);display:grid;place-items:center;padding:16px} .qrbox>div{background:var(--card);border-radius:18px;padding:18px;text-align:center;max-width:340px;width:100%} .qrbox img{width:240px;height:240px;background:#fff;border-radius:12px;padding:8px} .qrbox b{display:block;font-size:17px;margin-bottom:4px} .qrbox code{display:block;font:600 12px ui-monospace,monospace;color:var(--muted);word-break:break-all;margin:8px 0} .qrbox button{border:1px solid var(--line2);background:var(--bg);border-radius:10px;padding:8px 14px;font-weight:800;margin:4px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--pri);color:var(--onpri);border-radius:12px;padding:9px 14px;font-weight:700;font-size:13.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60} .toast.on{opacity:1}
+@media (max-width:640px){ h1 small{display:none} .q{order:5;flex-basis:100%;max-width:none} .q kbd{display:none} .grid{grid-template-columns:1fr} .tile .act{opacity:1} table.map .hide-s{display:none} }
+</style>
+</head><body>
+<header class="top"><div class="tr">
+  <div class="logo">H</div><h1>All apps<small>every page of Hayat and its link</small></h1>
+  <label class="q"><span>🔍</span><input id="q" placeholder="Find an app · counter, kitchen, menus…" autocomplete="off" aria-label="find an app"><kbd>/</kbd></label>
+  <span class="sp"></span>
+  <div class="seg" role="tablist"><button data-v="tiles" class="on">Apps</button><button data-v="map">Site map</button></div>
+  <span class="who" id="who">…</span>
+</div></header>
+<main>
+  <div id="recWrap" hidden><div class="lab">🕘 Recently opened</div><div class="rec" id="rec"></div></div>
+  <div id="tiles"></div>
+  <div id="map" hidden></div>
+  <div class="empty" id="empty" hidden>No app called that. Try “counter”, “kitchen”, “menus”, “planner”.</div>
+  <div class="foot"><span>Tip: on a laptop, press <b>Ctrl + K</b> on any staff page to jump to another app.</span><span id="mine"></span></div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+(function(){ 'use strict';
+const $=id=>document.getElementById(id), H=window.HAYAT_APPS, esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const RN={office:'Office',cashier:'Cashier',captain:'Captain',waiter:'Waiter',kitchen:'Kitchen',cleaner:'Cleaner',rider:'Rider','*':'Everyone'};
+let ROLE=null, VIEW='tiles', ONLYMINE=false;
+const full=u=>new URL(u,location.href).href;
+const hl=(t,q)=>{ t=esc(t); if(!q) return t; const i=t.toLowerCase().indexOf(q); return i<0?t:t.slice(0,i)+'<mark>'+t.slice(i,i+q.length)+'</mark>'+t.slice(i+q.length); };
+function vis(a){ return !ONLYMINE||H.allowed(a,ROLE); }
+function match(a,q){ return !q||(a.name+' '+a.what+' '+a.url+' '+a.roles.join(' ')).toLowerCase().indexOf(q)>=0; }
+function tile(a,q){ const g='var(--g-'+a.group+')', soon=!a.url, href=soon?'':a.url;
+  const inner=`<span class="ic">${a.ic}</span><span class="tx"><b>${hl(a.name,q)}</b><span>${hl(a.what,q)}</span>${soon?'<code>coming next</code>':`<code>${hl(a.url.replace('./','/'),q)}</code>`}<span class="roles">${a.roles.map(r=>`<em>${RN[r]||r}</em>`).join('')}</span></span>${soon?'':`<span class="act"><button data-copy="${a.key}" title="copy link" aria-label="copy link">⧉</button><button data-qr="${a.key}" title="QR code for a phone" aria-label="QR code">▦</button></span>`}`;
+  return soon?`<div class="tile soon" style="--gc:${g}" data-k="${a.key}">${inner}</div>`:`<a class="tile" style="--gc:${g}" href="${esc(href)}" data-k="${a.key}">${inner}</a>`; }
+function draw(){ const q=($('q').value||'').trim().toLowerCase(); let n=0;
+  $('tiles').innerHTML=H.groups.map(([k,ic,name])=>{ const L=H.apps.filter(a=>a.group===k&&vis(a)&&match(a,q)); n+=L.length; if(!L.length) return '';
+    return `<section class="grp" style="--gc:var(--g-${k})"><div class="gh"><i>${ic}</i><b>${name}</b><small>${L.length}</small></div><div class="grid">${L.map(a=>tile(a,q)).join('')}</div></section>`; }).join('');
+  const rows=H.apps.filter(a=>vis(a)&&match(a,q));
+  $('map').innerHTML=`<table class="map"><tr><th>Area</th><th>App</th><th>Link</th><th class="hide-s">For</th><th class="hide-s">What it does</th></tr>${rows.map(a=>{ const G=H.groups.find(g=>g[0]===a.group); return `<tr style="--gc:var(--g-${a.group})"><td class="g">${G[1]} ${G[2]}</td><td>${a.url?`<a href="${esc(a.url)}">${a.ic} ${hl(a.name,q)}</a>`:`${a.ic} ${esc(a.name)}`}</td><td>${a.url?`<code>${esc(full(a.url).replace(/^https?:\/\//,''))}</code>`:'<code>coming next</code>'}</td><td class="hide-s">${a.roles.map(r=>RN[r]||r).join(', ')}</td><td class="hide-s">${esc(a.what)}</td></tr>`; }).join('')}</table>`;
+  $('tiles').hidden=VIEW!=='tiles'; $('map').hidden=VIEW!=='map'; $('empty').hidden=!!n;
+  const R=H.recent().map(k=>H.apps.find(a=>a.key===k)).filter(a=>a&&a.url&&vis(a)).slice(0,6); $('recWrap').hidden=!R.length||!!q;
+  $('rec').innerHTML=R.map(a=>`<a class="rc" href="${esc(a.url)}"><i>${a.ic}</i>${esc(a.name)}</a>`).join(''); }
+$('q').addEventListener('input',draw);
+$('q').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const f=document.querySelector(VIEW==='map'?'#map a':'#tiles a.tile'); if(f) location.href=f.getAttribute('href'); } if(e.key==='Escape'){ $('q').value=''; draw(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='/'&&document.activeElement!==$('q')){ e.preventDefault(); $('q').focus(); } });
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{ VIEW=b.dataset.v; document.querySelectorAll('[data-v]').forEach(x=>x.classList.toggle('on',x===b)); try{ localStorage.setItem('hayat-hub-view',VIEW); }catch(e){} draw(); });
+try{ const v=localStorage.getItem('hayat-hub-view'); if(v==='map'||v==='tiles'){ VIEW=v; document.querySelectorAll('[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v)); } }catch(e){}
+let TT=null; function toast(t){ const e=$('toast'); e.textContent=t; e.classList.add('on'); clearTimeout(TT); TT=setTimeout(()=>e.classList.remove('on'),2200); }
+document.addEventListener('click',e=>{ const c=e.target.closest('[data-copy]'), r=e.target.closest('[data-qr]'); if(!c&&!r) return; e.preventDefault(); e.stopPropagation();
+  const a=H.apps.find(x=>x.key===(c||r).dataset[c?'copy':'qr']); if(!a) return; const u=full(a.url);
+  if(c){ (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('Link copied · '+a.name),()=>toast(u)); return; }
+  const d=document.createElement('div'); d.className='qrbox'; d.innerHTML=`<div><b>${a.ic} ${esc(a.name)}</b><img alt="QR code" src="${window.qrSvg?window.qrSvg(u,240):''}"><code>${esc(u)}</code><button data-x>Close</button></div>`;
+  d.onclick=ev=>{ if(ev.target===d||ev.target.closest('[data-x]')) d.remove(); }; document.body.appendChild(d); },true);
+$('mine').addEventListener('click',e=>{ if(e.target.closest('button')){ ONLYMINE=!ONLYMINE; mine(); draw(); } });
+function mine(){ const all=!ROLE||ROLE==='office'||ROLE==='cashier'; $('mine').innerHTML=all?'':`<button style="border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:4px 12px;font-weight:800;font-size:12.5px">${ONLYMINE?'Show every app':'Only what '+(RN[ROLE]||ROLE)+'s use'}</button>`; }
+draw();
+/* who is signed in on this device (only to say it and to offer "only mine") */
+(async function(){ if(!window.HayatAuth){ $('who').textContent=''; return; } try{ const C=await HayatAuth.start({cache:true}); ROLE=C.role||null; $('who').textContent=C.role?('Signed in · '+(C.name||'')+' · '+(RN[C.role]||C.role)):'Not signed in · each app asks'; if(ROLE&&ROLE!=='office'&&ROLE!=='cashier') ONLYMINE=true; mine(); draw(); }catch(e){ $('who').textContent='Offline · links still work'; } })();
+window.HUB={draw,get ROLE(){ return ROLE; },set ROLE(v){ ROLE=v; ONLYMINE=!!v&&v!=='office'&&v!=='cashier'; mine(); draw(); }};
+})();
+</script>
+</body></html>

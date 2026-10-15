@@ -45,7 +45,7 @@ const LS='hayat-plan-v1', UIK='hayat-plan-ui', THK='hayat-plan-thumbs-v1';
 let P=null, FL=0, SEL=null, SELS=new Set(), TOOL='select', VIEW={s:40,ox:40,oy:40}, MODE='2d', PREWALK='3d', DIRTY=false, CTX=null, CLOUD={at:0,busy:false,err:''}, PRO=false, SPACEDOWN=false, CLIP=null, CUR=null, NORULER=false;
 const HIST={u:[],r:[]};
 const PREF=Object.assign({lib:true,tab:'props',rulers:true,roomDims:false,snap:true,mag:true,fold:{}},(()=>{ try{ return JSON.parse(localStorage.getItem(UIK)||'{}'); }catch(e){ return {}; } })());
-PREF.lay=Object.assign({spaces:[1,0],furn:[1,0],open:[1,0],dims:[1,0],labels:[1,0],grid:[1,0]},PREF.lay||{});
+PREF.lay=Object.assign({spaces:[1,0],furn:[1,0],open:[1,0],dims:[1,0],labels:[1,0],grid:[1,0],sketch:[1,0]},PREF.lay||{});
 function savePref(){ try{ localStorage.setItem(UIK,JSON.stringify(PREF)); }catch(e){} }
 let THUMBS={}; try{ THUMBS=JSON.parse(localStorage.getItem(THK)||'{}')||{}; }catch(e){ THUMBS={}; }
 function blank(name){ return {v:1,id:'demo',name:name||'Demo hotel',grid:.1,floors:[{id:uid(),name:'Ground',items:[]}],at:Date.now()}; }
@@ -149,7 +149,9 @@ function draw(){
   if(PREF.lay.grid[0]){ const g1=S*.5, g5=S*5, ox=((VIEW.ox%g1)+g1)%g1, oy=((VIEW.oy%g1)+g1)%g1, ox5=((VIEW.ox%g5)+g5)%g5, oy5=((VIEW.oy%g5)+g5)%g5;
     out.push(`<defs><pattern id="pg1" width="${g1}" height="${g1}" patternUnits="userSpaceOnUse" x="${ox}" y="${oy}"><path d="M ${g1} 0 L 0 0 0 ${g1}" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern><pattern id="pg5" width="${g5}" height="${g5}" patternUnits="userSpaceOnUse" x="${ox5}" y="${oy5}"><path d="M ${g5} 0 L 0 0 0 ${g5}" fill="none" stroke="var(--grid2)" stroke-width="1"/></pattern></defs>`);
     out.push(`<rect width="100%" height="100%" fill="url(#pg1)" data-bg="1"/><rect width="100%" height="100%" fill="url(#pg5)" data-bg="1"/>`); }
-  L.filter(i=>i.kind==='space'&&vis(i)).forEach(s=>{ const t=ST[s.type]||ST.other, P0=worldPts(s); out.push(`<g data-id="${s.id}" class="${WARN.ids.has(s.id)?'bad':''}${lk(s)}"><polygon points="${ptsAttr(P0)}" fill="${t.c}" class="sp"/></g>`); });
+  const U=floor().under; if(U&&U.src&&PREF.lay.sketch[0]){ const a=W2S([U.x,U.y]); out.push(`<image href="${U.src}" x="${a[0].toFixed(1)}" y="${a[1].toFixed(1)}" width="${(U.w*S).toFixed(1)}" height="${(U.h*S).toFixed(1)}" opacity="${U.op==null?.35:U.op}" preserveAspectRatio="none" pointer-events="none"/>`); }
+  const UO=U&&U.src&&PREF.lay.sketch[0]?' fill-opacity=".55"':'';
+  L.filter(i=>i.kind==='space'&&vis(i)).forEach(s=>{ const t=ST[s.type]||ST.other, P0=worldPts(s); out.push(`<g data-id="${s.id}" class="${WARN.ids.has(s.id)?'bad':''}${lk(s)}"><polygon points="${ptsAttr(P0)}" fill="${t.c}"${UO} class="sp"/></g>`); });
   L.filter(i=>i.kind==='obj'&&vis(i)).forEach(o=>{ const T=OBJ[o.t]||{}, P0=worldPts(o), c=W2S(ctr(o));
     out.push(`<g data-id="${o.id}" class="${WARN.ids.has(o.id)?'bad':''}${lk(o)}"><polygon points="${ptsAttr(P0)}" fill="${o.c||T.c||'#bbb'}" class="ob${WARN.ids.has(o.id)?' bad':''}" fill-opacity="${T.lift?'.45':'1'}"/><g transform="translate(${c[0].toFixed(1)},${c[1].toFixed(1)}) rotate(${o.r||0}) scale(${S})" pointer-events="none">${glyph(o)}</g></g>`); });
   L.filter(i=>(i.kind==='door'||i.kind==='window')&&vis(i)).forEach(o=>{ const q=openingPos(o); if(!q) return; const a=q.ang*Math.PI/180, ux=Math.cos(a), uy=Math.sin(a), hw=o.w/2;
@@ -399,8 +401,9 @@ function sheet(html,onWire){ $('sheetBody').innerHTML=html; $('sheet').classList
 function closeSheet(){ $('sheet').classList.remove('on'); }
 (function(){ const sh=$('sheet'); let y0=null; sh.addEventListener('touchstart',e=>{ if(sh.scrollTop<=0) y0=e.touches[0].clientY; },{passive:true}); sh.addEventListener('touchend',e=>{ if(y0!=null&&e.changedTouches[0].clientY-y0>80) closeSheet(); y0=null; },{passive:true}); })();
 function shapeSheet(){ if(MODE==='3d') setMode(PRO?'split':'2d'); const sh=[['rect','Rectangle','<rect x="6" y="10" width="44" height="22" rx="1"/>'],['square','Square','<rect x="16" y="6" width="26" height="26"/>'],['circle','Circle','<circle cx="29" cy="20" r="14"/>'],['tri','Triangle','<path d="M29 5l17 30H12z"/>'],['poly','Any shape','<path d="M8 32l6-24 18 6 16-8-2 26z"/>']];
-  sheet(`<h2>Draw a space <button class="ib x" data-x>✕</button></h2><p style="margin:0 0 8px;color:var(--muted);font-size:13px">1 · what is it</p><div class="types">${STYPES.map(t=>`<button class="tp${NEWTYPE===t[0]?' on':''}" data-nt="${t[0]}"><i style="background:${t[2]}"></i>${esc(t[1])}</button>`).join('')}</div>
+  sheet(`<h2>Draw a space <button class="ib x" data-x>✕</button></h2><button class="btn" data-sketch style="width:100%;margin:0 0 10px;text-align:left">📷 Plan from a paper sketch <small style="color:var(--muted);font-weight:600">· take a photo, the rooms are found for you</small></button><p style="margin:0 0 8px;color:var(--muted);font-size:13px">1 · what is it</p><div class="types">${STYPES.map(t=>`<button class="tp${NEWTYPE===t[0]?' on':''}" data-nt="${t[0]}"><i style="background:${t[2]}"></i>${esc(t[1])}</button>`).join('')}</div>
     <p style="margin:12px 0 8px;color:var(--muted);font-size:13px">2 · its shape, then drag on the plan</p><div class="shapes">${sh.map(s=>`<button class="li" data-sh="${s[0]}"><svg viewBox="0 0 58 40" fill="${(ST[NEWTYPE]||ST.other).c}" stroke="currentColor" stroke-width="2">${s[2]}</svg>${s[1]}</button>`).join('')}</div>`,root=>{
+    root.querySelector('[data-sketch]').onclick=()=>{ closeSheet(); openSketch(); };
     root.querySelectorAll('[data-nt]').forEach(b=>b.onclick=()=>{ NEWTYPE=b.dataset.nt; shapeSheet(); });
     root.querySelectorAll('[data-sh]').forEach(b=>b.onclick=()=>{ closeSheet(); setTool(b.dataset.sh); }); }); }
 
@@ -508,6 +511,7 @@ function propsPanel(){ const root=$('propsBody'), L=selList();
   root.innerHTML=`<h2>🏢 ${esc(F.name)} <small style="font-size:12px;color:var(--muted);font-weight:600">${esc(P.name)}</small></h2>
     <div class="row"><label class="f">Floor name<input data-pf="fname" value="${esc(F.name)}" maxlength="24"></label><label class="f">Plan name<input data-pf="pname" value="${esc(P.name)}" maxlength="40"></label></div>
     <p class="ph">This floor</p><div class="stat"><div><small>Spaces</small><b>${SP.length}</b></div><div><small>Guest rooms</small><b>${rooms}</b></div><div><small>Seats</small><b>${seats}</b></div><div><small>Area</small><b>${Math.round(A)} m²</b></div></div>
+    <p class="ph">From paper</p><div class="btns" style="margin-top:0"><button class="btn sm" data-q="sketch">📷 Plan from a sketch photo</button></div>${F.under?`<div class="row"><label class="f" style="flex:1">Sketch under the plan<input type="range" min="0" max="1" step=".05" data-und="op" value="${F.under.op==null?.35:F.under.op}"></label></div><div class="btns" style="margin-top:0"><button class="btn sm" data-und="hide">${PREF.lay.sketch[0]?'🙈 Hide sketch':'👁 Show sketch'}</button><button class="btn sm bad" data-und="del">🗑 Remove sketch</button></div>`:''}
     <p class="ph">Grid + snapping</p><div class="btns" style="margin-top:0">${[.05,.1,.25,.5].map(g=>`<button class="btn sm${Math.abs((P.grid||.1)-g)<1e-6?' on':''}" data-grid="${g}">${g*100} cm</button>`).join('')}</div>
     <label class="tgl"><input type="checkbox" data-pt="snap"${PREF.snap?' checked':''}># Snap to the grid</label><label class="tgl"><input type="checkbox" data-pt="mag"${PREF.mag?' checked':''}>🧲 Stick to walls (magnets)</label><label class="tgl"><input type="checkbox" data-pt="rulers"${PREF.rulers?' checked':''}>📏 Rulers</label><label class="tgl"><input type="checkbox" data-pt="roomDims"${PREF.roomDims?' checked':''}>↔ Room sizes on the plan</label>
     <p class="ph">Quick</p><div class="btns" style="margin-top:0"><button class="btn sm" data-q="fit">⤢ Fit</button><button class="btn sm" data-q="sum">📊 Summary</button><button class="btn sm" data-q="rooms">🛏 Rooms</button><button class="btn sm" data-q="warn">⚠ Checks · ${WARN.list.length}</button><button class="btn sm" data-q="split">◫ Split 2D + 3D</button></div>
@@ -515,10 +519,11 @@ function propsPanel(){ const root=$('propsBody'), L=selList();
   root.querySelectorAll('[data-pf]').forEach(i=>i.onchange=()=>{ commit(); if(i.dataset.pf==='fname') F.name=i.value.trim()||F.name; else P.name=i.value.trim()||P.name; changed(); renderPanel(); });
   root.querySelectorAll('[data-grid]').forEach(b=>b.onclick=()=>{ commit(); P.grid=+b.dataset.grid; changed(); renderPanel(); });
   root.querySelectorAll('[data-pt]').forEach(i=>i.onchange=()=>{ PREF[i.dataset.pt]=i.checked; savePref(); layout(); draw(); renderPanel(); });
-  root.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ const q=b.dataset.q; if(q==='fit') fit(); else if(q==='sum') sumSheet(); else if(q==='rooms') roomsSheet(); else if(q==='warn') warnSheet(); else if(q==='split') setMode('split'); }); }
+  root.querySelectorAll('[data-und]').forEach(b=>{ const k=b.dataset.und; if(k==='op'){ b.oninput=()=>{ F.under.op=+b.value; draw(); }; b.onchange=()=>{ changed(true); }; return; } b.onclick=()=>underAct(k); });
+  root.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ const q=b.dataset.q; if(q==='sketch'){ openSketch(); return; } if(q==='fit') fit(); else if(q==='sum') sumSheet(); else if(q==='rooms') roomsSheet(); else if(q==='warn') warnSheet(); else if(q==='split') setMode('split'); }); }
 function layersPanel(){ const root=$('layersBody'), F=floor(), HS=hiddenSpaces(), cnt=k=>F.items.filter(i=>layerOf(i)===k).length;
-  const LN=[['spaces','Spaces · walls'],['furn','Furniture + things'],['open','Doors + windows'],['dims','Measures'],['labels','Names'],['grid','Grid']];
-  let h=`<p class="ph">Layers</p><div class="lay">${LN.map(([k,n])=>{ const L=PREF.lay[k]; const c=k==='labels'||k==='grid'?'':`<small>${cnt(k)}</small>`; return `<div class="lr"><button class="e${L[0]?'':' off'}" data-le="${k}" title="show / hide">👁</button>${k==='labels'||k==='grid'?'<span style="width:24px"></span>':`<button class="k${L[1]?'':' off'}" data-lk="${k}" title="lock: can't be picked or moved">🔒</button>`}<span class="n">${n}</span>${c}</div>`; }).join('')}</div>`;
+  const LN=[['spaces','Spaces · walls'],['furn','Furniture + things'],['open','Doors + windows'],['dims','Measures'],['labels','Names'],['grid','Grid']].concat(floor().under?[['sketch','Sketch photo']]:[]);
+  let h=`<p class="ph">Layers</p><div class="lay">${LN.map(([k,n])=>{ const L=PREF.lay[k]; const c=k==='labels'||k==='grid'||k==='sketch'?'':`<small>${cnt(k)}</small>`; return `<div class="lr"><button class="e${L[0]?'':' off'}" data-le="${k}" title="show / hide">👁</button>${k==='labels'||k==='grid'||k==='sketch'?'<span style="width:24px"></span>':`<button class="k${L[1]?'':' off'}" data-lk="${k}" title="lock: can't be picked or moved">🔒</button>`}<span class="n">${n}</span>${c}</div>`; }).join('')}</div>`;
   const SP=F.items.filter(i=>i.kind==='space').slice().sort((a,b)=>{ const ga=(ST[a.type]||{}).guest?1:0, gb=(ST[b.type]||{}).guest?1:0; return ga-gb||String(spaceLabel(a)).localeCompare(String(spaceLabel(b)),undefined,{numeric:true}); });
   const kidsOf=s=>{ const P0=worldPts(s); return F.items.filter(o=>(o.kind==='obj'&&inside(ctr(o),P0))||((o.kind==='door'||o.kind==='window')&&o.sp===s.id)); };
   const used=new Set(); const selHost=SEL&&byId(SEL); const row=(it,kid)=>{ const hidden=isHidden(it,null,HS)&&!PREF.lay[layerOf(it)][0]?true:!!it.hid; const ic=it.kind==='space'?`<i class="sw" style="background:${(ST[it.type]||ST.other).c}"></i>`:it.kind==='obj'?'▪':it.kind==='door'?'🚪':it.kind==='window'?'🪟':'📏';
@@ -549,7 +554,9 @@ function afterSel(quiet){ draw(); dock(); if(PRO) renderPanel(); else if(!quiet)
 function sync3d(){ if(V3&&MODE!=='2d'&&MODE!=='walk'&&V3.setSel) V3.setSel(SELS.size===1?SEL:null); }
 function floorSheet(i){ const f=i>=0?P.floors[i]:null;
   sheet(`<h2>${f?'Floor · '+esc(f.name):'Add a floor'}<button class="ib x" data-x>✕</button></h2><label class="f">Name<input id="flN" value="${esc(f?f.name:(['Ground','First','Second','Third','Fourth','Terrace'][P.floors.length]||'Floor '+P.floors.length))}" maxlength="24"></label>
+    ${f&&f.under?`<div class="btns"><button class="btn" data-und="hide">${PREF.lay.sketch[0]?'🙈 Hide the sketch photo':'👁 Show the sketch photo'}</button><button class="btn bad" data-und="del">🗑 Remove the sketch photo</button></div>`:''}
     <div class="btns"><button class="btn pri" id="flGo">${f?'Rename':'＋ Empty floor'}</button>${f?'':`<button class="btn" id="flCopy">⧉ Copy “${esc(floor().name)}”</button>`}${f&&P.floors.length>1?'<button class="btn bad" id="flDel">🗑 Remove floor</button>':''}</div>${f?'':'<p style="font-size:12.5px;color:var(--muted)">Copy keeps rooms, doors and objects; room numbers move up by 100 (101 → 201).</p>'}`,()=>{
+    document.querySelectorAll('#sheetBody [data-und]').forEach(b=>b.onclick=()=>{ underAct(b.dataset.und); closeSheet(); });
     $('flGo').onclick=()=>{ const n=$('flN').value.trim()||'Floor'; commit(); if(f) f.name=n; else { P.floors.push({id:uid(),name:n,items:[]}); FL=P.floors.length-1; } closeSheet(); selClear(); changed(); floors(); fit(); renderPanel(); };
     const c=$('flCopy'); if(c) c.onclick=()=>{ commit(); const src=floor(), map={}, step=100*(P.floors.length-FL);
       const nf={id:uid(),name:$('flN').value.trim()||'Floor',items:src.items.map(o=>{ const k=JSON.parse(JSON.stringify(o)); map[o.id]=k.id=uid(); if(k.no&&/^\d+$/.test(k.no)) k.no=String(+k.no+step); return k; })};
@@ -663,11 +670,28 @@ $('file').onchange=()=>{ const f=$('file').files[0]; if(!f) return; const rd=new
 $('more').onclick=e=>{ e.stopPropagation(); $('menu').classList.toggle('on'); };
 document.addEventListener('click',e=>{ if(!e.target.closest('#menu,#more')) $('menu').classList.remove('on'); });
 $('menu').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{ $('menu').classList.remove('on'); const m=b.dataset.m;
+  if(m==='sketch'){ openSketch(); return; }
   if(m==='sum') sumSheet(); else if(m==='rooms') roomsSheet(); else if(m==='help') helpSheet(); else if(m==='png') savePng(); else if(m==='json') saveJson(); else if(m==='import') $('file').click();
   else if(m==='tpl'||m==='blank'){ sheet(`<h2>${m==='tpl'?'Start from the demo hotel':'Start a blank plan'}<button class="ib x" data-x>✕</button></h2><p>This replaces the plan on screen (${P.floors.reduce((n,f)=>n+f.items.length,0)} things). ↶ brings it back.</p><div class="btns"><button class="btn pri" id="tGo">Yes, start</button></div>`,()=>{ $('tGo').onclick=()=>{ commit(); P=m==='tpl'?demoHotel():blank('My hotel'); FL=0; selClear(); closeSheet(); changed(); fit(); afterSel(true); if(MODE!=='2d') show3d(true); }; }); }
   else if(m==='name'){ sheet(`<h2>Rename<button class="ib x" data-x>✕</button></h2><label class="f">Plan name<input id="pN" value="${esc(P.name)}" maxlength="40"></label><div class="btns"><button class="btn pri" id="pGo">Save</button></div>`,()=>{ $('pGo').onclick=()=>{ commit(); P.name=$('pN').value.trim()||'My hotel'; closeSheet(); changed(); renderPanel(); }; }); } });
 $('undo').onclick=undo; $('redo').onclick=redo;
 $('zin').onclick=()=>{ const r=svg.getBoundingClientRect(); setView(VIEW.s*1.3,r.width/2,r.height/2); }; $('zout').onclick=()=>{ const r=svg.getBoundingClientRect(); setView(VIEW.s/1.3,r.width/2,r.height/2); }; $('zfit').onclick=()=>{ if(MODE==='3d') show3d(true); else fit(); };
+/* ---------------- plan from a paper sketch (planner-sketch.js, loaded when opened) ---------------- */
+let SK=null;
+function underAct(k){ const F=floor(); if(!F.under) return; if(k==='hide'){ PREF.lay.sketch[0]=PREF.lay.sketch[0]?0:1; savePref(); draw(); renderPanel(); return; } if(k==='del'){ commit(); delete F.under; changed(); renderPanel(); toast('Sketch photo removed · ↶ brings it back'); } }
+function skHooks(){ return {ST,STYPES,uid,toast,
+  floorEmpty:()=>!items().some(i=>i.kind==='space'), floorName:()=>floor().name,
+  usedNos:()=>new Set(P.floors.flatMap(f=>f.items).filter(i=>i.no).map(i=>String(i.no))),
+  nextRoomNo:()=>{ const used=new Set(P.floors.flatMap(f=>f.items).filter(i=>i.no).map(i=>String(i.no))); let n=(P.floors.length&&!items().some(i=>i.kind==='space')?FL:P.floors.length)*100+1; if(n<101) n=101; while(used.has(String(n))) n++; return String(n); },
+  create:(list,under,where)=>{ commit();
+    if(where==='new'){ P.floors.push({id:uid(),name:'From sketch'+(P.floors.some(f=>/^From sketch/.test(f.name))?' '+(P.floors.length+1):''),items:[]}); FL=P.floors.length-1; }
+    else if(where==='replace'){ floor().items=[]; }
+    const F=floor(); list.forEach(o=>F.items.push(o)); if(under) F.under=under; PREF.lay.sketch[0]=1; selClear(); setMode('2d'); changed(); floors(); fit(); afterSel(true);
+    const sp=list.filter(o=>o.kind==='space').length, dr=list.filter(o=>o.kind==='door').length, wn=list.filter(o=>o.kind==='window').length;
+    toast(`✓ ${sp} rooms · ${dr} doors · ${wn} windows made`+(WARN.list.length?` · ⚠ ${WARN.list.length} to check`:''));
+    if(WARN.list.length) setTimeout(()=>warnSheet(),900); } }; }
+async function openSketch(){ try{ SK=SK||await import('./planner-sketch.js'); SK.open(skHooks()); }catch(e){ toast('The sketch reader could not start: '+(e.message||e)); } }
+
 let V3=null;
 function H3(reset){ return {reset,ST,OBJ,worldPts,openingPos,edges,area,centroid,spaceLabel,inside,hidden:(it,f)=>isHidden(it,f),layers:{furn:!!PREF.lay.furn[0],open:!!PREF.lay.open[0]},
   onSelect:id=>{ if(id) sel1(id); else selClear(); draw(); dock(); if(PRO) renderPanel(); else if(id) openInspector(); else closeSheet(); },
@@ -690,7 +714,7 @@ function layout(){ const was=PRO; PRO=innerWidth>=900; const B=document.body; B.
 let RZ=null; window.addEventListener('resize',()=>{ clearTimeout(RZ); RZ=setTimeout(()=>{ const was=PRO; layout(); if(MODE!=='3d'&&MODE!=='walk'){ if(was!==PRO) fit(); else draw(); } },60); });
 /* tests + console */
 window.PLANNER={get P(){ return P; },get SEL(){ return SEL; },set SEL(v){ sel1(v); },get SELS(){ return [...SELS]; },set SELS(v){ SELS=new Set(v||[]); SEL=v&&v.length?v[v.length-1]:null; },get VIEW(){ return VIEW; },get WARN(){ return WARN; },get TOOL(){ return TOOL; },get FL(){ return FL; },set FL(v){ FL=v; selClear(); floors(); if(MODE!=='2d') show3d(true); fit(); renderPanel(); },get MODE(){ return MODE; },get PRO(){ return PRO; },get PREF(){ return PREF; },get THUMBS(){ return THUMBS; },get V3(){ return V3; },
-  load:o=>{ if(load(o)){ changed(); fit(); } },demoHotel,checks,worldPts,openingPos,byId,undo,redo,fit,setMode,placeObj,setTool,changed,W2S,S2W,roomsAll,alignSel,dup,del,copySel,paste,afterSel,makeThumbs,get HIST(){ return HIST; }};
+  load:o=>{ if(load(o)){ changed(); fit(); } },demoHotel,checks,worldPts,openingPos,byId,undo,redo,fit,setMode,placeObj,setTool,changed,W2S,S2W,roomsAll,alignSel,dup,del,copySel,paste,afterSel,makeThumbs,openSketch,get SK(){ return SK; },get HIST(){ return HIST; }};
 /* ---------------- start ---------------- */
 (async function boot(){
   let saved=null; try{ saved=JSON.parse(localStorage.getItem(LS)||'null'); }catch(e){}

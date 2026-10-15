@@ -6,6 +6,7 @@
      It never writes VMENU's vm_* data - spends and profit keep coming from VMENU;
      the owner page only COMPARES the two. -->
 <script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<script src="nav.js" onerror="0"></script>
 <script src="hayat-auth.js"></script>
 <script src="stock-read.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,13 +54,17 @@ input,select{font:500 16px "Jost",sans-serif;color:var(--ink);background:var(--b
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;z-index:70;max-width:92vw}
 .rd{border:2px solid var(--accent);border-radius:14px;padding:12px;display:grid;gap:8px;background:var(--bg)} .rd.no{border-color:var(--warn)} .rd .st{font-weight:700} .rd .bar{height:6px;background:var(--soft);border-radius:4px;overflow:hidden} .rd .bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
 .rdw{background:#f8ecd2;color:#7a4f00;border-radius:10px;padding:8px 10px;font-size:13.5px} label.rl{cursor:pointer} .rl.off{opacity:.55} .rl input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent)}
-.rl{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:2px 8px;border-top:1px solid var(--line);padding:7px 0} .rl .raw{font-size:12.5px;color:var(--muted)} .rl .nm{font-weight:700} .rl .amt{text-align:right;font-weight:700} .rl .qr{font-size:12.5px;color:var(--muted);text-align:right}
+.rl{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:2px 8px;border-top:1px solid var(--line);padding:7px 0} .rl .raw{font-size:12.5px;color:var(--muted)} .rl .btn.sug{padding:4px 10px;font-size:13px;margin-top:4px;border-color:var(--warn);color:var(--warn)} .rl .nm{font-weight:700} .rl .amt{text-align:right;font-weight:700} .rl .qr{font-size:12.5px;color:var(--muted);text-align:right}
 .cf{display:inline-block;border-radius:999px;padding:0 7px;font-size:11.5px;font-weight:800;margin-left:4px} .cf.hi{background:#e3f1e6;color:#145c2c} .cf.mid{background:#f8ecd2;color:#7a4f00} .cf.new{background:#e4ecf3;color:#24506e}
 .ln.chk{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--bg))} .ln .tip.read{color:var(--warn);font-weight:600}
+.qt{display:flex;gap:8px;flex-wrap:wrap} .vo{border:2px solid var(--accent);border-radius:12px;padding:10px;display:grid;gap:6px;background:var(--bg)} .voi{font-style:italic;color:var(--muted)} .voh{font-size:14px} .voh.bad{color:var(--bad)}
+.chips{display:flex;gap:6px;flex-wrap:wrap} .chips button{border:1px dashed var(--line);background:var(--bg);border-radius:999px;padding:7px 11px;font:600 14px "Jost",sans-serif;color:var(--ink);cursor:pointer} .chips small{color:var(--muted);font-weight:500}
+.pinpv{position:fixed;left:0;right:0;top:0;height:36vh;z-index:20;background:#111;display:flex;flex-direction:column;box-shadow:0 4px 14px rgba(0,0,0,.35)} .pinbar{display:flex;justify-content:space-between;align-items:center;color:#eee;font-size:12.5px;padding:4px 10px} .pinbar button{border:0;background:transparent;color:#fff;font-size:18px;cursor:pointer}
+.pinsc{flex:1;overflow:auto;-webkit-overflow-scrolling:touch} .pinsc img{width:100%;display:block} .pinsc img.z{width:220%} body.pinned .wrap{padding-top:calc(36vh + 12px)} body.pinned header{display:none}
 .it{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0} .it small{color:var(--muted)}
 .it .b6{border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--bg);font-weight:700;cursor:pointer} .it .b6.on{background:var(--good);color:#fff;border-color:var(--good)}
 </style></head><body>
-<header><h1>📦 Stock</h1><span class="chip" id="who">…</span><span class="sp"></span><span class="chip" id="net">connecting…</span></header>
+<header><a href="./hub.html" title="all apps" aria-label="all apps" style="text-decoration:none;font-size:20px;line-height:1;padding:2px 6px 2px 0">⌂</a><h1>📦 Stock</h1><span class="chip" id="who">…</span><span class="sp"></span><span class="chip" id="net">connecting…</span></header>
 <main class="wrap" id="app"><div class="note">Loading…</div></main>
 <div class="savebar" id="savebar" hidden><button class="btn" id="clr">Clear</button><button class="btn pri" id="save">Save bill</button></div>
 <script>
@@ -76,6 +81,7 @@ function toast(m){ let t=$('toast'); if(!t){ t=document.createElement('div'); t.
 let RD=null, AIURL='', CTX=null, TAB='new', ITEMS={items:{},sup:{},alias:{}}, BUYS=[], DRAFT=null, PHOTO=null, OPEN=null, DEL=null;
 const lsGet=(k,d)=>{ try{ return JSON.parse(localStorage.getItem(k))||d; }catch(e){ return d; } }, lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
 function fresh(){ return {day:bizDay(),supplier:'',billNo:'',billTotal:'',note:'',lines:[{n:'',q:'',u:'kg',r:'',a:''}]}; }
+window.__RD=()=>RD;   /* test hook: the last read */
 function saveDraft(){ lsSet('hayat-stock-draft',{d:DRAFT,at:Date.now()}); }
 (function(){ const x=lsGet('hayat-stock-draft',null); DRAFT=x&&Date.now()-x.at<12*3600e3?x.d:fresh(); })();
 
@@ -88,26 +94,34 @@ async function pick(e){ const f=e.target.files&&e.target.files[0]; e.target.valu
 /* read the bill: free on this phone first, the AI reader only if unsure (and only if a reader URL is set) */
 async function readBill(){ if(!PHOTO||!window.StockRead) return; const me=PHOTO; RD={busy:true,msg:'Reading the bill…',f:0}; paintRead();
   try{ const res=await StockRead.read(PHOTO,{items:ITEMS.items,alias:ITEMS.alias,aiUrl:AIURL,suppliers:Object.values(ITEMS.sup).map(s=>s.n),onProg:(m,f)=>{ if(RD&&RD.busy){ RD.msg=m; RD.f=f; paintRead(); } }});
-    if(PHOTO!==me) return; (res.lines||[]).forEach(l=>{ l.good=!!(l.ok&&(l.conf==null||l.conf>=75)&&(l.m.via!=='new'||l.m.score>=0.5||res.via==='ai')); l.on=l.good; }); RD={res}; }catch(e){ RD={err:e.message||String(e)}; }
+    if(PHOTO!==me) return; (res.lines||[]).forEach(l=>{ l.good=goodLine(l,res); l.on=l.good; }); RD={res}; }catch(e){ RD={err:e.message||String(e)}; }
   paintRead(); }
+/* a line is ticked for you only when its numbers PROVE themselves: qty × rate = amount all read (handwriting is often faint,
+   so the arithmetic counts more than the reader's confidence), or the bill total fixed it. A rate worked out from the amount needs a clear read. */
+function goodLine(l,res){ const nameOk=l.m.via!=='new'||l.m.via==='ai'?true:(l.how==='3'&&(l.conf==null||l.conf>=75));   /* a known item (≥78%) is ticked and marked amber when under 90%; a new name only on a clear read */
+  if(l.how==='3'||l.how==='self'||l.how==='fix'||l.how==='fixr') return nameOk; if(l.how==='2') return nameOk&&(res.via==='ai'?!!res.totalOk:(l.conf==null||l.conf>=75)); return false; }   /* AI lines without a written rate only when the whole bill adds up */
+const whyLine=l=>l.how==='mm'?(l.sugA!=null?`probably ${rs(l.sugA)} (${l.q} × ${rs(l.r)}) — the amount reads ${rs(l.a)}`:`qty × rate = ${rs(l.alt)}, the amount reads ${rs(l.a)} — one is misread`):l.how==='self'?(l.readR!=null?`rate read ${l.readR}, fixed to ${l.r} (qty × rate = amount)`:`qty read ${l.readQ}, fixed to ${l.q} (qty × rate = amount)`):l.how==='fix'?`amount fixed with the bill total (read ${rs(l.read)})`:l.how==='fixr'?'rate fixed with the bill total':l.how==='1'?'no qty read':l.how==='2'&&l.conf!=null&&l.conf<75?'faint · rate worked out':(l.conf!=null&&l.conf<75&&l.how!=='3')?'faint on the photo':'';
 function knownSup(name){ if(!name) return ''; let best='',bs=0; Object.values(ITEMS.sup).forEach(x=>{ const v=StockRead.phraseSim(name,x.n); if(v>bs){ bs=v; best=x.n; } }); return bs>=0.75?best:name; }
 function readCard(){ if(!RD) return ''; if(RD.busy) return `<div class="rd" id="rd"><span class="st">🔎 ${esc(RD.msg)}</span><div class="bar"><i style="width:${Math.round(100*(RD.f||0))}%"></i></div><span class="note">First time on this phone it downloads the reader (~7 MB), then it is instant.</span></div>`;
   if(RD.err) return `<div class="rd no" id="rd"><span class="st">Could not read it: ${esc(RD.err)}</span><span class="note">Enter the items below by hand.</span></div>`;
-  const r=RD.res; if(!r.isBill) return `<div class="rd no" id="rd"><span class="st">🤔 This does not look like a bill</span><span class="note">${esc(r.why||'')}${r.aiError?' · AI: '+esc(r.aiError):''}. Retake the photo flat and bright, or enter the items by hand.</span><div class="row"><button class="btn" id="rdX">OK</button></div></div>`;
-  const cf=(m,l)=>!l.good?'<span class="cf mid">check</span>':m.via==='new'?'<span class="cf new">new item</span>':m.score>=0.9?'<span class="cf hi">'+Math.round(m.score*100)+'%</span>':'<span class="cf mid">check · '+Math.round(m.score*100)+'%</span>';
-  const why=l=>!l.ok?'qty × rate ≠ amount':(l.conf!=null&&l.conf<75)?'faint on the photo':'';
+  const r=RD.res; if(!r.isBill) return `<div class="rd no" id="rd"><span class="st">🤔 This does not look like a bill</span><span class="note">${esc(r.why||'')}${r.aiError?' · AI: '+esc(r.aiError):''}. Messy handwriting is normal — the photo is kept as proof.</span><div class="row"><button class="btn pri" id="rdVo">🎤 Speak the bill</button><button class="btn" id="rdPin">📌 Pin photo &amp; type</button><button class="btn" id="rdX">OK</button></div>${AIURL?'':(CTX&&CTX.role==='office'?'<span class="note">Or switch on the free AI reader in Items.</span>':'')}</div>`;
+  const cf=(m,l)=>l.how==='fix'||l.how==='fixr'||l.how==='self'?(l.good?'<span class="cf hi">fixed ✓</span>':'<span class="cf mid">fixed · check name</span>'):!l.good?'<span class="cf mid">check</span>':m.via==='new'?'<span class="cf new">new item</span>':m.score>=0.9?'<span class="cf hi">'+Math.round(m.score*100)+'%</span>':'<span class="cf mid">check · '+Math.round(m.score*100)+'%</span>';
+  const why=whyLine;
   const nOn=r.lines.filter(l=>l.on).length, mism=r.total!=null&&r.totalOk===false;
   return `<div class="rd" id="rd"><span class="st">✓ Bill read · ${r.lines.length} line${r.lines.length===1?'':'s'} · ${r.via==='ai'?'read by AI':'read on this phone'}${r.via!=='ai'&&r.sure<0.7?' (unsure)':''}</span>
-    <span class="note">${[r.supplier&&('Supplier: <b>'+esc(knownSup(r.supplier))+'</b>'),r.date&&('Date: '+esc(r.date)),r.billNo&&('No. '+esc(r.billNo)),r.total!=null&&('Total '+rs(r.total)+(r.totalOk===false?' <b style="color:var(--bad)">· lines add up to '+rs(r.sum)+'</b>':r.totalOk?' ✓':''))].filter(Boolean).join(' · ')}${r.aiError?' · AI not used: '+esc(r.aiError):''}</span>
+    <span class="note">${[r.supplier&&('Supplier: <b>'+esc(knownSup(r.supplier))+'</b>'),r.date&&('Date: '+esc(r.date)),r.billNo&&('No. '+esc(r.billNo)),r.total!=null&&('Total '+rs(r.total)+(r.totalOk===false?' <b style="color:var(--bad)">· lines add up to '+rs(r.sum)+(r.rounded?' (rounded off?)':'')+'</b>':r.totalOk?' ✓':''))].filter(Boolean).join(' · ')}${r.aiError?' · AI not used: '+esc(r.aiError):''}</span>
     ${mism?`<div class="rdw">⚠ The lines add up to <b>${rs(r.sum)}</b> but the bill says <b>${rs(r.total)}</b> — some lines could not be read. Tick only what is right and type the rest${AIURL?'':' (or turn on the free AI reader in Items)'}.</div>`:''}
     ${r.dropped?`<span class="note">${r.dropped} unclear line${r.dropped>1?'s':''} on the photo skipped (packets, labels, smudges).</span>`:''}
-    <div>${r.lines.map((l,i)=>`<label class="rl${l.on?'':' off'}"><input type="checkbox" data-rdi="${i}"${l.on?' checked':''}><span><span class="nm">${esc(l.m.n)}</span>${cf(l.m,l)} <span class="note">· ${esc(l.m.c||'')}</span><br><span class="raw">read “${esc(l.raw)}”${l.m.near?' · maybe '+esc(l.m.near):''}${why(l)?' · '+why(l):''}</span></span><span><span class="amt">${rs(l.a)}</span><br><span class="qr">${l.q} ${esc(l.u)} × ${rs(l.r)}</span></span></label>`).join('')}</div>
+    <div>${r.lines.map((l,i)=>`<label class="rl${l.on?'':' off'}"><input type="checkbox" data-rdi="${i}"${l.on?' checked':''}><span><span class="nm">${esc(l.m.n)}</span>${cf(l.m,l)} <span class="note">${esc(l.m.c||'')}</span><br><span class="raw">read “${esc(l.raw)}”${l.m.near?' · maybe '+esc(l.m.near):''}${why(l)?' · '+why(l):''}</span>${l.how==='mm'&&l.sugA!=null?`<br><button type="button" class="btn sug" data-sug="${i}">Use ${rs(l.sugA)}</button>`:''}</span><span><span class="amt">${rs(l.a)}</span><br><span class="qr">${l.q} ${esc(l.u)} × ${rs(l.r)}</span></span></label>`).join('')}</div>
     <div class="row"><button class="btn pri" id="rdUse"${nOn?'':' disabled'}>✓ Add ${nOn} ticked line${nOn===1?'':'s'}</button><button class="btn" id="rdX">Ignore</button></div></div>`; }
 function paintRead(){ const ra=$('rdAgain'); if(ra) ra.hidden=!!RD; const el=$('rd'), html=readCard(); if(el){ if(html) el.outerHTML=html; else el.remove(); } else if(html){ const h=document.querySelector('#shotCard'); if(h) h.insertAdjacentHTML('beforeend',html); } wireRead(); }
 function wireRead(){ const u=$('rdUse'), x=$('rdX'); if(x) x.onclick=()=>{ RD=null; paintRead(); };
+  const rv=$('rdVo'); if(rv) rv.onclick=()=>{ RD=null; voStart(); setTimeout(()=>{ const c=$('itCard'); if(c) c.scrollIntoView({block:'start'}); },60); };
+  const rp=$('rdPin'); if(rp) rp.onclick=()=>{ RD=null; PIN=true; render(); setTimeout(()=>{ const q=$('qline'); if(q){ q.focus(); } },60); };
   document.querySelectorAll('[data-rdi]').forEach(c=>c.onchange=()=>{ RD.res.lines[+c.dataset.rdi].on=c.checked; paintRead(); });
+  document.querySelectorAll('[data-sug]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); const l=RD.res.lines[+b.dataset.sug]; l.read=l.a; l.a=l.sugA; l.how='fix'; l.ok=true; l.good=true; l.on=true; RD.res.sum=RD.res.lines.reduce((n,x)=>n+x.a,0); RD.res.totalOk=RD.res.total!=null?Math.abs(RD.res.sum-RD.res.total)<=1.01:null; paintRead(); });
   if(u) u.onclick=()=>{ const r=RD.res, D=DRAFT; if(r.supplier&&!D.supplier) D.supplier=knownSup(r.supplier); if(r.date&&r.date<=bizDay()) D.day=r.date; if(r.billNo&&!D.billNo) D.billNo=r.billNo; if(r.total!=null) D.billTotal=String(r.total);
-    const keep=D.lines.filter(l=>l.n); D.lines=keep.concat(r.lines.filter(l=>l.on).map(l=>({n:l.m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:l.m.c||'',chk:!l.good||l.m.via==='new'||l.m.score<0.9?1:0,rTyped:true})));
+    const keep=D.lines.filter(l=>l.n), seen=new Set(keep.filter(l=>l.raw).map(l=>l.raw+'|'+num(l.a))); D.lines=keep.concat(r.lines.filter(l=>l.on&&!seen.has(l.raw+'|'+l.a)).map(l=>({n:l.m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:l.m.c||'',w:l.good?'':whyLine(l),chk:!l.good||l.m.via==='new'||l.m.score<0.9?1:0,rTyped:true})));
     saveDraft(); RD=null; render(); toast('Lines filled in — check the amber ones'); const f=document.querySelector('.ln.chk'); if(f) f.scrollIntoView({block:'center'}); }; }
 
 /* ---------- what we know: items (unit, last rate, last supplier) and each supplier's usual items ---------- */
@@ -123,7 +137,7 @@ function render(){ const A=$('app'); if(!CTX) return;
   $('savebar').hidden=TAB!=='new';
   const tabs=`<nav class="tabs">${[['new','＋ New bill'],['bills','Bills'],['items','Items']].map(t=>`<button aria-pressed="${TAB===t[0]}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
   if(TAB==='new') A.innerHTML=tabs+newView(); else if(TAB==='bills') A.innerHTML=tabs+billsView(); else A.innerHTML=tabs+itemsView();
-  wire(); }
+  wire(); if(!PIN||!PHOTO||TAB!=='new'){ document.body.classList.remove('pinned'); const w=$('pinPv'); if(w) w.remove(); } else pinView(); }
 function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,12), tot=sumLines(), bt=num(D.billTotal), diff=bt?tot-bt:0;
   return `<div class="card" id="shotCard"><h2>1 · Photo of the bill</h2>
     ${PHOTO?`<div class="pv"><img src="${PHOTO}" id="pvImg" alt="bill photo"><div class="row"><span class="note">Photo ready · ${Math.round(PHOTO.length*0.75/1024)} KB</span><button class="btn warn" id="pvDel">Remove</button></div></div>`:''}
@@ -134,7 +148,7 @@ function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.
     <div class="row"><input id="sup" list="supL" placeholder="Supplier name" value="${esc(D.supplier)}" style="flex:1 1 180px"><input id="day" type="date" value="${esc(D.day)}" max="${bizDay()}" style="flex:0 0 160px"></div>
     <datalist id="supL">${Object.values(ITEMS.sup).map(s=>`<option value="${esc(s.n)}">`).join('')}</datalist>
     <div class="row"><input id="bno" placeholder="Bill no. (optional)" value="${esc(D.billNo)}" style="flex:1">${D.supplier&&lastLines(D.supplier).length&&!D.lines.some(l=>l.n)?`<button class="btn" id="usual">↺ Their usual items</button>`:''}</div></div>
-  <div class="card"><h2>3 · Items on the bill</h2>
+  <div class="card" id="itCard"><h2>3 · Items on the bill</h2>${quickTools()}
     <datalist id="itL">${Object.values(ITEMS.items).map(i=>`<option value="${esc(i.n)}">`).join('')}</datalist>
     ${D.lines.map((l,i)=>`<div class="ln${l.chk?' chk':''}" data-i="${i}"><div class="f">
       <label class="nm"><small>Item</small><input data-k="n" list="itL" value="${esc(l.n)}" placeholder="e.g. Chicken (whole)" autocomplete="off"></label>
@@ -142,11 +156,39 @@ function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.
       <label><small>Unit</small><select data-k="u">${UNITS.map(u=>`<option${u===l.u?' selected':''}>${u}</option>`).join('')}</select></label>
       <label><small>Rate ₹</small><input data-k="r" inputmode="decimal" value="${esc(l.r)}" placeholder="per unit"></label>
       <label><small>Amount ₹</small><input data-k="a" inputmode="decimal" value="${esc(l.a)}" placeholder="${num(l.q)&&num(l.r)?Math.round(num(l.q)*num(l.r)):'auto'}"></label>
-      ${lineTip(l)}${l.raw&&StockRead.norm(l.raw)!==StockRead.norm(l.n)?`<div class="tip${l.chk?' read':''}">${l.chk?'⚠ check: ':''}read “${esc(l.raw)}” on the bill${l.c?' · '+esc(l.c):''}</div>`:''}</div><button class="x" data-del="${i}" aria-label="remove line">✕</button></div>`).join('')}
+      ${lineTip(l)}${l.w&&l.chk?`<div class="tip read">⚠ ${esc(l.w)}</div>`:''}${l.raw&&StockRead.norm(l.raw)!==StockRead.norm(l.n)?`<div class="tip${l.chk?' read':''}">${l.chk?'⚠ check: ':''}read “${esc(l.raw)}” on the bill${l.c?' · '+esc(l.c):''}</div>`:''}</div><button class="x" data-del="${i}" aria-label="remove line">✕</button></div>`).join('')}
     <button class="btn" id="addLn">＋ Add item</button></div>
   <div class="card"><h2>4 · Check the total</h2><div class="tot"><div class="k"><small>Items add up to</small><b id="sumT">${rs(tot)}</b></div>
     <div class="k ${bt?(Math.abs(diff)<=1?'ok':'bad'):''}" id="btBox"><small>Total on the bill</small><input id="bt" inputmode="decimal" value="${esc(D.billTotal)}" placeholder="type it to check"><span id="btNote" class="note">${bt?(Math.abs(diff)<=1?'✓ matches':(diff>0?'items are '+rs(diff)+' more':'items are '+rs(-diff)+' less — an item missing?')):''}</span></div></div>
     <input id="note" placeholder="Note (optional)" value="${esc(D.note)}"></div>`; }
+/* ---------- faster entry (Majid, 15 Oct: most bills are "doctor's handwriting") ----------
+   1. 🎤 Speak the bill (English / Malayalam, Chrome's free speech-to-text) · 2. type a line the way you would say it ·
+   3. tap chips for the supplier's usual items · 4. keep the bill photo pinned on screen while typing */
+let VO={on:false,lang:'ml-IN',heard:[],interim:'',rec:null}, PIN=false; try{ VO.lang=localStorage.getItem('hayat-stock-lang')||'ml-IN'; }catch(e){}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function chipItems(){ const sup=ITEMS.sup[slug(DRAFT.supplier)], have=new Set(DRAFT.lines.filter(l=>l.n).map(l=>slug(l.n)));
+  const L=(sup&&sup.items||[]).map(k=>ITEMS.items[k]).filter(Boolean); Object.values(ITEMS.items).sort((a,b)=>(b.at||0)-(a.at||0)).forEach(i=>{ if(L.length<14&&!L.includes(i)) L.push(i); });
+  return L.filter(i=>!have.has(slug(i.n))).slice(0,14); }
+function quickTools(){ const C=chipItems();
+  return `<div class="qt">${PHOTO?`<button type="button" class="btn${PIN?' pri':''}" id="pinPh">📌 ${PIN?'Photo pinned':'Pin the photo'}</button>`:''}<button type="button" class="btn${VO.on?' pri':''}" id="voGo">🎤 ${VO.on?'Listening… tap to stop':'Speak the bill'}</button></div>
+    ${VO.on||VO.heard.length?`<div class="vo" id="voBox"><div class="row"><span class="note">Say one item at a time: <b>name · qty · rate · amount</b> — e.g. “thakkali pathu kilo 32 320” or “തക്കാളി പത്ത് കിലോ മുന്നൂറ്റി ഇരുപത്”.</span></div>
+      <div class="sups">${[['ml-IN','മലയാളം'],['en-IN','English']].map(x=>`<button type="button" data-volang="${x[0]}" class="${VO.lang===x[0]?'on':''}">${x[1]}</button>`).join('')}</div>
+      ${VO.interim?`<div class="voi">“${esc(VO.interim)}”</div>`:''}${VO.heard.slice(-5).reverse().map(h=>`<div class="voh${h.ok?'':' bad'}">${h.ok?'✓':'?'} “${esc(h.t)}”${h.ok?` → <b>${esc(h.n)}</b> ${h.q} ${esc(h.u)} · ${rs(h.a)}`:' — not understood, say it again or type it'}</div>`).join('')}
+      ${!SR?'<div class="rdw">This phone\'s browser has no voice reader. Use Chrome — or tap the 🎤 on your keyboard inside the box below.</div>':''}</div>`:''}
+    <div class="row"><input id="qline" placeholder="Type or say a line: thakkali 10 kg 32 320" autocomplete="off" enterkeyhint="done" style="flex:1"><button type="button" class="btn" id="qAdd">Add</button></div>
+    ${C.length?`<div class="chips">${C.map(i=>`<button type="button" data-chip="${esc(i.n)}">＋ ${esc(i.n)}${i.r?` <small>${rs(i.r)}/${esc(i.u||'')}</small>`:''}</button>`).join('')}</div>`:''}`; }
+/* one line said or typed -> a bill line (the same proof rules: a worked-out rate is marked to check) */
+function addSpoken(t){ const l=StockRead.parseSpoken(t); if(!l) return null; const m=StockRead.match(l.raw,{items:ITEMS.items,alias:ITEMS.alias,u:l.u});
+  const ln={n:m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:m.c||'',rTyped:true,chk:(l.how!=='3'&&l.how!=='2')||m.via==='new'||m.score<0.9?1:0,w:l.how==='mm'?`qty × rate = ${rs(l.alt)}, you said ${rs(l.a)}`:l.how==='1'?'no qty heard':''};
+  const D=DRAFT; D.lines=D.lines.filter(x=>x.n||x.q||x.a); D.lines.push(ln); saveDraft(); return {n:m.n,q:l.q,u:l.u,a:l.a}; }
+function voStart(){ if(!SR){ VO.on=false; VO.heard.push({t:'',ok:false}); render(); return; } try{ const r=new SR(); r.lang=VO.lang; r.continuous=true; r.interimResults=true;
+    r.onresult=e=>{ let interim=''; for(let i=e.resultIndex;i<e.results.length;i++){ const x=e.results[i], t=x[0].transcript.trim(); if(x.isFinal){ const h=addSpoken(t); VO.heard.push(h?Object.assign({t,ok:true},h):{t,ok:false}); } else interim+=t+' '; } VO.interim=interim.trim(); render(); };
+    r.onend=()=>{ if(VO.on){ try{ r.start(); }catch(e){ VO.on=false; render(); } } }; r.onerror=e=>{ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ VO.on=false; toast('Allow the microphone for this page'); render(); } };
+    VO.rec=r; VO.on=true; r.start(); }catch(e){ VO.on=false; toast('Voice did not start'); } render(); }
+function voStop(){ VO.on=false; VO.interim=''; try{ VO.rec&&VO.rec.stop(); }catch(e){} render(); }
+function pinView(){ let w=$('pinPv'); if(!PIN||!PHOTO||TAB!=='new'){ if(w) w.remove(); return; } if(!w){ w=document.createElement('div'); w.id='pinPv'; w.className='pinpv'; document.body.appendChild(w); }
+  w.innerHTML=`<div class="pinbar"><span>📌 Bill photo · drag to move around · tap to zoom</span><button type="button" id="pinX" aria-label="unpin">✕</button></div><div class="pinsc"><img src="${PHOTO}" alt="bill" class="${PIN==='z'?'z':''}"></div>`;
+  w.querySelector('img').onclick=()=>{ PIN=PIN==='z'?true:'z'; pinView(); }; $('pinX').onclick=()=>{ PIN=false; render(); }; document.body.classList.add('pinned'); }
 function billsView(){ if(!BUYS.length) return '<div class="card"><p class="note">No bills yet. Use ＋ New bill.</p></div>';
   const by={}; BUYS.forEach(b=>(by[b.day]=by[b.day]||[]).push(b)); const days=Object.keys(by).sort().reverse();
   return days.map(d=>{ const L=by[d].sort((a,b)=>b.at-a.at); return `<div class="day"><h3><span>${esc(dayName(d))}</span><span>${rs(L.reduce((n,b)=>n+(b.total||0),0))}</span></h3>${L.map(b=>{ const open=OPEN===b.id;
@@ -167,6 +209,15 @@ function wire(){ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()
     $('bt').oninput=e=>{ set('billTotal',e.target.value); totals(); };
     document.querySelectorAll('[data-sup]').forEach(b=>b.onclick=()=>{ DRAFT.supplier=b.dataset.sup; if(!DRAFT.lines.some(l=>l.n)) DRAFT.lines=lastLines(DRAFT.supplier).concat([]); if(!DRAFT.lines.length) DRAFT.lines=[fresh().lines[0]]; saveDraft(); render(); });
     const us=$('usual'); if(us) us.onclick=()=>{ DRAFT.lines=lastLines(DRAFT.supplier); saveDraft(); render(); };
+    const vg=$('voGo'); if(vg) vg.onclick=()=>VO.on?voStop():voStart();
+    document.querySelectorAll('[data-volang]').forEach(b=>b.onclick=()=>{ VO.lang=b.dataset.volang; try{ localStorage.setItem('hayat-stock-lang',VO.lang); }catch(e){} if(VO.on){ voStop(); voStart(); } else render(); });
+    const ql=$('qline'), qa=$('qAdd'), qgo=()=>{ const t=ql.value.trim(); if(!t) return; const h=addSpoken(t); if(!h){ toast('Could not read that — e.g. “onion 25 kg 700”'); return; } render(); const q2=$('qline'); if(q2) q2.focus(); toast('＋ '+h.n+' · '+rs(h.a)); };
+    if(ql){ ql.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); qgo(); } }; qa.onclick=qgo; }
+    document.querySelectorAll('[data-chip]').forEach(b=>b.onclick=()=>{ const it=known(b.dataset.chip)||{n:b.dataset.chip}; DRAFT.lines=DRAFT.lines.filter(x=>x.n||x.q||x.a); DRAFT.lines.push({n:it.n,q:'',u:it.u||'kg',r:it.r!=null?String(it.r):'',a:''}); saveDraft(); render(); const L=document.querySelectorAll('.ln'); const last=L[L.length-1]; if(last){ const q=last.querySelector('[data-k="q"]'); q.focus(); last.scrollIntoView({block:'center'}); } });
+    const pp=$('pinPh'); if(pp) pp.onclick=()=>{ PIN=PIN?false:true; render(); };
+    /* Enter jumps to the next box; Enter in the last amount adds a new line */
+    document.querySelectorAll('.ln input').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; e.preventDefault(); const all=[...document.querySelectorAll('.ln input')], i=all.indexOf(inp);
+      if(i<all.length-1) all[i+1].focus(); else $('addLn').click(); }));
     $('addLn').onclick=()=>{ DRAFT.lines.push({n:'',q:'',u:'kg',r:'',a:''}); saveDraft(); render(); const L=document.querySelectorAll('.ln'); const last=L[L.length-1]; if(last){ last.scrollIntoView({block:'center'}); last.querySelector('[data-k="n"]').focus(); } };
     document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ DRAFT.lines.splice(+b.dataset.del,1); if(!DRAFT.lines.length) DRAFT.lines=[fresh().lines[0]]; saveDraft(); render(); });
     document.querySelectorAll('.ln [data-k]').forEach(inp=>{ const i=+inp.closest('.ln').dataset.i, k=inp.dataset.k;
@@ -214,7 +265,7 @@ async function save(){ if(SAVING) return; const D=DRAFT, L=D.lines.map(l=>({c:l.
     fs.onSnapshot(fs.doc(db,'settings','stock_ai'),d=>{ AIURL=(d.exists()&&d.data().url)||''; if(TAB==='items') render(); },()=>{});
     const since=bizDay(Date.now()-45*864e5);
     fs.onSnapshot(fs.query(fs.collection(db,'stock_buys'),fs.where('day','>=',since)),q=>{ BUYS=q.docs.map(d=>Object.assign({id:d.id},d.data())); if(TAB==='bills') render(); },()=>{ $('net').textContent='offline'; });
-    $('save').onclick=save; $('clr').onclick=()=>{ DRAFT=fresh(); PHOTO=null; saveDraft(); render(); };
+    $('save').onclick=save; $('clr').onclick=()=>{ DRAFT=fresh(); PHOTO=null; RD=null; saveDraft(); render(); };
     render(); };
   if(CTX.role&&ROLES.includes(CTX.role)) go();
   else { $('who').textContent='sign in'; HayatAuth.form($('app'),CTX,ROLES,()=>go(),'Office, cashier or kitchen. Once per phone.'); }

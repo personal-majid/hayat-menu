@@ -4,11 +4,14 @@ HAYAT BILL READER - FREE (Cloudflare Workers AI)
 The Stock page reads bill photos FREE on the phone first. Only when that
 read is unsure (handwriting, blur, totals that do not add up) does it ask
 this Cloudflare Worker, which uses Cloudflare's OWN free AI
-(Meta Llama 3.2 11B Vision).
+(Meta Llama 4 Scout - better at messy handwriting; if your account does not
+have it, the worker falls back to Meta Llama 3.2 11B Vision by itself).
+Already have the worker? Paste the NEW worker.js over the old one -> Deploy.
 
 Cost: Rs 0. No API key, no card.
 - Workers Free plan: 100,000 requests a day.
-- Workers AI: 10,000 free "neurons" a day = roughly 200 bill photos.
+- Workers AI: 10,000 free "neurons" a day = roughly 100-200 bill photos
+  (the bigger model uses more per photo; only unreadable bills are sent).
   Past that the reader just says "free daily limit reached" until the next
   day - the FREE plan never charges you. (Do NOT switch to Workers Paid.)
 

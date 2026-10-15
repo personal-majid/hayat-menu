@@ -5,6 +5,7 @@
 <meta name="theme-color" content="#1B1A17">
 <link rel="icon" href="assets/icon-192.png">
 <script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
+<script src="nav.js" onerror="0"></script>
 <script src="hayat-auth.js"></script>
 <style>
 :root{--bg:#F5F0E4;--card:#FBF8F1;--ink:#1B1A17;--muted:#6F6758;--line:rgba(27,26,23,.13);--line2:rgba(27,26,23,.26);--pri:#1B1A17;--onpri:#F5F0E4;--acc:#B8975A;--soft:rgba(27,26,23,.05);--soft2:rgba(27,26,23,.09);--bad:#c0392b;--good:#2f8f5b;--warn:#b7791f;--sel:#2a78d6;--seltint:rgba(42,120,214,.12);--dimc:#d9661f;--grid:rgba(27,26,23,.07);--grid2:rgba(27,26,23,.14);--paper:#fffdf8;--panel:#fbf8f2;--rail:56px;--lw:264px;--rw:300px;--sb:26px}
@@ -143,7 +144,7 @@ body.pro .toast{bottom:calc(var(--sb) + 16px)} body.pro .hint{top:calc(var(--top
 </style>
 </head><body>
 <header class="top">
-  <a class="ib" href="./#/admin" title="back to the office" aria-label="back">‹</a>
+  <a class="ib" href="./hub.html" title="all apps · Ctrl+K" aria-label="all apps">⌂</a>
   <h1>Space planner<small id="pname">Demo hotel</small></h1>
   <span style="flex:1"></span>
   <div class="seg" role="tablist"><button id="m2d" class="on" role="tab" title="plan (2D)">2D</button><button id="m3d" role="tab" title="3D view">3D</button><button id="mSplit" role="tab" title="plan + 3D side by side">Split</button><button id="mWalk" role="tab" title="walk inside">🚶</button></div>
@@ -154,6 +155,7 @@ body.pro .toast{bottom:calc(var(--sb) + 16px)} body.pro .hint{top:calc(var(--top
   <button data-m="sum">📊 Summary · rooms, seats, areas</button>
   <button data-m="rooms">🛏 Rooms for booking</button>
   <hr>
+  <button data-m="sketch">📷 Plan from a sketch photo</button>
   <button data-m="tpl">🏨 Start from the demo hotel</button>
   <button data-m="blank">⬜ Blank plan</button>
   <button data-m="name">✎ Rename the plan</button>

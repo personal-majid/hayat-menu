@@ -7,11 +7,12 @@
    Setup (Cloudflare dashboard, no code tools needed):
      Worker -> Settings -> Bindings -> Add -> Workers AI -> Variable name: AI
      Worker -> Settings -> Variables -> ALLOW_ORIGIN (Text) = https://personal-majid.github.io
-   Model: Meta Llama 3.2 11B Vision (reads photos). Meta's licence is accepted automatically on the first call
-   (Cloudflare asks every account to send "agree" once).
+   Models (both on the free plan): Meta Llama 4 Scout first (much better at messy handwriting), Llama 3.2 11B Vision
+   if Scout is not available on the account. Meta's licence is accepted automatically on the first call
+   (Cloudflare asks every account to send "agree" once). Optional variable MODEL overrides the first choice.
 
    Reply: {is_bill, why, supplier, date (YYYY-MM-DD), bill_no, total, lines:[{raw, name, category, qty, unit, rate, amount}]} */
-const MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+const MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct', OLD = '@cf/meta/llama-3.2-11b-vision-instruct';
 export default {
   async fetch(req, env){
     const origin = req.headers.get('Origin') || '';
@@ -35,20 +36,26 @@ export default {
 If NOT, answer exactly: {"is_bill": false, "why": "short reason"}
 If it is, answer with ONLY this JSON, nothing else:
 {"is_bill": true, "supplier": "", "date": "YYYY-MM-DD or empty", "bill_no": "", "total": number or null,
- "lines": [{"raw": "item text as written", "name": "clean English item name", "category": "one of: ${cats}", "qty": number, "unit": "kg|g|L|ml|nos|pkt|box|tray|bag|tin|bottle|cyl|bundle|dozen", "rate": number, "amount": number}]}
-Rules: rupees, no commas. If rate is missing use amount/qty. Fix spelling and expand short or Malayalam names (thakkali=Tomato, savala=Onion, inji=Ginger, kozhi=Chicken).
+ "lines": [{"raw": "item text as written", "name": "clean English item name", "category": "one of: ${cats}", "qty": number, "unit": "kg|g|L|ml|nos|pkt|box|tray|bag|tin|bottle|cyl|bundle|dozen", "rate_written": number or null, "amount": number, "unsure": true or false}]}
+Rules: rupees, no commas. rate_written = the rate ONLY if it is written on the bill, else null (never work it out). unsure = true when you had to guess a word or a number.
+The handwriting may be very messy (like a doctor's note): read digits carefully, the amounts must add up to the total. Fix spelling and expand short or Malayalam names (thakkali=Tomato, savala=Onion, inji=Ginger, kozhi=Chicken, mathi=Sardine, ayala=Mackerel).
 Use these exact names when the item is one of ours: ${items || '(none yet)'}. Known suppliers: ${sups || '(none yet)'}.
 Leave tax, discount, round-off and total rows out of "lines". Never invent lines you cannot see.`;
 
-    const ask = () => env.AI.run(MODEL, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], image: img, max_tokens: 1500, temperature: 0.1 });
+    const first = env.MODEL || MODEL;
+    /* Scout takes the photo inside the message; the older vision model takes it as "image" */
+    const askNew = m => env.AI.run(m, { messages: [{ role: 'system', content: system }, { role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: img } }] }], max_tokens: 1500, temperature: 0.1 });
+    const askOld = () => env.AI.run(OLD, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], image: img, max_tokens: 1500, temperature: 0.1 });
+    const ask = async () => { if(first === OLD) return askOld(); try{ return await askNew(first); }catch(e){ const m = String(e && e.message || e); if(/agree|licen[cs]e|neuron|limit|quota|429/i.test(m)) throw e; return askOld(); } };
     let r;
     try{ r = await ask(); }
     catch(e){
       const msg = String(e && e.message || e);
-      if(/agree|licen[cs]e/i.test(msg)){ try{ await env.AI.run(MODEL, { prompt: 'agree' }); r = await ask(); }catch(e2){ return out({ error: 'AI: ' + String(e2.message || e2).slice(0, 200) }, 502); } }
+      if(/agree|licen[cs]e/i.test(msg)){ try{ await env.AI.run(first === OLD ? OLD : first, { prompt: 'agree' }).catch(() => env.AI.run(OLD, { prompt: 'agree' })); r = await ask(); }catch(e2){ return out({ error: 'AI: ' + String(e2.message || e2).slice(0, 200) }, 502); } }
       else if(/neuron|limit|quota|429|capacity/i.test(msg)) return out({ error: 'free daily AI limit reached - try again tomorrow' }, 429);
       else return out({ error: 'AI: ' + msg.slice(0, 200) }, 502);
     }
+    if(r && r.response && typeof r.response === 'object') return out(r.response);   /* some models already answer with an object */
     const txt = typeof r === 'string' ? r : (r && (r.response || r.result || '')) || '';
     const s = String(txt).indexOf('{'), e = String(txt).lastIndexOf('}');
     try{ return out(JSON.parse(String(txt).slice(s, e + 1))); }catch(err){ return out({ error: 'could not read the AI answer', raw: String(txt).slice(0, 300) }, 502); }

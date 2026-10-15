@@ -691,7 +691,7 @@ function navItems(){
 }
 function topBar(){
   var openC = Object.values(S.clean).filter(function(c){ return c.status === 'open' || c.status === 'taken'; }).length;
-  return '<header class="top"><div class="brand">Hayat<small>' + (SETUP ? 'Setup' : esc(ROLES[S.me.role] || 'Captain')) + '</small></div>' +
+  return '<header class="top">' + (SETUP || /office|cashier/.test(S.me.role || '') ? '<a href="./hub.html" title="all apps" aria-label="all apps" style="text-decoration:none;font-size:20px;line-height:1;padding:0 8px 0 0;color:inherit">\u2302</a>' : '') + '<div class="brand">Hayat<small>' + (SETUP ? 'Setup' : esc(ROLES[S.me.role] || 'Captain')) + '</small></div>' +
     (isTrial() ? '<span class="pill trial" title="Bills here are a trial: the owner app still counts VMENU">TRIAL</span>' : '') +
     '<span class="sp"></span><span class="pill"><i class="dot' + (S.online ? '' : ' off') + '"></i>' + (S.online ? 'live' : 'offline') + '</span>' +
     '<button class="me" data-a="me">' + '<span>' + esc(S.me.name) + '</span>' + avatar(S.me.name) + '</button></header>' +
