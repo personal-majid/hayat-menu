@@ -8943,6 +8943,7 @@ var POS = null;        /* the ticket being built */
 var POS_FAV = null;    /* the frozen usual, computed once */
 var POS_CAT = "";      /* "" is the usual grid; otherwise a category id */
 var POS_SCOPE = false; /* true = keep the search inside that category */
+var POS_SPACE = ""; try{ POS_SPACE = localStorage.getItem("hayat-pos-space") || ""; }catch(e){}   /* the hall chip on the dine-in plan */
 
 function posFresh(){
   return { lines: [], mode: "takeaway", table: "", name: "", phone: "", addr: "", note: "",
@@ -8993,6 +8994,7 @@ function posOpenBills(){
 
 function posWhereFrom(o){
   if(o.source === "counter") return o.mode === "dinein" ? "Table" : o.mode === "delivery" ? "Delivery" : "Counter";
+  if(o.source === "captain") return "Table";
   if(o.source === "phone")  return "Phone";
   if(o.source === "ticket") return "Call-back";
   return "Website";
@@ -9114,6 +9116,31 @@ function posBump(key, by){
     return;
   }
 }
+
+/* v297: like the captain app - one card per dish, its sizes as buttons side by side.
+   Each size button is still a .postile with data-pos, so the frozen order, arrow keys
+   and Enter work exactly as before; only consecutive sizes of one dish share a card. */
+function posSize(l){ var t = String(l || ""); return /^quarter$/i.test(t) ? "Qtr" : t; }
+function posCardsHtml(rows){
+  var cards = [], by = {};
+  rows.forEach(function(r){
+    var parts = String(r.label || "").split(/\s*\u00b7\s*/), size = parts.pop(), variant = parts.join(" \u00b7 ");
+    var key = r.id + "|" + variant, c = by[key];
+    if(!c){ c = by[key] = { name: r.name, variant: variant, rows: [] }; cards.push(c); }
+    c.rows.push({ r: r, size: size });
+  });
+  return cards.map(function(c){
+    return '<div class="posdish"><div class="pdn"><b>' + esc(c.name) + '</b>' +
+        (c.variant ? '<small>' + esc(c.variant) + '</small>' : '') + '</div>' +
+      '<div class="possz">' + c.rows.map(function(x){
+        var r = x.r;
+        return '<button class="postile" data-pos="' + esc(r.id + "|" + r.label + "|" + r.price) + '" title="' + esc(r.name + (r.label ? " \u00b7 " + r.label : "")) + '">' +
+          '<span class="pls">' + esc(posSize(x.size) || "Add") + '</span>' +
+          '<span class="plp">' + rupee(r.price) + '</span></button>';
+      }).join("") + '</div></div>';
+  }).join("");
+}
+function posKbd(){ try{ return matchMedia("(hover:hover) and (pointer:fine)").matches; }catch(e){ return true; } }
 
 function posTileHtml(r){
   return '<button class="postile" data-pos="' + esc(r.id + "|" + r.label + "|" + r.price) + '">' +
@@ -9372,6 +9399,179 @@ function posMoveSheet(id, after){
   };
 }
 
+/* ============================================================
+   v298 - tables, paying, and learning the till (Majid, 16 Oct)
+   "most of it is takeaway or delivery; when they still select dine
+   in, tables shall be shown" · "when a person comes to pay his bill
+   we need a list of due bills so the cashier can quickly check which
+   table" · "easy onboarding of new and old cashiers".
+   Research behind the shape:
+   - recognition over recall (Nielsen): pick the table from the real
+     floor, never remember or type its code; the pay list shows the
+     table, the items and the amount, so "the man in blue from N4" is
+     found by what is visible, not by a bill number;
+   - Hick-Hyman: the pay list puts the likeliest first (bill already
+     printed, then the oldest) so the answer is usually the top row;
+   - contextual help beats an up-front manual (NN/g, "onboarding
+     tutorials vs contextual help"): a 4-step spotlight on first use,
+     one tip a day where it applies, and ? to see it all again;
+   - Fitts: the big actions sit at the thumb (phone bottom bar).
+   ============================================================ */
+var POS_DEF_FLOOR = [
+  { id:"ac", name:"AC", t:[1,2,3,4,5,6,7,8,9,10].map(function(n){ return ["A" + n, n <= 6 ? 6 : 2]; }) },
+  { id:"nonac", name:"Non AC", t:[[1,12],[2,6],[3,6],[4,6],[5,4],[6,4],[7,4]].map(function(x){ return ["N" + x[0], x[1]]; }) },
+  { id:"hut", name:"Hut", t:[["H1",12],["H2",12]] },
+  { id:"juicy", name:"Juicy Hut", t:[1,2,3,4,5,6].map(function(n){ return ["J" + n, 4]; }) }
+];
+/* the floor the captain app uses (settings/floor), else the same default it seeds */
+function posSpaces(){
+  var f = DB.settings && DB.settings.floor;
+  if(f && f.spaces && f.spaces.length) return f.spaces.map(function(sp){ return { id: sp.id, name: sp.name, t: (sp.tables || []).map(function(t){ return [t.name, t.seats || 0, t.id]; }) }; });
+  return POS_DEF_FLOOR;
+}
+function posNorm(t){ return String(t == null ? "" : t).trim().toUpperCase().replace(/\s+/g, ""); }
+/* which open bill sits on each table (the captain app writes table + tableId, the till writes table) */
+function posTableBills(){
+  var by = {};
+  posOpenBills().forEach(function(o){
+    if(o.paid) return;
+    var k = posNorm(o.table); if(!k) return;
+    if(!by[k] || (o.at || 0) > (by[k].at || 0)) by[k] = o;
+  });
+  return by;
+}
+function posPaidSoFar(o){ return o.paid ? money(o).total : (o.pays || []).reduce(function(n, p){ return n + (+p.amt || 0); }, 0); }
+function posBalance(o){ return Math.max(0, Math.round(money(o).total - posPaidSoFar(o))); }
+function posWhoLabel(o){ return o.table ? "Table " + o.table : o.token ? "Token #" + o.token : (o.name || prettyPhone(o.phone) || o.id); }
+
+/* ---- 💰 Pay a bill: who is standing at the counter? ---------- */
+var POSP = { q: "" };
+function posPaySheet(onOpen){
+  var old = el("posPaySheet"); if(old) old.remove();
+  var box = document.createElement("div"); box.id = "posPaySheet"; box.className = "pospaywrap";
+  document.body.appendChild(box);
+  function age(o){ return Math.max(0, Math.round((Date.now() - (o.at || Date.now())) / 60000)); }
+  function rank(o){ return o.dueAt ? 0 : (o.table ? 1 : 2); }
+  function exact(o){ var q = posNorm(POSP.q), d = q.replace(/^#/, ""); return !!q && (posNorm(o.table) === q || (o.token != null && String(o.token) === d)); }
+  function list(){
+    var q = posNorm(POSP.q), qq = String(POSP.q || "").trim().toLowerCase();
+    return posOpenBills().filter(function(o){
+      if(o.paid || posBalance(o) <= 0) return false;
+      if(!q) return true;
+      if(exact(o)) return true;
+      var dig = q.replace(/^#/, "");
+      if(/^\d{1,3}$/.test(dig)) return posNorm(o.table).indexOf(dig) >= 0;   /* a short number is a token or a table, never part of a phone */
+      var s = (posNorm(o.table) + " " + (o.token || "") + " " + (o.name || "") + " " + String(o.phone || "").replace(/\D/g, "") + " " + (o.lines || []).map(function(l){ return l.name; }).join(" ")).toLowerCase();
+      return s.indexOf(qq) >= 0 || s.indexOf(q.toLowerCase()) >= 0;
+    }).sort(function(a, b){
+      var ea = q && exact(a) ? -1 : 0, eb = q && exact(b) ? -1 : 0;   /* the exact table / token first */
+      return (ea - eb) || (rank(a) - rank(b)) || ((a.dueAt || a.at || 0) - (b.dueAt || b.at || 0));
+    });
+  }
+  function draw(){
+    if(!document.body.contains(box)) return;
+    var rows = list(), all = posOpenBills().filter(function(o){ return !o.paid && posBalance(o) > 0; });
+    var tables = all.filter(function(o){ return o.table; }).map(function(o){ return o.table; }).filter(function(t, i, a){ return a.indexOf(t) === i; }).sort();
+    box.innerHTML = '<div class="pospay" role="dialog" aria-label="Pay a bill">' +
+      '<div class="ppy-h"><div><b>Who is paying?</b><small>' + all.length + ' open \u00b7 ' + rupee(all.reduce(function(n, o){ return n + posBalance(o); }, 0)) + ' to collect</small></div>' +
+        '<button class="ppy-x" id="ppyX" aria-label="Close">\u2715</button></div>' +
+      '<input class="fld big ppy-q" id="ppyQ" autocomplete="off" enterkeyhint="go" placeholder="Table, token, name or phone" value="' + esc(POSP.q) + '">' +
+      (tables.length ? '<div class="ppy-t">' + tables.map(function(t){ return '<button class="pkchip' + (posNorm(t) === posNorm(POSP.q) ? ' on' : '') + '" data-ppyt="' + esc(t) + '">' + esc(t) + '</button>'; }).join("") + '</div>' : '') +
+      '<div class="ppy-l">' + (rows.length ? rows.map(function(o, i){
+        var a = age(o), items = posMerged(o), bal = posBalance(o), part = posPaidSoFar(o);
+        return '<div class="ppy-r' + (i === 0 && POSP.q ? ' top' : '') + '">' +
+          '<div class="ppy-w"><b>' + esc(posWhoLabel(o)) + '</b><small>' + esc(posWhereFrom(o)) + (o.by ? ' \u00b7 ' + esc(o.by) : '') + ' \u00b7 ' + a + ' min</small>' +
+            '<span class="ppy-i">' + items.slice(0, 3).map(function(l){ return l.q + '\u00d7 ' + esc(l.name); }).join(', ') + (items.length > 3 ? ' +' + (items.length - 3) : '') + '</span>' +
+            '<span class="ppy-tags">' + (o.dueAt ? '<em class="due">\ud83e\uddfe bill printed ' + esc(when(o.dueAt)) + '</em>' : '<em>still open</em>') + (part ? '<em class="part">\u20b9' + part + ' paid already</em>' : '') + '</span></div>' +
+          '<div class="ppy-a"><b>' + rupee(bal) + '</b>' +
+            '<button class="posbtn" data-ppy="pay|' + esc(o.id) + '">Take ' + rupee(bal) + '</button>' +
+            '<span class="ppy-s"><button class="linky" data-ppy="bill|' + esc(o.id) + '">Bill</button>' + (onOpen ? '<button class="linky" data-ppy="open|' + esc(o.id) + '">Add items</button>' : '') + '</span></div>' +
+        '</div>'; }).join("") : '<p class="posnone">' + (all.length ? 'Nothing matches \u201c' + esc(POSP.q) + '\u201d. Try the table name, the token number or a dish they ate.' : 'No bills waiting \u2713 Everything is paid.') + '</p>') + '</div>' +
+      '<p class="ppy-hint">Tip: ask \u201cwhich table?\u201d and tap it above \u2014 or type the token. Enter takes the top bill.</p></div>';
+    el("ppyX").onclick = function(){ box.remove(); };
+    var q = el("ppyQ");
+    q.oninput = function(){ POSP.q = q.value; var p = q.selectionStart; draw(); var n = el("ppyQ"); n.focus(); try{ n.setSelectionRange(p, p); }catch(e){} };
+    q.onkeydown = function(e){ if(e.key === "Enter"){ var r = list()[0]; if(r){ e.preventDefault(); posSettle(r.id, function(){ POSP.q = ""; draw(); }); } } if(e.key === "Escape") box.remove(); };
+    box.querySelectorAll("[data-ppyt]").forEach(function(b){ b.onclick = function(){ POSP.q = posNorm(POSP.q) === posNorm(b.dataset.ppyt) ? "" : b.dataset.ppyt; draw(); }; });
+    box.querySelectorAll("[data-ppy]").forEach(function(b){ b.onclick = function(){
+      var p = b.dataset.ppy.split("|"), act = p[0], id = p.slice(1).join("|"); if(!STORE.order(id)){ draw(); return; }
+      if(act === "pay") posSettle(id, function(){ POSP.q = ""; draw(); });
+      else if(act === "bill") posBillSheet(id, draw);
+      else if(act === "open"){ box.remove(); onOpen(id); }
+    }; });
+  }
+  box.onclick = function(e){ if(e.target === box) box.remove(); };
+  POSP.draw = draw; POSP.q = ""; draw();
+  try{ if(posKbd()) el("ppyQ").focus(); }catch(e){}
+  return box;
+}
+
+/* ---- learning the till: a 4-step spotlight, a daily tip, ? -------- */
+var POS_TIPS = [
+  ["phone", "A dish card shows its sizes \u2014 one tap on a size adds it. The gold badge counts how many are on the bill."],
+  ["all", "Customer at the counter to pay? \ud83d\udcb0 Pay a bill \u2014 tap their table, then Take \u20b9."],
+  ["all", "Changed your mind? Undo last takes back the last thing you added."],
+  ["desk", "Type to search the whole menu, \u2191\u2193 to move, Enter to add, Esc to clear."],
+  ["desk", "F2 shows every open bill full screen."],
+  ["all", "Dine-in: tap the table on the plan \u2014 a busy table shows its bill; tapping it adds to that bill."],
+  ["all", "Delivery needs a phone number and an address \u2014 Send KOT tells you what is missing."]
+];
+function posTipToday(){
+  var kb = posKbd(), L = POS_TIPS.filter(function(t){ return t[0] === "all" || (kb ? t[0] === "desk" : t[0] === "phone"); });
+  var seen = {}; try{ seen = JSON.parse(localStorage.getItem("hayat-pos-tips") || "{}"); }catch(e){}
+  var day = String(dayStartOf(Date.now())); if(seen.day === day) return seen.off ? null : L[seen.i % L.length];
+  var i = ((seen.i == null ? -1 : seen.i) + 1) % L.length; try{ localStorage.setItem("hayat-pos-tips", JSON.stringify({ day: day, i: i })); }catch(e){}
+  return L[i];
+}
+function posTour(force){
+  var key = "hayat-pos-tour1|" + (posWho() || "me");
+  try{ if(!force && localStorage.getItem(key)) return; localStorage.setItem(key, "1"); }catch(e){}
+  var phone = !posKbd() && innerWidth <= 720;
+  var steps = [
+    [".posdish", "Tap a size to add it", "Every dish is a card. Tap Qtr, Half or Full \u2014 the gold badge counts it."],
+    [phone ? "#posDockBill" : "#posMode", phone ? "The bill opens from here" : "Takeaway, Dine-in or Delivery", phone ? "Tap it to see the items, pick Takeaway / Dine-in / Delivery and a table." : "Most orders are takeaway. Dine-in shows the tables to tap."],
+    [phone ? "#posDockGo" : "#posGo", "Send KOT", "Sends the kitchen ticket and writes the bill. When it is grey it says what is missing."],
+    ["#posPay", "\ud83d\udcb0 Pay a bill", "When someone comes to pay: tap their table or type the token, then Take \u20b9."]
+  ];
+  var i = 0, ov = document.createElement("div"); ov.id = "posTour"; ov.className = "postour"; document.body.appendChild(ov);
+  /* it never blocks the till: the dimming lets taps through, and a tap anywhere but its card ends it */
+  var off = function(e){ if(!document.body.contains(ov)){ document.removeEventListener("pointerdown", off, true); return; } if(!e.target.closest(".ptr-card")){ ov.remove(); document.removeEventListener("pointerdown", off, true); } };
+  document.addEventListener("pointerdown", off, true);
+  function show(){
+    var st = steps[i], t = document.querySelector(st[0]);
+    if(!t){ if(++i < steps.length) return show(); ov.remove(); return; }
+    try{ t.scrollIntoView({ block: "center" }); }catch(e){}
+    var r = t.getBoundingClientRect(), pad = 6;
+    var below = r.top < innerHeight / 2;
+    ov.innerHTML = '<div class="ptr-spot" style="left:' + (r.left - pad) + 'px;top:' + (r.top - pad) + 'px;width:' + (r.width + 2 * pad) + 'px;height:' + (r.height + 2 * pad) + 'px"></div>' +
+      '<div class="ptr-card" style="' + (below ? 'top:' + Math.min(innerHeight - 190, r.bottom + 14) + 'px' : 'bottom:' + Math.min(innerHeight - 190, innerHeight - r.top + 14) + 'px') + '">' +
+        '<small>' + (i + 1) + ' of ' + steps.length + '</small><b>' + st[1] + '</b><p>' + st[2] + '</p>' +
+        '<div class="ptr-b"><button class="linky" id="ptrSkip">Skip</button><button class="posbtn" id="ptrNext">' + (i === steps.length - 1 ? 'Got it' : 'Next') + '</button></div></div>';
+    el("ptrSkip").onclick = function(){ ov.remove(); };
+    el("ptrNext").onclick = function(){ if(++i < steps.length) show(); else ov.remove(); };
+  }
+  setTimeout(show, 120);
+}
+function posHelp(){
+  var old = el("posHelp"); if(old) old.remove();
+  var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "posHelp";
+  var kb = posKbd();
+  box.innerHTML = '<div class="panel small poshelp"><div class="shead"><div><b>How the counter works</b><small>for new and old cashiers</small></div></div>' +
+    '<ol class="phl">' +
+      '<li><b>Add</b> \u2014 tap a size on a dish card' + (kb ? ', or type a few letters and press Enter' : '') + '. Wrong one? <b>Undo last</b>.</li>' +
+      '<li><b>Who is it for</b> \u2014 Takeaway needs nothing (the token is printed). Dine-in: tap the table. Delivery: phone + address.</li>' +
+      '<li><b>Send KOT</b> \u2014 the kitchen gets the ticket. Adding later to the same bill sends only the new items.</li>' +
+      '<li><b>\ud83d\udcb0 Pay a bill</b> \u2014 ask \u201cwhich table?\u201d or the token, tap it, <b>Take \u20b9</b>. Bill shows and prints the bill first.</li>' +
+      '<li><b>Open bills</b> \u2014 every bill not paid yet' + (kb ? ' (F2 = full screen)' : '') + ': add items, move table, reprint, cancel with a reason.</li>' +
+    '</ol>' +
+    (kb ? '<p class="poshint flat">Keys: type = search \u00b7 \u2191\u2193 move \u00b7 Enter add \u00b7 Esc clear \u00b7 F2 open bills</p>' : '') +
+    '<div class="posbar"><button class="posbtn ghost" id="phTour">Show me again</button><button class="posbtn" id="phOk">Got it</button></div></div>';
+  document.body.appendChild(box);
+  box.onclick = function(e){ if(e.target === box) box.remove(); };
+  el("phOk").onclick = function(){ box.remove(); };
+  el("phTour").onclick = function(){ box.remove(); posTour(true); };
+}
+
 function viewPos(main){
   gateRoles(main, ["office", "captain", "waiter"], function(){ paintPos(main); });
 }
@@ -9388,11 +9588,14 @@ function paintPos(main){
       '<div class="poscols">' +
 
         '<section class="posleft">' +
-          '<div class="posfindrow">' +
+          '<div class="posfindrow"><span class="posfindin">' +
             '<input class="posfind" id="posFind" autocomplete="off" ' +
               'placeholder="Search the whole menu…">' +
-            '<button class="posclear" id="posClear" hidden aria-label="Clear">×</button>' +
+            '<button class="posclear" id="posClear" hidden aria-label="Clear">×</button></span>' +
+            '<button class="pospaybtn" id="posPay" title="Someone came to pay">\ud83d\udcb0 Pay a bill<b id="posPayN" hidden></b></button>' +
+            '<button class="poshelpbtn" id="posHelpBtn" aria-label="How the counter works" title="How the counter works">?</button>' +
           '</div>' +
+          '<div class="postip" id="posTip" hidden></div>' +
 
           '<div class="posbarrow">' +
             '<div class="posbartabs">' +
@@ -9431,6 +9634,13 @@ function paintPos(main){
           '<p class="poshint">↑↓ to move · Enter to add · Esc to clear</p>' +
         '</aside>' +
 
+      '</div>' +
+      /* v297 phone: total + Send at the thumb; the bill opens as a sheet */
+      '<div class="posscrim" id="posScrim"></div>' +
+      '<div class="posdock" id="posDock">' +
+        '<div class="pdwhy" id="posDockWhy"></div>' +
+        '<button class="pdtot" id="posDockBill"><b>\u20b90</b><small>0 items \u00b7 bill \u25b4</small></button>' +
+        '<button class="posbtn" id="posDockGo">Send KOT</button>' +
       '</div>' +
       '<div class="poscatsheet" id="posSheet" hidden>' +
         '<div class="poscatbox" role="dialog" aria-label="All categories">' +
@@ -9472,7 +9682,7 @@ function paintPos(main){
             (POS_SCOPE ? '✓ ' : '') + 'Only ' + esc(catName(POS_CAT)) + '</button>'
           : '');
       var sc = el("posScope");
-      if(sc) sc.onclick = function(){ POS_SCOPE = !POS_SCOPE; drawWhat(); drawGrid(); find.focus(); };
+      if(sc) sc.onclick = function(){ POS_SCOPE = !POS_SCOPE; drawWhat(); drawGrid(); if(posKbd()) find.focus(); };
       return;
     }
     POS_SCOPE = false;
@@ -9500,7 +9710,7 @@ function paintPos(main){
         (POS_SCOPE && POS_CAT ? ' in ' + esc(catName(POS_CAT)) + '.' : '.') + '</p>';
       return;
     }
-    grid.innerHTML = rows.map(posTileHtml).join("");
+    grid.innerHTML = posCardsHtml(rows); syncDock();
     at = 0; markGrid(!!q);
     grid.querySelectorAll("[data-pos]").forEach(function(b, i){
       b.onclick = function(){ takeTile(b); };
@@ -9519,8 +9729,10 @@ function paintPos(main){
     b.classList.add("hit");
     setTimeout(function(){ b.classList.remove("hit"); }, 170);
     drawTicket(); drawKot();
-    if(find.value.trim()) find.select();
-    find.focus();
+    /* a phone keyboard must not jump up on every tap (Majid, 16 Oct):
+       back into the search only with a real keyboard, or mid-search */
+    if(find.value.trim()){ find.select(); find.focus(); }
+    else if(posKbd()) find.focus();
   }
 
   function drawTabs(){
@@ -9541,7 +9753,7 @@ function paintPos(main){
     POS_CAT = id;
     drawTabs(); drawWhat(); drawGrid();
     el("posSheet").hidden = true;
-    find.focus();
+    if(posKbd()) find.focus();
   }
 
   /* ---- the open bills -------------------------------------
@@ -9762,8 +9974,19 @@ function paintPos(main){
   function drawWho(){
     var box = el("posWho"), m = POS.mode, bits = "";
     if(m === "dinein"){
-      bits = '<input class="fld big" id="poTable" autocomplete="off" inputmode="numeric" ' +
-               'placeholder="Table number" value="' + esc(POS.table) + '">';
+      var SP = posSpaces(), busy = posTableBills(), cur = posNorm(POS.table), pick = POS_SPACE;
+      if(pick && !SP.some(function(x){ return x.id === pick; })) pick = "";
+      bits = '<div class="postbl" id="posTbl">' +
+        '<div class="ptsp">' + [["", "All"]].concat(SP.map(function(x){ return [x.id, x.name]; })).map(function(x){ return '<button class="pkchip' + (pick === x[0] ? ' on' : '') + '" data-ptsp="' + esc(x[0]) + '">' + esc(x[1]) + '</button>'; }).join("") + '</div>' +
+        SP.filter(function(x){ return !pick || x.id === pick; }).map(function(x){
+          return '<div class="ptsec"><small>' + esc(x.name) + '</small><div class="ptgrid">' + x.t.map(function(t){
+            var b = busy[posNorm(t[0])], on = posNorm(t[0]) === cur;
+            return '<button class="pttab' + (b ? ' busy' : '') + (on ? ' on' : '') + '" data-ptbl="' + esc(t[0]) + '"' + (b ? ' data-ptbill="' + esc(b.id) + '"' : '') + '>' +
+              '<b>' + esc(t[0]) + '</b><small>' + (b ? rupee(posBalance(b)) + ' \u00b7 ' + Math.max(0, Math.round((Date.now() - (b.at || Date.now())) / 60000)) + "\u2032" : (t[1] ? t[1] + ' seats' : 'free')) + '</small></button>';
+          }).join("") + '</div></div>';
+        }).join("") + '</div>' +
+        '<input class="fld" id="poTable" autocomplete="off" ' +
+               'placeholder="or type the table" value="' + esc(POS.table) + '">';
     } else if(m === "delivery"){
       bits = '<input class="fld" id="poPhone" inputmode="tel" autocomplete="off" ' +
                'placeholder="Phone number" value="' + esc(POS.phone) + '">' +
@@ -9789,6 +10012,11 @@ function paintPos(main){
       b.classList.toggle("on", b.dataset.mode === m);
     });
     el("posWhoBox").open = (m !== "takeaway");
+    box.querySelectorAll("[data-ptsp]").forEach(function(b){ b.onclick = function(){ POS_SPACE = b.dataset.ptsp; try{ localStorage.setItem("hayat-pos-space", POS_SPACE); }catch(e){} drawWho(); }; });
+    box.querySelectorAll("[data-ptbl]").forEach(function(b){ b.onclick = function(){
+      if(b.dataset.ptbill && b.dataset.ptbill !== POS.editing){ resume(b.dataset.ptbill); return; }   /* a busy table: add to its bill */
+      POS.table = b.dataset.ptbl; drawWho(); drawToken(); drawGo();
+    }; });
   }
 
   /* ---- wiring --------------------------------------------- */
@@ -9921,15 +10149,52 @@ function paintPos(main){
 
   /* a cloud update: the open list and the next token move on
      their own, the half-built ticket in front of somebody does not */
-  window.__posRefresh = function(){ drawOpen(); drawTicket(); drawToken(); drawKot(); if(el("posBoard") && POSB.draw) POSB.draw();
+  window.__posRefresh = function(){ drawOpen(); drawTicket(); drawToken(); drawKot(); drawPayN(); if(el("posBoard") && POSB.draw) POSB.draw(); if(el("posPaySheet") && POSP.draw) POSP.draw();
+    if(POS.mode === "dinein" && el("posTbl") && !isTyping()) drawWho();
     if(!POS_FAV && !POS_CAT && !find.value.trim()) drawGrid(); };   /* the usual is not frozen yet (or the menu changed): refill it */
   /* F2 = every open bill, full screen */
   if(!window.__posF2){ window.__posF2 = true; document.addEventListener("keydown", function(e){ if(e.key === "F2" && el("posWrap")){ e.preventDefault(); posBoard(function(id){ if(window.__posResume) window.__posResume(id); }); } }); }
   window.__posResume = resume;
 
+  /* v297 phone dock: mirrors the panel's total and Send button; the panel itself
+     becomes a sheet that slides up (the same elements, so every guard still applies) */
+  function syncDock(){
+    var g = el("posGo"), b = el("posDockBill"), d = el("posDockGo"), w = el("posDockWhy");
+    if(!g || !b || !d) return;
+    var tb = el("posTotal").querySelector("b"), ts = el("posTotal").querySelector("span");   /* the panel's own words */
+    b.innerHTML = '<b>' + (tb ? tb.textContent : "\u20b90") + '</b><small>' + (ts ? ts.textContent : "0 items") + ' \u00b7 bill ' + (document.body.classList.contains("posbill") ? "\u25be" : "\u25b4") + '</small>';
+    d.textContent = g.textContent; d.classList.toggle("off", g.classList.contains("off") || g.disabled);
+    var why = (el("posGoWhy").textContent || "").trim(); w.textContent = why; w.hidden = !why;
+    /* how many of each size are on the ticket, as a badge on its button (captain app style) */
+    var n = {}; (POS.lines || []).forEach(function(l){ if(l.q > 0) n[l.k] = (n[l.k] || 0) + l.q; });
+    grid.querySelectorAll(".posdish .postile").forEach(function(t){
+      var p = t.dataset.pos.split("|"), k = p[0] + "|" + p.slice(1, -1).join("|");
+      if(n[k]) t.setAttribute("data-n", n[k]); else t.removeAttribute("data-n");
+    });
+  }
+  function billSheet(on){ document.body.classList.toggle("posbill", on); syncDock(); }
+  el("posDockBill").onclick = function(){ billSheet(!document.body.classList.contains("posbill")); };
+  el("posScrim").onclick = function(){ billSheet(false); };
+  el("posDockGo").onclick = function(){
+    var g = el("posGo");
+    if(g.classList.contains("off") || g.disabled){ billSheet(true); return; }   /* say why, where it can be fixed */
+    g.click(); setTimeout(syncDock, 60);
+  };
+  try{ new MutationObserver(syncDock).observe(el("posWrap").querySelector(".posright"), { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:["class","disabled"] }); }catch(e){}
+  document.body.classList.remove("posbill");
+  if(innerWidth <= 720) find.placeholder = "Search menu\u2026";   /* the phone row also holds Pay a bill and ? */
+  function drawPayN(){ var n = posOpenBills().filter(function(o){ return !o.paid && posBalance(o) > 0; }).length, b = el("posPayN"); if(b){ b.textContent = n; b.hidden = !n; } }
+  el("posPay").onclick = function(){ posPaySheet(function(id){ billSheet(false); resume(id); }); };
+  el("posHelpBtn").onclick = posHelp;
+  (function(){ var t = posTipToday(), box = el("posTip"); if(!t || !box) return;
+    box.innerHTML = '<span>\ud83d\udca1 ' + esc(t[1]) + '</span><button class="linky" id="posTipX">Got it</button>'; box.hidden = false;
+    el("posTipX").onclick = function(){ box.hidden = true; try{ var s = JSON.parse(localStorage.getItem("hayat-pos-tips") || "{}"); s.off = 1; localStorage.setItem("hayat-pos-tips", JSON.stringify(s)); }catch(e){} };
+  })();
+
   drawTabs(); drawWhat(); drawGrid(); drawWho();
-  drawOpen(); drawTicket(); drawToken(); drawKot();
-  find.focus();
+  drawOpen(); drawTicket(); drawToken(); drawKot(); syncDock(); drawPayN();
+  if(posKbd()) find.focus();   /* a phone keyboard stays down until search is tapped */
+  if(!window.__posNoTour) posTour(false);   /* first time for this person on this device */
 }
 
 /* The counter is the only page with this layout, so its styles
@@ -10117,7 +10382,85 @@ function posStyle(){
   ".prt{display:flex;justify-content:space-between;font-size:20px;font-weight:900;margin-top:4px} .prpaid{text-align:center;background:#111;color:#fff;font-weight:900;padding:4px;margin-top:6px}" +
   ".posrs .posrsl{margin:6px 0 8px} .posrsrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line,#ddd)} .posrsc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}" +
   ".poshist{display:flex;flex-direction:column;gap:2px;max-height:60vh;overflow:auto} .phe{display:grid;grid-template-columns:58px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid var(--line,#ddd)} .phe small{display:block;color:var(--muted);font-size:12px} .pht{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}" +
-  ".phe.cancel b,.phe.edit b{color:#b4452f} .phe.kot b{color:#1f4d4a} .phe.paid b{color:#2e7d4f}";
+  ".phe.cancel b,.phe.edit b{color:#b4452f} .phe.kot b{color:#1f4d4a} .phe.paid b{color:#2e7d4f}" +
+  /* v297: dish cards like the captain app */
+  ".posgrid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}" +
+  ".posdish{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 12px 14px;" +
+    "box-shadow:0 1px 2px rgba(27,26,23,.05),0 6px 16px rgba(27,26,23,.05);display:flex;flex-direction:column;gap:10px}" +
+  ".posdish .pdn b{display:block;font-size:16px;font-weight:750;line-height:1.25;color:var(--cream)}" +
+  ".posdish .pdn small{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-top:2px}" +
+  ".possz{display:grid;grid-template-columns:repeat(auto-fit,minmax(68px,1fr));gap:8px}" +
+  ".posdish .postile{min-height:58px;padding:6px 4px;border:0;border-radius:12px;background:var(--card2);" +
+    "align-items:center;justify-content:center;text-align:center;gap:1px}" +
+  ".posdish .postile .pls{font-size:13px;font-weight:750;color:var(--cream);text-transform:none;letter-spacing:0}" +
+  ".posdish .postile .plp{font-size:14px;font-weight:650;color:var(--muted)}" +
+  ".posdish .postile:hover{background:var(--soft2)}" +
+  ".posdish .postile.on{box-shadow:0 0 0 2px var(--gold)}" +
+  ".posdish .postile.hit{background:var(--accentwash)}" +
+  ".posdish .postile{position:relative}" +
+  ".posdish .postile[data-n]::after{content:attr(data-n);position:absolute;top:-7px;right:-5px;min-width:22px;height:22px;padding:0 6px;" +
+    "border-radius:11px;background:var(--gold);color:#fff;font-size:12px;font-weight:800;line-height:22px;box-shadow:0 2px 6px rgba(0,0,0,.18)}" +
+  ".posdock,.posscrim{display:none}" +
+  /* v298: pay, help, tip, tables, pay sheet, tour */
+  ".posfindrow{display:flex;gap:8px;align-items:center}.posfindin{position:relative;flex:1 1 auto;min-width:0;display:block}" +
+  ".pospaybtn{flex:0 0 auto;height:52px;padding:0 16px;border-radius:var(--r2);border:1px solid var(--gold);background:var(--accentwash);color:var(--cream);" +
+    "font-family:inherit;font-size:15px;font-weight:750;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}" +
+  ".pospaybtn b{min-width:24px;height:24px;padding:0 7px;border-radius:12px;background:var(--gold);color:#fff;font-size:12.5px;line-height:24px}" +
+  ".pospaybtn b[hidden]{display:none}" +
+  ".poshelpbtn{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:1px solid var(--line2);background:var(--card);color:var(--muted);font:inherit;font-size:18px;font-weight:800;cursor:pointer}" +
+  ".postip{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:9px 12px;border-radius:12px;background:var(--accentwash2);font-size:13px;color:var(--cream)}" +
+  ".postip span{flex:1}.postip[hidden]{display:none}" +
+  ".postbl{display:flex;flex-direction:column;gap:10px;margin:0 0 10px}.ptsp{display:flex;gap:6px;flex-wrap:wrap}" +
+  ".ptsec small{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin:0 0 6px}" +
+  ".ptgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}" +
+  ".pttab{min-height:56px;padding:4px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--cream);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}" +
+  ".pttab b{font-size:16px;font-weight:800}.pttab small{font-size:10.5px;color:var(--muted);white-space:nowrap}" +
+  ".pttab.busy{background:#F6E7CF;border-color:#D9A85B}.pttab.busy small{color:#8A5A12;font-weight:700}" +
+  ".pttab.on{background:var(--pri);border-color:var(--pri);color:var(--onaccent)}.pttab.on small{color:inherit;opacity:.8}" +
+  ".pospaywrap{position:fixed;inset:0;z-index:950;background:var(--veil);display:flex;align-items:flex-end;justify-content:center}" +
+  ".pospay{width:min(760px,100%);max-height:92vh;overflow:auto;background:var(--bg);border-radius:22px 22px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px))}" +
+  "@media(min-width:900px){.pospaywrap{align-items:center}.pospay{border-radius:20px}}" +
+  ".ppy-h{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px}.ppy-h b{font-size:22px;display:block}.ppy-h small{color:var(--muted);font-size:13px}" +
+  ".ppy-x{width:40px;height:40px;border-radius:50%;border:0;background:var(--soft2);color:var(--cream);font-size:16px;cursor:pointer}" +
+  ".ppy-q{margin:0 0 10px;font-size:18px}.ppy-t{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}.ppy-t .pkchip{height:38px;padding:0 14px;font-size:15px;font-weight:700}" +
+  ".ppy-l{display:flex;flex-direction:column;gap:8px}" +
+  ".ppy-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border-radius:16px;background:var(--card);border:1px solid var(--line)}" +
+  ".ppy-r.top{border-color:var(--gold);box-shadow:0 0 0 2px var(--accentwash)}" +
+  ".ppy-w b{display:block;font-size:19px;font-weight:800;color:var(--cream)}.ppy-w small{display:block;font-size:12px;color:var(--muted)}" +
+  ".ppy-i{display:block;font-size:13px;margin-top:4px;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+  ".ppy-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.ppy-tags em{font-style:normal;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--soft2);color:var(--muted)}" +
+  ".ppy-tags em.due{background:#F3DFB5;color:#7A4F00}.ppy-tags em.part{background:#CFE8D8;color:#1E5C38}" +
+  ".ppy-a{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.ppy-a > b{font-size:22px;font-weight:850;color:var(--cream)}" +
+  ".ppy-a .posbtn{height:46px;padding:0 16px;font-size:15px}.ppy-s{display:flex;gap:12px}.ppy-hint{font-size:12.5px;color:var(--muted);margin:12px 2px 0}" +
+  ".postour{position:fixed;inset:0;z-index:960;pointer-events:none}" +
+  ".ptr-spot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(15,12,8,.55);transition:all .25s ease}" +
+  ".ptr-card{position:fixed;left:50%;transform:translateX(-50%);width:min(360px,calc(100% - 28px));pointer-events:auto;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:0 14px 40px rgba(0,0,0,.3)}" +
+  ".ptr-card small{color:var(--muted);font-size:11.5px;font-weight:700}.ptr-card b{display:block;font-size:18px;margin:2px 0 4px;color:var(--cream)}.ptr-card p{margin:0 0 10px;font-size:14px;color:var(--cream)}" +
+  ".ptr-b{display:flex;justify-content:space-between;align-items:center}.ptr-b .posbtn{height:42px;padding:0 18px}" +
+  ".poshelp .phl{margin:6px 0 12px;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45}" +
+  "@media(max-width:720px){.pospaybtn{height:46px;padding:0 12px;font-size:14px}.posfind{height:46px}.poshelpbtn{width:40px;height:40px}}" +
+  "@media(max-width:720px){" +
+    ".posgrid{grid-template-columns:1fr;gap:10px}" +
+    ".posfindrow{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0;margin:0 0 6px}" +
+    ".posbarrow{gap:6px}.postab{height:40px;padding:0 13px;border-radius:999px;font-size:14px}" +
+    ".poswhat{display:none}" +
+    ".poswrap{padding-bottom:120px}" +
+    ".posdock{display:grid;grid-template-columns:1fr auto;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:72;" +
+      "padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--line2);" +
+      "box-shadow:0 -8px 24px rgba(27,26,23,.10)}" +
+    ".posdock .pdwhy{grid-column:1/-1;font-size:12.5px;font-weight:600;color:var(--hot);margin:0 2px}" +
+    ".posdock .pdwhy[hidden]{display:none}" +
+    ".pdtot{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-height:54px;padding:0 14px;" +
+      "border-radius:14px;border:1px solid var(--line2);background:var(--bg);color:var(--cream);font-family:inherit;cursor:pointer}" +
+    ".pdtot b{font-size:20px;font-weight:800;line-height:1.1}.pdtot small{font-size:12px;color:var(--muted)}" +
+    ".posdock .posbtn{height:54px;min-width:150px;padding:0 18px;border-radius:14px}" +
+    ".posright{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:71;max-height:84vh;overflow:auto;background:var(--bg);" +
+      "border-radius:22px 22px 0 0;padding:16px 14px calc(96px + env(safe-area-inset-bottom,0px));" +
+      "box-shadow:0 -12px 40px rgba(0,0,0,.22);transform:translateY(105%);transition:transform .25s ease;visibility:hidden}" +
+    "body.posbill .posright{transform:none;visibility:visible}" +
+    "body.posbill .posscrim{display:block;position:fixed;inset:0;z-index:70;background:var(--veil)}" +
+    ".posticket{max-height:none}" +
+  "}";
   document.head.appendChild(s);
 }
 

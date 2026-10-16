@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap">
 <script src="config.js"></script>
 <script src="nav.js" onerror="0"></script>
+<script src="owner-ux.js" onerror="0"></script>
 <script src="hayat-auth.js"></script>
 <script src="assets/qr.js"></script>
 <style>
@@ -571,7 +572,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v296';
+const BOARD='v298';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -646,7 +647,7 @@ function todayBox(){
     <div class="tbn"><b>${rs(tot)}</b>${live?`<span><i class="dp"></i>paid ${rs(paid)}${uT?` · <em class="u">unpaid ${rs(uT)}</em>`:''}</span>`:''}</div>${bar}${tbl}</div>
     ${fc?`<div class="tbr2">${fc}${VIEW==='full'?`<button type="button" class="fcgear" id="fcGear" title="outlook, closing time, pre-booking">⚙ forecast settings</button>`:''}</div>`:''}</div>`; }
 /* ---- v283 SIMPLE VIEW for partners/family: Today · Days · Money · Dishes; "Analysis" = the full app (remembered per device) ---- */
-let VIEW='simple'; try{ VIEW=localStorage.getItem('hayat-view')||'simple'; }catch(e){}
+let VIEW='full'; try{ if(!localStorage.getItem('hayat-view-v298')){ localStorage.setItem('hayat-view-v298','1'); localStorage.setItem('hayat-view','full'); } VIEW=localStorage.getItem('hayat-view')||'full'; }catch(e){}   /* v298: Majid wants every graph back - full is the default again; Simple stays one tap away in More */
 function setView(v){ VIEW=v; try{ localStorage.setItem('hayat-view',v); }catch(e){} document.body.classList.toggle('simple',v==='simple'); }
 function alertList(){ const R=recs(), out=[];
   R.filter(r=>(r.status==='open'||r.status==='due')&&r.kind!=='staff').forEach(r=>{ const age=mins(r.createdAt,tsNow()), sd=r.dueAt?mins(r.dueAt,tsNow()):null, who=r.table||(r.kind==='counter'?'CO token '+(r.token||r.kot):r.kind==='delivery'?'Delivery '+((r.customer&&r.customer.name)||'KOT '+r.kot):'KOT '+r.kot);
@@ -685,7 +686,7 @@ function kpis(){
   const seats=tables.reduce((n,t)=>n+(t.chairs||0),0), seatsBusy=tables.filter(t=>busy.has(t.name)).reduce((n,t)=>n+(t.chairs||0),0);
   return `${todayBox()}
   ${live&&FCSET.open?`<div class="fcset">${scnBar()}</div>`:''}${live?`<div class="fcline">${trfHint()}</div>`:''}
-  ${avgStrip()}<details class="moreg kmore" data-mg="kpi2"${MOREG.kpi2?' open':''}><summary><b>More numbers</b><small>seats · table time · cash / card · paid out</small></summary><div class="kpis">
+  ${avgStrip()}<details class="moreg kmore" data-mg="kpi2"${MOREG.kpi2!==false?' open':''}><summary><b>More numbers</b><small>seats · table time · cash / card · paid out</small></summary><div class="kpis">
     <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
@@ -3619,7 +3620,7 @@ function placeDay(){ const t=document.querySelector('.tday'), dk=$('dock'), top=
 /* ---- averages a day, early on Live + Sales (Majid, 14 Oct 2026): full days BEFORE the shown day; tap opens that span ---- */
 /* "More ▾": every page shows what matters first; the rest of its cards fold here, open state remembered (Majid, 14 Oct 2026) */
 let MOREG={}; try{ MOREG=JSON.parse(localStorage.getItem('hayat-more')||'{}')||{}; }catch(e){ MOREG={}; }
-function moreG(key,title,what,html){ if(!html||!String(html).trim()) return ''; return `<details class="moreg" data-mg="${key}"${MOREG[key]?' open':''}><summary><b>${title}</b><small>${esc(what)}</small></summary><div class="grid">${html}</div></details>`; }
+function moreG(key,title,what,html){ if(!html||!String(html).trim()) return ''; return `<details class="moreg" data-mg="${key}"${MOREG[key]!==false?' open':''}><summary><b>${title}</b><small>${esc(what)}</small></summary><div class="grid">${html}</div></details>`; }
 function moreWire(){ $$('details.moreg').forEach(d=>d.ontoggle=()=>{ MOREG[d.dataset.mg]=d.open; try{ localStorage.setItem('hayat-more',JSON.stringify(MOREG)); }catch(e){} if(d.open){ try{ fitTables(); }catch(e){} } }); }
 /* Live: ONE outlook card - today (how it will end) | tomorrow */
 let OUTT='today'; try{ OUTT=localStorage.getItem('hayat-out')||'today'; }catch(e){}
@@ -3793,7 +3794,23 @@ function wireDayStart(){ $$('[data-ds]').forEach(b=>b.onclick=()=>{ const k=b.da
   if(['week','month','l30','lmonth'].includes(k)){ const p=k==='week'?P[0]:k==='month'?P[2]:k==='l30'?P[4]:P[3]; MODE='period'; PTAB='overview'; loadPeriod(p[1],p[2],p[0]); return; }
   TAB=k==='yitems'?'items':k==='yspend'?'buy':k==='ycash'?'cash':k==='ysim'?'similar':'sales'; MODE='day'; setDay(y); render();
   if(k==='yrep') setTimeout(()=>{ const r=document.querySelector('[data-rpgo]'); if(r) r.click(); },900); }); }
-function render(){ FC_MEMO={}; try{ render0(); } finally{ FC_MEMO=null; } }   /* fcToday is asked ~6× a render: compute once per render */
+function render(){ FC_MEMO={}; try{ render0(); } finally{ FC_MEMO=null; } try{ if(window.OwnerUX) OwnerUX.after(); }catch(e){ console.warn('OwnerUX',e); } }
+/* v298: a card that cannot draw shows a small note in its place - it no longer blanks the rest of the page.
+   Every card's first element also carries data-ck="<its function>" so usage + Arrange know which card it is. */
+const CARD_ERR={};
+function ckTag(h,name){ return h.replace(/^(\s*<(?:div|details|section)\b)(?![^>]*data-ck=)/,'$1 data-ck="'+name+'"'); }
+function SAFE(f,name){ return function(){ try{ const h=f.apply(this,arguments); return typeof h==='string'&&h?ckTag(h,name):h; }
+  catch(e){ CARD_ERR[name]=String(e&&e.message||e); console.warn('card '+name,e); return `<div class="card wide carderr" data-ck="${name}"><h2>⚠ This card could not draw <span class="n">${esc(name)}</span></h2><div class="note">${esc(CARD_ERR[name].slice(0,160))} · the rest of the page is fine</div></div>`; } }; }
+bills=SAFE(bills,'bills'); billsCard=SAFE(billsCard,'billsCard'); breakdown=SAFE(breakdown,'breakdown'); cashCard=SAFE(cashCard,'cashCard'); closures=SAFE(closures,'closures');
+compare=SAFE(compare,'compare'); daySpendCard=SAFE(daySpendCard,'daySpendCard'); discounts=SAFE(discounts,'discounts'); drafts=SAFE(drafts,'drafts'); fcostCard=SAFE(fcostCard,'fcostCard');
+floor=SAFE(floor,'floor'); hourly=SAFE(hourly,'hourly'); instaCard=SAFE(instaCard,'instaCard'); items=SAFE(items,'items'); juiceCard=SAFE(juiceCard,'juiceCard'); kitchens=SAFE(kitchens,'kitchens');
+lgCard=SAFE(lgCard,'lgCard'); needsYou=SAFE(needsYou,'needsYou'); newOrders=SAFE(newOrders,'newOrders'); outlook=SAFE(outlook,'outlook'); pace=SAFE(pace,'pace'); payments=SAFE(payments,'payments');
+runLine=SAFE(runLine,'runLine'); similar=SAFE(similar,'similar'); spDupCard=SAFE(spDupCard,'spDupCard'); tables=SAFE(tables,'tables'); topDishes=SAFE(topDishes,'topDishes');
+trafficCard=SAFE(trafficCard,'trafficCard'); trends=SAFE(trends,'trends'); unrealized=SAFE(unrealized,'unrealized'); upsell=SAFE(upsell,'upsell'); voids=SAFE(voids,'voids'); waiters=SAFE(waiters,'waiters');
+weekCard=SAFE(weekCard,'weekCard'); todayBox=SAFE(todayBox,'todayBox'); alerts=SAFE(alerts,'alerts'); topItems=SAFE(topItems,'topItems'); catCard=SAFE(catCard,'catCard'); avgStrip=SAFE(avgStrip,'avgStrip');
+/* the page keys Arrange + usage use; the helper (owner-ux.js) talks to the board only through this */
+window.__OWNUX={ page:()=>MODE==='period'?'p/'+PTAB:(VIEW==='simple'?'s/':'d/')+TAB, view:()=>VIEW, render:()=>render(), errors:()=>Object.assign({},CARD_ERR),
+  who:()=>FB?(FB.name||FB.crewId||''):'', fs:()=>FB?{fs:FB.fs,db:FB.db}:null, day:()=>bizToday() };   /* fcToday is asked ~6× a render: compute once per render */
 function render0(){ tabCarry(); if(VIEW!=='simple'&&TAB==='days') TAB='floor';
   if(SL.open&&(MODE!=='day'||TAB!=='sales')) slClose(true);
   /* a PC whose clock is behind the shop's (or a browser in another zone) must not show negative ages */

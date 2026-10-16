@@ -29,7 +29,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
   page.on('dialog', d => d.accept());
-  await page.addInitScript(() => {
+  await page.addInitScript(() => { window.__posNoTour = true;   // the first-time tour has its own test
     try { sessionStorage.setItem('hayat_admin', '1'); } catch (e) {}
     window.__jobs = [];
     window.open = () => null;

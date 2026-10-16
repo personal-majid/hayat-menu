@@ -173,24 +173,38 @@ function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.
    3. tap chips for the supplier's usual items · 4. keep the bill photo pinned on screen while typing */
 let VO={on:false,lang:'ml-IN',heard:[],interim:'',rec:null,target:'bill'}, PIN=false; try{ VO.lang=localStorage.getItem('hayat-stock-lang')||'ml-IN'; }catch(e){}
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+/* iPhone (v297): Safari hears one phrase per tap and refuses a restart that does not come from a tap - the old
+   auto-restart flashed the mic popup and then "allow the microphone". So on iPhone: one item per 🎤 tap, and the
+   real fix in words when the mic or Dictation is off. */
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function voWhy(e){ const pwa=IOS&&navigator.standalone;
+  if(e==='not-allowed') return pwa?'On iPhone, voice does not work in the home-screen app. Open this page in Safari, or tap the 🎤 on the keyboard in the box below.'
+    :IOS?'The microphone is blocked. In Safari tap aA (left of the address) → Website Settings → Microphone → Allow, then tap 🎤 again.':'Allow the microphone for this page: tap the 🔒 next to the address → Microphone → Allow.';
+  if(e==='service-not-allowed') return IOS?'Turn on Dictation: Settings → General → Keyboard → Enable Dictation. Then tap 🎤 again.':'This browser blocked its voice service. Use Chrome, or the 🎤 on the keyboard.';
+  if(e==='audio-capture') return 'No microphone found on this device.';
+  if(e==='network') return 'Voice needs the internet. Check the connection and tap 🎤 again.';
+  return ''; }
+function voNote(T){ return VO.err&&VO.errT===T?`<div class="rdw">${esc(VO.err)}</div>`:(IOS&&!VO.on&&VO.heard.some(h=>h.target===T&&h.t)?'<div class="note">iPhone: one item per tap — tap 🎤 again for the next.</div>':''); }
 function chipItems(){ const sup=ITEMS.sup[slug(DRAFT.supplier)], have=new Set(DRAFT.lines.filter(l=>l.n).map(l=>slug(l.n)));
   const L=(sup&&sup.items||[]).map(k=>ITEMS.items[k]).filter(Boolean); Object.values(ITEMS.items).sort((a,b)=>(b.at||0)-(a.at||0)).forEach(i=>{ if(L.length<14&&!L.includes(i)) L.push(i); });
   return L.filter(i=>!have.has(slug(i.n))).slice(0,14); }
 function quickTools(){ const C=chipItems();
   return `<div class="qt">${PHOTO?`<button type="button" class="btn${PIN?' pri':''}" id="pinPh">📌 ${PIN?'Photo pinned':'Pin the photo'}</button>`:''}<button type="button" class="btn${VO.on&&VO.target==='bill'?' pri':''}" id="voGo">🎤 ${VO.on&&VO.target==='bill'?'Listening… tap to stop':'Speak the bill'}</button></div>
-    ${VO.target==='bill'&&(VO.on||VO.heard.some(h=>h.target==='bill'))?`<div class="vo" id="voBox"><div class="row"><span class="note">Say one item at a time: <b>name · qty · rate · amount</b> — e.g. “thakkali pathu kilo 32 320” or “തക്കാളി പത്ത് കിലോ മുന്നൂറ്റി ഇരുപത്”.</span></div>
+    ${VO.target==='bill'&&(VO.on||VO.err||VO.heard.some(h=>h.target==='bill'))?`<div class="vo" id="voBox"><div class="row"><span class="note">Say one item at a time: <b>name · qty · rate · amount</b> — e.g. “thakkali pathu kilo 32 320” or “തക്കാളി പത്ത് കിലോ മുന്നൂറ്റി ഇരുപത്”.</span></div>
       <div class="sups">${[['ml-IN','മലയാളം'],['en-IN','English']].map(x=>`<button type="button" data-volang="${x[0]}" class="${VO.lang===x[0]?'on':''}">${x[1]}</button>`).join('')}</div>
       ${VO.interim?`<div class="voi">“${esc(VO.interim)}”</div>`:''}${VO.heard.filter(h=>h.target==='bill'&&h.t).slice(-5).reverse().map(h=>`<div class="voh${h.ok?'':' bad'}">${h.ok?'✓':'?'} “${esc(h.t)}”${h.ok?` → <b>${esc(h.n)}</b> ${h.q} ${esc(h.u)} · ${rs(h.a)}`:' — not understood, say it again or type it'}</div>`).join('')}
-      ${!SR?'<div class="rdw">This phone\'s browser has no voice reader. Use Chrome — or tap the 🎤 on your keyboard inside the box below.</div>':''}</div>`:''}
+      ${voNote('bill')}${!SR?'<div class="rdw">This phone\'s browser has no voice reader. Use Chrome — or tap the 🎤 on your keyboard inside the box below.</div>':''}</div>`:''}
     <div class="row"><input id="qline" placeholder="Type or say a line: thakkali 10 kg 32 320" autocomplete="off" enterkeyhint="done" style="flex:1"><button type="button" class="btn" id="qAdd">Add</button></div>
     ${C.length?`<div class="chips">${C.map(i=>`<button type="button" data-chip="${esc(i.n)}">＋ ${esc(i.n)}${i.r?` <small>${rs(i.r)}/${esc(i.u||'')}</small>`:''}</button>`).join('')}</div>`:''}`; }
 /* one line said or typed -> a bill line (the same proof rules: a worked-out rate is marked to check) */
 function addSpoken(t){ const l=StockRead.parseSpoken(t); if(!l) return null; const m=StockRead.match(l.raw,{items:ITEMS.items,alias:ITEMS.alias,u:l.u});
   const ln={n:m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:m.c||'',rTyped:true,chk:(l.how!=='3'&&l.how!=='2')||m.via==='new'||m.score<0.9?1:0,w:l.how==='mm'?`qty × rate = ${rs(l.alt)}, you said ${rs(l.a)}`:l.how==='1'?'no qty heard':''};
   const D=DRAFT; D.lines=D.lines.filter(x=>x.n||x.q||x.a); D.lines.push(ln); saveDraft(); return {n:m.n,q:l.q,u:l.u,a:l.a}; }
-function voStart(){ if(!SR){ VO.on=false; VO.heard.push({t:'',ok:false,target:VO.target}); render(); return; }   /* target: so the "no voice reader" hint shows */ try{ const r=new SR(); r.lang=VO.lang; r.continuous=true; r.interimResults=true;
+function voStart(){ VO.err=''; if(!SR){ VO.on=false; VO.heard.push({t:'',ok:false,target:VO.target}); render(); return; }   /* target: so the "no voice reader" hint shows */ try{ try{ VO.rec&&VO.rec.abort(); }catch(x){} const r=new SR(); r.lang=VO.lang; r.continuous=!IOS; r.interimResults=true;
     r.onresult=e=>{ let interim=''; for(let i=e.resultIndex;i<e.results.length;i++){ const x=e.results[i], t=x[0].transcript.trim(); if(x.isFinal){ if(VO.target==='bill'){ const h=addSpoken(t); VO.heard.push(h?Object.assign({t,ok:true,target:'bill'},h):{t,ok:false,target:'bill'}); } else VO.heard.push(applyQty(t,VO.target)); } else interim+=t+' '; } VO.interim=interim.trim(); render(); };
-    r.onend=()=>{ if(VO.on&&VO.rec===r){ try{ r.start(); }catch(e){ VO.on=false; render(); } } }; r.onerror=e=>{ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ VO.on=false; toast('Allow the microphone for this page'); render(); } };
+    /* Chrome/Android: keep listening. iPhone: stop after the phrase (a restart there is refused) */
+    r.onend=()=>{ if(VO.rec!==r) return; if(VO.on&&!IOS&&!VO.err){ try{ r.start(); return; }catch(e){} } VO.on=false; VO.interim=''; render(); };
+    r.onerror=e=>{ if(VO.rec!==r) return; const w=voWhy(e.error); if(w){ VO.on=false; VO.err=w; VO.errT=VO.target; render(); } else if(e.error==='no-speech'&&IOS){ VO.on=false; toast('Did not hear anything. Tap 🎤 and speak.'); render(); } };
     VO.rec=r; VO.on=true; r.start(); }catch(e){ VO.on=false; toast('Voice did not start'); } render(); }
 function voStop(){ VO.on=false; VO.interim=''; try{ VO.rec&&VO.rec.stop(); }catch(e){} render(); }
 function pinView(){ let w=$('pinPv'); if(!PIN||!PHOTO||TAB!=='new'){ if(w) w.remove(); return; } if(!w){ w=document.createElement('div'); w.id='pinPv'; w.className='pinpv'; document.body.appendChild(w); }
@@ -245,12 +259,12 @@ function pickAlt(hi,ii,ai){ const h=VO.heard[hi], x=h&&h.items[ii], a=x&&x.alts[
   if(!itemOf(a.k)) S.newIt[a.k]={n:a.n,u:x.u||'kg'}; delete Q[x.k]; const i=L.indexOf(x.k); if(i>=0&&!sugRelease(bizDay()).items[x.k]) L.splice(i,1);
   setQ(h.target,a.k,x.q); S.learn[StockRead.norm(x.raw).replace(/ /g,'_')]=a.k; x.alts[ai]={n:x.n,k:x.k,s:x.score}; x.k=a.k; x.n=a.n; x.score=1; x.via='picked';
   h.target==='rel'?saveRel():saveCnt(); render(); }
-function heardBox(target){ if(VO.target!==target||!(VO.on||VO.heard.some(h=>h.target===target))) return '';
+function heardBox(target){ if(VO.target!==target||!(VO.on||VO.err||VO.heard.some(h=>h.target===target))) return '';
   const H=VO.heard.map((h,i)=>[h,i]).filter(([h])=>h.target===target&&h.t).slice(-4).reverse();
   return `<div class="vo"><div class="sups">${[['ml-IN','മലയാളം'],['en-IN','English']].map(x=>`<button type="button" data-volang="${x[0]}" class="${VO.lang===x[0]?'on':''}">${x[1]}</button>`).join('')}</div>
     <span class="note">Say <b>item · how much</b>, several in one go: “kozhi pathu kilo, ari irupathiyanchu kilo” · “mathi illa” = 0</span>${VO.interim?`<div class="voi">“${esc(VO.interim)}”</div>`:''}
     ${H.map(([h,hi])=>!h.ok?`<div class="voh bad">? “${esc(h.t)}” — not understood, say it again or type it</div>`:`<div class="voh">“${esc(h.t)}”${h.items.map((x,ii)=>`<div class="vhl">✓ <b>${esc(x.n)}</b> ${fq(x.q,x.u)}${x.via==='new'?' <span class="cf new">new item</span>':x.score<0.9&&x.via!=='picked'?` <span class="cf mid">${Math.round(x.score*100)}%</span>`:''}${(()=>{ const A=x.alts.map((a,ai)=>[a,ai]).filter(([a])=>x.via==='new'||x.score<0.9||a.own||a.s>=x.score-0.15||(x.via==='alias'&&a.share)); return A.length&&x.via!=='picked'&&x.via!=='learned'?`<div class="chips alt"><small>or did you mean</small>${A.map(([a,ai])=>`<button type="button" data-alt="${hi}|${ii}|${ai}">${esc(a.n)}</button>`).join('')}</div>`:''; })()}</div>`).join('')}</div>`).join('')}
-    ${!SR?'<div class="rdw">This browser has no voice reader. Use Chrome, or the 🎤 on your keyboard in the box below.</div>':''}</div>`; }
+    ${voNote(target)}${!SR?'<div class="rdw">This browser has no voice reader. Use Chrome, or the 🎤 on your keyboard in the box below.</div>':''}</div>`; }
 const sayRow=(target,ph)=>`<div class="row"><button type="button" class="btn${VO.on&&VO.target===target?' pri':''}" data-vo="${target}">🎤 ${VO.on&&VO.target===target?'Listening… tap to stop':'Say it'}</button><input id="mvLine" placeholder="${ph}" autocomplete="off" enterkeyhint="done" style="flex:1 1 160px"><button type="button" class="btn" id="mvAdd">Add</button></div>`;
 const mvRow=(k,val,sub,extra,ph)=>{ const it=itemOf(k)||{n:k}; return `<div class="mv" data-mk="${esc(k)}"><span class="nm"><b>${esc(it.n)}</b>${sub?`<small>${sub}</small>`:''}</span><input data-mq="${esc(k)}" inputmode="decimal" value="${esc(val)}" placeholder="${ph||'0'}" aria-label="${esc(it.n)} quantity"><span class="u">${esc(it.u||'')}</span>${extra||''}</div>`; };
 const byLine=m=>`${new Date(m.at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${esc((m.by&&m.by.name)||'')}`;

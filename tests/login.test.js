@@ -33,7 +33,7 @@ const CREW = [
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
 
-  await page.addInitScript(() => {
+  await page.addInitScript(() => { window.__posNoTour = true;   // the first-time tour has its own test
     if (navigator.serviceWorker) navigator.serviceWorker.register = () => Promise.reject(new Error('off'));
   });
   await page.goto('http://localhost:8097/#/', { waitUntil: 'load' });

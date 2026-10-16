@@ -36,7 +36,7 @@ function check(name, cond, extra) {
 
   // the offline passcode door, so the test never needs Firebase
   page.on('dialog', d => d.accept());
-  await page.addInitScript(() => {
+  await page.addInitScript(() => { window.__posNoTour = true;   // the first-time tour has its own test
     try { sessionStorage.setItem('hayat_admin', '1'); } catch (e) {}
     // printJob opens print.html in a popup; keep it out of the test
     window.__opened = [];
