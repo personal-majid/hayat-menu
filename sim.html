@@ -71,11 +71,11 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .score .hi{color:var(--good)} .score .lo{color:var(--food)}
 @media (max-width:759px){
   .score{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .score::-webkit-scrollbar{display:none}
-  .tspd,.tlen{display:none!important} .tclk{min-width:64px} .tctl input[type=range]{order:9;flex-basis:100%} .tctl select.tsel{max-width:170px}
+  .tspd{display:none!important} .tclk{min-width:64px} .tctl input[type=range]{order:9;flex-basis:100%} .tctl select.tsel{max-width:170px}
   .key{font-size:11.5px} .knote{display:none} .kc:not(.hot) .kl{display:none} .kc:not(.hot){padding-right:3px}
   #p-rush .planwrap svg{max-height:none;min-height:0}
 }
-.duo{display:grid;gap:10px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+
 .rview{display:grid;gap:14px}
 .rcol{display:grid;gap:10px;align-content:start;min-width:0}
 .rview.single #colB{display:none}
@@ -145,7 +145,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .pbgrid{display:grid;gap:14px} @media (min-width:1000px){ .pbgrid{grid-template-columns:1fr 1fr} }
 .rhythm{display:flex;height:46px;border-radius:10px;overflow:hidden;margin-top:6px;border:1px solid var(--line)}
 .rhythm div{display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;text-align:center;line-height:1.1;padding:0 2px;min-width:0;overflow:hidden}
-.rhlab{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
+
 .sect td,.sect th{text-align:center} .sect td:first-child,.sect th:first-child{text-align:left}
 .op{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}
 .op.y{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)} .op.n{background:color-mix(in srgb,#C2362C 14%,transparent);color:#C2362C} .op.p{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
@@ -176,7 +176,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .tmc h3{margin:0;font:600 16px "Jost",sans-serif;display:flex;justify-content:space-between;gap:8px} .tmc h3 small{font-weight:500;color:var(--muted);font-size:12px}
 .tmc .rl{font-weight:600;color:var(--c)} .tmc ul{margin:2px 0 0;padding-left:18px;font-size:13px;color:var(--ink)} .tmc li{margin:1px 0}
 .tmc .mt{font-size:12.5px;color:var(--muted)}
-.tmk{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+
 .tmload{height:8px;border-radius:4px;background:var(--soft);overflow:hidden;min-width:60px} .tmload div{height:100%}
 @media print{ body *{visibility:hidden} #tmCards,#tmCards *{visibility:visible} #tmCards{position:absolute;left:0;top:0;width:100%} .tmc{break-inside:avoid;border-color:#999} }
 .gwin{max-width:520px;flex:1} .gwin button{padding:6px 8px;font-size:12.5px;white-space:nowrap}
@@ -274,12 +274,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 td.bad{color:var(--food);font-weight:600}
 @media (min-width:860px){ .cmp.two{grid-template-columns:1fr 1fr} }
 .pane{display:grid;gap:6px;align-content:start}
-.ptitle{font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center}
+
 .tagA,.tagB{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;color:#fff;font-size:12px;font-weight:700;background:var(--muted)}
 .tagB{background:var(--good)}
-.pst{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:2.6em}
-.pst b{color:var(--ink)}
-.pmap{max-height:none}
+
+
+
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font:500 13px "Jost",sans-serif;cursor:pointer;display:flex;gap:7px;align-items:center}
 .chip i{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--muted);display:inline-grid;place-items:center;font-style:normal;font-size:11px;line-height:1}
 .chip[aria-pressed="true"]{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--surface))}
@@ -978,7 +978,7 @@ function dsim(sc,day,st){ const k=JSON.stringify([onK(sc),day,st,S.halls,S.kcap|
 function buildDay(){ const sel=$('selD'); sel.innerHTML='';
   DAYS.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=dname(d)+' · '+BILLS.filter(b=>b.d===d).length+' bills'+(d===24?' (part day)':''); sel.appendChild(o); });
   if(!DAYS.includes(+S.day)) S.day=DAYS[0];
-  sel.onchange=()=>{ S.day=+sel.value; PB.t=null; save(); renderDay(); };
+  sel.onchange=()=>{ S.day=+sel.value; save(); renderDay(); };
   [['nW','waiters',1,12],['nC','captains',0,3],['nR','runners',0,4],['nB','bussers',0,4]].forEach(([id,k,lo,hi])=>{ $(id).value=S.staff[k]; $(id).oninput=e=>{ const raw=e.target.value; if(raw==='') return; S.staff[k]=Math.max(lo,Math.min(hi,Math.round(+raw))); save(); renderDay(); }; });
 }
 const TC={order:'--order',setup:'--setup',food:'--food',bill:'--bill',clear:'--clear',run:'--run'};
@@ -1063,7 +1063,7 @@ function renderDay(){
   const n=FULLDAYS.length;
   mt+='<tr><td><b>Average</b></td><td><b>'+fm(sb/n)+'</b></td><td><b>'+fm(sk/n,1)+' km</b></td>'+(picks.length?'<td class="good">'+fm(sp/n,1)+' km</td>':'')+'<td><b>'+fm(sp/n/st.waiters,1)+' km</b></td><td></td></tr>';
   $('monthtbl').innerHTML=mt;
-  $('monthtbl').querySelectorAll('tr[data-d]').forEach(tr=>tr.onclick=()=>{ S.day=+tr.dataset.d; PB.t=null; save(); renderDay(); scrollTo({top:0,behavior:'smooth'}); });
+  $('monthtbl').querySelectorAll('tr[data-d]').forEach(tr=>tr.onclick=()=>{ S.day=+tr.dataset.d; save(); renderDay(); scrollTo({top:0,behavior:'smooth'}); });
   setupPB(r);
 }
 
@@ -1241,8 +1241,6 @@ function rFlip(sc,k){ const n=Object.assign({},sc); n[k]=!n[k]; if(k==='app'&&n.
 
 // ---- record the replay as a video, in the browser (MediaRecorder on a canvas)
 const REC={on:false};
-function recType(){ const L=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
-  return window.MediaRecorder?L.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } }):null; }
 function recBg(){ if(REC.bg) return REC.bg;
   const c=RP.A.svg.cloneNode(true); [...c.children].slice(-3).forEach(g=>g.innerHTML=''); c.removeAttribute('id'); c.setAttribute('width',1480); c.setAttribute('height',1470);
   const st=document.createElementNS(NS,'style'); st.textContent='text{text-anchor:middle;font-family:Jost,Arial,sans-serif}.lab{font-weight:600;letter-spacing:.08em}.sub{font-weight:500;letter-spacing:.04em}.dn,.dim{font-weight:600}.road{fill:#6E6A62;font-weight:600;letter-spacing:.3em}'; c.insertBefore(st,c.firstChild);
@@ -1892,7 +1890,6 @@ function renderPlay(){ const T=teamList(), on=T.filter(p=>p.on&&p.role!=='off'),
   $('pbPosters').innerHTML=post.map(([t,c,sub,dos,never])=>'<div class="poster" style="--c:'+c+'"><h1>'+t+'</h1><div class="sub">'+esc2(sub||'')+' · Rush '+W.map(w=>hm(w[0])+'–'+hm(w[1])).join(', ')+'</div><h2>Do</h2><ul>'+dos.map(x=>'<li>'+x+'</li>').join('')+'</ul><h2 class="nv">Never</h2><ul class="nv">'+never.map(x=>'<li>'+x+'</li>').join('')+'</ul><h2>Signals</h2><ul><li>🔔 Bell / kitchen screen = your table\'s food is ready: go now</li><li>✋ Never walk empty-handed</li><li>🧾 Bill goes down when plates are cleared</li></ul></div>').join('');
   $('pbPrint').onclick=()=>{ document.body.classList.add('pbprint'); setTimeout(()=>{ window.print(); document.body.classList.remove('pbprint'); },50); };
 }
-function rWindow(a,b){ rStop(); RS.t=Math.max(RS.t0,a); RS.stopAt=Math.min(RS.t1,b); rDraw(true); rPlay(); }
 function rStop(){ RS.playing=false; cancelAnimationFrame(RS.raf); $('rPlay').textContent='▶'; $('rPlay').classList.remove('on'); $('rPlay').setAttribute('aria-label','Play'); RS.stopAt=null; }
 function rPlay(){ const w=rWin()||{a:RS.t0,b:RS.t1}; if(RS.t<w.a||RS.t>=w.b-0.5) RS.t=w.a; RS.stopAt=w.b; RS.playing=true; $('rPlay').textContent='❚❚'; $('rPlay').classList.add('on'); $('rPlay').setAttribute('aria-label','Pause'); RS.last=performance.now();
   const end=RS.stopAt||RS.t1;
@@ -1963,8 +1960,6 @@ function rParcels(t,r){ const P=(r&&r.parc)||RS.P||[], cook=[], wait=[]; let don
   const html='<div class="ph">🛍️ Parcels &amp; delivery<small>'+cook.length+' cooking · '+wait.length+' at counter · '+done+' gone</small></div>'
     +((cook.length||wait.length)?'<div class="pr">'+cook.map(p=>tile(p,'#5B5A8C','🔥')).join('')+wait.map(p=>tile(p,t-p.o>25?'#C2362C':'#8A6D4A','🛍️')).join('')+'</div>':'');
   return {html,live:cook.length+wait.length,cook:cook.length,wait:wait.length,done}; }
-function _unused_(){
-}
 
 buildChips(); buildSelects(); buildMix(); buildDay(); buildRush(); showTab(); render();
 </script>

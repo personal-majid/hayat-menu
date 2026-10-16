@@ -69,7 +69,7 @@ header .logo{height:38px;width:auto;flex:0 0 auto;opacity:.95}
 #body{flex:1;display:flex;min-height:0}
 nav{width:250px;flex:0 0 auto;overflow-y:auto;padding:12px;
   border-right:1px solid var(--line);background:var(--navbg)}
-nav::-webkit-scrollbar,main::-webkit-scrollbar,.hscroll::-webkit-scrollbar{height:0;width:0}
+nav::-webkit-scrollbar,main::-webkit-scrollbar{height:0;width:0}
 .navitem{display:flex;align-items:center;gap:12px;width:100%;min-height:var(--tap);
   padding:0 13px;border-radius:var(--r2);margin-bottom:4px;text-align:left;
   font-size:14.5px;font-weight:600;line-height:1.2;color:var(--cream)}
@@ -280,21 +280,17 @@ table.mx tr:last-child th,table.mx tr:last-child td{border-bottom:0}
 .tabs button{min-height:42px;padding:0 22px;border-radius:11px;font-size:13.5px;
   font-weight:700;color:var(--muted);letter-spacing:.4px}
 .tabs button.on{background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
-.ggrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
-.gcell{border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--card);
-  position:relative;width:100%;display:block;box-shadow:var(--shadow)}
-.gcell img,.gcell video{width:100%;aspect-ratio:4/3;object-fit:cover;background:#000}
-.gcell .gc{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;font-size:13px;
-  font-weight:600;background:linear-gradient(180deg,rgba(12,7,3,0),rgba(12,7,3,.9));pointer-events:none}
-.gcell .play{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
-.gcell .play span{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
-  background:rgba(12,7,3,.6);border:1px solid rgba(255,255,255,.4);font-size:20px;color:#fff}
-.hscroll{display:flex;gap:15px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x mandatory}
-.igcard{flex:0 0 auto;width:330px;height:560px;border-radius:var(--r);overflow:hidden;
-  border:1px solid var(--line);background:#000;scroll-snap-align:start}
-.igcard iframe{width:100%;height:100%;border:0;display:block}
-.igwrap{display:grid;gap:15px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));max-width:1080px}
-.igwrap .igcard{width:100%}
+
+
+
+
+
+
+
+
+
+
+
 .offline{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;
   height:100%;padding:26px;text-align:center;background:var(--card);color:var(--muted);font-size:13px}
 .offline b{color:var(--cream);font-size:15px}
@@ -855,11 +851,10 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
 .ridercard small{display:block;font-size:11.5px;color:var(--muted)}
 .callbtn{margin-left:auto;padding:9px 18px;border-radius:999px;text-decoration:none;font-size:13px;
   font-weight:700;background:var(--green);color:#0E1A06}
-.pinwrap{margin:2px 0 12px}
-.pinhead{display:flex;align-items:center;gap:10px;margin:0 0 8px}
-.pinhead b{flex:1;font-size:13px;font-weight:700;color:var(--cream)}
-.pinme{flex:none;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:8px 13px;
-  border-radius:999px;border:1px solid var(--gold);background:var(--accentwash2);color:var(--gold2)}
+
+
+
+
 .comap{position:relative;height:240px;border-radius:var(--r2);overflow:hidden;
   border:1px solid var(--line);background:var(--soft2)}
 /* the pin is painted over the centre; the map moves underneath it */
@@ -909,8 +904,7 @@ body.hascart main{padding-bottom:160px}   /* clear the floating cart button */
 .mapfail{display:grid;place-items:center;height:100%;padding:16px;text-align:center;
   font-size:12.5px;color:var(--muted);line-height:1.6}
 .pinnote{font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.55}
-.pinlink{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:700;color:var(--green);
-  text-decoration:none;border-bottom:1px solid currentColor}
+
 .addr.nopin{color:var(--muted);opacity:.75;font-style:italic}
 /* ---- the office: the whole window, nothing else ---- */
 body.deskwork nav#nav{display:none}
@@ -1051,27 +1045,21 @@ body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
 .ptag.off{background:var(--hot);color:#fff}
 
 /* ---- keep your orders ---- */
-.youare{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-  border:1px solid var(--line);border-radius:var(--r2);
-  padding:12px 14px;margin:0 0 14px;background:var(--soft3)}
-.youare span{font-size:var(--t-body);color:var(--muted)}
-.youare span b{color:var(--cream)}
-.youare .linky{margin-left:auto}
-.youare.guest{border-left:3px solid var(--gold)}
+
+
+
+
+
 .yt{flex:1;min-width:0}
 .yt b{display:block;font-size:var(--t-h3);color:var(--cream)}
 .yt small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
-.youare .shopbtn{margin:0;width:auto;flex:0 0 auto;white-space:nowrap}
-@media (max-width:420px){
-  .youare .shopbtn{width:100%}
-}
+
 
 /* ---- before an order is accepted ---- */
-.preact{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 0;
-  padding-top:9px;border-top:1px dashed var(--line2)}
+
 .bcard.empty{border-color:var(--hot)}
 .emptyord{text-align:left;margin:8px 0 0;color:var(--hot);font-weight:600}
-.numtxt{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
 .shownum{cursor:pointer}
 .shownum.showing{font-variant-numeric:tabular-nums;letter-spacing:.02em}
 
@@ -1082,10 +1070,8 @@ body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
    ============================================================ */
 .finder{position:relative;margin:0 0 14px}
 .finder .fld{margin:0}
-.findpanel{display:none;margin-top:8px;border:1px solid var(--line);
-  border-radius:var(--r2);overflow:hidden;background:var(--card);
-  max-height:min(52vh,380px);overflow-y:auto;-webkit-overflow-scrolling:touch}
-.findpanel.on{display:block}
+
+
 
 .findrow{display:flex;align-items:center;gap:11px;width:100%;
   padding:11px 13px;border:0;border-bottom:1px solid var(--line);
@@ -1104,8 +1090,6 @@ body.ridework #dvGo{position:sticky;bottom:12px;z-index:40;
 .findrow:hover .fadd{background:var(--gold);color:var(--onaccent);border-color:transparent}
 .findrow.done .fadd{background:var(--green);color:var(--onaccent);border-color:transparent}
 .fnone{text-align:left;padding:14px 13px;margin:0}
-
-  border-bottom:1px solid var(--line);border-left:3px solid var(--line2)}
 
 /* ============================================================
    THE OFFICE CONSOLE
@@ -1353,10 +1337,10 @@ button.mini,select.mini{width:100%;min-height:36px;border-radius:9px;border:1px 
   background:linear-gradient(135deg,var(--pri2),var(--pri));color:var(--onaccent)}
 .ghostmini{background:var(--soft);border-color:var(--line);color:var(--cream)}
 .sel.mini{padding:0 10px;color:var(--cream);background:var(--soft2);border:1px solid var(--line)}
-.pinlink.mini2{font-size:11.5px;margin:0 0 6px}
+
 .admap{height:340px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--line);
   background:var(--soft2);margin:0 0 8px}
-.admaplegend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+
 .lg{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
   letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
 .lg::before{content:"";width:10px;height:10px;border-radius:50%;border:1.5px solid var(--line2)}
@@ -1378,10 +1362,10 @@ button.mini,select.mini{width:100%;min-height:36px;border-radius:9px;border:1px 
 .linky{margin-left:auto;background:none;border:0;cursor:pointer;font:inherit;font-size:13px;
   font-weight:650;color:var(--gold2);text-decoration:underline;text-underline-offset:3px}
 .linky.warn{margin-left:0;color:var(--hot)}
-.ocard{border:1px solid var(--line);border-radius:var(--r2);padding:13px;margin:0 0 11px;background:var(--soft3)}
+
 .orow{display:flex;align-items:center;gap:9px;margin-bottom:7px}
 .orow b{font-size:15px;color:var(--cream)}
-.otime{margin-left:auto;font-size:11.5px;color:var(--muted)}
+
 .status{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
   padding:4px 10px;border-radius:999px;background:var(--soft2);color:var(--muted)}
 .status.big{display:block;text-align:center;font-size:13px;padding:11px;margin:12px 0 0}
@@ -1403,67 +1387,6 @@ button.mini,select.mini{width:100%;min-height:36px;border-radius:9px;border:1px 
 .revphoto{font-size:12px;color:var(--muted);text-align:center;margin:12px 0 22px}
 .revpriv{border-top:1px solid var(--line);padding-top:16px;margin-top:4px}
 
-/* ================= second palette: the flyer's garden green =================
-   Same layout, same spacing — only the colours are restated. Switched from
-   the leaf button in the header and remembered on the device. */
-html[data-theme="garden"]{
-  --bg:#EDF2DD; --card:#FFFFFF; --card2:#F6F9EC;
-  --line:rgba(36,53,15,.14); --line2:rgba(36,53,15,.28);
-  --gold:#5B8C2A; --gold2:#3F6B18; --cream:#1B2410; --green:#5B8C2A;
-  --paper:#FFFFFF; --ink:#1B2410; --hot:#C0491F; --muted:#5F6E4B;
-  --soft:rgba(36,53,15,.045); --soft2:rgba(36,53,15,.085); --soft3:rgba(36,53,15,.035);
-  --chrome:rgba(36,53,15,.96); --chrome2:rgba(36,53,15,.96); --navbg:rgba(255,255,255,.55);
-  --deep:#DCE6C6; --onaccent:#FFFFFF; --accentwash:rgba(91,140,42,.14);
-  --accentwash2:rgba(91,140,42,.09); --veil:rgba(27,36,16,.45);
-  --shadow:0 10px 26px rgba(36,53,15,.10);
-}
-html[data-theme="garden"] body{
-  background:
-    radial-gradient(900px 520px at 50% -20%, #FFFFFF 0%, transparent 62%),
-    var(--bg);
-  color:var(--ink);
-}
-/* the header and footer stay the deep olive band from the flyer */
-html[data-theme="garden"] header,html[data-theme="garden"] footer{border-color:rgba(255,255,255,.14)}
-html[data-theme="garden"] .brand h1{color:#FFFFFF}
-html[data-theme="garden"] .brand p{color:#C9E08F}
-html[data-theme="garden"] #search{color:#FFFFFF;background:rgba(255,255,255,.12);
-  border-color:rgba(255,255,255,.22)}
-html[data-theme="garden"] #search::placeholder{color:rgba(255,255,255,.6)}
-html[data-theme="garden"] .gbtn{color:#FFFFFF;background:rgba(255,255,255,.10);
-  border-color:rgba(255,255,255,.20)}
-html[data-theme="garden"] .gbtn.on{background:#86BC3F;border-color:transparent;color:#11200A}
-html[data-theme="garden"] .tools .sep{background:rgba(255,255,255,.25)}
-html[data-theme="garden"] footer button,html[data-theme="garden"] footer a{
-  color:#FFFFFF;background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.20)}
-html[data-theme="garden"] footer .gold{background:linear-gradient(135deg,#9ACB4B,#6FA52C);
-  color:#11200A;border-color:transparent}
-html[data-theme="garden"] footer .ig{background:rgba(221,42,123,.16);
-  border-color:rgba(221,42,123,.45);color:#FFD9EA}
-html[data-theme="garden"] footer .star{color:#F2C230}
-/* cards sit on white with a soft edge instead of glowing out of the dark */
-html[data-theme="garden"] .tile,html[data-theme="garden"] .pbox,
-html[data-theme="garden"] .pcard,html[data-theme="garden"] .plist,
-html[data-theme="garden"] .vcard,html[data-theme="garden"] .slides{box-shadow:var(--shadow)}
-html[data-theme="garden"] .navitem{color:var(--ink)}
-html[data-theme="garden"] .navitem.on{background:var(--accentwash);color:var(--gold2);
-  box-shadow:inset 2px 0 0 var(--gold)}
-html[data-theme="garden"] .detail .desc{color:#3C4A2C}
-html[data-theme="garden"] .brandhero{background:
-  radial-gradient(520px 260px at 50% 0%, rgba(91,140,42,.10), transparent 70%), var(--card2)}
-html[data-theme="garden"] .brandhero .mark,html[data-theme="garden"] .artmark img{
-  filter:brightness(.25) saturate(.3)}
-html[data-theme="garden"] .homehero img{filter:brightness(.18) saturate(.35)}
-html[data-theme="garden"] .revbtn .g{border:1px solid var(--line)}
-html[data-theme="garden"]{--tablehead:rgba(36,53,15,.08); --tablerow:rgba(36,53,15,.04)}
-html[data-theme="garden"] table.mx{background:var(--card)}
-html[data-theme="garden"] table.mx td{color:var(--gold2)}
-html[data-theme="garden"] .igbar{background:var(--card);border-color:var(--line)}
-html[data-theme="garden"] .igbar .t{color:var(--ink)}
-html[data-theme="garden"] .opt,html[data-theme="garden"] .chip{background:var(--card)}
-html[data-theme="garden"] .seg{background:var(--soft)}
-html[data-theme="garden"] .backbar a,html[data-theme="garden"] .backbar button{background:var(--card)}
-html[data-theme="garden"]{--listbg:var(--card)}
 
 
 /* ============================================================
@@ -1617,7 +1540,7 @@ body.palopen{overflow:hidden}
 .omark.cust .tag{font-weight:600}
 
 /* taking an order down the phone */
-.callwrap{max-width:720px}
+
 .knownbox{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   border:1px solid var(--line);border-left:3px solid var(--green);
   border-radius:var(--r2);padding:12px 14px;margin:0 0 14px;background:var(--soft3)}
@@ -1697,7 +1620,7 @@ body.pkopen{overflow:hidden}
 .ht b{color:var(--hot)}
 
 /* a softer offer, for something optional */
-.youare.guest.soft{border-left-color:var(--line2);background:transparent}
+
 
 
 /* the tally shouts when orders exist but cannot be drawn */
@@ -1747,10 +1670,8 @@ a.ln:hover b{color:var(--gold)}
 
 
 /* we filled your boxes, and here is how to undo that */
-.knownme{font-size:var(--t-small);color:var(--muted);
-  margin:-6px 0 14px;text-align:left}
-.knownme .linky{padding:0;min-height:0;border:0;background:none;
-  text-decoration:underline;font-size:inherit}
+
+
 
 
 /* ============================================================
@@ -1784,13 +1705,11 @@ a.ln:hover b{color:var(--gold)}
 .mini.go{background:var(--gold);color:var(--onaccent);border-color:transparent}
 
 /* on the edit screen */
-.tkhead{border:1px solid var(--line);border-left:3px solid var(--gold);
-  border-radius:var(--r2);padding:14px 15px;margin:0 0 16px;background:var(--soft3)}
-.tkhead b{display:block;font-size:var(--t-h3);color:var(--cream)}
-.tkhead small{display:block;font-size:var(--t-small);color:var(--muted);
-  margin-top:3px;line-height:1.5}
-.tkrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-.tkrow .shopbtn{margin:0;width:auto}
+
+
+
+
+
 
 
 /* ============================================================
@@ -1799,16 +1718,14 @@ a.ln:hover b{color:var(--gold)}
    know you are open and how to order - in that order.
    ============================================================ */
 .land{max-width:560px;margin:0 auto;padding:26px 18px 40px}
-.landtop{text-align:center;margin:0 0 26px}
-.landh{font-size:40px;line-height:1;margin:0;letter-spacing:-.02em;color:var(--cream)}
-.landsub{margin:8px 0 0;font-size:var(--t-body);color:var(--muted)}
-.landstate{display:inline-flex;align-items:center;gap:8px;margin:14px 0 0;
-  border:1px solid var(--line);border-radius:999px;padding:7px 14px;
-  font-size:var(--t-small);font-weight:600}
-.landstate.on{color:var(--green);border-color:rgba(91,140,42,.35)}
-.landstate.off{color:var(--hot);border-color:rgba(228,112,90,.35)}
-.ldot{width:8px;height:8px;border-radius:50%;background:currentColor}
-.landstate.on .ldot{box-shadow:0 0 0 3px rgba(91,140,42,.22)}
+
+
+
+
+
+
+
+
 
 .landlive{display:flex;align-items:center;gap:12px;text-decoration:none;
   border:1px solid var(--line);border-left:3px solid var(--green);
@@ -1818,21 +1735,16 @@ a.ln:hover b{color:var(--gold)}
 .landlive small{display:block;font-size:var(--t-small);color:var(--muted);margin-top:2px}
 .lgo{margin-left:auto;font-size:26px;color:var(--muted);line-height:1}
 
-.landdo{display:flex;flex-direction:column;gap:11px}
-.landbtn{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
-  border:1px solid var(--line2);border-radius:var(--r);
-  background:var(--card);color:var(--cream);font:inherit;
-  padding:18px 18px;cursor:pointer;transition:border-color .15s}
-.landbtn:hover{border-color:var(--gold)}
-.landbtn.big{background:var(--gold);color:var(--onaccent);border-color:transparent}
-.landbtn.big small{color:rgba(255,255,255,.82)}
-.landbtn.again{border-style:dashed}
-.lbi{font-size:24px;line-height:1;flex:0 0 auto}
-.lbt{flex:1;min-width:0}
-.lbt b{display:block;font-size:17px;line-height:1.25}
-.lbt small{display:block;font-size:var(--t-small);color:var(--muted);
-  margin-top:3px;line-height:1.45;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+
+
+
+
+
+
+
+
+
 
 .landfoot{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
   margin:22px 0 16px}
@@ -1894,9 +1806,8 @@ body:has(.land) #callfab{display:none !important}
 /* ---- checkout ---------------------------------------------
    The repeat order. Somebody who has told us where they live
    twice already should see what we remembered, not a form. */
-.cosum{display:flex;justify-content:space-between;align-items:baseline;
-  padding:14px 2px 10px;font-size:15px}
-.cosum b{font-size:22px;letter-spacing:-.01em}
+
+
 
 .coto{border:1px solid var(--line,#2b241c);border-radius:14px;
   padding:14px 15px 12px;margin:2px 0 14px;background:var(--card,#1a1510)}
@@ -1904,7 +1815,7 @@ body:has(.land) #callfab{display:none !important}
   opacity:.55;margin-bottom:5px}
 .cotow{font-size:16px;line-height:1.4}
 .coton{font-size:13px;opacity:.65;margin-top:5px}
-.cotoc{margin-top:9px;font-size:13px}
+
 
 /* the one button on the page should look like the one button */
 .shopbtn.big{min-height:58px;font-size:17px;font-weight:650;border-radius:15px}
@@ -1968,22 +1879,17 @@ body:has(.land) #callfab{display:none !important}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .landagain:hover{opacity:1;border-color:var(--gold,#e8c37a)}
 
-.catcap{font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-  opacity:.45;padding:0 2px 8px}
-.catlist{display:flex;flex-direction:column;
-  border:1px solid var(--line,#2b241c);border-radius:14px;overflow:hidden}
-.catrow{display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;
-  font:inherit;font-size:16px;text-align:left;color:inherit;background:transparent;
-  border:0;border-bottom:1px solid var(--line,#2b241c);padding:15px 15px}
-.catrow:last-child{border-bottom:0}
-.catrow:active,.catrow:hover{background:rgba(255,255,255,.04)}
-.catn{flex:1 1 auto}
+
+
+
+
+
+
 .catc{font-size:12px;opacity:.45;font-variant-numeric:tabular-nums}
-.catgo{opacity:.35;font-size:19px;line-height:1}
+
 
 /* the order, on the card, in one line */
-.bitems{font-size:12px;color:var(--cream);line-height:1.45;margin:2px 0 4px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:help}
+
 .baddr{cursor:help;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---- the board, with money on it ---------------------------- */
@@ -2050,7 +1956,7 @@ body.phoneorder header .brand h1{font-size:15px}
 .stepdots i{width:22px;height:4px;border-radius:2px;background:var(--line,#2b241c);display:block}
 .stepdots i.done{background:color-mix(in srgb,var(--gold,#e8c37a) 55%,transparent)}
 .stepdots i.now{background:var(--gold,#e8c37a)}
-.stepq{font-size:17px;font-weight:600;margin:0 0 14px;letter-spacing:-.01em}
+
 
 .addrbook{display:flex;flex-direction:column;gap:9px;margin-bottom:10px}
 .addrcard{display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:inherit;
@@ -2089,9 +1995,6 @@ body.phoneorder #search{display:none !important}
    Quiet type, one accent, plenty of air. The list is the page.
    ============================================================ */
 .menu1{padding:6px 0 90px}
-.mtop{display:flex;align-items:flex-end;justify-content:space-between;padding:10px 2px 14px}
-.mbrand b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1}
-.mbrand span{display:block;font-size:12.5px;opacity:.6;margin-top:5px}
 .mstate{font-size:12px;font-weight:600;opacity:.6;padding-bottom:3px}
 .mstate.on{color:#6fcf8e;opacity:1}
 .mstate.on:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
@@ -2301,9 +2204,7 @@ html[data-theme="paper"] body{
   color:var(--ink);
 }
 /* the serif: every name that would be in serif on the printed card */
-html[data-theme="paper"] .mbrand b,
 html[data-theme="paper"] .shoph,
-html[data-theme="paper"] .landh,
 html[data-theme="paper"] .mcatname,
 html[data-theme="paper"] .mtext b,
 html[data-theme="paper"] .detail h1,
@@ -2312,7 +2213,6 @@ html[data-theme="paper"] .colhead b,
 html[data-theme="paper"] .bwho b,
 html[data-theme="paper"] .who.big,
 html[data-theme="paper"] .line .ln > b,
-html[data-theme="paper"] .catrow b,
 html[data-theme="paper"] .kt b{
   font-family:"Cormorant","Cormorant Garamond",Georgia,serif;font-weight:700;letter-spacing:.005em}
 
@@ -2324,16 +2224,6 @@ html[data-theme="paper"] .brand p{color:var(--gold2)}
 html[data-theme="paper"] footer{background:var(--chrome);border-top:1px solid var(--line2)}
 
 /* the one-page menu */
-html[data-theme="paper"] .mtop{align-items:center;gap:12px;padding:14px 2px 18px;
-  border-bottom:1px solid var(--line2);margin:0 0 14px;position:relative}
-html[data-theme="paper"] .mtop::after{content:"\25C6";position:absolute;right:0;bottom:-6px;
-  font-size:9px;color:var(--gold);background:var(--bg);padding-left:6px}
-html[data-theme="paper"] .mbrand{display:flex;align-items:center;gap:12px}
-html[data-theme="paper"] .mbrand::before{content:"";width:26px;height:42px;flex:0 0 auto;
-  background:url(assets/mark.png) center/contain no-repeat}
-html[data-theme="paper"] .mbrand b{font-size:34px;font-weight:600;letter-spacing:-.01em}
-html[data-theme="paper"] .mbrand span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--gold2);opacity:1;margin-top:3px}
 html[data-theme="paper"] .mstate{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
   border:1px solid var(--gold);border-radius:999px;padding:6px 11px;color:var(--gold2);opacity:1}
 html[data-theme="paper"] .mstate.on{color:var(--green);border-color:var(--green)}
@@ -2388,7 +2278,7 @@ html[data-theme="paper"] .shoph{font-size:28px;font-weight:600;letter-spacing:.0
 html[data-theme="paper"] .backbar{background:var(--chrome)}
 html[data-theme="paper"] .back{border-radius:999px;border:1px solid var(--line2);background:var(--card)}
 html[data-theme="paper"] .crumbtxt{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--gold2)}
-html[data-theme="paper"] .lines,html[data-theme="paper"] .ocard,html[data-theme="paper"] .ridercard,
+html[data-theme="paper"] .lines,html[data-theme="paper"] .ridercard,
 html[data-theme="paper"] .addrcard,html[data-theme="paper"] .coto,html[data-theme="paper"] .notes,
 html[data-theme="paper"] .paid,html[data-theme="paper"] .landlive,html[data-theme="paper"] .bcard{
   background:var(--card);border-color:var(--line2);border-radius:10px}
@@ -2416,7 +2306,7 @@ html[data-theme="paper"] #cartfab{background:var(--pri);color:var(--onaccent);bo
 html[data-theme="paper"] #callfab{background:var(--card);color:var(--ink);border:1px solid var(--line2)}
 html[data-theme="paper"] .comap,html[data-theme="paper"] .admap{border-color:var(--line2);border-radius:10px}
 /* paper: ink mark, lining numerals, ink call button */
-html[data-theme="paper"] header .logo,html[data-theme="paper"] .mbrand::before{filter:brightness(0) opacity(.88)}
+html[data-theme="paper"] header .logo{filter:brightness(0) opacity(.88)}
 html[data-theme="paper"] .shoph,html[data-theme="paper"] .mtext b,html[data-theme="paper"] .mcatname,
 html[data-theme="paper"] .tstep b,html[data-theme="paper"] .colhead b,html[data-theme="paper"] .line .ln > b{
   font-variant-numeric:lining-nums;font-feature-settings:"lnum" 1}
@@ -2431,7 +2321,6 @@ html[data-theme="paper"] .qbtn.gm{color:var(--gold2)}
 /* the landing is its own front page: no second header above it on a phone */
 html[data-theme="paper"] body.phoneorder.onland header{display:none}
 html[data-theme="paper"] body.phoneorder.onland .menu1{padding-top:8px}
-html[data-theme="paper"] .mtopr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 html[data-theme="paper"] .mlang{font:inherit;font-size:10.5px;letter-spacing:.08em;color:var(--gold2);
   background:none;border:0;padding:2px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .mlang{display:none}                       /* only the paper landing shows it */
@@ -2507,13 +2396,13 @@ label.shopbtn{cursor:pointer}
 .trpill{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:0;border-radius:999px;
   background:rgba(255,255,255,.94);box-shadow:0 2px 10px rgba(0,0,0,.12);font:inherit;font-size:12px;color:#1B2410;cursor:pointer}
 .trh{font-weight:800;letter-spacing:.08em;font-size:10.5px;color:#7E6535}
-.trword{font-weight:700}.trchev{opacity:.5;margin-left:2px}
+.trword{font-weight:700}
 .trafstrip.s-clear .trword{color:#4F7A2C}.trafstrip.s-slow .trword{color:#C58A1A}.trafstrip.s-jam .trword{color:#B3462B}
 .trpts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:4px;max-width:min(94vw,560px);padding:7px 10px;border-radius:12px;
   background:rgba(255,255,255,.94);box-shadow:0 2px 10px rgba(0,0,0,.12);font-size:12px;color:#1B2410}
 .trp{white-space:nowrap}.trp b{font-variant-numeric:tabular-nums}
 .trp.s-clear b{color:#4F7A2C}.trp.s-slow b{color:#C58A1A}.trp.s-jam b,.trp.s-closed b{color:#B3462B}
-.trarrow{opacity:.4}
+
 @media (max-width:860px){.trafstrip{top:auto;bottom:236px;right:8px}}
 .findpin{display:block;margin:-4px 0 10px;font-size:13px}
 .bwhere .door{display:block;font-size:11px;opacity:.7;margin-top:2px;white-space:normal}
@@ -2624,10 +2513,9 @@ html[data-theme="paper"] .leaflet-pane.leaflet-traffic-pane,html[data-theme="pap
 }
 
 /* ---- v137: order by phone ---- */
-.callwrap{max-width:980px}
-.callgrid{display:grid;grid-template-columns:1fr;gap:0 32px}
-@media (min-width:860px){.callgrid{grid-template-columns:1fr 1.1fr}}
-.callcol h3.mini{margin-top:14px}
+
+
+
 .fld.big{font-size:20px;letter-spacing:.06em;font-variant-numeric:tabular-nums}
 .matches{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin:0 0 10px;background:var(--card)}
 .cmatch{display:grid;grid-template-columns:1fr auto;gap:0 10px;width:100%;text-align:left;padding:10px 13px;border:0;border-bottom:1px solid var(--line);

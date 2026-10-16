@@ -51,11 +51,12 @@ try{ CH = new BroadcastChannel("hayat_shop"); }catch(e){}
 
 var watchers = [];
 function fire(){ watchers.slice().forEach(function(f){ try{ f(); }catch(e){} }); }
-try{ if(CH) CH.onmessage = fire; }catch(e){}
 
 /* the working copy every view reads from */
 var DB = { orders:{}, riders:{}, customers:{}, verify:{}, pings:{}, menus:{}, crowd:{}, settings:{}, prints:{}, pos:{}, seq:100 };
 var LIVE  = false;             /* true only once the SERVER has answered */
+var POS_LOADED = false;        /* pos_days has arrived from the server; the drawer saves only after */
+var ORDERS_LOADED = false;     /* the first server snapshot of orders; the counter's usual freezes only after */
 var FAULT = null;              /* why it is not live, in one word */
 
 /* ----- local backing ----- */
@@ -94,7 +95,7 @@ window.addEventListener("storage", function(e){
   if(e.key === KEY && !LIVE){ DB = lsRead(); fire(); }
   if(e.key === CUST_KEY && LIVE){ DB.customers = custLoad(); fire(); }
 });
-if(CH) { var _on = CH.onmessage; CH.onmessage = function(){ if(!LIVE) DB = lsRead(); fire(); }; }
+if(CH) { CH.onmessage = function(){ if(!LIVE) DB = lsRead(); fire(); }; }
 
 /* ----- Firestore backing ----- */
 var FB = null;                 /* { db, api } once loaded */
@@ -259,6 +260,7 @@ async function connectFirebase(cfg){
   var db  = fsMod.getFirestore(app);
   var auth = auMod.getAuth(app);
   FB = { db: db, api: fsMod };
+  if(window.HayatCall) window.HayatCall.attach(FB);   /* in-app voice calls (call.js) ride on the same Firestore */
   AU = { auth: auth, api: auMod };
 
   /* Everyone gets an identity, quietly. A customer never notices;
@@ -319,7 +321,7 @@ async function connectFirebase(cfg){
       var next = {};
       snap.forEach(function(d){ next[d.id] = Object.assign({ id:d.id }, d.data()); });
       DB[into] = next;
-      if(!snap.metadata.fromCache) LIVE = true;
+      if(!snap.metadata.fromCache){ LIVE = true; if(into === "pos") POS_LOADED = true; if(into === "orders") ORDERS_LOADED = true; }
       fire();
     }, function(err){ FAULT = err && (err.code || err.message); LIVE = false; fire(); });
   }
@@ -417,23 +419,6 @@ var STORE = {
     }
     location.reload();
     return Promise.resolve();
-  },
-
-  signInOffice: function(who, code){
-    if(!FB || !AU) return Promise.reject(new Error("offline"));
-    if(!ME.uid) return Promise.reject(new Error("no-identity"));
-    return FB.api.setDoc(FB.api.doc(FB.db, "staff", ME.uid), {
-      crew: String(who),
-      code: String(code).trim(),
-      role: "office",
-      at: Date.now()
-    }).then(function(){
-      ME.role = "office";
-      ME.name = String(who);
-      try{ sessionStorage.setItem("hayat_admin", "1"); }catch(e){}
-      meFire();
-      return true;
-    });
   },
 
   /* A customer signing in with Google.
@@ -558,6 +543,7 @@ var STORE = {
   setStatus: function(id, s, extra){
     var o = DB.orders[id];
     if(!o) return null;
+    if(!statusMoveOk(o, s, extra)) return null;   /* forward only; a double tap is a no-op (no second KOT) */
     /* An order edited down to nothing cannot be sent out. A ticket
        may be accepted while still empty - that is the office
        picking up the phone - but nothing goes on a bike until
@@ -623,6 +609,7 @@ var STORE = {
   cancel: function(id, by, why){
     var o = DB.orders[id];
     if(!o) return null;
+    if(!statusMoveOk(o, "cancelled")) return null;  /* delivered and cancelled are final */
     o.status = "cancelled";
     o.cancelBy = by; o.cancelWhy = why || "";
     (o.log = o.log || []).push({ s:"cancelled", at:Date.now() });
@@ -1206,6 +1193,15 @@ var STORE = {
     });
     return fixed;
   },
+  /* ---- rider app switches (v296): today strip, earnings per delivery, slide to confirm ---- */
+  riderSettings: function(){ return Object.assign({ today:true, earn:0, slide:true }, DB.settings.rider || {}); },
+  saveRiderSettings: function(patch){
+    var now = Object.assign({}, DB.settings.rider || {}, patch, { id:"rider", at: Date.now() });
+    DB.settings.rider = now;
+    if(FB){ FB.api.setDoc(FB.api.doc(FB.db, "settings", "rider"), now, { merge:true }).catch(function(e){ console.warn("saveRiderSettings", e); }); fire(); }
+    else lsWrite();
+    return now;
+  },
   /* ---- printing: what the office set up, and the jobs sent ---- */
   printSettings: function(){ return DB.settings.print || {}; },
   savePrintSettings: function(patch){
@@ -1246,6 +1242,19 @@ var STORE = {
 
 /* ---------- the steps an order goes through ---------------- */
 var FLOW = ["placed","accepted","assigned","on_way","delivered"];
+/* Status only moves forward. delivered/cancelled are final; cancelled is allowed from any open status.
+   The same status again is ignored unless it carries a change (a new rider), and so is
+   on_way -> assigned unless it hands the job to a different rider ("Give it to someone else"). */
+function statusMoveOk(o, s, extra){
+  var cur = o.status;
+  if(cur === "delivered" || cur === "cancelled") return false;
+  if(s === "cancelled") return true;
+  var a = FLOW.indexOf(cur), b = FLOW.indexOf(s);
+  if(b < 0) return false;
+  if(b > a) return true;
+  if(s === "assigned" && extra && extra.riderId && extra.riderId !== o.riderId) return a >= b;   /* reassign */
+  return false;
+}
 /* A button is a verb. "Accepted" describes a card; "Accept" is what
    the finger is about to do. */
 var DOING = { accepted:"Accept", assigned:"Assign a rider", on_way:"On the way", delivered:"Mark delivered" };
@@ -1533,6 +1542,19 @@ function wirePaid(main, after){
   });
 }
 
+/* an old order's lines against today's menu: today's price; dishes or sizes that are gone or hidden are left out */
+function repriceLines(lines){
+  var by = {}, ok = [], gone = 0;
+  liveMenu().forEach(function(c){ (c.items || []).forEach(function(it){ if(onSale(it)) by[it.id] = it; }); });
+  (lines || []).forEach(function(l){
+    var it = by[l.id]; if(!it){ gone++; return; }
+    var ch = choices(it), pick = ch.filter(function(c){ return c.label === (l.label || ""); })[0] || (ch.length === 1 ? ch[0] : null);
+    if(!pick && !(it.ask && !ch.length)){ gone++; return; }
+    ok.push(Object.assign({}, l, pick ? { label: pick.label, price: pick.price } : {}));
+  });
+  return { lines: ok, gone: gone };
+}
+
 function dishById(id){
   var menu = (window.MENU || []);
   for(var i = 0; i < menu.length; i++){
@@ -1706,39 +1728,6 @@ function closeFinder(){
 
 /* Wires a search box to a results panel. onPick gets
    (dishId, sizeLabel, price, row). */
-function wireFinder(inputId, panelId, onPick, action){
-  var box = el(inputId), panel = el(panelId);
-  if(!box || !panel) return;
-
-  var draw = function(){
-    var q = box.value.trim();
-    if(!q){ panel.innerHTML = ""; panel.classList.remove("on"); return; }
-    var hits = findDishes(q);
-    panel.classList.add("on");
-    panel.innerHTML = hits.length
-      ? hits.map(function(r){ return findRowHtml(r, action); }).join("")
-      : '<p class="shopnote fnone">Nothing matches \u201c' + esc(q) + '\u201d.</p>';
-    panel.querySelectorAll("[data-find]").forEach(function(b){
-      b.onclick = function(){
-        var parts = b.dataset.find.split("|");
-        var price = +parts[parts.length - 1];
-        var lbl   = parts.slice(1, -1).join("|");
-        onPick(parts[0], lbl, price, b);
-      };
-    });
-  };
-
-  var job = null;
-  box.addEventListener("input", function(){
-    clearTimeout(job);
-    job = setTimeout(draw, 110);      /* let them finish the word */
-  });
-  box.addEventListener("focus", draw);
-  box.addEventListener("keydown", function(e){
-    if(e.key === "Escape"){ box.value = ""; draw(); box.blur(); }
-  });
-  return draw;
-}
 
 /* A way in for somebody who will not read a menu. It sits
    opposite the cart, disappears the moment there is anything in
@@ -1798,7 +1787,7 @@ function paintFab(){
      screen it reads as a second button competing with Place. */
   f.hidden = (n === 0) ||
     /^#\/(admin|drive|o|cart|checkout)\b/.test(location.hash||"");
-  f.innerHTML = '<span class="b">' + n + '</span> View cart · ' + rupee(cartTotal());
+  f.innerHTML = '<span class="b">' + n + '</span><span class="cft"><b>' + rupee(cartTotal()) + '</b><small>' + n + (n === 1 ? ' item' : ' items') + ' \u00b7 pay on delivery</small></span><span class="cfgo">View cart \u203a</span>';
   /* the button floats over the page, so the page has to end above it */
   try{ document.body.classList.toggle("hascart", !f.hidden); }catch(e){}
 }
@@ -1819,37 +1808,8 @@ function paintFab(){
    phone number: a stranger who knew a customer's number would
    otherwise be reading their home address.
    ------------------------------------------------------------ */
-function signInStrip(){
-  if(!STORE.live()) return "";
-  if(!STORE.isGuest())
-    return '<div class="youare"><span>Signed in as <b>' +
-      esc(STORE.signedInName()) + '</b></span>' +
-      '<a class="linky" href="#/orders">Your orders</a></div>';
-  return '<div class="youare guest">' +
-    '<div class="yt"><b>Keep your orders</b>' +
-      '<small>Sign in once and you can follow them from any phone.</small></div>' +
-    '<button class="shopbtn small" id="gIn">Sign in with Google</button>' +
-  '</div>';
-}
 
-function wireSignIn(main, after){
-  var b = el("gIn");
-  if(!b) return;
-  b.onclick = function(){
-    b.disabled = true;
-    b.textContent = "Opening\u2026";
-    STORE.signInGoogle().then(function(){
-      shopToast("Signed in. Your orders will follow you now.");
-      if(after) after();
-    }).catch(function(e){
-      b.disabled = false;
-      b.textContent = "Sign in with Google";
-      var code = (e && e.code) || "";
-      if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
-      shopToast("That did not work. You can still use the link we send you.");
-    });
-  };
-}
+/* (wireSignIn removed: no page renders #gIn any more) */
 
 /* The customer's side of proving a number on a new phone. */
 function seekPrefill(){
@@ -1890,20 +1850,6 @@ function viewSeeOld(main){
         '<button class="shopbtn ghost" id="soStop">Start again</button>') +
 
     '<button class="shopbtn ghost" data-go="#/">Back</button>');
-
-  var gg = el("soGoogle");
-  if(gg) gg.onclick = function(){
-    gg.disabled = true; gg.textContent = "Opening\u2026";
-    STORE.signInGoogle().then(function(){
-      shopToast("Welcome back.");
-      location.hash = "#/orders";
-    }).catch(function(e){
-      gg.disabled = false; gg.textContent = "Sign in with Google";
-      var code = (e && e.code) || "";
-      if(code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
-      shopToast("That did not work \u2014 use your number instead.");
-    });
-  };
 
   var go = el("soGo");
   if(go) go.onclick = function(){
@@ -1994,7 +1940,6 @@ function viewMyOrders(main){
     ) +
     '<button class="shopbtn ghost" data-go="#/">Browse the menu</button>');
 
-  wireSignIn(main, function(){ viewMyOrders(main); });
 }
 
 /* Search sits at the top of the cart. Someone who has just
@@ -2035,8 +1980,10 @@ function viewCart(main){
           '<small>Add or remove, then send it again. It replaces what we have.</small>' +
           '<button class="linky" id="amendNo">Leave it as it was</button></div>' : '') +
     cartFinder() +
-    '<div class="lines">' + CART.map(function(l){
+    '<div class="lines cartlines">' + CART.map(function(l){
+      var d = dishById(l.id), im = d && d.img;
       return '<div class="line">' +
+        (im ? '<img class="lthumb" loading="lazy" alt="" src="' + esc(thumbOf(im)) + '" onerror="this.onerror=null;this.src=\'' + esc(im) + '\'">' : '') +
         '<div class="ln"><b>' + esc(l.name) + '</b>' +
           (l.label ? '<small>' + esc(l.label) + '</small>' : '') + '</div>' +
         '<div class="qty">' +
@@ -2046,12 +1993,14 @@ function viewCart(main){
         '</div>' +
         '<div class="lp">' + rupee(l.q * l.price) + '</div></div>';
     }).join("") + '</div>' +
-    '<div class="total"><span>Total</span><b>' + rupee(cartTotal()) + '</b></div>' +
-    '<button class="shopbtn" data-go="#/checkout">' + (am ? "Update the order" : "Checkout") + '</button>' +
-    '<button class="shopbtn ghost" data-go="#/">Browse the menu</button>');
+    '<div class="billcard"><div class="brw"><span>Items</span><b>' + cartCount() + '</b></div>' +
+      '<div class="brw"><span>Delivery</span><b>' + esc(etaLine()) + '</b></div>' +
+      '<div class="total"><span>To pay</span><b>' + rupee(cartTotal()) + '</b></div>' +
+      '<small>Cash or UPI to the rider \u00b7 nothing to pay now</small></div>' +
+    '<button class="shopbtn ghost" data-go="#/">\uFF0B Add more dishes</button>' +
+    '<div class="stickgo"><button class="shopbtn" data-go="#/checkout">' + (am ? "Update the order" : "Checkout \u00b7 " + rupee(cartTotal())) + '</button></div>');
 
   wireCartFinder(main);
-  wireSignIn(main, function(){ viewCart(main); });
   var an = el("amendNo");
   if(an) an.onclick = function(){
     var id = AMEND; setAmend(null);
@@ -2345,6 +2294,7 @@ function applyMenu(){
   var want = cats && cats.length ? id + ":" + (m.at || 0) : "";
   if(want === MENU_APPLIED) return false;
   MENU_APPLIED = want;
+  FIND = null; POS_FAV = null;   /* both hold dishes and prices from the old menu */
   window.MENU = want ? cats.map(function(c){ return Object.assign({}, c, { items: (c.items || []).slice() }); }) : builtinMenu().slice();
   try{ if(window.MENU_CHANGED) window.MENU_CHANGED(); }catch(e){}
   return true;
@@ -2372,9 +2322,11 @@ function liveMenu(){
     return Object.assign({}, c, { items: items });
   });
 }
+/* "Hide today": layout.off[id] holds the business day it was hidden on; true (older data) still means hidden */
+function offToday(off, id){ var v = (off || {})[id]; return v === true || (!!v && v === dayKey(Date.now())); }
 function onSale(it){
   if(!it || it.off === true) return false;
-  if((STORE.layout().off || {})[it.id]) return false;
+  if(offToday(STORE.layout().off, it.id)) return false;
   return choices(it).length > 0 || !!it.ask;
 }
 function fromPrice(it){
@@ -2454,6 +2406,7 @@ function catBlock(c){
   var ml = c.ml || CAT_ML[c.id];
   return '<section class="mcat' + (open ? " open" : "") + '">' +
     '<button class="mcathead" data-cat="' + esc(c.id) + '">' +
+      (catImg(c) ? '<img class="mcover" loading="lazy" alt="" src="' + esc(thumbOf(catImg(c))) + '" onerror="this.onerror=null;this.src=\'' + esc(catImg(c)) + '\'">' : '') +
       '<span class="mcatname">' + esc(c.name) +
         (ml ? ' <span class="mml">' + ml + '</span>' : '') + '</span>' +
       '<span class="mrule"></span>' +
@@ -2463,6 +2416,11 @@ function catBlock(c){
     (open ? '<div class="mitems">' + items.map(function(it){ return dishRow(it, c); }).join("") + '</div>' : '') +
   '</section>';
 }
+
+/* v296 photo helpers: a section's picture = its first dish with a photo; the hero = the office's pick, else the first signature dish */
+function thumbOf(img){ return String(img || "").replace("photos/", "photos/th/"); }
+function catImg(c){ var it = (c.items || []).filter(function(x){ return x.img && onSale(x); })[0]; return it ? it.img : ""; }
+function heroImg(cats){ var h = C().heroImg; if(h) return h; for(var i = 0; i < (cats || []).length; i++){ var im = catImg(cats[i]); if(im) return im; } return "assets/og.png"; }
 
 /* v282: the first visit explains itself - three steps, how long, how to pay. Once. */
 function welcomeCard(mine){
@@ -2492,13 +2450,15 @@ function viewLanding(main){
   main.innerHTML =
     '<div class="menu1">' +
 
-      '<div class="mtop">' +
-        '<div class="mbrand"><b>Hayat</b><span>Fish &amp; Mandi · Makkaraparamba</span></div>' +
-        '<span class="mtopr">' +
-          '<span class="mstate' + (st.open ? " on" : "") + '">' + esc(st.txt || (st.open ? "Open" : "Closed")) + '</span>' +
+      /* v296: the front door is the food - a photo hero with the facts a hungry person asks first */
+      '<div class="phero">' +
+        '<img class="pheroimg" src="' + esc(heroImg(cats)) + '" alt="" fetchpriority="high">' +
+        '<div class="pherotop"><span class="phmark"><img src="assets/mark.png" alt=""></span>' +
           '<button class="mlang" id="ldLang" title="English / Malayalam">' +
-            ((typeof L === "string" && L === "ml") ? "English" : "\u0d2e\u0d32\u0d2f\u0d3e\u0d33\u0d02") + '</button>' +
-        '</span>' +
+            ((typeof L === "string" && L === "ml") ? "English" : "\u0d2e\u0d32\u0d2f\u0d3e\u0d33\u0d02") + '</button></div>' +
+        '<div class="pherotxt"><h1>Hayat</h1><p>Fish &amp; Mandi \u00b7 Makkaraparamba</p>' +
+          '<div class="phchips"><span class="mstate' + (st.open ? " on" : "") + '">' + esc(st.txt || (st.open ? "Open" : "Closed")) + '</span>' +
+            '<span>\uD83D\uDD52 ' + etaRange()[0] + '\u2013' + etaRange()[1] + ' min</span><span>\uD83D\uDCB5 Cash or UPI</span></div></div>' +
       '</div>' +
 
       (live
@@ -2515,6 +2475,10 @@ function viewLanding(main){
 
       (hits === null
         ? /* the normal page */
+          '<div class="pcats" role="navigation" aria-label="Menu sections">' + cats.map(function(c){ var im = catImg(c);
+            return '<button class="pcat' + (MOPEN[c.id] ? " on" : "") + '" data-catgo="' + esc(c.id) + '">' +
+              (im ? '<img loading="lazy" src="' + esc(thumbOf(im)) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(im) + '\'">' : '<i></i>') +
+              '<span>' + esc(c.name) + '</span></button>'; }).join("") + '</div>' +
           welcomeCard(mine) +
           '<button class="mcall" id="ldCall">' +
             '<span class="mcalli">☎</span>' +
@@ -2571,13 +2535,24 @@ function viewLanding(main){
       viewLanding(main);
     };
   });
+  /* a section chip OPENS that section (never closes it) and goes to it */
+  main.querySelectorAll("[data-catgo]").forEach(function(b){
+    b.onclick = function(){
+      var id = b.dataset.catgo; MOPEN[id] = true; viewLanding(main);
+      var sec = main.querySelector('[data-cat="' + id + '"]');
+      if(sec) try{ sec.scrollIntoView({ block:"start", behavior:"smooth" }); }catch(e){}
+    };
+  });
 
   var ag = el("ldAgain");
   if(ag) ag.onclick = function(){
-    CART = (last.lines || []).map(function(l){
+    var rp = repriceLines(last.lines);   /* today's prices; gone/hidden dishes dropped */
+    if(!rp.lines.length){ shopToast("Those dishes are not on the menu today."); return; }
+    CART = rp.lines.map(function(l){
       return { k: l.id + "|" + (l.label || ""), id: l.id, name: l.name,
                label: l.label || "", price: l.price, q: l.q };
     });
+    if(rp.gone) shopToast(rp.gone + (rp.gone === 1 ? " dish is" : " dishes are") + " not on the menu today \u2014 left out.");
     saveCart(); paintFab();
     location.hash = "#/cart";
   };
@@ -2934,7 +2909,7 @@ function viewCheckout(main){
     if(a.lat != null){ o.lat = +(+a.lat).toFixed(6); o.lng = +(+a.lng).toFixed(6); }
     var id = STORE.place(o);
     if(!id){ shopToast("Something went wrong. Nothing was ordered."); return; }
-    CART = []; saveCart(); paintFab(); CO_STEP = null; CO_ADDR = null; CO_EDIT = false;
+    CART = []; saveCart(); paintFab(); CO_STEP = null; CO_ADDR = null;
     location.hash = "#/o/" + id;
   }
 }
@@ -2944,10 +2919,6 @@ var CO_STEP = null, CO_ADDR = null, CO_NEWADDR = false, CO_DRAFT = {};
 window.addEventListener("hashchange", function(){
   if(!/^#\/checkout/.test(location.hash)){ CO_STEP = null; CO_ADDR = null; CO_NEWADDR = false; CO_DRAFT = {}; }
 });
-
-/* set while they are correcting a remembered address, so the
-   short screen does not immediately draw over the long one */
-var CO_EDIT = false;
 
 /* ---------- the pin -----------------------------------------
    Leaflet on OpenStreetMap tiles: free, no key, no billing.
@@ -3025,9 +2996,9 @@ function watchSize(box, map){
     }
   }catch(e){}
   window.addEventListener("orientationchange", kick);
+  map.on("unload", function(){ window.removeEventListener("orientationchange", kick); });   /* one listener per LIVE map */
 }
 
-function pinText(msg){ var t = el("coPinTxt"); if(t) t.textContent = msg; }
 
 /* ------------------------------------------------------------
    PICKING A SPOT ON A MAP
@@ -3077,6 +3048,7 @@ function openPinPicker(start, onPick){
     var box = el("pkMap");
     var map = LF.map(box, { zoomControl:false, attributionControl:true })
                 .setView([at.lat, at.lng], start && start.lat ? 18 : 16);
+    wrap._map = map;               /* closePinPicker removes it */
     LF.control.zoom({ position:"bottomleft" }).addTo(map);
     tileLayer(LF).addTo(map);
 
@@ -3123,6 +3095,7 @@ function openPinPicker(start, onPick){
 
 function closePinPicker(){
   if(!PICK) return;
+  try{ if(PICK._map) PICK._map.remove(); }catch(e){}
   try{ PICK.remove(); }catch(e){}
   PICK = null;
   document.body.classList.remove("pkopen");
@@ -3149,6 +3122,28 @@ function mountMap(saved){
       shopToast("Thank you \u2014 the rider will find you.");
     });
   };
+}
+
+/* v296: what a waiting customer looks at - where it is, and how long */
+/* the ETA line counts down by itself between repaints */
+setInterval(function(){
+  document.querySelectorAll(".oeta[data-eta]").forEach(function(e){
+    var l = Math.round((+e.dataset.eta - Date.now()) / 60000);
+    e.textContent = l > 1 ? "Arriving in ~" + l + " min" : "Any minute now";
+  });
+}, 30000);
+var OICON = { placed:"\uD83E\uDDFE", accepted:"\uD83D\uDC68\u200D\uD83C\uDF73", assigned:"\uD83D\uDEF5", on_way:"\uD83D\uDEF5", delivered:"\u2705" };
+function orderHero(o, at){
+  var s = STEP[o.status] || { t:o.status, s:"" }, eta = "", left = null;
+  if(o.status === "delivered"){ var dl = (o.log || []).filter(function(l){ return l.s === "delivered"; })[0]; eta = dl ? "Delivered at " + when(dl.at) : "Delivered"; }
+  else if(!isLater(o)){ left = Math.round((o.at + etaRange(o.lat, o.lng)[1] * 60000 - Date.now()) / 60000); eta = left > 1 ? "Arriving in ~" + left + " min" : "Any minute now"; }
+  else eta = "Coming " + whenWanted(o);
+  return '<div class="ohero s-' + esc(o.status) + '">' +
+    '<span class="ohi">' + (OICON[o.status] || "\uD83D\uDCE6") + '</span>' +
+    '<div class="oht"><b>' + esc(s.t) + '</b><small>' + esc(s.s || "") + '</small></div>' +
+    (eta ? '<div class="oeta"' + (left != null ? ' data-eta="' + (o.at + etaRange(o.lat, o.lng)[1] * 60000) + '"' : '') + '>' + esc(eta) + '</div>' : '') +
+    '<div class="obar">' + FLOW.map(function(f, i){ return '<i class="' + (i < at ? "on" : i === at ? "now" : "") + '"></i>'; }).join("") + '</div>' +
+  '</div>';
 }
 
 function viewOrder(main, id){
@@ -3186,6 +3181,7 @@ function viewOrder(main, id){
   }
 
   main.innerHTML = shell("Order " + esc(o.id),
+    orderHero(o, at) +
     '<div class="track">' + FLOW.map(function(s,i){
       var done = i <= at;
       var hit  = (o.log||[]).filter(function(l){ return l.s===s; })[0];
@@ -3203,8 +3199,8 @@ function viewOrder(main, id){
       ? '<a class="shopbtn rateup" href="' + esc(base() + "?guest#/review") + '">Enjoy! How was it? \u2605</a>'
       : '') +
     (rider && at >= 2
-      ? '<div class="ridercard"><div><b>' + esc(rider.name) + '</b><small>Your rider</small></div>' +
-        callBtn(rider.phone, "Call", "callbtn") + '</div>'
+      ? '<div class="ridercard"><span class="rav">' + esc(String(rider.name || "R").charAt(0).toUpperCase()) + '</span><div><b>' + esc(rider.name) + '</b><small>Your rider</small></div>' +
+        callBtn(rider.phone, "Call", "callbtn") + appCallBtn(o.id, "rider", o.name, rider.name, "callbtn ghost") + '</div>'
       : '') +
 
     /* once the rider is moving, show them moving */
@@ -3320,6 +3316,7 @@ function drawTrackMap(o){
   loadLeaflet().then(function(){
     var LF = window.L;
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
+    if(TMAP){ try{ TMAP.remove(); }catch(e){} TMAP = null; }   /* the last paint's map, or its listeners pile up */
     TMAP = LF.map(box, { zoomControl:false, attributionControl:true, dragging:true });
     tameMap(TMAP, box);
     tileLayer(LF).addTo(TMAP);
@@ -3670,6 +3667,8 @@ function hasRoleNow(roles){
 
 function gate(main, then){ return gateRoles(main, ["office"], then); }
 
+/* set once the 4-second "Connecting…" wait has passed (was never declared: under "use strict" the gate threw) */
+var GATE_WAITED = false;
 function gateRoles(main, roles, then){
   if(hasRoleNow(roles)) return then();
 
@@ -3692,8 +3691,10 @@ function gateRoles(main, roles, then){
   var cfg = C().firebase && C().firebase.projectId;
   if(cfg && !STORE.live() && !STORE.fault() && !GATE_WAITED){
     main.innerHTML = shell("Staff only", '<p class="shopsub">Connecting…</p>');
+    var waitFrom = location.hash;
     setTimeout(function(){
       GATE_WAITED = true;
+      if(location.hash !== waitFrom) return;   /* they went elsewhere meanwhile: do not paint this door over it */
       if(!hasRoleNow(roles) && el("main")) gateRoles(main, roles, then);
       else if(el("main")) then();
     }, 4000);
@@ -3882,16 +3883,10 @@ function wireSeen(main){
    The shop opens at eleven and closes at one in the morning, so
    "today" on the board is not midnight to midnight - an order
    delivered at half past midnight belongs to the evening that
-   is still going. The day starts at opening time; before that,
+   is still going. The day starts at 05:00; before that,
    we are still in yesterday's.
    ------------------------------------------------------------ */
-function shiftStart(){
-  var h = ((C().hours || {}).open || "11:00").split(":");
-  var d = new Date();
-  d.setHours(+h[0] || 11, +h[1] || 0, 0, 0);
-  if(Date.now() < d.getTime()) d.setDate(d.getDate() - 1);
-  return d.getTime();
-}
+/* (shiftStart() was folded into dayStartOf(Date.now()) below) */
 
 /* Delivered and settled, and from a day that is over: off the
    board. It is still in the book and the list; the board is for
@@ -3907,13 +3902,12 @@ function onBoard(o){
 }
 
 /* ---- the Day ledger: everything that happened, one day at a time.
-   A business day starts at opening time, so a delivery at half past
+   A business day starts at 05:00, so a delivery at half past
    midnight belongs to the evening still going. */
 var DAYSEL = null;                                  /* start-of-day ms; null = today */
-function openHourMin(){
-  var h = (C().hours || {}).open || "11:00", p = h.split(":");
-  return [+p[0] || 0, +p[1] || 0];
-}
+/* a fixed 05:00 local cut, the same as captain.js (BH0), the owner app and the cleaning log - not opening time */
+function openHourMin(){ return [5, 0]; }
+function ymdLocal(ts){ var d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 function dayStartOf(ts){
   var hm = openHourMin(), d = new Date(ts);
   d.setHours(hm[0], hm[1], 0, 0);
@@ -3973,7 +3967,7 @@ function dayLedger(orders){
       '<b class="daylbl">' + esc(dayLabel(start)) + '</b>' +
       '<button class="mini ghostmini" data-day="1" title="Later"' + (start >= dayStartOf(Date.now()) ? ' disabled' : '') + '>\u203A</button>' +
       (DAYSEL != null ? '<button class="linky" data-day="0">Today</button>' : '') +
-      '<input type="date" class="fld daypick" id="dayPick" value="' + new Date(start).toISOString().slice(0,10) + '">' +
+      '<input type="date" class="fld daypick" id="dayPick" value="' + ymdLocal(start) + '">' +
     '</div>' +
     '<div class="dtiles">' +
       tile(done.length, "delivered") + tile(rupee(sum(done)), "takings") +
@@ -4015,7 +4009,7 @@ function backupBar(){
 
 /* what the day has done so far */
 function takings(orders){
-  var since = shiftStart();
+  var since = dayStartOf(Date.now());
   var t = { n:0, sum:0, paid:0, open:0, openSum:0 };
   orders.forEach(function(o){
     if(o.status === "cancelled") return;
@@ -4042,7 +4036,7 @@ function tendRiders(riders){
 }
 /* the cash a rider is carrying today, and what they still have to collect */
 function pouchOf(r){
-  var since = shiftStart(), cash = 0, due = 0, n = 0;
+  var since = dayStartOf(Date.now()), cash = 0, due = 0, n = 0;
   STORE.orders().forEach(function(o){
     if(o.riderId !== r.id) return;
     if(o.status === "delivered" && o.at >= since && o.paid && o.payMode === "cash"){ cash += o.total || 0; n++; }
@@ -4340,7 +4334,7 @@ function boardCard(o){
     '</div>';
   } else if(empty){
     act = '<p class="shopnote emptyord">No items. Sort it out with the customer.</p>';
-  } else if(o.status === "accepted" && (o.type === "pickup" || o.type === "counter")){
+  } else if(o.status === "accepted" && walkIn(o)){
     /* nobody rides: the customer walks in and takes it */
     act = '<button class="mini" data-adv="' + o.id + '|delivered">Collected</button>';
   } else if(o.status === "accepted"){
@@ -4379,7 +4373,7 @@ function boardCard(o){
     return l.q + "× " + l.name + (l.label ? " (" + l.label + ")" : "") + (l.note ? " \u2013 " + l.note : "");
   });
   var more = lines.length > 3 ? ' <span class="bmore">+' + (lines.length - 3) + ' more</span>' : '';
-  var where = o.type === "pickup" ? "\uD83D\uDECD Pickup \u2014 they collect" : o.type === "counter" ? "\uD83C\uDFEA Counter"
+  var where = o.type === "pickup" ? "\uD83D\uDECD Pickup \u2014 they collect" : walkIn(o) ? "\uD83C\uDFEA " + (o.table ? "Table " + o.table : "Counter")
             : [shortAddr(o.addr), distLabel(o) ? distLabel(o) + " away" : ""].filter(Boolean).join(" · ");
 
   return '<div class="bcard' + (ticket ? " ticket" : empty ? " empty" : "") +
@@ -4645,33 +4639,7 @@ function msgAsk(o){
 /* What the office read back to them on the phone, in writing.
    A call is easy to mishear; this is the same thing they can
    check afterwards. */
-function msgTaken(o){
-  var m = money(o);
-  return "Hayat \u2014 order " + o.id + "\n\n" +
-    "Thank you" + (o.name ? " " + o.name : "") + ". This is what we have:\n\n" +
-    (o.lines || []).map(function(l){
-      return "\u2022 " + l.q + " \u00d7 " + l.name +
-             (l.label ? " (" + l.label + ")" : "") + "  " + rupee(l.q * l.price);
-    }).join("\n") +
-    (m.off ? "\n\nLess " + discountLabel(o) + ": \u2212" + rupee(m.off) : "") +
-    "\n\nTotal " + rupee(m.total) + " (cash on delivery)" +
-    "\nTo: " + (o.addr || "") +
-    (o.wantAt ? "\nFor: " + whenWanted(o) : "") +
-    "\n\nFollow it here: " + base() + "#/o/" + o.id;
-}
 
-function msgChanged(o){
-  var m = money(o);
-  return "Hayat \u2014 order " + o.id + "\n\nWe have updated your order:\n" +
-    (o.lines||[]).map(function(l){
-      return "  " + l.q + " \u00d7 " + l.name + (l.label ? " (" + l.label + ")" : "") +
-             "  " + rupee(l.q * l.price);
-    }).join("\n") +
-    (m.off ? "\n\nSubtotal " + rupee(m.sub) + "\nDiscount \u2212" + rupee(m.off) +
-             " (" + discountLabel(o) + ")" : "") +
-    "\n\nTotal " + rupee(m.total) + " (cash on delivery)" +
-    "\n\nThe latest is always here: " + base() + "#/o/" + o.id;
-}
 
 /* The links Google gives a listing, from config. writeLink lands on
    the five stars; the listing is the public page. */
@@ -4710,60 +4678,6 @@ function riderMsg(o, r){
     "\n\nYour page: " + base() + "#/drive/" + o.id;
 }
 
-function orderCard(o){
-  var at = FLOW.indexOf(o.status);
-  var next = FLOW[at+1];
-  var riders = STORE.riders();
-  var rider = o.riderId ? STORE.rider(o.riderId) : null;
-
-  var empty = !(o.lines || []).length;
-
-  var action = "";
-  if(o.kind === "ticket" && empty)
-    action = '<div class="tkact">' + callBtn(o.phone, "Call them", "shopbtn small") +
-      '<a class="shopbtn small ghost" href="#/admin/o/' + esc(o.id) + '">Write it down</a></div>';
-  else if(empty)
-    /* nothing to cook: the only honest move is to sort it out
-       with the customer, or close it */
-    action = '<p class="shopnote emptyord">This order has no items. ' +
-             'Call or message the customer, or cancel it.</p>';
-  else if(o.status === "placed")
-    action = '<button class="shopbtn small" data-adv="' + o.id + '|accepted">Accept</button>';
-  else if(o.status === "accepted")
-    action = '<button class="shopbtn small" data-assignpick="' + o.id + '">Assign a rider</button>';
-  else if(next)
-    action = '<button class="shopbtn small" data-adv="' + o.id + '|' + next + '">' +
-             esc(doWord(next)) + '</button>';
-
-  return '<div class="ocard">' +
-    '<div class="orow"><b>' + esc(o.id) + '</b>' +
-      '<span class="status s-' + o.status + '">' + esc(STEP[o.status].t) + '</span>' +
-      (isLater(o) ? '<span class="latertag">\u23F1 ' + esc(whenWanted(o)) + '</span>' : '') +
-      '<span class="otime">' + when(o.at) + '</span></div>' +
-    '<div class="who">' + esc(o.name) + ' \u00b7 ' +
-      (canDial() ? '<a href="tel:' + esc(o.phone) + '">' + esc(prettyPhone(o.phone)) + '</a>'
-                 : '<b class="numtxt" data-num="' + esc(o.phone) + '">' +
-                   esc(prettyPhone(o.phone)) + '</b>') + '</div>' +
-    '<div class="addr">' + esc(o.addr) +
-      (distLabel(o) ? ' <b class="dist">\u00b7 ' + esc(distLabel(o)) + '</b>' : '') + '</div>' +
-    (o.note ? '<div class="addr note">' + esc(o.note) + '</div>' : '') +
-    (o.lat ? '' : '<div class="addr nopin">No pin \u2014 address only</div>') +
-    '<div class="items">' + (o.lines||[]).map(function(l){
-      return l.q + "× " + esc(l.name) + (l.label ? " <i>" + esc(l.label) + "</i>" : "");
-    }).join(" · ") + '</div>' +
-    '<div class="orow"><span class="tot">' + rupee(o.total) + '</span>' + payTag(o) +
-      (discountLabel(o) ? '<span class="offtag">' + esc(discountLabel(o)) + '</span>' : '') +
-      (rider ? '<span class="rname">' + esc(rider.name) + '</span>' : '') + '</div>' +
-    '<div class="quick">' +
-      '<a class="qbtn wa" target="_blank" rel="noopener" href="' +
-        esc(waCustomer(o, o.status === "placed" ? msgAccepted(o) : msgOnWay(o))) + '">WhatsApp</a>' +
-      (o.lat ? '<a class="qbtn gm" target="_blank" rel="noopener" href="' + esc(mapsFromShop(o)) +
-        '">Open in Maps</a>' : '') +
-      callBtn(o.phone, "Call", "qbtn") +
-      '<a class="qbtn ed" href="#/admin/o/' + esc(o.id) + '">Edit' + noteTag(o) + '</a>' +
-    '</div>' +
-    action + '</div>';
-}
 
 /* ---------- every live order on one map ---------------------
    The office cares about one thing here: where the food has to go,
@@ -5453,6 +5367,7 @@ function drawAdminMap(list, blind){
     /* Leaflet puts zoom top-left by default, which is exactly
        where the Board / List / Map tabs float. Moved out of
        their way rather than asking the office to aim. */
+    if(AMAP){ try{ AMAP.remove(); }catch(e){} AMAP = null; }   /* the last paint's map, or its listeners pile up */
     AMAP = LF.map(box, { zoomControl:false })
              .setView([HOME.lat, HOME.lng], HOMEZOOM);   /* replaced by frameMap below */
     LF.control.zoom({ position:"topright" }).addTo(AMAP);
@@ -6244,7 +6159,7 @@ function paintMenuAdmin(main){
           var c = byId[id]; if(!c) return "";
           var hidden = !!L.hide[id], open = MA_OPEN === id;
           var items = L.items[id] || [];
-          var offN = items.filter(function(x){ return L.off[x]; }).length;
+          var offN = items.filter(function(x){ return offToday(L.off, x); }).length;
           return '<div class="marow' + (hidden ? " off" : "") + (open ? " open" : "") + '" draggable="true" data-ma="' + esc(id) + '">' +
             '<span class="magrip" title="Drag">☰</span>' +
             '<button class="maname" data-maopen="' + esc(id) + '">' + esc(c.name) +
@@ -6255,7 +6170,7 @@ function paintMenuAdmin(main){
               (hidden ? "🙈" : "👁") + '</button>' +
             (open ? '<div class="masub" data-masub="' + esc(id) + '">' + items.map(function(iid, j){
                 var it = (c.items || []).filter(function(x){ return x.id === iid; })[0]; if(!it) return "";
-                var isOff = !!L.off[iid];
+                var isOff = offToday(L.off, iid);
                 return '<div class="marow sub' + (isOff ? " off" : "") + '" draggable="true" data-mai="' + esc(id) + '|' + esc(iid) + '">' +
                   '<span class="magrip">☰</span>' +
                   '<span class="maname plain">' + esc(it.name) + '<small>' + esc(fromPrice(it)) + '</small></span>' +
@@ -6324,7 +6239,9 @@ function paintMenuAdmin(main){
     b.onclick = function(){ var id = b.dataset.mahide; if(L.hide[id]) delete L.hide[id]; else L.hide[id] = true; save(); };
   });
   main.querySelectorAll("[data-maoff]").forEach(function(b){
-    b.onclick = function(){ var id = b.dataset.maoff; if(L.off[id]) delete L.off[id]; else L.off[id] = true; save(); };
+    b.onclick = function(){ var id = b.dataset.maoff;
+      Object.keys(L.off).forEach(function(k){ if(!offToday(L.off, k)) delete L.off[k]; });   /* drop earlier days' flags */
+      if(offToday(L.off, id)) delete L.off[id]; else L.off[id] = dayKey(Date.now()); save(); };
   });
 
   /* ---- mouse drag: categories among categories, dishes within
@@ -6755,6 +6672,7 @@ function drawCustomerMap(list){
   loadLeaflet().then(function(){
     try{ if(box._leaflet_id){ box._leaflet_id = null; box.innerHTML = ""; } }catch(e){}
     var LF = window.L;
+    if(CMAP){ try{ CMAP.remove(); }catch(e){} CMAP = null; }   /* the last paint's map, or its listeners pile up */
     CMAP = LF.map(box, { zoomControl:false });
     LF.control.zoom({ position:"topright" }).addTo(CMAP);
     tameMap(CMAP, box);
@@ -6877,6 +6795,9 @@ function payWord(o){
   return o.payMode === "upi" ? "UPI" : o.payMode === "card" ? "card" : "cash";
 }
 
+/* nobody rides it out: pickup / counter types, and till or captain bills by mode (older counter bills carry mode but no type) */
+function walkIn(o){ return !!o && (o.type === "pickup" || o.type === "counter" || ((o.source === "counter" || o.source === "captain") && o.mode !== "delivery")); }
+
 /* the settle sheet: any order, from anywhere */
 function settleSheet(id, after){
   var o = STORE.order(id); if(!o) return;
@@ -6884,7 +6805,7 @@ function settleSheet(id, after){
   var m = money(o), st = tenderState(m.total);
   var box = document.createElement("div"); box.className = "sheetwrap top"; box.id = "settleSheet";
   document.body.appendChild(box);
-  var collect = o.status !== "delivered" && (o.type === "pickup" || o.type === "counter");
+  var collect = o.status !== "delivered" && walkIn(o);
   function draw(){
     box.innerHTML = '<div class="panel small settle">' +
       '<div class="shead"><div><b>' + esc(o.name || prettyPhone(o.phone) || "Walk-in") + '</b><small>' + esc(o.id) + ' · ' + esc(orderLine(o)).slice(0, 70) + '</small></div><span class="stot">' + rupee(m.total) + '</span></div>' +
@@ -6916,11 +6837,17 @@ function settleSheet(id, after){
    the orders cannot know: the float, cash in and out, the count.
    ============================================================ */
 function posDay(day){ return (DB.pos || {})[day] || { id: day, float: null, ins: [], outs: [] }; }
+/* with Firestore configured, never save before the day's doc has arrived: a blank local copy would wipe the float/entries */
+function posReady(){ var cf = C().firebase; return (!FB && !(cf && cf.projectId)) || POS_LOADED; }
 function posSave(day, patch){
-  var d = Object.assign(posDay(day), patch, { id: day, updatedAt: Date.now(), by: myName() });
+  if(!posReady()){ printWatch(); shopToast("The drawer is still loading \u2014 try again in a moment."); return false; }
+  var meta = { id: day, updatedAt: Date.now(), by: myName() };
+  var d = Object.assign(posDay(day), patch, meta);
   DB.pos = DB.pos || {}; DB.pos[day] = d;
-  if(FB){ FB.api.setDoc(FB.api.doc(FB.db, "pos_days", day), d).catch(function(e){ console.warn("pos", e); }); fire(); }
+  /* merge: only the changed keys go up; arrays in patch are full lists built from the loaded doc */
+  if(FB){ FB.api.setDoc(FB.api.doc(FB.db, "pos_days", day), Object.assign({}, patch, meta), { merge: true }).catch(function(e){ console.warn("pos", e); }); fire(); }
   else lsWrite();
+  return true;
 }
 function myName(){ return (ME && ME.name) || myVoice() || ""; }
 function dayKey(ts){ var d = new Date(dayStartOf(ts)); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
@@ -6933,7 +6860,7 @@ function daySales(start){
     if(o.status === "cancelled"){ S.canc++; return; }
     if(o.status !== "delivered" && !o.paid) { if(o.status !== "placed") { S.unpaid += o.total || 0; S.unpaidN++; } return; }
     var m = money(o); S.disc += m.off; S.charge += o.charge || 0;
-    S[o.type === "counter" ? "counter" : o.type === "pickup" ? "pickup" : "delivery"] += m.total;
+    S[o.type === "pickup" ? "pickup" : walkIn(o) ? "counter" : "delivery"] += m.total;
     if(!o.paid){ S.unpaid += m.total; S.unpaidN++; return; }
     S.sales += m.total; S.n++;
     (o.pays && o.pays.length ? o.pays : [{ mode: o.payMode === "upi" ? "upi" : o.payMode || "cash", amt: o.paidAmt != null ? o.paidAmt : m.total }]).forEach(function(p){
@@ -6944,6 +6871,7 @@ function daySales(start){
 function viewCounter(main){ gate(main, function(){ paintCounter(main); }); }
 var CDAY = null, CFORM = null;
 function paintCounter(main){
+  printWatch();                 /* pos_days is only watched once asked for; the drawer needs it */
   var start = CDAY == null ? dayStartOf(Date.now()) : CDAY, day = dayKey(start), P = posDay(day), S = daySales(start);
   var ins = (P.ins || []).reduce(function(n, x){ return n + x.amt; }, 0), outs = (P.outs || []).reduce(function(n, x){ return n + x.amt; }, 0);
   var expected = (P.float || 0) + S.cash + ins - outs;
@@ -6963,7 +6891,7 @@ function paintCounter(main){
         (S.disc ? tile(rupee(S.disc), "discounts", "dim") : "") + (S.canc ? tile(S.canc, "cancelled", "dim") : "") +
       '</div>' +
       '<div class="dtiles">' + tile(rupee(S.counter), "counter") + tile(rupee(S.delivery), "delivery") + tile(rupee(S.pickup), "pickup") + '</div>' +
-      '<h3 class="mini">The drawer</h3>' +
+      '<h3 class="mini">The drawer</h3>' + (posReady() ? '' : '<p class="shopnote left">Loading the drawer\u2026</p>') +
       '<div class="drawer">' +
         '<div class="trow"><label>Opening float</label><input class="fld" inputmode="numeric" id="pFloat" placeholder="0" value="' + (P.float != null ? P.float : "") + '"' + (P.closed ? ' disabled' : '') + '></div>' +
         '<div class="trow"><label>+ cash sales</label><b>' + rupee(S.cash) + '</b></div>' +
@@ -6994,17 +6922,19 @@ function paintCounter(main){
   var cf = el("cfGo"); if(cf) cf.onclick = function(){
     if(CFORM === "close"){
       var counted = +el("cfAmt").value; if(el("cfAmt").value === ""){ shopToast("Count the drawer first."); return; }
-      posSave(day, { closed: { at: Date.now(), by: myName(), counted: counted, expected: expected, diff: counted - expected, note: el("cfWhy").value.trim(), sales: S } });
+      if(!posSave(day, { closed: { at: Date.now(), by: myName(), counted: counted, expected: expected, diff: counted - expected, note: el("cfWhy").value.trim(), sales: S } })) return;
       CFORM = null; paintCounter(main); shopToast("Day closed."); return;
     }
     var amt = +el("cfAmt").value, why = el("cfWhy").value.trim(); if(!amt){ shopToast("Amount?"); return; }
-    var list = (P[CFORM === "in" ? "ins" : "outs"] || []).slice(); list.push({ at: Date.now(), amt: amt, why: why, by: myName() });
-    posSave(day, CFORM === "in" ? { ins: list } : { outs: list }); CFORM = null; paintCounter(main);
+    var list = (posDay(day)[CFORM === "in" ? "ins" : "outs"] || []).slice(); list.push({ at: Date.now(), amt: amt, why: why, by: myName() });  /* the current list, not the painted one */
+    if(!posSave(day, CFORM === "in" ? { ins: list } : { outs: list })) return; CFORM = null; paintCounter(main);
   };
   var cx = el("cfX"); if(cx) cx.onclick = function(){ CFORM = null; paintCounter(main); };
   var ca = el("cfAmt"); if(ca){ ca.focus(); ca.onkeydown = function(e){ if(e.key === "Enter") el("cfGo").click(); }; }
   main.querySelectorAll("[data-pdel]").forEach(function(b){ b.onclick = function(){
-    var p = b.dataset.pdel.split("|"), key = p[0] === "in" ? "ins" : "outs", list = (P[key] || []).slice(); list.splice(+p[1], 1);
+    var p = b.dataset.pdel.split("|"), key = p[0] === "in" ? "ins" : "outs", gone = (P[key] || [])[+p[1]];
+    /* drop that entry from the CURRENT list (matched by time + amount), so a newer entry from another till is kept */
+    var list = (posDay(day)[key] || []).filter(function(x){ return !(gone && x.at === gone.at && x.amt === gone.amt); });
     var patch = {}; patch[key] = list; posSave(day, patch); paintCounter(main); }; });
   var pc = el("pClose"); if(pc) pc.onclick = function(){ CFORM = "close"; paintCounter(main); };
   var pr = el("pReopen"); if(pr) pr.onclick = function(){ if(!confirm("Reopen " + dayLabel(start) + "?")) return; posSave(day, { closed: null }); paintCounter(main); };
@@ -7334,7 +7264,6 @@ function paintCall(main){
   function rebuild(){ var f = el("callForm"); if(f) f.remove(); paintCall(main); }
 
   /* ---- the pieces ---- */
-  function callSub(){ return CALL.lines.reduce(function(n,l){ return n + l.q * l.price; }, 0); }
   function callMoney(){ return money({ lines: CALL.lines, discount: CALL.discount, charge: CALL.charge }); }
 
   function useKnown(k, quiet){
@@ -7374,8 +7303,9 @@ function paintCall(main){
       '</div>';
       var rp = el("clRepeat");
       if(rp) rp.onclick = function(){
-        (last.lines || []).forEach(function(l){ addLine(l.id, l.label || "", l.price, l.q); });
-        callLines(); shopToast("Same as last time — check the sizes.");
+        var rl = repriceLines(last.lines);   /* today's prices; gone/hidden dishes dropped */
+        rl.lines.forEach(function(l){ addLine(l.id, l.label || "", l.price, l.q); });
+        callLines(); shopToast("Same as last time — check the sizes." + (rl.gone ? " " + rl.gone + " no longer on the menu, left out." : ""));
       };
       return;
     }
@@ -7529,6 +7459,7 @@ function orderBody(o, inPanel){
   var step = "";
   if(ticket) step = callBtn(o.phone, "Call " + (o.name || "them"), "shopbtn");
   else if(!lines.length) step = '<span class="oedhint">No items yet — add from the menu.</span>';
+  else if(o.status === "accepted" && walkIn(o)) step = '<button class="shopbtn" data-adv="' + esc(o.id) + '|delivered">Collected</button>';  /* nobody rides */
   else if(o.status === "accepted") step = '<button class="shopbtn" data-assignpick="' + esc(o.id) + '">Assign a rider</button>';
   else if(next && open) step = '<button class="shopbtn" data-adv="' + esc(o.id) + '|' + next + '">' + esc(doWord(next)) + '</button>';
 
@@ -7732,6 +7663,21 @@ function viewRiders(main){
   gate(main, function(){ paintRiders(main); });
 }
 var MENDED = false;
+/* v296: what the rider app shows - switchable, for a pooled rider service later */
+function riderAppCard(){
+  var R = STORE.riderSettings();
+  var tg = function(k, t, sub){ var on = R[k] !== false; return '<button class="opt rtog' + (on ? " on" : "") + '" data-rset="' + k + '" aria-pressed="' + on + '"><b>' + (on ? "\u2705 " : "\u2B1C ") + esc(t) + '</b><small>' + esc(sub) + '</small></button>'; };
+  return '<div class="rappcard"><h3 class="mini">Rider app</h3>' +
+    tg("today", "Today strip", "jobs to go, done today, cash with them") +
+    tg("slide", "Slide to mark delivered", "a pocket tap can't mark a delivery") +
+    '<label class="rearn">Earnings per delivery (\u20b9, 0 = hidden)<input class="fld" id="rEarn" inputmode="numeric" value="' + esc(String(+R.earn || 0)) + '"></label>' +
+  '</div>';
+}
+function wireRiderAppCard(main, again){
+  main.querySelectorAll("[data-rset]").forEach(function(b){ b.onclick = function(){ var k = b.dataset.rset, R = STORE.riderSettings(), p = {}; p[k] = R[k] === false; STORE.saveRiderSettings(p); again(); }; });
+  var e = el("rEarn"); if(e) e.onchange = function(){ var v = Math.max(0, Math.round(+e.value || 0)); STORE.saveRiderSettings({ earn:v }); shopToast(v ? "Riders see \u20b9" + v + " a delivery." : "Earnings hidden."); };
+}
+
 function paintRiders(main){
   if(!MENDED){ MENDED = true; STORE.mendRiders(); }
   var riders = STORE.riders();
@@ -7783,8 +7729,10 @@ function paintRiders(main){
     '<input class="fld" id="rName"  placeholder="Rider name">' +
     '<input class="fld" id="rPhone" placeholder="Phone with country code, e.g. 919844326842" inputmode="tel">' +
     '<button class="shopbtn" id="rAdd">Add rider</button>' +
+    riderAppCard() +
     '<div class="dockroom"></div>' +
     officeDock("riders"));
+  wireRiderAppCard(main, function(){ paintRiders(main); });
 
   var addRider = function(){
     var n = el("rName").value.trim(), p = el("rPhone").value.trim();
@@ -8240,18 +8188,28 @@ function viewDriveHome(main){
   var mine = STORE.orders().filter(function(o){
     return o.riderId === me.id && o.status !== "delivered" && o.status !== "cancelled";
   });
-  var done = STORE.orders().filter(function(o){
-    return o.riderId === me.id && o.status === "delivered";
-  }).length;
+  /* today = this business day (05:00 cut), from the delivered step in each order's log */
+  var d0 = dayStartOf(Date.now());
+  var doneToday = STORE.orders().filter(function(o){
+    if(o.riderId !== me.id || o.status !== "delivered") return false;
+    var dl = (o.log || []).filter(function(l){ return l.s === "delivered"; })[0];
+    return (dl ? dl.at : o.at) >= d0;
+  });
+  var done = doneToday.length, RS = STORE.riderSettings(), pouch = pouchOf(me);
 
   var on = me.avail !== false;
 
   main.innerHTML = shell("Your deliveries",
     installBar() +
     (canOfferInstall() ? "" : riderApkCard()) +
-    '<div class="adminbar"><span class="pill">' + mine.length + ' to go</span>' +
-      '<span class="pill quiet">' + done + ' done</span>' +
+    '<div class="rhello"><span class="rav">' + esc(String(me.name || "R").charAt(0).toUpperCase()) + '</span>' +
+      '<div><b>Hi, ' + esc(me.name) + '</b><small>' + esc(new Date().toLocaleDateString("en-IN", { weekday:"long", day:"numeric", month:"short" })) + '</small></div>' +
       '<button class="linky" id="rvOut">Not ' + esc(me.name) + '?</button></div>' +
+    (RS.today !== false
+      ? '<div class="rtoday"><div><b>' + mine.length + '</b><small>to go</small></div><div><b>' + done + '</b><small>done today</small></div>' +
+          '<div><b>' + rupee(pouch.cash || 0) + '</b><small>cash with you</small></div>' +
+          (+RS.earn > 0 ? '<div class="earn"><b>' + rupee(done * RS.earn) + '</b><small>earned today</small></div>' : '') + '</div>'
+      : '<div class="adminbar"><span class="pill">' + mine.length + ' to go</span><span class="pill quiet">' + done + ' done</span></div>') +
 
     /* One switch, and the shop knows. A rider who has finished
        for the day should not have to answer the phone to say so. */
@@ -8274,7 +8232,7 @@ function viewDriveHome(main){
           '<div class="baddr">' + esc(o.addr) + '</div>' +
           (distLabel(o) ? '<div class="bdist">' + esc(distLabel(o)) + ' from the shop</div>' : '') +
           '<div class="brow"><span class="btot">' + rupee(o.total) + '</span>' +
-            '<span class="rname">collect on delivery</span></div></a>';
+            '<span class="rname">' + (o.paid ? "paid \u2713" : "collect on delivery") + '</span><span class="bgo">Open \u203a</span></div></a>';
       }).join("")
       : '<p class="shopsub">Nothing assigned to you right now.</p>') +
     backToMenu());
@@ -8306,10 +8264,25 @@ function viewDrive(main, id){
       '<button class="shopbtn ghost" data-go="#/drive">Your deliveries</button>');
     return;
   }
+  /* only the rider it is assigned to gets the buttons and the tracking */
+  var me = whoAmI();
+  if(!me && riderPhone()){   /* signed in, riders not read yet: wait for the repaint */
+    main.innerHTML = shell("Delivery " + esc(o.id), '<p class="shopsub">Loading\u2026</p>' +
+      '<button class="shopbtn ghost" data-go="#/drive">Your deliveries</button>');
+    return;
+  }
+  if(!me) return viewDriveHome(main);
+  if(o.riderId !== me.id){
+    stopPing();
+    main.innerHTML = shell("Delivery " + esc(o.id),
+      '<p class="shopsub">This delivery was moved to another rider.</p>' +
+      '<button class="shopbtn ghost" data-go="#/drive">Your deliveries</button>');
+    return;
+  }
   var at = FLOW.indexOf(o.status), next = FLOW[at+1];
 
   main.innerHTML = shell("Delivery " + esc(o.id),
-    '<div class="who big">' + esc(o.name) + '</div>' +
+    '<div class="dvcard"><div class="who big">' + esc(o.name) + '</div>' +
     '<div class="addr">' + esc(o.addr) +
       (distLabel(o) ? ' <b class="dist">\u00b7 ' + esc(distLabel(o)) + '</b>' : '') + '</div>' +
     (o.note ? '<div class="addr note">' + esc(o.note) + '</div>' : '') +
@@ -8319,14 +8292,19 @@ function viewDrive(main, id){
       '<a class="shopbtn small ghost" target="_blank" rel="noopener" href="' +
         esc(waCustomer(o, msgRiderHere(o))) + '">WhatsApp</a>' +
       callBtn(o.phone, "Call", "shopbtn small ghost") +
+      appCallBtn(o.id, "customer", me.name, o.name, "shopbtn small ghost") +
     '</div>' +
     '<div class="items">' + (o.lines||[]).map(function(l){
       return l.q + "\u00d7 " + esc(l.name) + (l.label ? " <i>" + esc(l.label) + "</i>" : "");
     }).join(" \u00b7 ") + '</div>' +
-    '<div class="total"><span>Collect</span><b>' + rupee(o.total) + '</b></div>' +
+    '<div class="total"><span>Collect</span><b>' + rupee(o.total) + '</b></div></div>' +
     '<div class="status big s-' + o.status + '">' + esc(STEP[o.status].t) + '</div>' +
     payBlock(o, "rider") +
-    (next ? '<button class="shopbtn" id="dvGo">' + esc(doWord(next)) + '</button>'
+    (next && next === "delivered" && STORE.riderSettings().slide !== false
+      ? '<div class="slide" id="dvSlide" role="slider" aria-label="Slide to mark delivered" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">' +
+          '<span class="slt">Slide to mark delivered</span><span class="slk">\u203a</span></div>' +
+        '<button class="linky slidealt" id="dvGo">or tap here to mark delivered</button>'
+      : next ? '<button class="shopbtn" id="dvGo">' + esc(doWord(next)) + '</button>'
           : '<p class="shopnote">Done. Thank you.</p>') +
     /* Read from the order, not set by hand, so a repaint cannot
        quietly undo it - that is how the last one went wrong. */
@@ -8340,6 +8318,7 @@ function viewDrive(main, id){
   wirePaid(main, function(){ viewDrive(main, id); });
   paintTrouble(main, function(){ viewDrive(main, id); });
 
+  wireSlide(el("dvSlide"), function(){ var g = el("dvGo"); if(g) g.click(); });
   if(next) el("dvGo").onclick = function(){
     /* This tap is a gesture, and a gesture is the only moment a
        browser will show a location prompt. Starting to track on
@@ -8371,6 +8350,18 @@ function viewDrive(main, id){
   hush();                       /* they are looking at it now */
   if(o.status === "assigned" || o.status === "on_way") startPing(id);
   else stopPing();
+}
+
+/* v296 slide-to-confirm: drag the knob past 85% (or Enter / → on the keyboard) - a pocket tap can't mark a delivery */
+function wireSlide(box, done){
+  if(!box) return; var k = box.querySelector(".slk"), x0 = 0, dx = 0, dragging = false, max = 1;
+  var set = function(v){ dx = Math.max(0, Math.min(max, v)); k.style.transform = "translateX(" + dx + "px)"; box.style.setProperty("--p", (dx / max) || 0); box.setAttribute("aria-valuenow", Math.round(100 * dx / max) || 0); };
+  var fire = function(){ box.classList.add("ok"); set(max); if(navigator.vibrate) try{ navigator.vibrate(40); }catch(e){} setTimeout(done, 120); };
+  box.addEventListener("pointerdown", function(e){ max = box.clientWidth - k.offsetWidth - 8; dragging = true; x0 = e.clientX - dx; try{ box.setPointerCapture(e.pointerId); }catch(x){} box.classList.add("drag"); });
+  box.addEventListener("pointermove", function(e){ if(dragging) set(e.clientX - x0); });
+  var up = function(){ if(!dragging) return; dragging = false; box.classList.remove("drag"); if(dx >= max * 0.85) fire(); else set(0); };
+  box.addEventListener("pointerup", up); box.addEventListener("pointercancel", up);
+  box.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === "ArrowRight"){ e.preventDefault(); max = box.clientWidth - k.offsetWidth - 8; fire(); } });
 }
 
 function gpsLine(o){
@@ -8405,6 +8396,8 @@ function kmBetween(a1, b1, a2, b2){
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 function sendPing(id, lat, lng){
+  var me = whoAmI(), job = STORE.order(id);
+  if(!me || !job || job.riderId !== me.id){ stopPing(); return; }   /* moved to another rider: stop writing their position */
   if(!worthWriting(lat, lng)) return;
   LASTW = { lat:lat, lng:lng, at:Date.now() };
   STORE.ping(id, lat, lng);
@@ -8565,6 +8558,25 @@ function onEnter(node, run){
   });
 }
 
+/* 📞 in-app call (call.js): free WebRTC voice, rings while the other side has the site open */
+function appCallBtn(orderId, to, myName, peerName, cls){
+  if(!window.HayatCall || !window.RTCPeerConnection) return "";
+  return '<button class="' + cls + ' wcall" data-wcall="' + esc(orderId) + '" data-wto="' + esc(to) + '" data-wname="' + esc(myName || "") +
+    '" data-wpeer="' + esc(peerName || "") + '" title="Free voice call inside the app">\uD83D\uDCDE In app</button>';
+}
+/* which orders should ring on this phone: a rider's active jobs, a customer's own orders once a rider has them */
+function callSync(){
+  if(!window.HayatCall) return;
+  var live = { assigned:1, on_way:1 }, list = [];
+  try{
+    /* the page decides the role: the rider app / #/drive pages ring the rider, the menu's order pages ring the customer */
+    var asRider = riderApp() || /^#\/drive/.test(location.hash), me = asRider && riderPhone() ? whoAmI() : null;
+    if(me){ STORE.orders().forEach(function(o){ if(o.riderId === me.id && live[o.status]) list.push({ id:o.id, role:"rider" }); }); }
+    else if(!asRider){ var mine = localOrderIds(); STORE.orders().forEach(function(o){ if(mine.indexOf(o.id) >= 0 && o.riderId && live[o.status]) list.push({ id:o.id, role:"customer" }); }); }
+  }catch(e){}
+  window.HayatCall.sync(list);
+}
+window.shopToast = function(m){ shopToast(m); };
 function shopToast(m){
   try{ if(window.toast) return window.toast(m); }catch(e){}
   alert(m);
@@ -8644,6 +8656,8 @@ function repaintRows(){
    stop them ordering dinner.
    ------------------------------------------------------------ */
 var OFFER = null;                 /* Chrome's deferred prompt */
+/* a prompt can be shown once: after userChoice, whatever the answer, forget it here AND in the head's copy */
+function spendOffer(){ OFFER = null; window.__hayatOffer = null; }
 var INSTALLWATCH = [];
 
 function onOffer(f){ INSTALLWATCH.push(f); }
@@ -8689,8 +8703,8 @@ function wireInstallLink(repaint){
     try{ localStorage.removeItem("hayat_noinstall"); }catch(e){}
     if(theOffer()){
       OFFER.prompt();
-      OFFER.userChoice.then(function(r){
-        if(r && r.outcome === "accepted") OFFER = null;
+      OFFER.userChoice.then(function(){
+        spendOffer();
         if(repaint) repaint();
       });
     } else installSheet(true);                 /* Apple: the sheet with the two steps */
@@ -8715,7 +8729,7 @@ window.addEventListener("beforeinstallprompt", function(e){
 });
 
 window.addEventListener("appinstalled", function(){
-  OFFER = null;
+  spendOffer();
   try{ localStorage.removeItem("hayat_noinstall"); }catch(e){}
   offerFire();
   shopToast("Installed. Open it from your home screen.");
@@ -8787,7 +8801,7 @@ function installSheet(asked){
   if(go) go.onclick = function(){
     if(!theOffer()){ close(); return; }
     OFFER.prompt();
-    OFFER.userChoice.then(function(r){ if(r && r.outcome === "accepted") OFFER = null; close(); });
+    OFFER.userChoice.then(function(){ spendOffer(); close(); });
   };
 }
 
@@ -8840,11 +8854,10 @@ function wireInstall(repaint){
     if(!theOffer()) return;
     go.disabled = true;
     OFFER.prompt();
-    OFFER.userChoice.then(function(r){
-      if(r && r.outcome === "accepted"){ OFFER = null; }
-      else { go.disabled = false; }
+    OFFER.userChoice.then(function(){
+      spendOffer(); go.disabled = false;
       if(repaint) repaint();
-    }).catch(function(){ go.disabled = false; });
+    }).catch(function(){ spendOffer(); go.disabled = false; });
   };
   if(no) no.onclick = function(){ dismissInstall(); if(repaint) repaint(); };
 }
@@ -9044,8 +9057,10 @@ function posFavourites(){
     if(seen[k] || out.length >= 24) return;
     seen[k] = 1; out.push(r);
   });
-  POS_FAV = out;
-  return POS_FAV;
+  /* freeze only once the server's orders are in; ranked from an empty list it would stay in menu order all session */
+  var cf = C().firebase;
+  if(ORDERS_LOADED || !(cf && cf.projectId)) POS_FAV = out;
+  return out;
 }
 
 function posCats(){
@@ -9190,7 +9205,8 @@ function posCommit(id, lines, adds, voids, reason, picked, note){
 }
 /* a whole bill called off: every cooked item gets a CANCEL ticket */
 function posCancelBill(id, reason){
-  var o = STORE.order(id); if(!o) return;
+  var o = STORE.order(id); if(!o) return false;
+  if(!statusMoveOk(o, "cancelled")){ shopToast("That bill is already closed."); return false; }   /* no cancel tickets for a settled bill */
   var now = Date.now(), who = posWho(), live = posMerged(o);
   var kots = (o.kots || []).slice(), edits = (o.edits || []).slice();
   if(live.length){
@@ -9257,7 +9273,8 @@ function posBillSheet(id, after){
 function posSettle(id, after){
   settleSheet(id, function(){
     var o = STORE.order(id);
-    if(o && o.paid && o.mode !== "delivery" && o.status !== "delivered") STORE.setStatus(id, "delivered");
+    /* only till bills that nobody rides out; website/phone orders have no mode and must not jump to delivered */
+    if(o && o.paid && (o.source === "counter" || o.source === "captain") && o.mode !== "delivery" && o.type !== "delivery" && o.status !== "delivered") STORE.setStatus(id, "delivered");
     if(after) after();
   });
 }
@@ -9330,7 +9347,7 @@ function posBoard(onOpen){
       else if(act === "hist") posHistory(id);
       else if(act === "kot"){ printJob(Object.assign({}, o, { lines: posMerged(o), kotRound: posKotCount(o), kotReprint: true }), "kot", false, null); shopToast("KOT reprinted."); }
       else if(act === "move"){ posMoveSheet(id, draw); }
-      else if(act === "cancel"){ posReasonSheet("Cancel the whole bill?", posMerged(o).map(function(l){ return { name: l.name, label: l.label, q: l.q }; }), function(r){ posCancelBill(id, r); shopToast("Bill cancelled · cancel tickets printed."); draw(); }); }
+      else if(act === "cancel"){ posReasonSheet("Cancel the whole bill?", posMerged(o).map(function(l){ return { name: l.name, label: l.label, q: l.q }; }), function(r){ if(posCancelBill(id, r) === false) return; shopToast("Bill cancelled · cancel tickets printed."); draw(); }); }
     }; });
   }
   POSB.draw = draw;
@@ -9350,7 +9367,7 @@ function posMoveSheet(id, after){
   el("pmGo").onclick = function(){
     var to = t.value.trim(); if(!to){ t.focus(); return; }
     var mv = (o.moves || []).concat([{ from: o.table || posWhereFrom(o), to: to, at: Date.now(), by: posWho() }]);
-    STORE.edit(id, { table: to, addr: "Table " + to, mode: "dinein", moves: mv });
+    STORE.edit(id, { table: to, addr: "Table " + to, mode: "dinein", type: "counter", moves: mv });
     box.remove(); shopToast("Moved to table " + to + "."); if(after) after();
   };
 }
@@ -9734,7 +9751,7 @@ function paintPos(main){
       else if(a === "pay") posSettle(id, function(){ if(POS.editing === id && STORE.order(id) && STORE.order(id).status === "delivered") stopEditing(); else { drawOpen(); drawActs(); } });
       else if(a === "hist") posHistory(id);
       else if(a === "open") resume(id);
-      else if(a === "cancel"){ var cur = STORE.order(id); posReasonSheet("Cancel the whole bill?", posMerged(cur).map(function(l){ return { name: l.name, label: l.label, q: l.q }; }), function(r){ posCancelBill(id, r); shopToast("Bill cancelled · cancel tickets printed."); stopEditing(); }); }
+      else if(a === "cancel"){ var cur = STORE.order(id); posReasonSheet("Cancel the whole bill?", posMerged(cur).map(function(l){ return { name: l.name, label: l.label, q: l.q }; }), function(r){ if(posCancelBill(id, r) === false) return; shopToast("Bill cancelled · cancel tickets printed."); stopEditing(); }); }
     }; });
   }
 
@@ -9876,6 +9893,7 @@ function paintPos(main){
       total: posSub(),
       source: "counter",
       mode:  POS.mode,
+      type:  POS.mode === "delivery" ? "delivery" : "counter",   /* board/settle/day split read type */
       token: token,
       by:    (STORE.me() && STORE.me().name) || "",
       byRole:(STORE.me() && STORE.me().role) || ""
@@ -9903,9 +9921,10 @@ function paintPos(main){
 
   /* a cloud update: the open list and the next token move on
      their own, the half-built ticket in front of somebody does not */
-  window.__posRefresh = function(){ drawOpen(); drawTicket(); drawToken(); drawKot(); if(el("posBoard") && POSB.draw) POSB.draw(); };
+  window.__posRefresh = function(){ drawOpen(); drawTicket(); drawToken(); drawKot(); if(el("posBoard") && POSB.draw) POSB.draw();
+    if(!POS_FAV && !POS_CAT && !find.value.trim()) drawGrid(); };   /* the usual is not frozen yet (or the menu changed): refill it */
   /* F2 = every open bill, full screen */
-  if(!window.__posF2){ window.__posF2 = true; document.addEventListener("keydown", function(e){ if(e.key === "F2" && el("posWrap")){ e.preventDefault(); posBoard(function(id){ var r = el("posOpen"); if(window.__posResume) window.__posResume(id); }); } }); }
+  if(!window.__posF2){ window.__posF2 = true; document.addEventListener("keydown", function(e){ if(e.key === "F2" && el("posWrap")){ e.preventDefault(); posBoard(function(id){ if(window.__posResume) window.__posResume(id); }); } }); }
   window.__posResume = resume;
 
   drawTabs(); drawWhat(); drawGrid(); drawWho();
@@ -10170,7 +10189,8 @@ function quietSig(){
   return JSON.stringify([o, r, Object.keys(DB.customers).length, Object.keys(DB.verify).length,
                          Object.keys(DB.pings).length, mm.layout && mm.layout.at, mm.active && mm.active.id,
                          Object.keys(mm).map(function(k){ return k + ":" + (mm[k] && mm[k].at); }).join(","),
-                         Object.keys(DB.crowd || {}).map(function(k){ return DB.crowd[k] && DB.crowd[k].at; }).join(",")]);
+                         Object.keys(DB.crowd || {}).map(function(k){ return DB.crowd[k] && DB.crowd[k].at; }).join(","),
+                         POS_LOADED, Object.keys(DB.pos || {}).map(function(k){ return k + ":" + (DB.pos[k] && DB.pos[k].updatedAt); }).join(",")]);  /* the drawer repaints on pos_days */
 }
 var LASTSIG = "";
 
@@ -10207,6 +10227,8 @@ function nudgePins(){
    change. Painting once per collection rebuilt the office map seven
    times. Real changes are coalesced into one paint a beat later. */
 var PAINT_DUE = null;
+STORE.onChange(callSync);
+window.addEventListener("hashchange", callSync);
 STORE.onChange(function(){
   if(applyMenu()){ LASTSIG = ""; }        /* a menu switch is a repaint, always */
   var sig = quietSig();
@@ -10361,6 +10383,9 @@ window.SHOP = {
   rowControl: rowControl,
   repaintRows: repaintRows,
   paintFab: paintFab,
+  /* the menu as guests may see it now (active menu, hidden categories/dishes out); index.html reads it at render time */
+  liveMenu: function(){ return liveMenu().map(function(c){ return Object.assign({}, c, { items: (c.items || []).filter(onSale) }); })
+                                         .filter(function(c){ return c.items.length; }); },
   store: STORE,
   flow: FLOW
 };

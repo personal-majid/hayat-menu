@@ -22,7 +22,7 @@ self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var link = (e.notification.data && e.notification.data.link) || (e.notification.data && e.notification.data.FCM_MSG && e.notification.data.FCM_MSG.fcmOptions && e.notification.data.FCM_MSG.fcmOptions.link) || 'clean.html';
   e.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(function (ws) {
-    for (var i = 0; i < ws.length; i++) { if (ws[i].url.indexOf('clean.html') >= 0) { ws[i].focus(); return ws[i].navigate ? ws[i].navigate(link) : null; } }
+    for (var i = 0; i < ws.length; i++) { if (ws[i].url.indexOf('clean.html') >= 0) { return ws[i].focus(); }   /* navigate() only works on pages this worker controls (scope ./fcm/), so just bring the open app forward */ }
     return clients.openWindow(link);
   }));
 });

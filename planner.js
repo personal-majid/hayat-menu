@@ -649,9 +649,10 @@ function changed(silent){ DIRTY=true; checks(); draw(); dock(); floors(); $('und
   clearTimeout(ST1); ST1=setTimeout(saveLocal,350); clearTimeout(ST2); ST2=setTimeout(saveCloud,2500); if(MODE!=='2d') show3d(); if(PRO&&PREF.tab==='layers') layersPanel(); status(); }
 function saveLocal(){ P.at=Date.now(); try{ localStorage.setItem(LS,JSON.stringify(P)); savedNote('saved on this device'+(cloudOk()?' · cloud…':'')); }catch(e){ savedNote('⚠ storage full — save the plan file (⋯)'); } }
 function cloudOk(){ return !!(CTX&&CTX.fs&&CTX.db&&/office|cashier/.test(CTX.role||'')); }
-async function saveCloud(){ if(!cloudOk()||CLOUD.busy) return; const s=JSON.stringify(P); if(s.length>900000){ savedNote('⚠ plan too big for the cloud — save the plan file'); return; }
-  CLOUD.busy=true; try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'plans',P.id||'demo'),{v:1,name:P.name,at:P.at||Date.now(),by:CTX.name||'',json:s}); CLOUD.at=P.at; DIRTY=false; savedNote('saved · cloud ✓ '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})); }
-  catch(e){ savedNote('saved on this device · cloud failed, will retry'); setTimeout(saveCloud,15000); } CLOUD.busy=false; }
+async function saveCloud(){ if(!cloudOk()) return; if(CLOUD.busy){ CLOUD.again=true; return; }   /* edits made during an upload are sent right after it */
+  const s=JSON.stringify(P); if(s.length>900000){ savedNote('⚠ plan too big for the cloud — save the plan file'); return; }
+  CLOUD.busy=true; let ok=false; try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'plans',P.id||'demo'),{v:1,name:P.name,at:P.at||Date.now(),by:CTX.name||'',json:s}); ok=true; CLOUD.at=P.at; if(!CLOUD.again) DIRTY=false; savedNote('saved · cloud ✓ '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})); }
+  catch(e){ savedNote('saved on this device · cloud failed, will retry'); setTimeout(saveCloud,15000); } CLOUD.busy=false; if(CLOUD.again){ CLOUD.again=false; if(ok) saveCloud(); } }
 function savedNote(t){ const e=$('saved'); if(e) e.textContent=t; const s=$('stSave'); if(s) s.textContent=t; }
 function load(obj,why){ if(!obj||!obj.floors||!obj.floors.length) return false; P=obj; P.floors.forEach(f=>{ f.items=(f.items||[]).filter(i=>i&&i.kind&&(i.kind!=='dim'||(Array.isArray(i.a)&&Array.isArray(i.b)))); });
   P.floors.forEach(f=>{ const ids=new Set(f.items.map(i=>i.id)); f.items=f.items.filter(i=>!(i.kind==='door'||i.kind==='window')||ids.has(i.sp)); });

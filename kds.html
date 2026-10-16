@@ -74,9 +74,10 @@ dialog label{display:flex;gap:10px;align-items:center;font-size:17px;padding:6px
 <main id="main"><div class="empty">Loading…</div></main>
 <dialog id="dlg"><form method="dialog"><h3 style="margin-top:0">Stations on this screen</h3><div id="dlgBody"></div><p style="text-align:right;margin-bottom:0"><button class="hb" value="ok">Done</button></p></form></dialog>
 <script>
-/* Hayat kitchen screen. Reads open orders (vm_open) that the shop PC sends to Firebase every ~20 s,
-   shows only what this kitchen makes, one card per KOT round. "Done" is saved (kds collection) so
-   the office sees when food was ready. Office sign-in needed (same Google account as the office). */
+/* Hayat kitchen screen. Reads the counter + captain bills (orders, and trial_orders when
+   settings/captain.kdsTrial is on) plus VMENU's vm_open (only while the old VMENU sync runs),
+   shows only what this kitchen makes, one card per KOT round. Accept / Start go to kds_state,
+   "Ready" to kds, so the waiter's phone and the office see it. Sign in with a kitchen, captain or office code. */
 const $=id=>document.getElementById(id);
 const PREP={mandi:4,grill:10,fish:12,gravy:15,meals:3,bread:6.5,juice:5,tea:3,shawaya:8,fridge:0};
 const KNAME={mandi:'Mandi',grill:'Alfaham',fish:'Fish fry',gravy:'Gravy & Chinese',meals:'Meals',bread:'Porotta & chapati',juice:'Juice',tea:'Tea',shawaya:'Shawaya'};
@@ -101,7 +102,12 @@ function station(n){ n=String(n||'').toUpperCase();
   if(/FRIED RICE|NOODLE|NOODEL|CHILLI(?! SODA)|MANCHURIAN|CHICKEN 65|GARLIC|DRAGON|LOLLIPOP|KONDATTAM|BROAST|BEEF|SOUP|GHEE|FRENCH|SALAD(?! WITH)/.test(n)) return ['gravy'];
   if(/JUICE|MOJITO|LIME|AVILMILK|SHAKE|SCOOP|SCOTCH|FRUIT SALAD|TENDER|CHICCKU/.test(n)) return ['juice'];
   if(/TEA|COFFE|MILK|BOOST/.test(n)) return ['tea'];
-  return []; }
+  return null; }   /* null = no rule knows it ([] = never a kitchen item) */
+/* never drop a dish: no rule -> the line's own kitchen (captain/counter station) if it names a station or a screen, else the Main kitchen.
+   captain.js kdsStation / kdsSt / KDS_SCREENS is a COPY of this mapping (waiter's "n of m ready") - keep the two identical */
+const BOTTLED=/7 ?UP|SPRITE|PEPSI|COCA|COCO ?COLA|COKE|\bSLICE\b|MIRINDA|FANTA|THUMS ?UP|LIMCA|MAAZA|FROOTI|\bDEW\b|RED ?BULL|\bSTING\b|BISLERI|KINLEY|AQUAFINA|MINERAL|MENIRAL|WATER BOTTLE|BOTTLE WATER|\bCAN\b|\bPET\b|\d+ ?ML\b|\d ?LTR\b/i;   /* = captain.js DR_SOFT: bottles need no kitchen */
+function kdsSt(n,st){ const s=station(n); if(s) return s; if(BOTTLED.test(n)) return []; st=String(st||'').toLowerCase();
+  if(Object.prototype.hasOwnProperty.call(KNAME,st)) return [st]; if(Object.prototype.hasOwnProperty.call(SCREENS,st)) return [SCREENS[st].st[0]]; return [SCREENS.main.st[0]]; }
 function tms(v){ if(!v) return null; if(typeof v==='number') return v; if(typeof v==='object'){ if(v.toMillis) return v.toMillis(); if(v.seconds!=null) return v.seconds*1000; }
   let s=String(v); if(!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s+='+05:30'; const t=Date.parse(s); return isNaN(t)?null:t; }
 /* a new ticket says so across the whole screen for a few seconds */
@@ -114,16 +120,18 @@ let TRIAL=[], KDSTRIAL=false, KST={}, WEB=[], OPEN=[], DONE={}, META=null, FB=nu
 const kesc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));   /* web/captain orders carry typed notes: never raw HTML */
 function webOpen(){ const out=[], now=Date.now();
   /* captain-app TRIAL orders show only when Setup → Settings → "Show trial orders on the kitchen screen" is on */
-  for(const o of WEB.concat(KDSTRIAL?TRIAL:[])){ if(!o.kots||!o.kots.length||(o.noKds&&!o.trial)) continue; const gone=o.status==='delivered'||o.status==='cancelled';
+  for(const o of WEB.concat(KDSTRIAL?TRIAL:[])){ if(!o.kots||!o.kots.length||(o.noKds&&!o.trial)) continue;
+    const gone=o.status==='cancelled'||(o.status==='delivered'&&(o.mode==='delivery'||o.type==='delivery'||o.type==='pickup'));   /* a PAID bill keeps its uncooked tickets (counter bills are paid before cooking); only cancelled / handed-over orders clear */
     const items=[]; o.kots.forEach(k=>{ if(gone&&!(k.kind==='cancel'&&now-(k.at||0)<45*60000)) return; (k.lines||[]).forEach(l=>{ if(l.station==='none') return;   /* bottled drinks: the waiter brings them */
+      if(k.skip&&k.skip.includes(l.station)) return;   /* kitchens the waiter switched off for this KOT (kot.skip = captain station keys) */
       const lb=l.note&&l.base!=null?l.base:l.label;   /* new captain lines: base = size, note = the cook's note (old lines: note inside label) */
-      items.push({n:kesc(l.name+(lb?' ('+lb+')':'')),nt:kesc(l.note||''),q:+l.q||0,t:k.at,cancel:k.kind==='cancel',reason:kesc(k.reason||''),round:k.n,note:kesc(k.note||''),hold:!!(k.hold&&!k.fireAt),fire:k.fireAt||0,pri:k.pri||''}); }); });
+      items.push({n:kesc(l.name+(lb?' ('+lb+')':'')),st:l.station||'',nt:kesc(l.note||''),q:+l.q||0,t:k.at,cancel:k.kind==='cancel',reason:kesc(k.reason||''),round:k.n,note:kesc(k.note||''),hold:!!(k.hold&&!k.fireAt),fire:k.fireAt||0,pri:k.pri||''}); }); });
     if(!items.length) continue;
     out.push({invoiceId:'w'+kesc(o.id),orderAt:o.at,items,table:kesc(o.table||''),section:o.mode==='dinein'?kesc(o.section||''):'',type:o.mode==='dinein'?'':'Parcel',token:kesc(o.token||''),taker:kesc(String(o.by||'').replace(/^SIM · /,'')),pax:o.pax||0,trial:!!o.trial,web:true,src:o.source||'',onote:kesc(o.note||'')}); }
   return out; }
 function tickets(){ const mine=new Set(stations()), out=[];
   for(const o of OPEN.concat(webOpen())){ const base=tms(o.orderAt), groups={};
-    for(const it of o.items||[]){ const st=station(it.n).filter(s=>mine.has(s)); if(!st.length) continue;
+    for(const it of o.items||[]){ const st=kdsSt(it.n,it.st).filter(s=>mine.has(s)); if(!st.length) continue;
       const t=tms(it.t)||base; const k=String(Math.round((t||0)/60000))+(o.web&&it.round!=null&&!it.cancel?'r'+it.round:'')+(it.cancel?'c':'');   /* web/captain: one card per KOT round, even two rounds in the same minute */ (groups[k]=groups[k]||{t,items:[],st:new Set(),cancel:!!it.cancel,reason:it.reason||'',round:it.round,note:it.note||'',hold:!!it.hold,fire:it.fire||0,pri:it.pri||''}).items.push(it); st.forEach(s=>groups[k].st.add(s)); }
     const ks=Object.keys(groups).sort(); ks.forEach((k,idx)=>{ const g=groups[k], id=ST.screen+'_'+o.invoiceId+'_'+k;
       const mg={}; g.items.forEach(it=>{ const n=String(it.n).trim(), nt=it.nt||'', key=n+'|'+nt; (mg[key]=mg[key]||{n,nt,q:0}).q+=(+it.q||1); }); g.items=Object.values(mg);   /* "less spicy" stays its own line */
@@ -182,7 +190,10 @@ function cleanBar(){ const b=$('cbar'); if(!CPLAN){ b.hidden=true; return; }
   if(!late.length){ b.hidden=true; CLATE=''; return; }
   b.hidden=false; b.innerHTML='🧹 Late cleaning:'+late.slice(0,6).map(r=>'<span>'+H.area(CPLAN,r.t.area).icon+' '+r.t.name+' · '+r.late+'′</span>').join('')+(late.length>6?'<span>+'+(late.length-6)+' more</span>':'');
   const key=late.map(r=>r.id).join(','); if(key!==CLATE){ if(CLATE!==''||late.length) { if(ST.sound) beep(); } CLATE=key; } }
-setInterval(cleanBar,30000);
+let CLOGOFF=null, CLOGDAY='';
+function subLogs(){ if(!FB) return; const d=HayatClean.bizDate(); if(d===CLOGDAY) return; CLOGDAY=d; if(CLOGOFF) try{ CLOGOFF(); }catch(e){} CLOGS=[];   /* a tablet left on past 05:00 reads the NEW day's cleaning log */
+  CLOGOFF=FB.fs.onSnapshot(FB.fs.query(FB.fs.collection(FB.db,'cleanlog'),FB.fs.where('day','==',d)),s=>{ CLOGS=s.docs.map(x=>x.data()); cleanBar(); },()=>{}); }
+setInterval(()=>{ subLogs(); cleanBar(); },30000);
 (async function(){
   const stop=h=>{ $('main').innerHTML='<div class="msg">'+h+'</div>'; };
   let ctx; try{ ctx=await HayatAuth.start(); }catch(e){ return stop('<b>Not connected.</b> '+(e.message||e)); }
@@ -198,7 +209,7 @@ setInterval(cleanBar,30000);
     let trialOff=null; fs.onSnapshot(fs.doc(db,'settings','captain'),d=>{ const on=!!(d.exists()&&d.data().kdsTrial); if(on===KDSTRIAL&&(trialOff||!on)) return; KDSTRIAL=on; if(trialOff){ trialOff(); trialOff=null; TRIAL=[]; }
       if(on) trialOff=fs.onSnapshot(fs.query(fs.collection(db,'trial_orders'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ TRIAL=snap.docs.map(d=>Object.assign({id:d.id},d.data())); render(); },()=>{}); render(); },()=>{});
     fs.onSnapshot(fs.doc(db,'cleanplan','main'),d=>{ CPLAN=d.exists()&&d.data().tasks?Object.assign({},HayatClean.DEFAULT_PLAN,d.data()):HayatClean.DEFAULT_PLAN; cleanBar(); },()=>{});
-    fs.onSnapshot(fs.query(fs.collection(db,'cleanlog'),fs.where('day','==',HayatClean.bizDate())),s=>{ CLOGS=s.docs.map(d=>d.data()); cleanBar(); },()=>{});
+    subLogs();
   };
   if(!['office','kitchen','captain'].includes(ctx.role)){ $('main').innerHTML=''; await HayatAuth.form($('main'),ctx,['kitchen','office','captain'],go,'Sign in once on this tablet with the kitchen code.'); return; }
   go(); })();

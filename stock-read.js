@@ -90,11 +90,14 @@
   /* -> {n, c, score, via, raw}. score >= 0.82 auto, 0.62-0.82 "check", below = new item (cleaned raw name) */
   function match(raw, opt){ opt = opt || {}; var key = norm(raw).replace(/ /g,'_'), A = opt.alias || {};
     if(A[key] && opt.items && opt.items[A[key]]) return {n:opt.items[A[key]].n, c:opt.items[A[key]].c || '', score:1, via:'learned', raw:raw};
-    var best = null, cat = catalog(opt.items);
+    var best = null, cat = catalog(opt.items), all = [];
     cat.forEach(function(it){ var s = phraseSim(raw, it.n), via = 'name'; it.al.forEach(function(a){ var v = phraseSim(raw, a); if(v > s){ s = v; via = 'alias'; } }); if(it.own) s += 0.02;
-      if(!best || s > best.score) best = {n:it.n, c:it.c, score:Math.min(1, s), via:via, raw:raw}; });
+      all.push({n:it.n, c:it.c, score:Math.min(1, s)}); if(!best || s > best.score) best = {n:it.n, c:it.c, score:Math.min(1, s), via:via, raw:raw}; });
+    /* the next nearest names, so a person can pick the right one with one tap (Majid, 15 Oct) */
+    var alts = []; all.sort(function(a, b){ return b.score - a.score; }).forEach(function(x){ if(alts.length < 3 && x.score >= 0.45 && (!best || x.n !== best.n) && !alts.some(function(y){ return y.n === x.n; })) alts.push(x); });
+    if(best) best.alts = alts;
     /* a weak match NEVER swaps in one of our names: the line keeps what was written (Majid, 13 Oct: "it imports something that is not on the bill") */
-    if(!best || best.score < 0.78){ var nm = titleCase(words(raw).join(' ') || raw); return {n:nm, c:guessCat(raw, opt.u), score:best ? best.score : 0, via:'new', raw:raw, near:best && best.score >= 0.6 ? best.n : ''}; }
+    if(!best || best.score < 0.78){ var nm = titleCase(words(raw).join(' ') || raw); return {n:nm, c:guessCat(raw, opt.u), score:best ? best.score : 0, via:'new', raw:raw, near:best && best.score >= 0.6 ? best.n : '', alts:best && best.score >= 0.45 ? [{n:best.n, c:best.c, score:best.score}].concat(alts).slice(0, 3) : alts}; }
     return best; }
 
   /* ---------- text -> bill ---------- */
@@ -125,6 +128,9 @@
       for(var k = 0; k < alt.length; k++){ var x = t.slice(0, i) + alt[k] + t.slice(i + 1); if(!/^0\d/.test(x)) out[x] = 1; }
       if(t.length >= 2 && c !== '.'){ var y = t.slice(0, i) + t.slice(i + 1); if(y && !/^0\d/.test(y) && !/^\./.test(y)) out[y] = 1; } }
     return Object.keys(out).map(Number).filter(function(v){ return v > 0 && v !== +t; }); }
+  /* 'YYYY-MM-DD' only for a real calendar day (31/02 or a 3-digit year is no date), else '' */
+  function isoDay(y, m, d){ y = +y; m = +m; d = +d; var t = new Date(Date.UTC(y, m - 1, d)); return y >= 1000 && y <= 9999 && t.getUTCMonth() === m - 1 && t.getUTCDate() === d ? t.toISOString().slice(0, 10) : ''; }
+  function isoOf(s){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '').trim()); return m ? isoDay(m[1], m[2], m[3]) : ''; }
   function near(a, b){ return Math.abs(a - b) <= Math.max(1.01, 0.02 * Math.abs(b)); }
   /* -> {raw, q, u, r, a, ok, how}. how: '3' qty, rate and amount all read and they agree · '2' qty + amount read, rate worked out ·
      'mm' qty x rate != amount (one of them misread; alt = qty x rate) · '1' only an amount */
@@ -161,11 +167,11 @@
     var L = CL ? CL.map(function(x){ return x.t; }) : String(text || '').split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean), out = {supplier:'', date:'', billNo:'', lines:[], total:null, isBill:false, why:'', dropped:0};
     var seenItem = false;
     L.forEach(function(l, idx){ var lc = CL ? CL[idx].c : 90; if(RX_JUNK.test(l)){ if(/\d/.test(l)) out.dropped++; return; }
-      var d = l.match(RX_DATE); if(d && !out.date){ var y = +d[3]; if(y < 100) y += 2000; if(+d[2] >= 1 && +d[2] <= 12 && +d[1] >= 1 && +d[1] <= 31) out.date = y + '-' + String(d[2]).padStart(2,'0') + '-' + String(d[1]).padStart(2,'0'); }
+      var d = l.match(RX_DATE); if(d && !out.date){ var y = +d[3]; if(y < 100) y += 2000; out.date = isoDay(y, d[2], d[1]); }
       var bn = l.match(/\b(?:bill|inv(?:oice)?|receipt)\s*(?:no\.?|number|#)?\s*[:#.]?\s*([A-Z0-9][A-Z0-9\-\/]{0,12})/i) || (!seenItem && l.match(/^\s*no\.?\s*[:#]?\s*(\d{1,8})\b/i)); if(bn && !out.billNo && !/^\d{1,2}[\/\-.]/.test(bn[1])) out.billNo = bn[1];
       if(RX_TOTAL.test(l) && /\d/.test(l)){ var n = toks(l).filter(function(t){ return t.num != null && !t.u; }); if(n.length) out.total = n[n.length - 1].num; return; }
       var headerish = RX_DATE.test(l) || /\b\d{1,2}:\d{2}\b/.test(l) || (bn && !seenItem) || RX_OURS.test(l) || (!seenItem && /\b\d{1,2}\s*[\/\-.]\s*\d{1,2}\b/.test(l) && !/\d\s*(kg|ltr|l|pkt|nos)\b/i.test(l));   /* a date / time / bill-no / "Hayat" line is never an item */
-      if(!out.date && !seenItem){ var d2 = l.match(/\b(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\b/); if(d2 && +d2[2] >= 1 && +d2[2] <= 12 && +d2[1] >= 1 && +d2[1] <= 31 && opt.year) out.date = opt.year + '-' + String(d2[2]).padStart(2,'0') + '-' + String(d2[1]).padStart(2,'0'); }
+      if(!out.date && !seenItem){ var d2 = l.match(/\b(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\b/); if(d2 && opt.year) out.date = isoDay(opt.year, d2[2], d2[1]); }
       var it = !headerish && (!RX_SKIP.test(l) || /\d+\s*(kg|ltr|l|pkt|nos)\b/i.test(l)) ? parseLine(l) : null;
       if(it){ if(lc < 55){ out.dropped++; return; } it.conf = Math.round(lc); seenItem = true; out.lines.push(it); return; }
       if(!headerish && /\d/.test(l) && /[a-z]{3,}/i.test(l) && seenItem) out.dropped++;
@@ -236,7 +242,7 @@
   /* the AI reader: POST the photo to OUR Cloudflare Worker (it holds the key). hints help it name things our way */
   async function ai(img, url, hints){ var res = await fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({image:img, items:(hints && hints.items) || [], suppliers:(hints && hints.suppliers) || [], cats:CATS})});
     if(!res.ok) throw new Error('AI reader: ' + res.status); var j = await res.json(); if(j.error) throw new Error(j.error);
-    return {supplier:j.supplier || '', date:j.date || '', billNo:j.bill_no || j.billNo || '', total:j.total != null ? +j.total : null, isBill:j.is_bill !== false, why:j.why || '',
+    return {supplier:j.supplier || '', date:isoOf(j.date), billNo:j.bill_no || j.billNo || '', total:j.total != null ? +j.total : null, isBill:j.is_bill !== false, why:j.why || '',
       lines:(j.lines || []).map(function(l){ var q = +l.qty || 1, a = +l.amount || 0, rw = l.rate_written != null ? +l.rate_written : (+l.rate || 0), r = rw || (q ? a / q : 0), how;
         /* the AI can misread or invent too: its numbers must prove themselves like the free reader's (qty x rate = amount, or the bill total) */
         if(!a) how = '1'; else if(rw && near(q * rw, a)) how = '3'; else if(rw && q) how = 'mm'; else how = '2';
@@ -296,6 +302,21 @@
     return out.join(' ').replace(/\s+/g, ' ').trim(); }
   function parseSpoken(t){ var x = spokenToText(t), l = parseLine(x); if(!l){ var m = x.match(/^(.*?)(\d+(\.\d+)?)\s*(kg|g|L|nos|pkt|box|bag|bundle|bottle|tray)?\s*$/i); if(m && /[a-z]{2,}/i.test(m[1])) l = {raw:m[1].trim(), q:1, u:'nos', r:+m[2], a:+m[2], ok:false, how:'1'}; }
     if(l){ l.spoken = t; l.text = x; } return l; }
-  var API = {spokenToText:spokenToText, parseSpoken:parseSpoken, edits:edits, repair:repair, fixLook:fixLook, CATS:CATS, DICT:DICT, norm:norm, slug:slug, titleCase:titleCase, lev:lev, tokSim:tokSim, phraseSim:phraseSim, match:match, parse:parse, ocrLines:ocrLines, parseLine:parseLine, sure:sure, guessCat:guessCat, ocr:ocr, ai:ai, read:read};
+  /* "kozhi pathu kilo, ari irupathiyanchu kilo" / "12 kg chicken" -> [{raw, q, u}] : quantities only (kitchen release, closing count).
+     "nothing / illa / theernnu / kaali" = 0. Several items in one breath are split at each number. */
+  var ZERO = /^(nothing|none|zero|nil|illa|onnumilla|onnum|theernnu|theernu|theerno|kaali|kali|empty|finished|over)$/i;
+  var FILL = /^(baaki|baki|balance|left|remaining|undu|und|ullathu|kodukku|kodukkuka|release|give|send|kitchen|store|ottu|count|is|are|have|we|still|in|the)$/i;
+  function parseQtys(t){ var x = spokenToText(t).replace(/[.,;]+(\s|$)/g, ' ').trim(), W = x.split(/\s+/).filter(Boolean), out = [], name = [], q = null, u = null, pend = null;
+    function emit(){ var raw = name.join(' ').trim(); if(raw && /[a-z]{2,}/i.test(raw) && q != null) out.push({raw:raw, q:q, u:u}); name = []; q = null; u = null; }
+    for(var i = 0; i < W.length; i++){ var w = W[i], lw = w.toLowerCase();
+      if(/^\d+(\.\d+)?$/.test(w) || ZERO.test(lw)){ var v = ZERO.test(lw) ? 0 : +w;
+        if(name.length && q == null){ q = v; var nx = (W[i + 1] || '').toLowerCase(); if(UNITS[nx]){ u = UNITS[nx]; i++; } if(FILL.test((W[i + 1] || '').toLowerCase())) i++; emit(); }
+        else if(!name.length){ pend = {q:v, u:null}; var nx2 = (W[i + 1] || '').toLowerCase(); if(UNITS[nx2]){ pend.u = UNITS[nx2]; i++; } }
+        continue; }
+      if(FILL.test(lw)) continue;
+      if(pend && !name.length){ name.push(w); var j = i + 1; while(j < W.length && !/^\d/.test(W[j]) && !ZERO.test(W[j]) && !FILL.test(W[j]) && !UNITS[W[j].toLowerCase()]) name.push(W[j++]); q = pend.q; u = pend.u; pend = null; i = j - 1; emit(); continue; }
+      name.push(w); }
+    return out; }
+  var API = {parseQtys:parseQtys, spokenToText:spokenToText, parseSpoken:parseSpoken, edits:edits, repair:repair, fixLook:fixLook, CATS:CATS, DICT:DICT, norm:norm, slug:slug, titleCase:titleCase, lev:lev, tokSim:tokSim, phraseSim:phraseSim, match:match, parse:parse, ocrLines:ocrLines, parseLine:parseLine, sure:sure, guessCat:guessCat, ocr:ocr, ai:ai, read:read};
   if(typeof module !== 'undefined' && module.exports) module.exports = API; else root.StockRead = API;
 })(typeof window !== 'undefined' ? window : globalThis);

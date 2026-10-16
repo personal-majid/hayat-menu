@@ -12,6 +12,7 @@
 <link rel="manifest" href="rider.webmanifest">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="premium.css">
 <script>
 /* Chrome can offer the install before shop.js has finished parsing,
    and the offer is gone if nobody is listening. Catch it here, in
@@ -66,7 +67,7 @@ window.addEventListener("beforeinstallprompt", function(e){
 
   .boot{padding:40px 0;text-align:center;color:var(--muted)}
 
-    border-radius:var(--r2);padding:15px 16px;margin:0 0 16px;background:var(--soft3)}
+  /* (orphan body of the old inline .install card removed - it swallowed the next rule; the offer is shop.js's .sheet.install now) */
   .install b{display:block;font-size:var(--t-h3);color:var(--cream);margin:0 0 6px}
   .install p{margin:0 0 4px;font-size:var(--t-body);color:var(--muted);line-height:1.5}
   .install .hide{margin-top:10px}
@@ -105,6 +106,7 @@ window.addEventListener("beforeinstallprompt", function(e){
 <script src="config.js"></script>
 <script src="nav.js" onerror="0"></script>
 <script src="assets/qr.js"></script>
+<script src="call.js" onerror="0"></script>
 <script src="shop.js"></script>
 </body>
 </html>

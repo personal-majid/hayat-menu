@@ -79,7 +79,7 @@ function tms(v){ if(!v) return null; if(typeof v==='object'){ if(v.toMillis) ret
 const hm=ms=>new Date(ms+5.5*3600e3).toISOString().slice(11,16);
 function phone(p){ let d=String(p||'').replace(/\D/g,''); if(d.length===10) d='91'+d; if(d.length===11&&d[0]==='0') d='91'+d.slice(1); return d; }
 function bizToday(){ return new Date(Date.now()-5*3600e3+5.5*3600e3).toISOString().slice(0,10); }
-let FB=null, OPEN=[], LIST=[], TT=32, party=2, area='any', META=null;
+let FB=null, OPEN=[], LIST=[], TT=32, party=2, area='any', META=null, BILLDAY=null, BILLUN=null, subBills=null;
 
 /* typical table time today (first order → paid, dine-in), else 32 min */
 function tableTime(bills){ const x=bills.filter(b=>b.type!=='Parcel'&&b.orderToSettle>5&&b.orderToSettle<150).map(b=>b.orderToSettle).sort((a,b)=>a-b); return x.length>=10?x[x.length>>1]:32; }
@@ -91,7 +91,7 @@ function freeNow(){ const f={}; Object.keys(CAP).forEach(k=>f[k]={cap:CAP[k],use
 function quote(ar,n){ const f=freeNow(), ks=ar==='any'?Object.keys(CAP).filter(k=>k!=='HUT'):[ar];
   let free=0, ends=[]; ks.forEach(k=>{ free+=Math.max(0,f[k].cap-f[k].used); ends=ends.concat(f[k].ends); }); ends.sort((a,b)=>a-b);
   if(n<free) return 0; const e=ends[n-free]; if(!e) return 45; return Math.max(5,Math.ceil((e-Date.now())/60000/5)*5); }
-function waiting(){ return LIST.filter(w=>w.status==='waiting'||w.status==='notified').sort((a,b)=>(tms(a.addedAt)||Date.now())-(tms(b.addedAt)||Date.now())); }
+function waiting(){ const d=bizToday(); return LIST.filter(w=>w.day===d&&(w.status==='waiting'||w.status==='notified')).sort((a,b)=>(tms(a.addedAt)||Date.now())-(tms(b.addedAt)||Date.now())); }
 function posIn(w){ const L=waiting(); return L.filter(x=>(tms(x.addedAt)||Date.now())<=(tms(w.addedAt)||Date.now())&&(w.area==='any'||x.area==='any'||x.area===w.area)).length-1; }
 function waMsg(w,kind,mins){ const n=(w.name||'').split(' ')[0];
   const t=kind==='ready'?'Hi '+n+', your table for '+w.party+' is ready at Hayat Fish & Mandi 🙂 Please come to the counter in the next 5 minutes.'
@@ -107,8 +107,8 @@ function render(){ const f=freeNow();
   const L=waiting(), now=Date.now();
   $('wc').textContent=L.length;
   $('list').innerHTML=L.length?L.map((w,i)=>{ const waited=Math.round((now-(tms(w.addedAt)||now))/60000), late=w.quoted!=null&&waited>w.quoted+5, q2=quote(w.area,posIn(w));
-    return '<div class="row'+(q2===0?' next':'')+(w.status==='notified'?' notified':'')+(late?' late':'')+'"><span class="pos">'+(i+1)+'</span><div><div class="nm">'+esc(w.name||'Guest')+' · '+w.party+'</div>'
-      +'<div class="sub">'+AN[w.area||'any']+' · waiting '+waited+' min'+(w.quoted!=null?' (quoted '+w.quoted+')':'')+(w.status==='notified'?' · 📱 told '+hm(tms(w.notifiedAt)||now):'')+(q2===0?' · <b style="color:var(--good)">table free</b>':' · ~'+q2+' min more')+(w.note?' · '+esc(w.note):'')+'</div></div>'
+    return '<div class="row'+(q2===0?' next':'')+(w.status==='notified'?' notified':'')+(late?' late':'')+'"><span class="pos">'+(i+1)+'</span><div><div class="nm">'+esc(w.name||'Guest')+' · '+esc(w.party)+'</div>'
+      +'<div class="sub">'+AN[w.area||'any']+' · waiting '+waited+' min'+(w.quoted!=null?' (quoted '+esc(w.quoted)+')':'')+(w.status==='notified'?' · 📱 told '+hm(tms(w.notifiedAt)||now):'')+(q2===0?' · <b style="color:var(--good)">table free</b>':' · ~'+q2+' min more')+(w.note?' · '+esc(w.note):'')+'</div></div>'
       +'<div class="act">'+(w.phone?'<a class="btn wa" target="_blank" rel="noopener" data-ready="'+w.id+'" href="'+waMsg(w,'ready')+'">📱 Table ready</a>':'')+'<button class="btn" data-seat="'+w.id+'">🪑 Seated</button><button class="btn" data-left="'+w.id+'" title="Left without a table">✕</button></div></div>'; }).join('')
     :'<div class="empty">Nobody waiting 🙂</div>';
   $('list').querySelectorAll('[data-ready]').forEach(a=>a.onclick=()=>upd(a.dataset.ready,{status:'notified',notifiedAt:FB.fs.serverTimestamp()}));
@@ -129,7 +129,7 @@ $('add').onclick=async()=>{ const name=$('nm').value.trim(), ph=$('ph').value.tr
     if(doc.phone&&confirm('Send '+name+' their wait time on WhatsApp?')) window.open(waMsg(Object.assign({id:ref.id,addedAt:Date.now()},doc),'quote',q),'_blank','noopener');
     $('nm').value=''; $('ph').value=''; $('nt').value=''; party=2; $('pn').textContent=2; area='any'; render(); }
   catch(e){ alert('Could not save: '+(e.code||e.message)); } };
-setInterval(()=>{ if(FB) render(); },30000);
+setInterval(()=>{ if(subBills&&BILLDAY!==bizToday()) subBills(); if(FB) render(); },30000);   // new business day -> listen to that day's bills
 
 (async function(){ const gate=h=>{ $('gate').innerHTML='<div class="msg">'+h+'</div>'; };
   let ctx; try{ ctx=await HayatAuth.start(); }catch(e){ return gate('<b>Not connected.</b> '+(e.message||e)); }
@@ -138,7 +138,7 @@ setInterval(()=>{ if(FB) render(); },30000);
     $('app').hidden=false;
     fs.onSnapshot(fs.doc(db,'vm_meta','sync'),d=>{ META=d.exists()?d.data():null; render(); },()=>{});
     fs.onSnapshot(fs.collection(db,'vm_open'),s=>{ OPEN=s.docs.map(d=>d.data()); render(); },fail);
-    if(ctx.role==='office') fs.onSnapshot(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',bizToday())),s=>{ TT=tableTime(s.docs.map(d=>d.data())); render(); },()=>{});
+    if(ctx.role==='office'){ subBills=()=>{ if(BILLUN) BILLUN(); BILLDAY=bizToday(); TT=32; BILLUN=fs.onSnapshot(fs.query(fs.collection(db,'vm_bills'),fs.where('day','==',BILLDAY)),s=>{ TT=tableTime(s.docs.map(d=>d.data())); render(); },()=>{}); }; subBills(); }
     const since=new Date(Date.now()-36*3600e3);
     fs.onSnapshot(fs.query(fs.collection(db,'waitlist'),fs.where('addedAt','>=',since)),s=>{ LIST=s.docs.map(d=>Object.assign({id:d.id},d.data())); render(); },fail);
     /* privacy: phone numbers are not kept longer than a week */

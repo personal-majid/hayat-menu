@@ -80,7 +80,6 @@ const AREA=new URLSearchParams(location.search).get('a');
 const toast=(m,ms)=>{ const d=document.createElement('div'); d.className='toast'; d.textContent=m; document.body.appendChild(d); setTimeout(()=>d.remove(),ms||2600); };
 const T=(en,ml)=>LANG==='ml'&&ml?'<span class="ml">'+ml+'</span>':en;
 const today=()=>HC.bizDate(), nowM=()=>HC.bizMin();
-const isBoss=()=>CTX&&(CTX.role==='office'||CTX.role==='captain');
 function tm(v){ if(!v) return null; if(v.toMillis) return v.toMillis(); if(v.seconds!=null) return v.seconds*1000; const t=Date.parse(v); return isNaN(t)?null:t; }
 const clock=ms=>ms?new Date(ms+5.5*3600e3).toISOString().slice(11,16):'';
 function parseTime(s){ const m=/^(\d{1,2})[:.](\d{2})$/.exec(String(s).trim()); if(!m) return null; let v=+m[1]*60+ +m[2]; if(v<300) v+=1440; return v; }
@@ -138,7 +137,7 @@ function viewBoard(){ const S=HC.state(PLAN,today(),LOGS,nowM()), rows=S.rows, o
   const photos=LOGS.filter(l=>l.photo&&l.verified==null).sort((a,b)=>(tm(b.at)||0)-(tm(a.at)||0));
   const byRole={}; rows.forEach(r=>{ const k=r.t.role; (byRole[k]=byRole[k]||[]).push(r); });
   $('main').innerHTML='<div class="kpis"><div class="kpi '+(S.pct<80?'bad':'good')+'"><span>Done so far today</span><b>'+S.pct+'%</b></div><div class="kpi '+(over.length?'bad':'')+'"><span>Late now</span><b>'+over.length+'</b></div><div class="kpi"><span>Ticks today</span><b>'+LOGS.filter(l=>l.verified!==false).length+'</b></div><div class="kpi"><span>Photos to check</span><b>'+photos.length+'</b></div></div>'
-    +(photos.length?'<div class="card"><h2>Check photos</h2><div class="scroll"><table>'+photos.slice(0,12).map(l=>{ const t=PLAN.tasks.find(x=>x.id===l.task)||{name:l.task}; return '<tr><td><img class="thumb" src="'+l.photo+'" data-big="'+l.id+'"></td><td><b>'+esc(t.name)+'</b><div class="note">'+esc(l.name)+' · '+clock(tm(l.at))+(l.late>HC.grace(t)?' · '+l.late+' min late':'')+'</div></td><td style="text-align:right;white-space:nowrap"><button class="btn" data-ok="'+l.id+'">✓ Good</button> <button class="btn warn" data-no="'+l.id+'">✗ Redo</button></td></tr>'; }).join('')+'</table></div></div>':'')
+    +(photos.length?'<div class="card"><h2>Check photos</h2><div class="scroll"><table>'+photos.slice(0,12).map(l=>{ const t=PLAN.tasks.find(x=>x.id===l.task)||{name:l.task}; return '<tr><td>'+(/^data:image\//.test(l.photo)?'<img class="thumb" src="'+esc(l.photo)+'" data-big="'+esc(l.id)+'">':'')+'</td><td><b>'+esc(t.name)+'</b><div class="note">'+esc(l.name)+' · '+clock(tm(l.at))+(l.late>HC.grace(t)?' · '+l.late+' min late':'')+'</div></td><td style="text-align:right;white-space:nowrap"><button class="btn" data-ok="'+l.id+'">✓ Good</button> <button class="btn warn" data-no="'+l.id+'">✗ Redo</button></td></tr>'; }).join('')+'</table></div></div>':'')
     +['cleaner','waiter','kitchen','office'].filter(k=>byRole[k]).map(k=>'<div class="card"><h2>'+HC.ROLE[k]+'</h2><div class="scroll"><table><tr><th></th><th>Task</th><th>Status</th><th>Done</th><th>Last</th></tr>'+byRole[k].map(r=>{ const a=HC.area(PLAN,r.t.area);
         return '<tr><td>'+a.icon+'</td><td><b>'+esc(r.t.name)+'</b><div class="note">'+esc(a.name)+' · '+HC.freqText(r.t)+'</div></td><td><span class="st '+r.st+'">'+({overdue:'Late '+r.late+'′',due:'Due',soon:'Soon',later:HC.hm(r.m),done:'Done',missed:'Missed'})[r.st]+'</span></td><td>'+r.doneN+'/'+r.count+'</td><td>'+(r.last?clock(tm(r.last.at))+' '+esc(r.last.name||''):'–')+'</td></tr>'; }).join('')+'</table></div></div>').join('');
   document.querySelectorAll('[data-big]').forEach(i=>i.onclick=()=>{ const d=document.createElement('div'); d.className='big'; d.innerHTML='<img src="'+i.src+'">'; d.onclick=()=>d.remove(); document.body.appendChild(d); });
@@ -215,7 +214,10 @@ function render(){ if(!CTX||!CTX.role) return; const TB=tabsFor(); $('tabs').hid
   $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{ TAB=b.dataset.t; render(); });
   if(AREA) return viewArea();
   ({board:viewBoard,now:viewNow,today:viewToday,how:viewHow,send:viewSend,plan:viewPlan,qr:viewQR,staff:viewStaff,rec:viewRecords})[TAB](); }
-function softRender(){ if(['board','now','today'].includes(TAB)||AREA) render(); }
+let LOGDAY=null, LOGUN=null;
+function subLogs(){ const {fs,db}=CTX; if(LOGUN) LOGUN(); LOGDAY=today(); LOGS=[];   // one listener per business day; re-made when the day turns
+  LOGUN=fs.onSnapshot(fs.query(fs.collection(db,'cleanlog'),fs.where('day','==',LOGDAY)),s=>{ LOGS=s.docs.map(d=>Object.assign({id:d.id},d.data())); softRender(); },e=>toast('Log: '+(e.code||e.message))); }
+function softRender(){ if(LOGDAY&&LOGDAY!==today()) return subLogs(); if(['board','now','today'].includes(TAB)||AREA) render(); }
 setInterval(softRender,30000);
 $('lang').onclick=()=>{ LANG=LANG==='ml'?'en':'ml'; localStorage.setItem('clean-lang',LANG); $('lang').textContent=LANG==='ml'?'English':'മലയാളം'; render(); };
 $('lang').textContent=LANG==='ml'?'English':'മലയാളം';
@@ -237,7 +239,7 @@ $('bell').onclick=async()=>{ if(!CTX||!CTX.role) return; const key=(window.CONFI
   const after=()=>{ $('who').textContent=(CTX.name||'')+' · '+(HC.ROLE[CTX.role]||CTX.role); $('office').hidden=CTX.role!=='office';
     const {fs,db}=CTX;
     fs.onSnapshot(fs.doc(db,'cleanplan','main'),d=>{ if(d.exists()){ const x=d.data(); if(x&&Array.isArray(x.tasks)&&x.tasks.length){ PLAN=Object.assign({},HC.DEFAULT_PLAN,x); PLAN_SAVED=true; } } render(); },e=>{ toast('Schedule: '+(e.code||e.message)); render(); });
-    fs.onSnapshot(fs.query(fs.collection(db,'cleanlog'),fs.where('day','==',today())),s=>{ LOGS=s.docs.map(d=>Object.assign({id:d.id},d.data())); softRender(); },e=>toast('Log: '+(e.code||e.message)));
+    subLogs();
     HayatAuth.people(CTX).then(p=>{ PEOPLE=p; });
     if(CTX.role==='office'){ /* photos older than 30 days are dropped; the tick itself is kept a year */
       fs.getDocs(fs.query(fs.collection(db,'cleanlog'),fs.where('purgeAt','<=',today()),fs.limit(60))).then(s=>s.docs.forEach(d=>fs.updateDoc(d.ref,{photo:null,purgeAt:fs.deleteField()}).catch(()=>{}))).catch(()=>{}); }

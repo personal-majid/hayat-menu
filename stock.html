@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex"><meta name="theme-color" content="#2F5A74"><title>Hayat Stock</title>
 <!-- Purchases for STOCK, entered from a photo of the supplier bill (camera or upload).
-     Its own collections only: stock_buys, stock_photos, settings/stock_items.
+     Its own collections only: stock_buys, stock_photos, stock_moves (kitchen releases + closing counts), settings/stock_items.
      It never writes VMENU's vm_* data - spends and profit keep coming from VMENU;
      the owner page only COMPARES the two. -->
 <script src="config.js" onerror="window.CONFIG=window.CONFIG||null"></script>
@@ -61,8 +61,15 @@ input,select{font:500 16px "Jost",sans-serif;color:var(--ink);background:var(--b
 .chips{display:flex;gap:6px;flex-wrap:wrap} .chips button{border:1px dashed var(--line);background:var(--bg);border-radius:999px;padding:7px 11px;font:600 14px "Jost",sans-serif;color:var(--ink);cursor:pointer} .chips small{color:var(--muted);font-weight:500}
 .pinpv{position:fixed;left:0;right:0;top:0;height:36vh;z-index:20;background:#111;display:flex;flex-direction:column;box-shadow:0 4px 14px rgba(0,0,0,.35)} .pinbar{display:flex;justify-content:space-between;align-items:center;color:#eee;font-size:12.5px;padding:4px 10px} .pinbar button{border:0;background:transparent;color:#fff;font-size:18px;cursor:pointer}
 .pinsc{flex:1;overflow:auto;-webkit-overflow-scrolling:touch} .pinsc img{width:100%;display:block} .pinsc img.z{width:220%} body.pinned .wrap{padding-top:calc(36vh + 12px)} body.pinned header{display:none}
-.it{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0} .it small{color:var(--muted)}
+.it{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0} .it small{color:var(--muted)}
 .it .b6{border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--bg);font-weight:700;cursor:pointer} .it .b6.on{background:var(--good);color:#fff;border-color:var(--good)}
+.mvl{display:grid} .mv{display:grid;grid-template-columns:minmax(0,1fr) 88px 30px 36px;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0}
+.mv .nm small{display:block;color:var(--muted);font-size:12.5px} .mv input{text-align:right;font-weight:700;padding:10px 8px} .mv .u{color:var(--muted);font-size:14px}
+.mv .x,.mv .z0{border:1px solid var(--line);background:var(--bg);border-radius:10px;height:38px;font:700 15px "Jost",sans-serif;color:var(--muted);cursor:pointer}
+.btn.big1{width:100%;font-size:17px;padding:14px} .btn.sm{padding:6px 10px;font-size:13px} .mvh{display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid var(--line);padding:8px 0} .mvh small{color:var(--muted)}
+.vhl{padding:4px 0 2px} .chips.alt{margin-top:4px;align-items:center} .chips.alt small{font-size:12.5px} .chips.alt button{border-style:solid;border-color:var(--warn);padding:5px 10px}
+details.card>summary{cursor:pointer;list-style:none} .it .wh{border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--bg);font-weight:600;cursor:pointer;white-space:nowrap}
+@media (max-width:400px){ nav.tabs button{font-size:14px;padding:10px 2px} }
 </style></head><body>
 <header><a href="./hub.html" title="all apps" aria-label="all apps" style="text-decoration:none;font-size:20px;line-height:1;padding:2px 6px 2px 0">⌂</a><h1>📦 Stock</h1><span class="chip" id="who">…</span><span class="sp"></span><span class="chip" id="net">connecting…</span></header>
 <main class="wrap" id="app"><div class="note">Loading…</div></main>
@@ -116,11 +123,11 @@ function readCard(){ if(!RD) return ''; if(RD.busy) return `<div class="rd" id="
     <div class="row"><button class="btn pri" id="rdUse"${nOn?'':' disabled'}>✓ Add ${nOn} ticked line${nOn===1?'':'s'}</button><button class="btn" id="rdX">Ignore</button></div></div>`; }
 function paintRead(){ const ra=$('rdAgain'); if(ra) ra.hidden=!!RD; const el=$('rd'), html=readCard(); if(el){ if(html) el.outerHTML=html; else el.remove(); } else if(html){ const h=document.querySelector('#shotCard'); if(h) h.insertAdjacentHTML('beforeend',html); } wireRead(); }
 function wireRead(){ const u=$('rdUse'), x=$('rdX'); if(x) x.onclick=()=>{ RD=null; paintRead(); };
-  const rv=$('rdVo'); if(rv) rv.onclick=()=>{ RD=null; voStart(); setTimeout(()=>{ const c=$('itCard'); if(c) c.scrollIntoView({block:'start'}); },60); };
+  const rv=$('rdVo'); if(rv) rv.onclick=()=>{ RD=null; VO.target='bill'; voStart(); setTimeout(()=>{ const c=$('itCard'); if(c) c.scrollIntoView({block:'start'}); },60); };
   const rp=$('rdPin'); if(rp) rp.onclick=()=>{ RD=null; PIN=true; render(); setTimeout(()=>{ const q=$('qline'); if(q){ q.focus(); } },60); };
   document.querySelectorAll('[data-rdi]').forEach(c=>c.onchange=()=>{ RD.res.lines[+c.dataset.rdi].on=c.checked; paintRead(); });
   document.querySelectorAll('[data-sug]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); const l=RD.res.lines[+b.dataset.sug]; l.read=l.a; l.a=l.sugA; l.how='fix'; l.ok=true; l.good=true; l.on=true; RD.res.sum=RD.res.lines.reduce((n,x)=>n+x.a,0); RD.res.totalOk=RD.res.total!=null?Math.abs(RD.res.sum-RD.res.total)<=1.01:null; paintRead(); });
-  if(u) u.onclick=()=>{ const r=RD.res, D=DRAFT; if(r.supplier&&!D.supplier) D.supplier=knownSup(r.supplier); if(r.date&&r.date<=bizDay()) D.day=r.date; if(r.billNo&&!D.billNo) D.billNo=r.billNo; if(r.total!=null) D.billTotal=String(r.total);
+  if(u) u.onclick=()=>{ const r=RD.res, D=DRAFT; if(r.supplier&&!D.supplier) D.supplier=knownSup(r.supplier); const rdT=/^\d{4}-\d{2}-\d{2}$/.test(r.date||'')?new Date(r.date+'T12:00:00Z'):null; if(rdT&&!isNaN(rdT)&&rdT.toISOString().slice(0,10)===r.date&&r.date<=bizDay()&&r.date>=bizDay(Date.now()-60*864e5)) D.day=r.date;   /* a read date only within the last 60 days, else keep the form's day */ if(r.billNo&&!D.billNo) D.billNo=r.billNo; if(r.total!=null) D.billTotal=String(r.total);
     const keep=D.lines.filter(l=>l.n), seen=new Set(keep.filter(l=>l.raw).map(l=>l.raw+'|'+num(l.a))); D.lines=keep.concat(r.lines.filter(l=>l.on&&!seen.has(l.raw+'|'+l.a)).map(l=>({n:l.m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:l.m.c||'',w:l.good?'':whyLine(l),chk:!l.good||l.m.via==='new'||l.m.score<0.9?1:0,rTyped:true})));
     saveDraft(); RD=null; render(); toast('Lines filled in — check the amber ones'); const f=document.querySelector('.ln.chk'); if(f) f.scrollIntoView({block:'center'}); }; }
 
@@ -135,8 +142,8 @@ const sumLines=()=>DRAFT.lines.reduce((n,l)=>n+lineAmt(l),0);
 
 function render(){ const A=$('app'); if(!CTX) return;
   $('savebar').hidden=TAB!=='new';
-  const tabs=`<nav class="tabs">${[['new','＋ New bill'],['bills','Bills'],['items','Items']].map(t=>`<button aria-pressed="${TAB===t[0]}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
-  if(TAB==='new') A.innerHTML=tabs+newView(); else if(TAB==='bills') A.innerHTML=tabs+billsView(); else A.innerHTML=tabs+itemsView();
+  const tabs=`<nav class="tabs">${[['new','＋ Bill'],['rel','Release'],['cnt','Count'],['bills','Bills'],['items','Items']].map(t=>`<button aria-pressed="${TAB===t[0]}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
+  A.innerHTML=tabs+(TAB==='new'?newView():TAB==='rel'?relView():TAB==='cnt'?cntView():TAB==='bills'?billsView():itemsView());
   wire(); if(!PIN||!PHOTO||TAB!=='new'){ document.body.classList.remove('pinned'); const w=$('pinPv'); if(w) w.remove(); } else pinView(); }
 function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,12), tot=sumLines(), bt=num(D.billTotal), diff=bt?tot-bt:0;
   return `<div class="card" id="shotCard"><h2>1 · Photo of the bill</h2>
@@ -164,16 +171,16 @@ function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.
 /* ---------- faster entry (Majid, 15 Oct: most bills are "doctor's handwriting") ----------
    1. 🎤 Speak the bill (English / Malayalam, Chrome's free speech-to-text) · 2. type a line the way you would say it ·
    3. tap chips for the supplier's usual items · 4. keep the bill photo pinned on screen while typing */
-let VO={on:false,lang:'ml-IN',heard:[],interim:'',rec:null}, PIN=false; try{ VO.lang=localStorage.getItem('hayat-stock-lang')||'ml-IN'; }catch(e){}
+let VO={on:false,lang:'ml-IN',heard:[],interim:'',rec:null,target:'bill'}, PIN=false; try{ VO.lang=localStorage.getItem('hayat-stock-lang')||'ml-IN'; }catch(e){}
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 function chipItems(){ const sup=ITEMS.sup[slug(DRAFT.supplier)], have=new Set(DRAFT.lines.filter(l=>l.n).map(l=>slug(l.n)));
   const L=(sup&&sup.items||[]).map(k=>ITEMS.items[k]).filter(Boolean); Object.values(ITEMS.items).sort((a,b)=>(b.at||0)-(a.at||0)).forEach(i=>{ if(L.length<14&&!L.includes(i)) L.push(i); });
   return L.filter(i=>!have.has(slug(i.n))).slice(0,14); }
 function quickTools(){ const C=chipItems();
-  return `<div class="qt">${PHOTO?`<button type="button" class="btn${PIN?' pri':''}" id="pinPh">📌 ${PIN?'Photo pinned':'Pin the photo'}</button>`:''}<button type="button" class="btn${VO.on?' pri':''}" id="voGo">🎤 ${VO.on?'Listening… tap to stop':'Speak the bill'}</button></div>
-    ${VO.on||VO.heard.length?`<div class="vo" id="voBox"><div class="row"><span class="note">Say one item at a time: <b>name · qty · rate · amount</b> — e.g. “thakkali pathu kilo 32 320” or “തക്കാളി പത്ത് കിലോ മുന്നൂറ്റി ഇരുപത്”.</span></div>
+  return `<div class="qt">${PHOTO?`<button type="button" class="btn${PIN?' pri':''}" id="pinPh">📌 ${PIN?'Photo pinned':'Pin the photo'}</button>`:''}<button type="button" class="btn${VO.on&&VO.target==='bill'?' pri':''}" id="voGo">🎤 ${VO.on&&VO.target==='bill'?'Listening… tap to stop':'Speak the bill'}</button></div>
+    ${VO.target==='bill'&&(VO.on||VO.heard.some(h=>h.target==='bill'))?`<div class="vo" id="voBox"><div class="row"><span class="note">Say one item at a time: <b>name · qty · rate · amount</b> — e.g. “thakkali pathu kilo 32 320” or “തക്കാളി പത്ത് കിലോ മുന്നൂറ്റി ഇരുപത്”.</span></div>
       <div class="sups">${[['ml-IN','മലയാളം'],['en-IN','English']].map(x=>`<button type="button" data-volang="${x[0]}" class="${VO.lang===x[0]?'on':''}">${x[1]}</button>`).join('')}</div>
-      ${VO.interim?`<div class="voi">“${esc(VO.interim)}”</div>`:''}${VO.heard.slice(-5).reverse().map(h=>`<div class="voh${h.ok?'':' bad'}">${h.ok?'✓':'?'} “${esc(h.t)}”${h.ok?` → <b>${esc(h.n)}</b> ${h.q} ${esc(h.u)} · ${rs(h.a)}`:' — not understood, say it again or type it'}</div>`).join('')}
+      ${VO.interim?`<div class="voi">“${esc(VO.interim)}”</div>`:''}${VO.heard.filter(h=>h.target==='bill'&&h.t).slice(-5).reverse().map(h=>`<div class="voh${h.ok?'':' bad'}">${h.ok?'✓':'?'} “${esc(h.t)}”${h.ok?` → <b>${esc(h.n)}</b> ${h.q} ${esc(h.u)} · ${rs(h.a)}`:' — not understood, say it again or type it'}</div>`).join('')}
       ${!SR?'<div class="rdw">This phone\'s browser has no voice reader. Use Chrome — or tap the 🎤 on your keyboard inside the box below.</div>':''}</div>`:''}
     <div class="row"><input id="qline" placeholder="Type or say a line: thakkali 10 kg 32 320" autocomplete="off" enterkeyhint="done" style="flex:1"><button type="button" class="btn" id="qAdd">Add</button></div>
     ${C.length?`<div class="chips">${C.map(i=>`<button type="button" data-chip="${esc(i.n)}">＋ ${esc(i.n)}${i.r?` <small>${rs(i.r)}/${esc(i.u||'')}</small>`:''}</button>`).join('')}</div>`:''}`; }
@@ -181,14 +188,146 @@ function quickTools(){ const C=chipItems();
 function addSpoken(t){ const l=StockRead.parseSpoken(t); if(!l) return null; const m=StockRead.match(l.raw,{items:ITEMS.items,alias:ITEMS.alias,u:l.u});
   const ln={n:m.n,q:String(l.q),u:l.u,r:String(l.r),a:String(l.a),raw:l.raw,c:m.c||'',rTyped:true,chk:(l.how!=='3'&&l.how!=='2')||m.via==='new'||m.score<0.9?1:0,w:l.how==='mm'?`qty × rate = ${rs(l.alt)}, you said ${rs(l.a)}`:l.how==='1'?'no qty heard':''};
   const D=DRAFT; D.lines=D.lines.filter(x=>x.n||x.q||x.a); D.lines.push(ln); saveDraft(); return {n:m.n,q:l.q,u:l.u,a:l.a}; }
-function voStart(){ if(!SR){ VO.on=false; VO.heard.push({t:'',ok:false}); render(); return; } try{ const r=new SR(); r.lang=VO.lang; r.continuous=true; r.interimResults=true;
-    r.onresult=e=>{ let interim=''; for(let i=e.resultIndex;i<e.results.length;i++){ const x=e.results[i], t=x[0].transcript.trim(); if(x.isFinal){ const h=addSpoken(t); VO.heard.push(h?Object.assign({t,ok:true},h):{t,ok:false}); } else interim+=t+' '; } VO.interim=interim.trim(); render(); };
-    r.onend=()=>{ if(VO.on){ try{ r.start(); }catch(e){ VO.on=false; render(); } } }; r.onerror=e=>{ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ VO.on=false; toast('Allow the microphone for this page'); render(); } };
+function voStart(){ if(!SR){ VO.on=false; VO.heard.push({t:'',ok:false,target:VO.target}); render(); return; }   /* target: so the "no voice reader" hint shows */ try{ const r=new SR(); r.lang=VO.lang; r.continuous=true; r.interimResults=true;
+    r.onresult=e=>{ let interim=''; for(let i=e.resultIndex;i<e.results.length;i++){ const x=e.results[i], t=x[0].transcript.trim(); if(x.isFinal){ if(VO.target==='bill'){ const h=addSpoken(t); VO.heard.push(h?Object.assign({t,ok:true,target:'bill'},h):{t,ok:false,target:'bill'}); } else VO.heard.push(applyQty(t,VO.target)); } else interim+=t+' '; } VO.interim=interim.trim(); render(); };
+    r.onend=()=>{ if(VO.on&&VO.rec===r){ try{ r.start(); }catch(e){ VO.on=false; render(); } } }; r.onerror=e=>{ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ VO.on=false; toast('Allow the microphone for this page'); render(); } };
     VO.rec=r; VO.on=true; r.start(); }catch(e){ VO.on=false; toast('Voice did not start'); } render(); }
 function voStop(){ VO.on=false; VO.interim=''; try{ VO.rec&&VO.rec.stop(); }catch(e){} render(); }
 function pinView(){ let w=$('pinPv'); if(!PIN||!PHOTO||TAB!=='new'){ if(w) w.remove(); return; } if(!w){ w=document.createElement('div'); w.id='pinPv'; w.className='pinpv'; document.body.appendChild(w); }
   w.innerHTML=`<div class="pinbar"><span>📌 Bill photo · drag to move around · tap to zoom</span><button type="button" id="pinX" aria-label="unpin">✕</button></div><div class="pinsc"><img src="${PHOTO}" alt="bill" class="${PIN==='z'?'z':''}"></div>`;
   w.querySelector('img').onclick=()=>{ PIN=PIN==='z'?true:'z'; pinView(); }; $('pinX').onclick=()=>{ PIN=false; render(); }; document.body.classList.add('pinned'); }
+/* ---------- kitchen release + closing count (v291) ----------
+   Mixed flow (Majid, 15 Oct): chicken, fish, veg go straight to the kitchen when bought; rice, oil, masala, gas sit in the STORE and are released.
+   stock_moves/{id} {v:1, kind:'release'|'count', place:'kitchen'|'store', day, at, by, lines:[{k,n,q,u}], sug?:{k:q}}
+   Release suggests what usually goes out on this weekday, adjusted by how sales run now. Count = Big 6 at closing, by voice or tap. */
+const STORE_CATS=['Grocery','Rice & flour','Oil & ghee','Spices','Drinks','Packing','Cleaning','Gas & fuel'], WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+let MOVES=[], DAYS={}, MVDEL=null;
+const catOf=it=>it.c||StockRead.guessCat(it.n,it.u);
+const whereOf=it=>it.w||(STORE_CATS.includes(catOf(it))||/\bgas\b|cylinder/i.test(it.n)?'s':'k');
+const stepOf=u=>u==='kg'||u==='L'?0.5:u==='g'||u==='ml'?50:1, nq=(q,u)=>{ const s=stepOf(u); return Math.round(q/s)*s; };
+const fq=(q,u)=>(+q).toLocaleString('en-IN',{maximumFractionDigits:2})+(u?' '+u:'');
+const blankRel=()=>({day:bizDay(),q:{},add:[],learn:{},newIt:{}}), blankCnt=p=>({day:bizDay(),place:p||'kitchen',q:{kitchen:{},store:{}},add:{kitchen:[],store:[]},learn:{},newIt:{}});
+let REL=lsGet('hayat-stock-rel',null); if(!REL||REL.day!==bizDay()) REL=blankRel();
+let CNT=lsGet('hayat-stock-cnt',null); if(!CNT||CNT.day!==bizDay()) CNT=blankCnt(CNT&&CNT.place);
+const saveRel=()=>lsSet('hayat-stock-rel',REL), saveCnt=()=>lsSet('hayat-stock-cnt',CNT);
+const itemOf=k=>ITEMS.items[k]||REL.newIt[k]||CNT.newIt[k]||null;
+const typing=()=>{ const a=document.activeElement; return !!a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)&&!!a.closest('#app'); };
+function relByDay(){ const by={}; MOVES.filter(m=>m.kind==='release').forEach(m=>{ const d=by[m.day]=by[m.day]||{}; (m.lines||[]).forEach(l=>{ d[l.k]=(d[l.k]||0)+(+l.q||0); }); }); return by; }
+/* sales a day over the 7 open days before `before` (vm_meta/days, written by the shop PC) */
+function avgRev(before){ const L=Object.keys(DAYS).filter(d=>d<before&&(DAYS[d]&&DAYS[d].rev||0)>0).sort().reverse().slice(0,7); return L.length>=4?L.reduce((a,d)=>a+DAYS[d].rev,0)/L.length:null; }
+function salesFactor(ref,day){ const now=avgRev(day), b=ref.map(avgRev).filter(Boolean); if(!now||!b.length) return {f:1,why:''};
+  const f=Math.max(0.8,Math.min(1.25,now/(b.reduce((a,x)=>a+x,0)/b.length))), p=Math.round((f-1)*100); return {f,why:Math.abs(p)<3?'sales about the same as then':`sales ${p>0?'+':''}${p}% vs then`}; }
+function sugRelease(day){ const by=relByDay(), past=Object.keys(by).filter(d=>d<day).sort().reverse(), wd=new Date(day+'T12:00:00').getDay();
+  let ref=past.filter(d=>new Date(d+'T12:00:00').getDay()===wd).slice(0,4), how=`the last ${ref.length} ${WD[wd]}s`;
+  if(ref.length<2){ ref=past.slice(0,7); how=ref.length===1?'the last release':`the last ${ref.length} release days`; }
+  if(!ref.length) return {items:{},ref,how:'',why:''};
+  const sum={}; ref.forEach(d=>Object.entries(by[d]).forEach(([k,q])=>sum[k]=(sum[k]||0)+q)); const F=salesFactor(ref,day), items={};
+  Object.entries(sum).forEach(([k,s])=>{ const it=itemOf(k)||{}; const q=nq(s/ref.length*F.f,it.u); if(q>0) items[k]=q; }); return {items,ref,how,why:F.why,f:F.f}; }
+function lastCount(place,k,before){ const m=MOVES.filter(x=>x.kind==='count'&&x.place===place&&x.day<before&&(x.lines||[]).some(l=>l.k===k)).sort((a,b)=>b.day<a.day?-1:1)[0];
+  return m?{q:m.lines.find(l=>l.k===k).q,day:m.day}:null; }
+
+/* one thing said or typed ("ari irupathiyanchu kilo, oil 15 litre") -> quantities on the open list; near names offered as chips */
+function applyQty(t,target){ const P=StockRead.parseQtys(t); if(!P.length) return {t,ok:false,target};
+  const S=target==='rel'?REL:CNT, out=[];
+  P.forEach(p=>{ const m=StockRead.match(p.raw,{items:ITEMS.items,alias:ITEMS.alias,u:p.u}); let k=slug(m.n);
+    if(!itemOf(k)) S.newIt[k]={n:m.n,u:p.u||'kg',c:m.c||StockRead.guessCat(m.n,p.u)};
+    const it=itemOf(k); let q=p.q; if(p.u==='g'&&it.u==='kg') q=q/1000; if(p.u==='ml'&&it.u==='L') q=q/1000;
+    setQ(target,k,q); if(m.via!=='learned'&&StockRead.norm(p.raw)!==StockRead.norm(m.n)) S.learn[StockRead.norm(p.raw).replace(/ /g,'_')]=k;
+    /* a dictionary name we do not keep ("mathi" = Sardine) -> our own items of that kind first ("Fish") */
+    let alts=(m.alts||[]).map(a=>({n:a.n,k:slug(a.n),s:a.score})); if(!ITEMS.items[k]&&m.c) alts=Object.entries(ITEMS.items).filter(([kk,x])=>catOf(x)===m.c).map(([kk,x])=>({n:x.n,k:kk,s:1,own:1})).concat(alts);
+    const rw=StockRead.norm(p.raw).split(' ').filter(w=>w.length>=3); alts.forEach(a=>{ a.share=StockRead.norm(a.n).split(' ').some(w=>rw.includes(w)); });   /* "masala" is a whole word of both masalas */
+    alts=alts.filter((a,i,A)=>a.k!==k&&A.findIndex(b=>b.k===a.k)===i).slice(0,3);
+    out.push({raw:p.raw,k,n:m.n,q,u:it.u||p.u||'',score:m.score,via:m.via,alts}); });
+  target==='rel'?saveRel():saveCnt(); return {t,ok:true,target,items:out}; }
+function setQ(target,k,q){ if(target==='rel'){ REL.q[k]=String(q); if(!REL.add.includes(k)) REL.add.push(k); } else { const pl=CNT.place; CNT.q[pl][k]=String(q); if(!CNT.add[pl].includes(k)) CNT.add[pl].push(k); } }
+/* tap a near name: the quantity moves to that item and the spelling is learned on save */
+function pickAlt(hi,ii,ai){ const h=VO.heard[hi], x=h&&h.items[ii], a=x&&x.alts[ai]; if(!a) return; const S=h.target==='rel'?REL:CNT, Q=h.target==='rel'?REL.q:CNT.q[CNT.place], L=h.target==='rel'?REL.add:CNT.add[CNT.place];
+  if(!itemOf(a.k)) S.newIt[a.k]={n:a.n,u:x.u||'kg'}; delete Q[x.k]; const i=L.indexOf(x.k); if(i>=0&&!sugRelease(bizDay()).items[x.k]) L.splice(i,1);
+  setQ(h.target,a.k,x.q); S.learn[StockRead.norm(x.raw).replace(/ /g,'_')]=a.k; x.alts[ai]={n:x.n,k:x.k,s:x.score}; x.k=a.k; x.n=a.n; x.score=1; x.via='picked';
+  h.target==='rel'?saveRel():saveCnt(); render(); }
+function heardBox(target){ if(VO.target!==target||!(VO.on||VO.heard.some(h=>h.target===target))) return '';
+  const H=VO.heard.map((h,i)=>[h,i]).filter(([h])=>h.target===target&&h.t).slice(-4).reverse();
+  return `<div class="vo"><div class="sups">${[['ml-IN','മലയാളം'],['en-IN','English']].map(x=>`<button type="button" data-volang="${x[0]}" class="${VO.lang===x[0]?'on':''}">${x[1]}</button>`).join('')}</div>
+    <span class="note">Say <b>item · how much</b>, several in one go: “kozhi pathu kilo, ari irupathiyanchu kilo” · “mathi illa” = 0</span>${VO.interim?`<div class="voi">“${esc(VO.interim)}”</div>`:''}
+    ${H.map(([h,hi])=>!h.ok?`<div class="voh bad">? “${esc(h.t)}” — not understood, say it again or type it</div>`:`<div class="voh">“${esc(h.t)}”${h.items.map((x,ii)=>`<div class="vhl">✓ <b>${esc(x.n)}</b> ${fq(x.q,x.u)}${x.via==='new'?' <span class="cf new">new item</span>':x.score<0.9&&x.via!=='picked'?` <span class="cf mid">${Math.round(x.score*100)}%</span>`:''}${(()=>{ const A=x.alts.map((a,ai)=>[a,ai]).filter(([a])=>x.via==='new'||x.score<0.9||a.own||a.s>=x.score-0.15||(x.via==='alias'&&a.share)); return A.length&&x.via!=='picked'&&x.via!=='learned'?`<div class="chips alt"><small>or did you mean</small>${A.map(([a,ai])=>`<button type="button" data-alt="${hi}|${ii}|${ai}">${esc(a.n)}</button>`).join('')}</div>`:''; })()}</div>`).join('')}</div>`).join('')}
+    ${!SR?'<div class="rdw">This browser has no voice reader. Use Chrome, or the 🎤 on your keyboard in the box below.</div>':''}</div>`; }
+const sayRow=(target,ph)=>`<div class="row"><button type="button" class="btn${VO.on&&VO.target===target?' pri':''}" data-vo="${target}">🎤 ${VO.on&&VO.target===target?'Listening… tap to stop':'Say it'}</button><input id="mvLine" placeholder="${ph}" autocomplete="off" enterkeyhint="done" style="flex:1 1 160px"><button type="button" class="btn" id="mvAdd">Add</button></div>`;
+const mvRow=(k,val,sub,extra,ph)=>{ const it=itemOf(k)||{n:k}; return `<div class="mv" data-mk="${esc(k)}"><span class="nm"><b>${esc(it.n)}</b>${sub?`<small>${sub}</small>`:''}</span><input data-mq="${esc(k)}" inputmode="decimal" value="${esc(val)}" placeholder="${ph||'0'}" aria-label="${esc(it.n)} quantity"><span class="u">${esc(it.u||'')}</span>${extra||''}</div>`; };
+const byLine=m=>`${new Date(m.at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${esc((m.by&&m.by.name)||'')}`;
+const canUndo=m=>CTX.role==='office'||(Date.now()-m.at<10*60e3&&m.by&&m.by.id===(CTX.crewId||''));
+function relView(){ const day=bizDay(), S=sugRelease(day), done=relByDay()[day]||{}, today=MOVES.filter(m=>m.kind==='release'&&m.day===day).sort((a,b)=>b.at-a.at);
+  let keys=[...new Set([...Object.keys(S.items),...REL.add,...Object.keys(done)])].filter(itemOf);
+  const first=!S.ref.length&&!REL.add.length&&!today.length; if(first) keys=Object.keys(ITEMS.items).filter(k=>whereOf(ITEMS.items[k])==='s');
+  /* an item offered in an earlier release today (sent, changed or skipped with ✕) is not suggested again; top-ups are typed or said */
+  const offered=new Set(); today.forEach(m=>Object.keys(m.sug||{}).forEach(k=>offered.add(k)));
+  const val=k=>{ if(REL.q[k]!=null) return REL.q[k]; if(offered.has(k)) return ''; const left=nq((S.items[k]||0)-(done[k]||0),(itemOf(k)||{}).u); return left>0?String(left):''; };
+  let n=0, worth=0; keys.forEach(k=>{ const q=num(val(k)); if(q>0){ n++; worth+=q*((itemOf(k)||{}).r||0); } });
+  return `<div class="card"><h2>Release to kitchen · ${esc(dayName(day))}</h2>
+    <p class="note">${first?'No releases saved yet. Type or say what goes from the store to the kitchen today — from the next one on, the app suggests it for you.':S.ref.length?`Suggested = what went out on ${S.how}${S.why?', '+S.why:''}${today.length?', minus what already went out today':''}. Change any number, then release.`:'Type or say what goes out.'}</p>
+    ${sayRow('rel','rice 25 kg, oil 15 L')}${heardBox('rel')}
+    <div class="mvl">${keys.map(k=>{ const it=itemOf(k), u=it.u||''; const sub=[S.items[k]?'usual '+fq(S.items[k],u):'',done[k]?`✓ ${fq(done[k],u)} out today`:'',it.r?rs(it.r)+'/'+esc(u):''].filter(Boolean).join(' · ');
+      return mvRow(k,val(k),sub,`<button type="button" class="x" data-mx="${esc(k)}" aria-label="not today" title="not today">✕</button>`); }).join('')||'<p class="note">Nothing suggested. Add an item below.</p>'}</div>
+    <div class="row"><input id="mvItem" list="itL2" placeholder="＋ another item" autocomplete="off" style="flex:1"><button type="button" class="btn" id="mvItemAdd">Add</button></div>
+    <datalist id="itL2">${Object.values(ITEMS.items).map(i=>`<option value="${esc(i.n)}">`).join('')}</datalist>
+    <button type="button" class="btn pri big1" id="relGo"${n?'':' disabled'}>✓ Release ${n} item${n===1?'':'s'}${worth?' · ≈ '+rs(worth):''}</button></div>
+  ${today.length?`<div class="card"><h2>Gone out today · ${today.length}</h2>${today.map(m=>`<div class="mvh"><span><b>${byLine(m)}</b><br><small>${(m.lines||[]).map(l=>esc(l.n)+' '+fq(l.q,l.u)).join(' · ')}</small></span>${canUndo(m)?`<button type="button" class="btn warn sm" data-mvdel="${esc(m.id)}">${MVDEL===m.id?'Tap again to undo':'Undo'}</button>`:''}</div>`).join('')}</div>`:''}
+  ${relHistory()}`; }
+function relHistory(){ const by=relByDay(), days=Object.keys(by).filter(d=>d<bizDay()).sort().reverse().slice(0,7); if(!days.length) return '';
+  return `<details class="card"><summary><h2 style="display:inline">Last ${days.length} days</h2> <span class="note">▸ tap to see</span></summary>${days.map(d=>`<div class="mvh"><span><b>${esc(dayName(d))}</b><br><small>${Object.entries(by[d]).map(([k,q])=>{ const it=itemOf(k)||{n:k}; return esc(it.n)+' '+fq(q,it.u); }).join(' · ')}</small></span></div>`).join('')}</details>`; }
+function cntKeys(place){ const prev=new Set(); MOVES.filter(m=>m.kind==='count'&&m.place===place).forEach(m=>(m.lines||[]).forEach(l=>prev.add(l.k)));
+  const base=Object.keys(ITEMS.items).filter(k=>{ const it=ITEMS.items[k]; return place==='kitchen'?it.big:(whereOf(it)==='s'&&(it.big||prev.has(k))); });
+  return [...new Set([...base,...prev,...CNT.add[place]])].filter(itemOf).sort((a,b)=>(+!!(itemOf(b).big)-+!!(itemOf(a).big))||itemOf(a).n.localeCompare(itemOf(b).n)); }
+function cntView(){ const day=bizDay(), pl=CNT.place, saved=MOVES.find(m=>m.kind==='count'&&m.place===pl&&m.day===day), keys=cntKeys(pl);
+  const val=k=>{ const v=CNT.q[pl][k]; if(v!=null) return v; const l=saved&&(saved.lines||[]).find(x=>x.k===k); return l?String(l.q):''; };
+  const n=keys.filter(k=>val(k)!=='').length;
+  return `<div class="card"><h2>Closing count · ${esc(dayName(day))}</h2>
+    <div class="sups">${[['kitchen','🍳 Kitchen'],['store','🏬 Store']].map(x=>`<button type="button" data-place="${x[0]}" class="${pl===x[0]?'on':''}">${x[1]}</button>`).join('')}</div>
+    <p class="note">${pl==='kitchen'?'What is LEFT in the kitchen at closing — the Big 6 first. Two minutes: say it, or type the numbers.':'What is left in the store room. Count the store once a week or when something looks wrong.'}${saved?` <b>✓ Counted ${byLine(saved)}</b> — change and save again to correct it.`:''}</p>
+    ${sayRow('cnt','chicken 12 kg, fish 0')}${heardBox('cnt')}
+    <div class="mvl">${keys.map(k=>{ const it=itemOf(k), lc=lastCount(pl,k,day); return mvRow(k,val(k),[it.big?'★ Big 6':'',lc?`last ${fq(lc.q,it.u)} · ${esc(dayName(lc.day))}`:''].filter(Boolean).join(' · '),`<button type="button" class="z0" data-c0="${esc(k)}" title="none left">0</button>`,'—'); }).join('')||'<p class="note">Mark items as ★ Big 6 in Items, or add one below.</p>'}</div>
+    <div class="row"><input id="mvItem" list="itL2" placeholder="＋ another item" autocomplete="off" style="flex:1"><button type="button" class="btn" id="mvItemAdd">Add</button></div>
+    <datalist id="itL2">${Object.values(ITEMS.items).map(i=>`<option value="${esc(i.n)}">`).join('')}</datalist>
+    <button type="button" class="btn pri big1" id="cntGo"${n?'':' disabled'}>✓ ${saved?'Update':'Save'} ${pl} count · ${n} item${n===1?'':'s'}</button></div>`; }
+function wireMoves(){ const T=TAB==='rel'?'rel':'cnt', Q=()=>T==='rel'?REL.q:CNT.q[CNT.place];
+  document.querySelectorAll('[data-vo]').forEach(b=>b.onclick=()=>{ if(VO.on&&VO.target===T) voStop(); else { if(VO.on) voStop(); VO.target=T; voStart(); } });
+  document.querySelectorAll('[data-volang]').forEach(b=>b.onclick=()=>{ VO.lang=b.dataset.volang; try{ localStorage.setItem('hayat-stock-lang',VO.lang); }catch(e){} if(VO.on){ voStop(); voStart(); } else render(); });
+  document.querySelectorAll('[data-alt]').forEach(b=>b.onclick=()=>{ const [h,i,a]=b.dataset.alt.split('|').map(Number); pickAlt(h,i,a); });
+  const ln=$('mvLine'), go=()=>{ const t=ln.value.trim(); if(!t) return; VO.target=T; const h=applyQty(t,T); VO.heard.push(h); if(!h.ok){ toast('Could not read that — e.g. “rice 25 kg”'); return; } render(); const l2=$('mvLine'); if(l2) l2.focus(); };
+  if(ln){ ln.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }; $('mvAdd').onclick=go; }
+  const ia=$('mvItemAdd'), ii=$('mvItem'); if(ia) ia.onclick=()=>{ const v=ii.value.trim(); if(!v) return; const m=StockRead.match(v,{items:ITEMS.items,alias:ITEMS.alias}); const k=slug(m.via==='new'?nice(v):m.n);
+    if(!itemOf(k)) (T==='rel'?REL:CNT).newIt[k]={n:m.via==='new'?nice(v):m.n,u:'kg',c:m.c};
+    if(T==='rel'){ if(!REL.add.includes(k)) REL.add.push(k); saveRel(); } else { if(!CNT.add[CNT.place].includes(k)) CNT.add[CNT.place].push(k); saveCnt(); }
+    render(); const box=document.querySelector(`[data-mq="${CSS.escape(k)}"]`); if(box){ box.focus(); box.scrollIntoView({block:'center'}); } };
+  if(ii) ii.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); ia.click(); } };
+  /* typing a number never redraws the list (focus stays); only the button text updates */
+  document.querySelectorAll('[data-mq]').forEach(inp=>{ inp.oninput=()=>{ Q()[inp.dataset.mq]=inp.value; T==='rel'?saveRel():saveCnt(); mvButton(); };
+    inp.onkeydown=e=>{ if(e.key!=='Enter') return; e.preventDefault(); const all=[...document.querySelectorAll('[data-mq]')], i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); else inp.blur(); }; });
+  document.querySelectorAll('[data-mx]').forEach(b=>b.onclick=()=>{ REL.q[b.dataset.mx]='0'; saveRel(); render(); });
+  document.querySelectorAll('[data-c0]').forEach(b=>b.onclick=()=>{ CNT.q[CNT.place][b.dataset.c0]='0'; saveCnt(); const i=document.querySelector(`[data-mq="${CSS.escape(b.dataset.c0)}"]`); if(i) i.value='0'; mvButton(); });
+  document.querySelectorAll('[data-place]').forEach(b=>b.onclick=()=>{ if(VO.on) voStop(); CNT.place=b.dataset.place; saveCnt(); render(); });
+  document.querySelectorAll('[data-mvdel]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.mvdel; if(MVDEL!==id){ MVDEL=id; render(); return; } MVDEL=null; try{ await CTX.fs.deleteDoc(CTX.fs.doc(CTX.db,'stock_moves',id)); toast('Release undone'); }catch(e){ toast('Could not undo'); } });
+  const rg=$('relGo'); if(rg) rg.onclick=saveRelease; const cg=$('cntGo'); if(cg) cg.onclick=saveCount; }
+function mvButton(){ const rows=[...document.querySelectorAll('[data-mq]')]; if(TAB==='rel'){ let n=0,w=0; rows.forEach(i=>{ const q=num(i.value); if(q>0){ n++; w+=q*((itemOf(i.dataset.mq)||{}).r||0); } }); const b=$('relGo'); if(b){ b.disabled=!n; b.textContent=`✓ Release ${n} item${n===1?'':'s'}${w?' · ≈ '+rs(w):''}`; } }
+  else { const n=rows.filter(i=>i.value.trim()!=='').length, b=$('cntGo'); if(b){ b.disabled=!n; b.textContent=b.textContent.replace(/· \d+ items?$/,`· ${n} item${n===1?'':'s'}`); } } }
+/* items the app met for the first time + spellings picked from the chips go to settings/stock_items */
+async function learnItems(S){ const it={}; Object.entries(S.newIt).forEach(([k,x])=>{ if(!ITEMS.items[k]) it[k]={n:x.n,u:x.u||'kg',c:x.c||StockRead.guessCat(x.n,x.u),at:Date.now()}; });
+  const al=Object.assign({},S.learn); if(!Object.keys(it).length&&!Object.keys(al).length) return; await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'settings','stock_items'),{items:it,alias:al},{merge:true}); }
+const mvBy=()=>({id:CTX.crewId||'',name:CTX.name||''});
+let MVSAVE=false;
+async function saveRelease(){ if(MVSAVE) return; const rows=[...document.querySelectorAll('[data-mq]')].map(i=>({k:i.dataset.mq,q:num(i.value)})).filter(x=>x.q>0); if(!rows.length) return;
+  const day=bizDay(), S=sugRelease(day), id=day.replace(/-/g,'')+'-rel-'+Date.now().toString(36), lines=rows.map(x=>{ const it=itemOf(x.k); return {k:x.k,n:it.n,q:x.q,u:it.u||''}; });
+  MVSAVE=true; const b=$('relGo'); b.disabled=true; b.textContent='Saving…';
+  try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'stock_moves',id),{v:1,kind:'release',place:'kitchen',day,at:Date.now(),by:mvBy(),lines,sug:S.items});
+    await learnItems(REL); REL=blankRel(); saveRel(); if(VO.on) voStop(); VO.heard=VO.heard.filter(h=>h.target!=='rel'); toast('✓ Released '+lines.length+' item'+(lines.length===1?'':'s')+' to the kitchen'); }
+  catch(e){ toast('Could not save — check the signal and try again'); }
+  MVSAVE=false; render(); }
+async function saveCount(){ if(MVSAVE) return; const pl=CNT.place, rows=[...document.querySelectorAll('[data-mq]')].filter(i=>i.value.trim()!=='').map(i=>({k:i.dataset.mq,q:num(i.value)})); if(!rows.length) return;
+  const day=bizDay(), id=day.replace(/-/g,'')+'-count-'+pl, lines=rows.map(x=>{ const it=itemOf(x.k); return {k:x.k,n:it.n,q:x.q,u:it.u||''}; });
+  MVSAVE=true; const b=$('cntGo'); b.disabled=true; b.textContent='Saving…';
+  try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'stock_moves',id),{v:1,kind:'count',place:pl,day,at:Date.now(),by:mvBy(),lines});
+    await learnItems(CNT); CNT.q[pl]={}; CNT.add[pl]=[]; CNT.learn={}; CNT.newIt={}; saveCnt(); if(VO.on) voStop(); VO.heard=VO.heard.filter(h=>h.target!=='cnt'); toast('✓ '+(pl==='kitchen'?'Kitchen':'Store')+' count saved · '+lines.length+' items'); }
+  catch(e){ toast('Could not save — check the signal and try again'); }
+  MVSAVE=false; render(); }
 function billsView(){ if(!BUYS.length) return '<div class="card"><p class="note">No bills yet. Use ＋ New bill.</p></div>';
   const by={}; BUYS.forEach(b=>(by[b.day]=by[b.day]||[]).push(b)); const days=Object.keys(by).sort().reverse();
   return days.map(d=>{ const L=by[d].sort((a,b)=>b.at-a.at); return `<div class="day"><h3><span>${esc(dayName(d))}</span><span>${rs(L.reduce((n,b)=>n+(b.total||0),0))}</span></h3>${L.map(b=>{ const open=OPEN===b.id;
@@ -197,19 +336,20 @@ function billsView(){ if(!BUYS.length) return '<div class="card"><p class="note"
       ${open?`<table>${(b.lines||[]).map(l=>`<tr><td>${esc(l.n)}</td><td class="r">${l.q} ${esc(l.u||'')}</td><td class="r">${l.r?rs(l.r):''}</td><td class="r"><b>${rs(l.a)}</b></td></tr>`).join('')}</table>
         ${b.note?`<div class="note">📝 ${esc(b.note)}</div>`:''}<div class="row">${b.photo?`<button class="btn" data-photo="${esc(b.photo)}">📷 See photo</button>`:''}${CTX.role==='office'?`<button class="btn warn" data-rm="${esc(b.id)}">${DEL===b.id?'Tap again to delete':'Delete'}</button>`:''}</div>`:''}</div>`; }).join('')}</div>`; }).join(''); }
 function itemsView(){ const L=Object.entries(ITEMS.items).sort((a,b)=>(+!!b[1].big-+!!a[1].big)||a[1].n.localeCompare(b[1].n));
-  return `<div class="card"><h2>Items we buy · ${L.length}</h2><p class="note"><b>Big 6</b> = the few items that are most of the cost. They get counted at closing (next step).</p>
-    ${L.map(([k,i])=>`<div class="it"><span><b>${esc(i.n)}</b><br><small>${i.r?rs(i.r)+'/'+esc(i.u||''):'no rate yet'}${i.s?' · '+esc(i.s):''}${i.at?' · '+esc(dayName(bizDay(i.at))):''}</small></span><select data-cat="${esc(k)}" aria-label="category" style="width:auto;padding:6px">${StockRead.CATS.map(c=>`<option${c===(i.c||StockRead.guessCat(i.n,i.u))?' selected':''}>${c}</option>`).join('')}</select><button class="b6${i.big?' on':''}" data-big="${esc(k)}">${i.big?'★ Big 6':'☆'}</button></div>`).join('')||'<p class="note">Items appear here after the first bill.</p>'}</div>
+  return `<div class="card"><h2>Items we buy · ${L.length}</h2><p class="note"><b>Big 6</b> = the few items that are most of the cost; they are counted at closing. <b>🏬 Store</b> items are released to the kitchen; <b>🍳 Kitchen</b> items go straight there when bought. Tap to change.</p>
+    ${L.map(([k,i])=>`<div class="it"><span><b>${esc(i.n)}</b><br><small>${i.r?rs(i.r)+'/'+esc(i.u||''):'no rate yet'}${i.s?' · '+esc(i.s):''}${i.at?' · '+esc(dayName(bizDay(i.at))):''}</small></span><select data-cat="${esc(k)}" aria-label="category" style="width:auto;padding:6px">${StockRead.CATS.map(c=>`<option${c===(i.c||StockRead.guessCat(i.n,i.u))?' selected':''}>${c}</option>`).join('')}</select><button class="wh" data-wh="${esc(k)}" title="where it is kept">${whereOf(i)==='s'?'🏬 Store':'🍳 Kitchen'}</button><button class="b6${i.big?' on':''}" data-big="${esc(k)}">${i.big?'★ Big 6':'☆'}</button></div>`).join('')||'<p class="note">Items appear here after the first bill.</p>'}</div>
     ${CTX.role==='office'?`<div class="card"><h2>AI reader (optional)</h2><p class="note">Bills are read free on the phone. For handwritten bills the phone can ask a FREE Cloudflare AI reader (Workers AI, free plan - about 200 bills a day, never billed; setup in cloudflare/bill-reader/README.txt). Paste its URL; leave empty to use only the on-phone reader.</p>
       <div class="row"><input id="aiUrl" placeholder="https://hayat-bill-reader.xxx.workers.dev" value="${esc(AIURL)}" style="flex:1"><button class="btn pri" id="aiSave">Save</button></div><p class="note">${AIURL?'✓ AI fallback on':'Off — free reader only'} · learned spellings: ${Object.keys(ITEMS.alias||{}).length}</p></div>`:''}`; }
 
-function wire(){ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; OPEN=null; DEL=null; render(); window.scrollTo(0,0); });
+function wire(){ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ if(VO.on) voStop(); TAB=b.dataset.tab; OPEN=null; DEL=null; MVDEL=null; render(); window.scrollTo(0,0); });
+  if(TAB==='rel'||TAB==='cnt') wireMoves();
   if(TAB==='new'){ $('cam').onchange=pick; $('upl').onchange=pick; const ra=$('rdAgain'); if(ra) ra.onclick=readBill; wireRead(); const pd=$('pvDel'); if(pd) pd.onclick=()=>{ PHOTO=null; RD=null; render(); }; const pi=$('pvImg'); if(pi) pi.onclick=()=>zoom(PHOTO);
     const set=(k,v)=>{ DRAFT[k]=v; saveDraft(); };
     $('sup').oninput=e=>set('supplier',e.target.value); $('sup').onchange=()=>render(); $('day').onchange=e=>set('day',e.target.value||bizDay()); $('bno').oninput=e=>set('billNo',e.target.value); $('note').oninput=e=>set('note',e.target.value);
     $('bt').oninput=e=>{ set('billTotal',e.target.value); totals(); };
     document.querySelectorAll('[data-sup]').forEach(b=>b.onclick=()=>{ DRAFT.supplier=b.dataset.sup; if(!DRAFT.lines.some(l=>l.n)) DRAFT.lines=lastLines(DRAFT.supplier).concat([]); if(!DRAFT.lines.length) DRAFT.lines=[fresh().lines[0]]; saveDraft(); render(); });
     const us=$('usual'); if(us) us.onclick=()=>{ DRAFT.lines=lastLines(DRAFT.supplier); saveDraft(); render(); };
-    const vg=$('voGo'); if(vg) vg.onclick=()=>VO.on?voStop():voStart();
+    const vg=$('voGo'); if(vg) vg.onclick=()=>{ if(VO.on&&VO.target==='bill') voStop(); else { if(VO.on) voStop(); VO.target='bill'; voStart(); } };
     document.querySelectorAll('[data-volang]').forEach(b=>b.onclick=()=>{ VO.lang=b.dataset.volang; try{ localStorage.setItem('hayat-stock-lang',VO.lang); }catch(e){} if(VO.on){ voStop(); voStart(); } else render(); });
     const ql=$('qline'), qa=$('qAdd'), qgo=()=>{ const t=ql.value.trim(); if(!t) return; const h=addSpoken(t); if(!h){ toast('Could not read that — e.g. “onion 25 kg 700”'); return; } render(); const q2=$('qline'); if(q2) q2.focus(); toast('＋ '+h.n+' · '+rs(h.a)); };
     if(ql){ ql.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); qgo(); } }; qa.onclick=qgo; }
@@ -222,7 +362,7 @@ function wire(){ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()
     document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ DRAFT.lines.splice(+b.dataset.del,1); if(!DRAFT.lines.length) DRAFT.lines=[fresh().lines[0]]; saveDraft(); render(); });
     document.querySelectorAll('.ln [data-k]').forEach(inp=>{ const i=+inp.closest('.ln').dataset.i, k=inp.dataset.k;
       /* never redraw the form while someone is typing in it: update this line in place (a redraw stole the next box's focus and lost the qty) */
-      const upd=()=>{ const l=DRAFT.lines[i], el=inp.closest('.ln'); l[k]=k==='u'?inp.value:inp.value;
+      const upd=()=>{ const l=DRAFT.lines[i], el=inp.closest('.ln'); l[k]=inp.value;
         if(k==='n'){ if(l.chk){ l.chk=0; el.classList.remove('chk'); } const it=known(inp.value); if(it){ if(it.u){ l.u=it.u; const u=el.querySelector('[data-k="u"]'); if(u) u.value=it.u; } if(!l.r&&it.r){ l.r=String(it.r); const r=el.querySelector('[data-k="r"]'); if(r) r.value=l.r; } } }
         if(k==='a'&&num(l.q)&&num(l.a)&&!l.rTyped){ l.r=String(+(num(l.a)/num(l.q)).toFixed(2)); const r=el.querySelector('[data-k="r"]'); if(r) r.value=l.r; } if(k==='r') l.rTyped=!!inp.value;
         const old=el.querySelector('.tip'), html=lineTip(l); if(old) old.outerHTML=html||'<div class="tip"></div>'; else if(html) el.querySelector('.f').insertAdjacentHTML('beforeend',html);
@@ -233,6 +373,7 @@ function wire(){ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()
     document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.rm; if(DEL!==id){ DEL=id; render(); return; } DEL=null; try{ const x=BUYS.find(z=>z.id===id); await CTX.fs.deleteDoc(CTX.fs.doc(CTX.db,'stock_buys',id)); if(x&&x.photo) await CTX.fs.deleteDoc(CTX.fs.doc(CTX.db,'stock_photos',x.photo)).catch(()=>{}); toast('Deleted'); }catch(e){ toast('Could not delete'); } }); }
   if(TAB==='items'){ document.querySelectorAll('[data-cat]').forEach(sel=>sel.onchange=async()=>{ const k=sel.dataset.cat, it=ITEMS.items[k]; if(!it) return; try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'settings','stock_items'),{items:{[k]:Object.assign({},it,{c:sel.value})}},{merge:true}); toast(it.n+' → '+sel.value); }catch(e){ toast('Could not save'); } });
     const as=$('aiSave'); if(as) as.onclick=async()=>{ const u=$('aiUrl').value.trim(); if(u&&!/^https:\/\/[^ ]+$/.test(u)){ toast('That is not an https:// address'); return; } try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'settings','stock_ai'),{url:u,at:Date.now()},{merge:true}); toast(u?'AI reader saved':'AI reader off'); }catch(e){ toast('Could not save'); } }; }
+  if(TAB==='items') document.querySelectorAll('[data-wh]').forEach(b=>b.onclick=async()=>{ const k=b.dataset.wh, it=ITEMS.items[k]; if(!it) return; try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'settings','stock_items'),{items:{[k]:Object.assign({},it,{w:whereOf(it)==='s'?'k':'s'})}},{merge:true}); }catch(e){ toast('Could not save'); } });
   if(TAB==='items') document.querySelectorAll('[data-big]').forEach(b=>b.onclick=async()=>{ const k=b.dataset.big, it=ITEMS.items[k]; if(!it) return; try{ await CTX.fs.setDoc(CTX.fs.doc(CTX.db,'settings','stock_items'),{items:{[k]:Object.assign({},it,{big:!it.big})}},{merge:true}); }catch(e){ toast('Could not save'); } });
 }
 function totals(){ const tot=sumLines(), bt=num(DRAFT.billTotal), diff=bt?tot-bt:0, s=$('sumT'), bx=$('btBox'), nt=$('btNote'); if(s) s.textContent=rs(tot);
@@ -261,7 +402,9 @@ async function save(){ if(SAVING) return; const D=DRAFT, L=D.lines.map(l=>({c:l.
   const go=()=>{ $('who').textContent=(CTX.name||'staff')+' · '+CTX.role; $('net').textContent='live';
     const fs=CTX.fs, db=CTX.db;
     fs.onSnapshot(fs.doc(db,'settings','stock_items'),d=>{ const x=d.exists()?d.data():{}; ITEMS={items:x.items||{},sup:x.sup||{},alias:x.alias||{}};
-      BIG6.forEach(([n,u])=>{ const k=slug(n); if(!ITEMS.items[k]) ITEMS.items[k]={n:nice(n),u,big:true}; }); if(TAB!=='new'||!document.activeElement||document.activeElement.tagName!=='INPUT') render(); },()=>{});
+      BIG6.forEach(([n,u])=>{ const k=slug(n); if(!ITEMS.items[k]) ITEMS.items[k]={n:nice(n),u,big:true}; }); if(!typing()) render(); },()=>{});
+    fs.onSnapshot(fs.query(fs.collection(db,'stock_moves'),fs.where('day','>=',bizDay(Date.now()-45*864e5))),q=>{ MOVES=q.docs.map(d=>Object.assign({id:d.id},d.data())); if((TAB==='rel'||TAB==='cnt')&&!typing()) render(); },()=>{});
+    fs.getDoc(fs.doc(db,'vm_meta','days')).then(d=>{ DAYS=(d.exists()&&d.data().days)||{}; if(TAB==='rel'&&!typing()) render(); }).catch(()=>{});
     fs.onSnapshot(fs.doc(db,'settings','stock_ai'),d=>{ AIURL=(d.exists()&&d.data().url)||''; if(TAB==='items') render(); },()=>{});
     const since=bizDay(Date.now()-45*864e5);
     fs.onSnapshot(fs.query(fs.collection(db,'stock_buys'),fs.where('day','>=',since)),q=>{ BUYS=q.docs.map(d=>Object.assign({id:d.id},d.data())); if(TAB==='bills') render(); },()=>{ $('net').textContent='offline'; });
