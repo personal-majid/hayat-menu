@@ -165,6 +165,7 @@ body.period #dockTime{display:none}
 .ssmt{display:grid;gap:2px;margin-top:10px;font-size:13px} .ssmt>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:4px 0;border-top:1px solid var(--line)} .ssmt>div>*:not(:first-child){text-align:right;font-variant-numeric:tabular-nums} .ssmt small{color:var(--muted)} .ssmt .ssmh{border-top:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .spc .spcg td{color:var(--muted);font-size:12.5px} .spc .spct td{border-bottom:2px solid var(--line2)}
 .fcmat{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:4px 0 10px} .fcmat>div,.fcmat>label{background:var(--soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px} .fcmat small{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.04em;text-transform:uppercase} .fcmat b{font-size:17px} .fcmat em{font-style:normal;font-size:12px;color:var(--muted)} .fcmat input{width:100%}
+.pscard .psctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px} .pslist{display:flex;flex-direction:column} .psrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(120px,1.4fr) minmax(96px,.8fr);gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)} .psn{display:flex;flex-direction:column;min-width:0} .psn b{font-size:14px;overflow-wrap:anywhere} .psn small,.psv small{font-size:12px;color:var(--muted)} .psv{display:flex;flex-direction:column;align-items:flex-end;text-align:right} .psv b{font-size:17px;font-variant-numeric:tabular-nums} .psv small.dn{color:#b3261e;font-weight:800} .psn small.pswarn{color:#a86400;font-weight:800} .psv small.up{color:#1e7a3c;font-weight:800} .psl{width:100%;height:32px;accent-color:#b8975a;touch-action:pan-y} @media (max-width:560px){.psrow{grid-template-columns:minmax(0,1fr) 92px}.psrow .psl{grid-column:1/-1;grid-row:2}}
 .fcot input{width:74px;text-align:right} .slbtn{border:0;background:var(--soft);border-radius:8px;padding:1px 7px;font-size:14px;cursor:pointer;margin-left:6px;vertical-align:middle} .slbtn.on{background:var(--pri);color:#fff} .sltag{margin:-4px 0 10px} .altoast .alamt{font-size:20px;font-weight:800;margin-right:4px} .b.hsplit{display:flex;background:transparent!important} .b.hsplit i{display:block;height:100%;background:var(--pri)} .b.hsplit i.u{background:repeating-linear-gradient(45deg,#c0882c 0 4px,#e0b56a 4px 8px)} .kpi.tb{display:flex;flex-direction:column;gap:4px} .kpi.tb>small{font-size:11px}    .kpi.tb .up{color:#1e7a3c} .kpi.tb .dn{color:#b3261e}
    .kpi .ua{color:#8a5a00}
  .norow.ao{background:color-mix(in srgb,#2f6fd0 8%,transparent);border-left:3px solid #2f6fd0} .aot{font-style:normal;color:#2f6fd0;font-weight:700} .norow .a small{display:block;opacity:.7;font-size:11px} .aoc{color:#2f6fd0} .altoast.addon{border-left-color:#2f6fd0}    
@@ -572,7 +573,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v300';
+const BOARD='v301';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -3392,7 +3393,7 @@ function fcostCard(itemMap,sp,rng){ const rows=Object.values(itemMap||{}).filter
   const D=rows.map(x=>{ const pc=plateCost(x.n), price=x.v/x.q; MAT.forEach(m=>{ if(pc.r[m[0]]) used[m[0]]+=pc.r[m[0]]*x.q; }); const c=pc.c*x.q; cost+=c; sales+=x.v; if(pc.fixed||pc.own) fixedSales+=x.v; return {n:x.n,q:x.q,price,pc:pc.c,fx:price*ov,fixed:pc.fixed,derived:pc.derived,own:pc.own,c,v:x.v}; });
   const pct=sales?Math.round(1000*cost/sales)/10:0, known=sales?Math.round(100*fixedSales/sales):0, guessP=MAT.filter(m=>!priceSet(m[0])).length;
   const band=pct>38?'dn':pct<25?'':'up';
-  return `<div class="card wide fco"><h2>Food cost · estimate <span class="n"><a href="#" id="fcoEdit">set prices &amp; dish costs</a></span></h2>
+  return `<div class="card wide fco"><h2>Food cost · estimate <span class="n"><a href="#" id="fcoEdit">set prices &amp; dish costs</a> · <a href="#" data-tab="price">price simulator</a></span></h2>
     <div class="sstop"><div><small>Raw material</small><b>${rs(cost)}</b><em>for ${rs(sales)} of food sold</em></div><div><small>Food cost</small><b class="${band}">${pct}%</b><em>many restaurants aim ~30–35%</em></div><div><small>Gross margin</small><b>${rs(sales-cost)}</b><em>before salary, rent, gas</em></div><div><small>Fixed costs share</small><b>${MX?Math.round(MX.pct*1000)/10+'%':'…'}</b><em>${MX?'of every sale · '+rs(MX.fixed)+' ÷ '+rs(MX.sales)+' sales, '+MX.el+' days of '+MX.dim:'working it out'}</em></div><div><small>Your own numbers</small><b>${known}%</b><em>of sales${guessP?' · '+guessP+' prices still my guess':''}</em></div>${(()=>{ if(!sp||!sp.byDay) return ''; let g=0; Object.values(sp.byDay).forEach(L=>(L||[]).forEach(x=>{ if((x.g||spGrp(x.n,x.cat))==='purchase') g+=x.v; })); return g>0?`<div><small>Goods actually bought</small><b>${sales?Math.round(100*g/sales):0}%</b><em>${rs(g)} · the reality check (also drinks, packing, charcoal)</em></div>`:''; })()}</div>
     <h3 class="ssh">Used (estimate)</h3><div class="fcmat">${MAT.filter(m=>used[m[0]]>0).map(m=>`<div><small>${m[1]}</small><b>${Math.round(used[m[0]]*10)/10} ${m[2]}</b><em>${rs(used[m[0]]*matPrice(m[0]))} · ₹${matPrice(m[0])}/${m[2]}${priceSet(m[0])?'':' (guess)'}</em></div>`).join('')}</div>
     <h3 class="ssh">Per dish · top ${Math.min(15,D.length)}</h3><div class="scroll"><table><tr><th>Dish</th><th class="r">Sold</th><th class="r">Price</th><th class="r">Food / plate</th><th class="r">Fixed share</th><th class="r">Profit / plate</th><th class="r">Food cost</th></tr>
@@ -3573,9 +3574,99 @@ function swipeTab(dir){ if(MODE==='day'){ const L=VIEW==='simple'?['floor','days
   window.scrollTo(0,0); render(); }
 /* the dock at the bottom: the mode's tabs, the range chips, the day pill. Collapsible; swipe the page to change tab. */
 /* Money and Insights each hold a few pages; a chip row on top switches between them and the tab remembers the last one */
-const TSUB={buy:[['buy','Spends'],['cash','Cash & bank']],patterns:[['patterns','Patterns'],['growth','Why we grew'],['similar','Similar days'],['lab','Forecast lab'],['cmp','Compare']]};
+/* v301: PRICE SIMULATOR (Insights → Price simulator). Move a dish's price → expected plates, sales, food cost and profit.
+   Base = the last 21 finished days (customer bills, pre-bookings and staff food out). How plates react to price (elasticity)
+   was measured on the 25 Oct 2026 rise, hall by hall, after taking out the general drop in customers:
+   Full mandi −1.3 · Half/Qtr, meals, broast, biriyani −0.4 · king fish mandi −1.8 · fish/prawn fry −1.5 · drinks −0.3/−0.6 · breads −0.2.
+   A Full that saves less against two Halves loses extra plates (× e^(2·Δsaving)); half of each lost Full comes back as a Half.
+   "How price-aware" scales every elasticity ×0.6 / ×1 / ×1.5, and the result shows that range. A model, not a promise. */
+let PS={busy:false,base:null,p:{},sens:1,all:false,drag:false,pend:false};
+try{ const s=JSON.parse(localStorage.getItem('hayat-psim')||'null'); if(s){ PS.p=s.p||{}; PS.sens=+s.sens||1; } }catch(e){}
+const psSave=()=>{ try{ localStorage.setItem('hayat-psim',JSON.stringify({p:PS.p,sens:PS.sens})); }catch(e){} };
+const PS_SENS=[[0.6,'Barely notice'],[1,'Normal'],[1.5,'Very price-aware']];
+const PS_MRP=/PEPSI|7UP|COLA|DEW|SPRITE|MIRINDA|MINERAL|SODA|SMOODH|\bCAN\b|\d+\s*ML|LTR|1LT|\b1L\b/;
+function psEl(n){ const u=String(n).toUpperCase(), z=sizeOf(u);
+  if(/KING FISH|NEYMEEN|SEER/.test(u)&&/MANDI/.test(u)) return -1.8;
+  if(/PRAWN|POMFRET|FISH|AILA|AYALA|MATHI|SQUID|KOONTHAL/.test(u)) return -1.5;
+  if(/MANDI|ALFA|ALFHAM|SHAWAYA|KABSA/.test(u)&&z.s===1) return -1.3;
+  if(/MANDI|ALFA|ALFHAM|SHAWAYA|BROAST|BIRIYANI|BIRYANI|MEALS/.test(u)) return -0.4;
+  if(PS_MRP.test(u)) return -0.3;
+  if(/LIME|JUICE|MOJITO|SHAKE|LASSI|TEA|COFFEE/.test(u)) return -0.6;
+  if(/POROTTA|PAROTTA|CHAPATI|KUBOOS|ROTTI|\bRICE\b/.test(u)) return -0.2;
+  return -0.8; }
+/* food cost of one plate: the app's own estimate (your dish costs / recipes); bottled drinks ~78% of price; anything without a recipe ~35% */
+function psCost(x){ const c=plateCost(x.n).c; if(c>0) return c; return x.avg*(PS_MRP.test(x.n)?0.78:0.35); }
+function psDays(){ return Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0&&!oneOff(d)).sort().slice(-21); }
+async function psLoad(days){ PS.busy=true; render(); for(const d of days){ if(CACHE[d]===undefined) await loadDay(d); } PS.busy=false; PS.base=null; render(); }
+function psBase(){ if(PS.base) return PS.base; const days=psDays(); if(!days.length) return null;
+  const need=days.filter(d=>CACHE[d]===undefined); if(need.length){ if(!PS.busy) setTimeout(()=>psLoad(need),0); return null; }
+  const it={}, last7=days.slice(-7); let sales=0, bills=0, nd=0;
+  days.forEach(d=>{ const doc=CACHE[d]; if(!doc||!doc.records) return; nd++;
+    Object.values(doc.records).forEach(r=>{ if(!isSale(r)||isLarge(r,d)) return; sales+=saleV(r); bills++;
+      (r.items||[]).forEach(i=>{ if(!i.n||!(i.q>0)) return; const k=String(i.n).trim().toUpperCase().replace(/\s+/g,' '), x=it[k]=it[k]||{n:k,q:0,v:0,pc:{}};
+        x.q+=i.q; x.v+=i.a||0; if(last7.includes(d)&&i.p>0) x.pc[i.p]=(x.pc[i.p]||0)+i.q; }); }); });
+  if(!nd) return null;
+  const L=Object.values(it).filter(x=>x.v>0&&x.q>0).map(x=>{ const top=Object.entries(x.pc).sort((a,b)=>b[1]-a[1])[0], avg=x.v/x.q;
+    const o={n:x.n,q:x.q/nd,v:x.v/nd,avg,p0:top?+top[0]:Math.round(avg),e:psEl(x.n),z:sizeOf(x.n)}; o.c=psCost(o); return o; }).sort((a,b)=>b.v-a.v);
+  PS.base={nd,from:days[0],to:days[days.length-1],sales:sales/nd,bills:bills/nd,L}; return PS.base; }
+/* the model: plates at a new price; P = {dish: price}; sens = how price-aware */
+function psRun(B,P,sens){ const fam={}; B.L.forEach(x=>{ if(x.z.s) (fam[x.z.fam]=fam[x.z.fam]||{})[x.z.s]=x; });
+  const pr=x=>P[x.n]>0?+P[x.n]:x.p0;
+  const R=B.L.map(x=>{ const p=pr(x), r=p/x.p0; let q=x.q*Math.pow(r,x.e*sens), save=null;
+    const H=x.z.s===1&&fam[x.z.fam]&&fam[x.z.fam][.5];
+    if(H){ const s0=1-x.p0/(2*H.p0), s1=1-p/(2*pr(H)); save=2*pr(H)-p; q*=Math.min(1.6,Math.max(.5,Math.exp(2*(s1-s0)*sens))); }
+    return {x,p,r,q,save,H}; });
+  R.forEach(o=>{ if(o.H){ const h=R.find(k=>k.x===o.H); if(h) h.q+=(o.x.q-o.q)*0.5; } });
+  let rev=0, rev0=0, food=0, food0=0, plates=0, plates0=0;
+  R.forEach(o=>{ o.q=Math.max(0,o.q); o.rev=o.x.avg*o.r*o.q; o.food=o.x.c*o.q; o.prof=o.rev-o.food; o.prof0=o.x.v-o.x.c*o.x.q;
+    rev+=o.rev; rev0+=o.x.v; food+=o.food; food0+=o.x.c*o.x.q; plates+=o.q; plates0+=o.x.q; });
+  const sales=B.sales-rev0+rev;
+  return {R,sales,sales0:B.sales,food,food0,gross:sales-food,gross0:B.sales-food0,plates,plates0}; }
+/* fixed costs a day: this month so far (or last month when this one is young) from spends + your monthly lines + rice/oil per day */
+function psFixed(){ const m=bizToday().slice(0,7), d=new Date(bizToday()+'T12:00:00'); d.setDate(0); const pm=ymd(d).slice(0,7);
+  const a=fxMonth(m), b=fxMonth(pm), M=a&&a.el>=10?a:(b||a); if(!M) return null; return {v:M.fixed/M.el+bulkDay(), m:M.m}; }
+const PS_SUG={'ALFAHAM MANDI FULL':720,'CHICKEN MANDI FULL':660,'HONEY MANDI FULL':750,'PERI PERI MANDI FULL':750,'KING FISH MANDI QTR':650,'KING FISH MANDI HALF':1280,'PRAWNS FRY':420};
+function pricePage(){ const B=psBase();
+  if(!B) return `<div class="card wide"><h2>Price simulator</h2><p class="note">${PS.busy?'Loading the last 21 days of bills…':'Needs finished days with a day log.'}</p></div>`;
+  const F=psFixed(), S=psRun(B,PS.p,PS.sens), lo=psRun(B,PS.p,PS.sens*0.6), hi=psRun(B,PS.p,PS.sens*1.5);
+  const fx=F?F.v:0, net=x=>x.gross-fx, net0=S.gross0-fx, chg=Object.keys(PS.p).filter(k=>B.L.some(x=>x.n===k&&+PS.p[k]!==x.p0)).length;
+  const show=B.L.filter(x=>x.q>=0.3&&x.p0>=10).slice(0,PS.all?60:18), fams=[]; show.forEach(x=>{ const f=x.z.s?x.z.fam:x.n; if(!fams.includes(f)) fams.push(f); });
+  const order=fams.flatMap(f=>show.filter(x=>(x.z.s?x.z.fam:x.n)===f).sort((a,b)=>(b.z.s||0)-(a.z.s||0)));
+  const famC=f=>{ const F=B.L.find(y=>y.z.fam===f&&y.z.s===1); return F?F.c:0; };
+  const row=x=>{ const o=S.R.find(k=>k.x===x), p=o.p, mn=Math.max(5,Math.floor(x.p0*0.7/5)*5), mxp=Math.ceil(x.p0*1.3/5)*5, st=x.p0>=100?5:1, d=o.prof-o.prof0;
+    const odd=x.c>=x.p0*0.95||(x.z.s&&x.z.s<1&&famC(x.z.fam)>0&&x.c>famC(x.z.fam)*x.z.s*1.5);   /* a Half that costs like a Full = a recipe typed for the wrong size */
+    return `<div class="psrow" data-psn="${esc(x.n)}"><div class="psn"><b>${esc(x.n)}</b><small>now ₹${x.p0} · ${Math.round(x.q*10)/10} a day · keeps ${rs(x.p0-x.c)} a plate</small>${odd?'<small class="pswarn">⚠ its food cost looks wrong · check it in dish costs</small>':''}</div>
+      <input type="range" class="psl" min="${mn}" max="${mxp}" step="${st}" value="${p}" data-psl="${esc(x.n)}" aria-label="price of ${esc(x.n)}">
+      <div class="psv"><b data-psp>₹${p}</b><small data-psq>${Math.round(o.q*10)/10} a day</small><small data-psd class="${d<-1?'dn':d>1?'up':''}">${d>=0?'+':'−'}${rs(Math.abs(d)).replace('−','')}/day</small>${o.save!=null?`<small data-pssv class="${o.save<40?'dn':''}">saves ${rs(o.save)} vs 2 Halves</small>`:''}</div></div>`; };
+  return `<div class="card wide pscard"><h2>Price simulator <span class="n">base: ${B.nd} days ${esc(B.from)} → ${esc(B.to)}</span></h2>
+    <p class="note">Move a price and see what it does to plates, sales and profit a day. Plates react the way our customers did when prices rose on 25 Oct 2026.</p>
+    <div class="sstop" id="psTiles">${psTiles(S,lo,hi,fx,net0)}</div>
+    <div class="psctl"><span class="n">How price-aware are customers?</span>${PS_SENS.map(s=>`<button type="button" class="tab ${PS.sens===s[0]?'on':''}" data-pss="${s[0]}">${s[1]}</button>`).join('')}
+      <span style="flex:1"></span><button type="button" class="tab" id="psSug">Try the review's prices</button><button type="button" class="tab" id="psReset">Back to today's prices${chg?' ('+chg+')':''}</button></div>
+    <div class="pslist">${order.map(row).join('')}</div>
+    <p class="note"><a href="#" id="psAll">${PS.all?'Show fewer dishes':'Show more dishes'}</a> · Other dishes stay at today's price and plates. Food cost per plate comes from <a href="#" id="fcoEdit">your dish costs</a> (or the app's estimate); bottled drinks ~78% of price. Fixed costs ${F?rs(fx)+' a day ('+esc(F.m)+', spends + your monthly lines)':'are still loading'}. This is a model built from one price change; treat the range as the honest answer.</p></div>`; }
+function psTiles(S,lo,hi,fx,net0){ const n=x=>x.gross-fx, mo=v=>(v>=0?'':'−')+'₹'+(Math.abs(v)*30/1e5).toFixed(2)+' L';
+  const t=(k,a,b,sub)=>`<div><small>${k}</small><b class="${b-a>1?'up':b-a<-1?'dn':''}">${rs(b)}</b><em>now ${rs(a)} · ${b-a>=0?'+':'−'}${rs(Math.abs(b-a)).replace('−','')}${sub||''}</em></div>`;
+  return t('Sales a day',S.sales0,S.sales)+t('Profit a day',net0,n(S),' · after food and fixed costs')+
+    `<div><small>Profit a month</small><b class="${n(S)-net0>1?'up':n(S)-net0<-1?'dn':''}">${mo(n(S))}</b><em>now ${mo(net0)} · range ${mo(Math.min(n(lo),n(hi)))} to ${mo(Math.max(n(lo),n(hi)))}</em></div>`+
+    `<div><small>Plates a day</small><b>${Math.round(S.plates)}</b><em>now ${Math.round(S.plates0)}</em></div>`; }
+/* sliders repaint only their numbers - a full redraw while dragging would drop the slider out of the finger */
+function psPaint(){ const B=psBase(); if(!B) return; const F=psFixed(), fx=F?F.v:0, S=psRun(B,PS.p,PS.sens), lo=psRun(B,PS.p,PS.sens*0.6), hi=psRun(B,PS.p,PS.sens*1.5);
+  const T=$('psTiles'); if(T) T.innerHTML=psTiles(S,lo,hi,fx,S.gross0-fx);
+  $$('.psrow').forEach(el=>{ const o=S.R.find(k=>k.x.n===el.dataset.psn); if(!o) return; const d=o.prof-o.prof0;
+    el.querySelector('[data-psp]').textContent='₹'+o.p; el.querySelector('[data-psq]').textContent=(Math.round(o.q*10)/10)+' a day';
+    const dd=el.querySelector('[data-psd]'); dd.textContent=(d>=0?'+':'−')+rs(Math.abs(d)).replace('−','')+'/day'; dd.className=d<-1?'dn':d>1?'up':'';
+    const sv=el.querySelector('[data-pssv]'); if(sv&&o.save!=null){ sv.textContent='saves '+rs(o.save)+' vs 2 Halves'; sv.className=o.save<40?'dn':''; } }); }
+function psWire(){ if(TAB!=='price') return;
+  $$('[data-psl]').forEach(s=>{ s.oninput=()=>{ PS.p[s.dataset.psl]=+s.value; psSave(); psPaint(); };
+    s.onpointerdown=()=>{ PS.drag=true; }; const up=()=>{ PS.drag=false; if(PS.pend){ PS.pend=false; setTimeout(render,0); } }; s.onpointerup=up; s.onpointercancel=up; s.onchange=up; });
+  $$('button[data-pss]').forEach(b=>{ b.onclick=()=>{ PS.sens=+b.dataset.pss; psSave(); render(); }; });
+  const r=$('psReset'); if(r) r.onclick=()=>{ PS.p={}; psSave(); render(); };
+  const g=$('psSug'); if(g) g.onclick=()=>{ const B=psBase(); if(!B) return; Object.keys(PS_SUG).forEach(k=>{ if(B.L.some(x=>x.n===k)) PS.p[k]=PS_SUG[k]; }); psSave(); render(); };
+  const a=$('psAll'); if(a) a.onclick=e=>{ e.preventDefault(); PS.all=!PS.all; render(); }; }
+const TSUB={buy:[['buy','Spends'],['cash','Cash & bank']],patterns:[['patterns','Patterns'],['growth','Why we grew'],['price','Price simulator'],['similar','Similar days'],['lab','Forecast lab'],['cmp','Compare']]};
 const TGRP={}; Object.entries(TSUB).forEach(([g,L])=>L.forEach(t=>TGRP[t[0]]=g)); const TLAST={};
-const PG_N={floor:['Live','what is happening now'],sales:['Sales','money by hour, running total, bills'],buy:['Spends','money paid out'],cash:['Cash & bank','drawer and bank'],items:['Items','what sold, food cost, juice'],bills:['Bills','every bill'],patterns:['Insights · Patterns',''],similar:['Insights · Similar days','days that went like this one'],lab:['Insights · Forecast lab',''],growth:['Insights · Why we grew','week by week, what grew, what we did'],cmp:['Insights · Compare','']};
+const PG_N={floor:['Live','what is happening now'],sales:['Sales','money by hour, running total, bills'],buy:['Spends','money paid out'],cash:['Cash & bank','drawer and bank'],items:['Items','what sold, food cost, juice'],bills:['Bills','every bill'],patterns:['Insights · Patterns',''],similar:['Insights · Similar days','days that went like this one'],lab:['Insights · Forecast lab',''],growth:['Insights · Why we grew','week by week, what grew, what we did'],price:['Insights · Price simulator','change a price, see plates, sales and profit'],cmp:['Insights · Compare','']};
 function pgHead(){ const n=PG_N[TAB]; if(!n) return ''; return `<div class="pghead"><b>${n[0]}</b><span>${esc(rpName(DAY))}${DAY===bizToday()&&!/today/i.test(rpName(DAY))?' · live':''}${n[1]?' · '+n[1]:''}</span>${TAB==='sales'||TAB==='floor'?`<a href="#" class="pgsim" data-tab="similar">🔍 Similar days</a>`:''}</div>`; }
 function subNav(){ const g=TGRP[TAB]; if(!g) return ''; TLAST[g]=TAB; return `<div class="subnav">${TSUB[g].map(t=>`<button type="button" class="${TAB===t[0]?'on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`; }
 function dockH(){ const d=$('dock'); if(d) document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px'); const b=$('dockMoreBtn'); if(b) b.setAttribute('aria-expanded',String(!$('dockSheet').hidden)); }
@@ -3798,7 +3889,7 @@ function wireDayStart(){ $$('[data-ds]').forEach(b=>b.onclick=()=>{ const k=b.da
   if(['week','month','l30','lmonth'].includes(k)){ const p=k==='week'?P[0]:k==='month'?P[2]:k==='l30'?P[4]:P[3]; MODE='period'; PTAB='overview'; loadPeriod(p[1],p[2],p[0]); return; }
   TAB=k==='yitems'?'items':k==='yspend'?'buy':k==='ycash'?'cash':k==='ysim'?'similar':'sales'; MODE='day'; setDay(y); render();
   if(k==='yrep') setTimeout(()=>{ const r=document.querySelector('[data-rpgo]'); if(r) r.click(); },900); }); }
-function render(){ FC_MEMO={}; try{ render0(); } finally{ FC_MEMO=null; } try{ if(window.OwnerUX) OwnerUX.after(); }catch(e){ console.warn('OwnerUX',e); } }
+function render(){ if(PS.drag){ PS.pend=true; return; } FC_MEMO={}; try{ render0(); } finally{ FC_MEMO=null; } try{ if(window.OwnerUX) OwnerUX.after(); }catch(e){ console.warn('OwnerUX',e); } }
 /* v298: a card that cannot draw shows a small note in its place - it no longer blanks the rest of the page.
    Every card's first element also carries data-ck="<its function>" so usage + Arrange know which card it is. */
 const CARD_ERR={};
@@ -3836,6 +3927,7 @@ function render0(){ tabCarry(); if(VIEW!=='simple'&&TAB==='days') TAB='floor';
      TAB==='similar'?`<div class="grid">${similar()}</div>`:
      TAB==='cmp'?`<div class="grid">${compare()}</div>`:
      TAB==='growth'?growthPage():
+     TAB==='price'?`<div class="grid">${pricePage()}</div>`:
      TAB==='cash'?`<div class="grid">${cashCard(DAY)}${payments()}</div>`:`<div class="grid">${items()}${fcostCard(itemsOf(recs()))}${juiceCard(itemsOf(recs()),dayLines(DOC))}</div>`)+
     `<div class="note">Day log ${esc(DOC.updatedAt||'')} · ${DOC.count||0} records · shop PC appends every minute · board ${BOARD}</div>`;
   document.documentElement.style.setProperty('--toph',(document.querySelector('.top')||{offsetHeight:52}).offsetHeight+'px');
@@ -3847,7 +3939,7 @@ function render0(){ tabCarry(); if(VIEW!=='simple'&&TAB==='days') TAB='floor';
   $$('[data-spc]').forEach(x=>x.onchange=()=>{ SPC[x.dataset.spc]=x.value; render(); });
   $$('[data-topn]').forEach(b=>b.onclick=()=>{ TOPN=+b.dataset.topn; try{ localStorage.setItem('hayat-topn',TOPN); }catch(e){} render(); });
   dock(); slRow(); const stg=$('slTog'); if(stg) stg.onclick=e=>{ e.preventDefault(); slClose(); }; const st2=$('slTog2'); if(st2) st2.onclick=e=>{ e.stopPropagation(); if(SL.open) slClose(); else { SL.open=true; render(); } }; addShare(); fitTables(); if(RP.open&&!RP.playing&&!RP.drag) rpTick();
-  simWire(); lgCardWire(); ptWire(); labWire(); spWire(); simpleWire(); growWire(); instaWire(); document.body.classList.toggle('simple',VIEW==='simple');
+  simWire(); lgCardWire(); ptWire(); labWire(); spWire(); simpleWire(); growWire(); instaWire(); psWire(); document.body.classList.toggle('simple',VIEW==='simple');
   $$('[data-rpgo]').forEach(a=>a.onclick=e=>{ e.preventDefault(); openReplay(); });
   $$('[data-tab]').forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; if(b.closest('#dockTabs')){ if(TLAST[TAB]&&TGRP[TLAST[TAB]]===TAB) TAB=TLAST[TAB]; window.scrollTo(0,0); } Q=''; render(); if(TAB==='cmp'&&!WEEK) loadWeek(); });
   $$('[data-ptab]').forEach(b=>b.onclick=e=>{ if(e) e.preventDefault(); PTAB=b.dataset.ptab; Q=''; if(b.tagName==='A'||b.closest('#dockTabs')) window.scrollTo(0,0); render(); });
