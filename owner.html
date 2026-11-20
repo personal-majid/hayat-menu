@@ -165,7 +165,7 @@ body.period #dockTime{display:none}
 .ssmt{display:grid;gap:2px;margin-top:10px;font-size:13px} .ssmt>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:4px 0;border-top:1px solid var(--line)} .ssmt>div>*:not(:first-child){text-align:right;font-variant-numeric:tabular-nums} .ssmt small{color:var(--muted)} .ssmt .ssmh{border-top:0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .spc .spcg td{color:var(--muted);font-size:12.5px} .spc .spct td{border-bottom:2px solid var(--line2)}
 .fcmat{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:4px 0 10px} .fcmat>div,.fcmat>label{background:var(--soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px} .fcmat small{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.04em;text-transform:uppercase} .fcmat b{font-size:17px} .fcmat em{font-style:normal;font-size:12px;color:var(--muted)} .fcmat input{width:100%}
-.pscard .psctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px} .pslist{display:flex;flex-direction:column} .psrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(120px,1.4fr) minmax(96px,.8fr);gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)} .psn{display:flex;flex-direction:column;min-width:0} .psn b{font-size:14px;overflow-wrap:anywhere} .psn small,.psv small{font-size:12px;color:var(--muted)} .psv{display:flex;flex-direction:column;align-items:flex-end;text-align:right} .psv b{font-size:17px;font-variant-numeric:tabular-nums} .psv small.dn{color:#b3261e;font-weight:800} .psn small.pswarn{color:#a86400;font-weight:800} .psv small.up{color:#1e7a3c;font-weight:800} .psl{width:100%;height:32px;accent-color:#b8975a;touch-action:pan-y} @media (max-width:560px){.psrow{grid-template-columns:minmax(0,1fr) 92px}.psrow .psl{grid-column:1/-1;grid-row:2}}
+.pscard .psctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px} .pslist{display:flex;flex-direction:column} .psrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(120px,1.4fr) minmax(96px,.8fr);gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)} .psn{display:flex;flex-direction:column;min-width:0} .psn b{font-size:14px;overflow-wrap:anywhere} .psn small,.psv small{font-size:12px;color:var(--muted)} .psv{display:flex;flex-direction:column;align-items:flex-end;text-align:right} .psv b{font-size:17px;font-variant-numeric:tabular-nums} .psv small.dn{color:#b3261e;font-weight:800} .psn small.pswarn{color:#a86400;font-weight:800} .pstb{fill:var(--s1,#3b6ea5);opacity:.85} .psbe{stroke:#b3261e;stroke-width:1.5;stroke-dasharray:5 4} .psl0{fill:none;stroke:#6f6758;stroke-width:2.5;stroke-dasharray:6 4} .pslp{fill:none;stroke:#1e7a3c;stroke-width:2.5;stroke-dasharray:6 4} .pslu{fill:none;stroke:#a86400;stroke-width:2.5;stroke-dasharray:2 4} .ptkey i.psk0,i.psk0{background:#6f6758;height:3px} .ptkey i.pskp,i.pskp{background:#1e7a3c;height:3px} .ptkey i.psku,i.psku{background:#a86400;height:3px} .ptkey i.pskb{background:#b3261e;height:2px} tr.psbad td{background:rgba(179,38,30,.08)} tr.psgood td{background:rgba(30,122,60,.08)} .pscall{font-weight:800;font-size:15px;margin:6px 0} .psv small.up{color:#1e7a3c;font-weight:800} .psl{width:100%;height:32px;accent-color:#b8975a;touch-action:pan-y} @media (max-width:560px){.psrow{grid-template-columns:minmax(0,1fr) 92px}.psrow .psl{grid-column:1/-1;grid-row:2}}
 .fcot input{width:74px;text-align:right} .slbtn{border:0;background:var(--soft);border-radius:8px;padding:1px 7px;font-size:14px;cursor:pointer;margin-left:6px;vertical-align:middle} .slbtn.on{background:var(--pri);color:#fff} .sltag{margin:-4px 0 10px} .altoast .alamt{font-size:20px;font-weight:800;margin-right:4px} .b.hsplit{display:flex;background:transparent!important} .b.hsplit i{display:block;height:100%;background:var(--pri)} .b.hsplit i.u{background:repeating-linear-gradient(45deg,#c0882c 0 4px,#e0b56a 4px 8px)} .kpi.tb{display:flex;flex-direction:column;gap:4px} .kpi.tb>small{font-size:11px}    .kpi.tb .up{color:#1e7a3c} .kpi.tb .dn{color:#b3261e}
    .kpi .ua{color:#8a5a00}
  .norow.ao{background:color-mix(in srgb,#2f6fd0 8%,transparent);border-left:3px solid #2f6fd0} .aot{font-style:normal;color:#2f6fd0;font-weight:700} .norow .a small{display:block;opacity:.7;font-size:11px} .aoc{color:#2f6fd0} .altoast.addon{border-left-color:#2f6fd0}    
@@ -573,7 +573,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v301';
+const BOARD='v302';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -3599,7 +3599,7 @@ function psCost(x){ const c=plateCost(x.n).c; if(c>0) return c; return x.avg*(PS
 function psDays(){ return Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0&&!oneOff(d)).sort().slice(-21); }
 async function psLoad(days){ PS.busy=true; render(); for(const d of days){ if(CACHE[d]===undefined) await loadDay(d); } PS.busy=false; PS.base=null; render(); }
 function psBase(){ if(PS.base) return PS.base; const days=psDays(); if(!days.length) return null;
-  const need=days.filter(d=>CACHE[d]===undefined); if(need.length){ if(!PS.busy) setTimeout(()=>psLoad(need),0); return null; }
+  const need=days.concat(psRefDays().days).filter(d=>CACHE[d]===undefined); if(need.length){ if(!PS.busy) setTimeout(()=>psLoad(need),0); return null; }
   const it={}, last7=days.slice(-7); let sales=0, bills=0, nd=0;
   days.forEach(d=>{ const doc=CACHE[d]; if(!doc||!doc.records) return; nd++;
     Object.values(doc.records).forEach(r=>{ if(!isSale(r)||isLarge(r,d)) return; sales+=saleV(r); bills++;
@@ -3629,7 +3629,8 @@ const PS_SUG={'ALFAHAM MANDI FULL':720,'CHICKEN MANDI FULL':660,'HONEY MANDI FUL
 function pricePage(){ const B=psBase();
   if(!B) return `<div class="card wide"><h2>Price simulator</h2><p class="note">${PS.busy?'Loading the last 21 days of bills…':'Needs finished days with a day log.'}</p></div>`;
   const F=psFixed(), S=psRun(B,PS.p,PS.sens), lo=psRun(B,PS.p,PS.sens*0.6), hi=psRun(B,PS.p,PS.sens*1.5);
-  const fx=F?F.v:0, net=x=>x.gross-fx, net0=S.gross0-fx, chg=Object.keys(PS.p).filter(k=>B.L.some(x=>x.n===k&&+PS.p[k]!==x.p0)).length;
+  const SUGP={}; Object.keys(PS_SUG).forEach(k=>{ if(B.L.some(x=>x.n===k)) SUGP[k]=PS_SUG[k]; }); const S0=psRun(B,{},PS.sens), SP=psRun(B,SUGP,PS.sens);
+  const fx=F?F.v:0, net0=S.gross0-fx, chg=Object.keys(PS.p).filter(k=>B.L.some(x=>x.n===k&&+PS.p[k]!==x.p0)).length;
   const show=B.L.filter(x=>x.q>=0.3&&x.p0>=10).slice(0,PS.all?60:18), fams=[]; show.forEach(x=>{ const f=x.z.s?x.z.fam:x.n; if(!fams.includes(f)) fams.push(f); });
   const order=fams.flatMap(f=>show.filter(x=>(x.z.s?x.z.fam:x.n)===f).sort((a,b)=>(b.z.s||0)-(a.z.s||0)));
   const famC=f=>{ const F=B.L.find(y=>y.z.fam===f&&y.z.s===1); return F?F.c:0; };
@@ -3638,7 +3639,7 @@ function pricePage(){ const B=psBase();
     return `<div class="psrow" data-psn="${esc(x.n)}"><div class="psn"><b>${esc(x.n)}</b><small>now ₹${x.p0} · ${Math.round(x.q*10)/10} a day · keeps ${rs(x.p0-x.c)} a plate</small>${odd?'<small class="pswarn">⚠ its food cost looks wrong · check it in dish costs</small>':''}</div>
       <input type="range" class="psl" min="${mn}" max="${mxp}" step="${st}" value="${p}" data-psl="${esc(x.n)}" aria-label="price of ${esc(x.n)}">
       <div class="psv"><b data-psp>₹${p}</b><small data-psq>${Math.round(o.q*10)/10} a day</small><small data-psd class="${d<-1?'dn':d>1?'up':''}">${d>=0?'+':'−'}${rs(Math.abs(d)).replace('−','')}/day</small>${o.save!=null?`<small data-pssv class="${o.save<40?'dn':''}">saves ${rs(o.save)} vs 2 Halves</small>`:''}</div></div>`; };
-  return `<div class="card wide pscard"><h2>Price simulator <span class="n">base: ${B.nd} days ${esc(B.from)} → ${esc(B.to)}</span></h2>
+  return psTrendCard(S0,SP,chg?S:null,F?F.v:0)+psDiagCard()+`<div class="card wide pscard"><h2>Price simulator <span class="n">base: ${B.nd} days ${esc(B.from)} → ${esc(B.to)}</span></h2>
     <p class="note">Move a price and see what it does to plates, sales and profit a day. Plates react the way our customers did when prices rose on 25 Oct 2026.</p>
     <div class="sstop" id="psTiles">${psTiles(S,lo,hi,fx,net0)}</div>
     <div class="psctl"><span class="n">How price-aware are customers?</span>${PS_SENS.map(s=>`<button type="button" class="tab ${PS.sens===s[0]?'on':''}" data-pss="${s[0]}">${s[1]}</button>`).join('')}
@@ -3650,6 +3651,81 @@ function psTiles(S,lo,hi,fx,net0){ const n=x=>x.gross-fx, mo=v=>(v>=0?'':'−')+
   return t('Sales a day',S.sales0,S.sales)+t('Profit a day',net0,n(S),' · after food and fixed costs')+
     `<div><small>Profit a month</small><b class="${n(S)-net0>1?'up':n(S)-net0<-1?'dn':''}">${mo(n(S))}</b><em>now ${mo(net0)} · range ${mo(Math.min(n(lo),n(hi)))} to ${mo(Math.max(n(lo),n(hi)))}</em></div>`+
     `<div><small>Plates a day</small><b>${Math.round(S.plates)}</b><em>now ${Math.round(S.plates0)}</em></div>`; }
+/* v302: TREND · WHAT CHANGED · PLANS (top of Insights → Price & trend).
+   Trend = Sun–Sat weeks from INDEX (rev = customer bills + pre-bookings), last 14 full weeks.
+   Projection = next 42 days: weekday level of the last 21 finished days (29th–4th left out) × 1.10 on the 29th–4th, + average pre-bookings.
+   A plan scales that by its simulated sales ÷ today's; profit a day = sales × (1 − food share of that plan) − fixed a day.
+   What changed = a 4-week "normal" span you pick (PS.ref, localStorage hayat-psref) against the last 21 days, per day. */
+const PS_REF0='2026-08-30';
+try{ const r=localStorage.getItem('hayat-psref'); if(r) PS.ref=r; }catch(e){}
+const psMT=d=>{ const n=+d.slice(8); return n>=29||n<=4; };
+function psRefDays(){ const R=psDays(), last=R[R.length-1]; let a=PS.ref||PS_REF0; if(!last) return {from:a,to:a,days:[]};
+  if(a>=R[0]||!Object.keys(INDEX).some(d=>d<=a)) a=addDays(R[0],-56);
+  const days=[]; for(let i=0;i<28;i++){ const d=addDays(a,i); if(d<R[0]&&nrev(d)>0&&!oneOff(d)) days.push(d); } return {from:a,to:addDays(a,27),days}; }
+function psWeeks(){ const today=bizToday(), W={}; Object.keys(INDEX).filter(d=>d<today&&nrev(d)>0).forEach(d=>{ const x=new Date(d+'T12:00:00'); x.setDate(x.getDate()-x.getDay()); const k=ymd(x), w=W[k]=W[k]||{k,v:0,b:0,n:0}; w.v+=+(INDEX[d].rev||0); w.b+=+(INDEX[d].bills||0); w.n++; });
+  return Object.values(W).filter(w=>w.n>=4).sort((a,b)=>a.k<b.k?-1:1).slice(-14).map(w=>({k:w.k,v:w.v/w.n,b:w.b/w.n,n:w.n})); }
+function psProject(mult){ const H=psDays(), wd={}, base=[]; let pb=0;
+  H.forEach(d=>{ pb+=+(INDEX[d].big||0); if(psMT(d)) return; const w=new Date(d+'T12:00:00').getDay(); (wd[w]=wd[w]||[]).push(nrev(d)); base.push(nrev(d)); });
+  pb=H.length?pb/H.length:0; const avg=mean(base)||0, out=[];
+  for(let i=0;i<42;i++){ const d=addDays(bizToday(),i), w=new Date(d+'T12:00:00').getDay(), b=wd[w]&&wd[w].length?mean(wd[w]):avg; out.push({d,v:b*(psMT(d)?1.10:1)*mult+pb}); } return out; }
+function psSeg(days){ const o={n:0,sales:0,bills:0,c:{},item:{},wd:{}};
+  days.forEach(d=>{ const doc=CACHE[d]; if(!doc||!doc.records) return; o.n++; let nb=0;
+    Object.values(doc.records).forEach(r=>{ if(!isSale(r)||isLarge(r,d)) return; const v=saleV(r); o.sales+=v; o.bills++; nb++;
+      const h=+(String(r.createdAt||r.settledAt||'').slice(11,13)), hh=h<5?h+24:h, add=k=>{ o.c[k]=(o.c[k]||0)+1; };
+      add('k:'+(r.kind==='counter'?'Walk-in counter':r.kind==='delivery'?'Delivery':'Dine-in'));
+      add('h:'+(hh<13?'11:00–13:00':hh<15?'13:00–15:00':hh<18?'15:00–18:00':hh<20?'18:00–20:00':hh<22?'20:00–22:00':'22:00–close'));
+      add('s:'+(v<200?'under ₹200':v<400?'₹200–400':v<700?'₹400–700':v<1200?'₹700–1,200':'₹1,200 and up'));
+      (r.items||[]).forEach(i=>{ const k=String(i.n||'').trim().toUpperCase().replace(/\s+/g,' '); if(k&&i.q>0) o.item[k]=(o.item[k]||0)+i.q; }); });
+    const w=new Date(d+'T12:00:00').getDay(), g=w===0||w===6?'Sat–Sun':w===5?'Friday':'Mon–Thu', x=o.wd[g]=o.wd[g]||{n:0,b:0}; x.n++; x.b+=nb; });
+  return o; }
+function psDiag(){ const R=psRefDays(), A=psSeg(R.days), B=psSeg(psDays()); if(!A.n||!B.n) return null;
+  const rows=[], row=(grp,lab,a,b)=>{ if(a<0.5&&b<0.5) return; rows.push({grp,lab,a,b,d:b-a,p:a?b/a-1:0}); };
+  row('All','Customer bills a day',A.bills/A.n,B.bills/B.n); row('All','Sales a day (₹)',A.sales/A.n,B.sales/B.n); row('All','Average bill (₹)',A.sales/A.bills,B.sales/B.bills);
+  const keys=new Set(Object.keys(A.c).concat(Object.keys(B.c)));
+  [['k:','Where'],['h:','When ordered'],['s:','Bill size']].forEach(([p,g])=>[...keys].filter(k=>k.startsWith(p)).sort().forEach(k=>row(g,k.slice(2),(A.c[k]||0)/A.n,(B.c[k]||0)/B.n)));
+  ['Mon–Thu','Friday','Sat–Sun'].forEach(g=>{ const a=A.wd[g], b=B.wd[g]; if(a&&b) row('Day of week',g+' (bills a day)',a.b/a.n,b.b/b.n); });
+  const it=Object.keys(A.item).filter(k=>B.item[k]!==undefined||A.item[k]/A.n>=2).map(k=>({lab:k,a:A.item[k]/A.n,b:(B.item[k]||0)/B.n})).filter(x=>x.a>=1.5);
+  it.forEach(x=>{ x.d=x.b-x.a; x.p=x.b/x.a-1; });
+  const falls=it.filter(x=>x.p<=-0.2).sort((x,y)=>x.d-y.d).slice(0,8), rises=it.filter(x=>x.p>=0.2).sort((x,y)=>y.d-x.d).slice(0,5);
+  return {R,A,B,rows,falls,rises}; }
+function psTrendCard(S0,SP,SU,fx){ const W=psWeeks(); if(W.length<4) return '';
+  const fs=x=>x.sales?x.food/x.sales:0.45, m0=1, mP=SP.sales/S0.sales, mU=SU?SU.sales/S0.sales:null;
+  const P0=psProject(m0), PP=psProject(mP), PU=SU?psProject(mU):null, wk=(P)=>{ const o={}; P.forEach(x=>{ const t=new Date(x.d+'T12:00:00'); t.setDate(t.getDate()-t.getDay()); const k=ymd(t); (o[k]=o[k]||[]).push(x.v); }); return Object.keys(o).sort().map(k=>({k,v:mean(o[k])})); };
+  const F0=wk(P0), FP=wk(PP), FU=PU?wk(PU):null, be=fx>0?fx/(1-fs(S0)):0;
+  const all=W.map(w=>w.v).concat(F0.map(x=>x.v),FP.map(x=>x.v),FU?FU.map(x=>x.v):[],be?[be]:[]), mx=Math.max(...all)*1.1, n=W.length+F0.length;
+  const w=Math.max(340,n*30), h=220, pad=46, X=i=>pad+i*(w-pad-12)/Math.max(1,n-1), Y=v=>h-34-v/mx*(h-56), bw=Math.max(8,(w-pad)/n*0.55);
+  const grid=[0,1,2,3].map(i=>{ const v=mx*i/3.3; return `<line x1="${pad}" x2="${w-6}" y1="${Y(v)}" y2="${Y(v)}" class="gl"/><text x="${pad-6}" y="${Y(v)+4}" text-anchor="end" class="gt">${kfmt(v)}</text>`; }).join('');
+  const bars=W.map((x,i)=>`<rect x="${X(i)-bw/2}" y="${Y(x.v)}" width="${bw}" height="${Y(0)-Y(x.v)}" rx="2" class="pstb"><title>week of ${x.k} · ${rs(x.v)} a day · ${Math.round(x.b)} bills a day</title></rect>`).join('');
+  const line=(F,cls)=>`<polyline points="${[{v:W[W.length-1].v}].concat(F).map((x,i)=>X(W.length-1+i)+','+Y(x.v)).join(' ')}" class="${cls}"/>`;
+  const labs=W.map((x,i)=>i%2===0?`<text x="${X(i)}" y="${h-18}" text-anchor="middle" class="gt">${+x.k.slice(8)}/${+x.k.slice(5,7)}</text><text x="${X(i)}" y="${h-5}" text-anchor="middle" class="gt">${Math.round(x.b)}</text>`:'').join('');
+  const flabs=F0.map((x,i)=>i%2===1?`<text x="${X(W.length+i)}" y="${h-18}" text-anchor="middle" class="gt">${+x.k.slice(8)}/${+x.k.slice(5,7)}</text>`:'').join('');
+  const evs=Object.values(EVENTS||{}).filter(e=>e&&e.d&&e.d>=W[0].k).map(e=>{ const i=W.findIndex(x=>e.d>=x.k&&e.d<=addDays(x.k,6)); return i<0?'':`<text x="${X(i)}" y="14" text-anchor="middle" class="evm"><title>${esc(e.d+' · '+(e.note||e.kind||''))}</title>${EV_IC[e.kind]||'•'}</text>`; }).join('');
+  const svg=`<svg viewBox="0 0 ${w} ${h}" class="grsvg" style="min-width:${w}px">${grid}${bars}
+    ${be?`<line x1="${pad}" x2="${w-6}" y1="${Y(be)}" y2="${Y(be)}" class="psbe"/><text x="${w-8}" y="${Y(be)-4}" text-anchor="end" class="gt">break-even ${kfmt(be)}</text>`:''}
+    <line x1="${(X(W.length-1)+X(W.length))/2}" x2="${(X(W.length-1)+X(W.length))/2}" y1="18" y2="${h-34}" class="cpl"/><text x="${(X(W.length-1)+X(W.length))/2+4}" y="28" class="gt">next 6 weeks</text>
+    ${line(F0,'psl0')}${line(FP,'pslp')}${FU?line(FU,'pslu'):''}${labs}${flabs}${evs}</svg>`;
+  const prof=(F,S)=>mean(F.map(x=>x.v))*(1-fs(S))-fx, mo=v=>(v<0?'−':'')+'₹'+(Math.abs(v)*30/1e5).toFixed(2)+' L';
+  const plans=[['Keep today\'s prices',F0,S0,'psk0']].concat([['Fix a few items (suggested)',FP,SP,'pskp']]).concat(FU?[['Your slider prices',FU,SU,'psku']]:[]);
+  const last4=W.slice(-4), prev4=W.slice(-8,-4), ch=prev4.length===4?mean(last4.map(x=>x.v))/mean(prev4.map(x=>x.v))-1:null;
+  return `<div class="card wide"><h2>Trend · past 14 weeks and the next 6 <span class="n">sales a day incl. pre-bookings · bills a day under each week</span></h2>
+    <div class="scroll">${svg}</div>
+    <div class="ptkey"><span><i style="background:var(--s1)"></i>sales a day, each week</span><span><i class="psk0"></i>keep today's prices</span><span><i class="pskp"></i>fix a few items</span>${FU?'<span><i class="psku"></i>your slider prices</span>':''}<span><i class="pskb"></i>break-even</span></div>
+    <div class="scroll"><table><tr><th>Next 6 weeks</th><th class="r">Sales a day</th><th class="r">Profit a day</th><th class="r">Profit a month</th></tr>
+    ${plans.map(p=>{ const pr=prof(p[1],p[2]); return `<tr><td><i class="${p[3]}" style="display:inline-block;width:14px;height:3px;margin-right:6px;vertical-align:middle"></i>${p[0]}</td><td class="r">${rs(mean(p[1].map(x=>x.v)))}</td><td class="r"><b class="${pr<0?'dn':''}">${rs(pr)}</b></td><td class="r">${mo(pr)}</td></tr>`; }).join('')}</table></div>
+    <p class="note">Last 4 weeks ${ch==null?'':(ch>=0?'+':'')+Math.round(ch*100)+'% against the 4 weeks before'}. Projection = each weekday's level over the last 21 days, +10% on the 29th–4th (salary days), plus usual pre-bookings. It does not know about festivals, Sabarimala, rain or a new place opening nearby — mark those on "Why we grew" and read the bars with them in mind. Profit uses food cost from your dish costs and fixed costs ${fx?rs(fx)+' a day':'(loading)'}.</p></div>`; }
+function psDiagCard(){ const G=psDiag(); if(!G) return `<div class="card wide"><h2>What changed</h2><p class="note">${PS.busy?'Loading the days to compare…':'Pick a normal 4 weeks to compare with.'}</p></div>`;
+  const fmt=(lab,v)=>/\(₹\)$/.test(lab)?rs(v):(Math.round(v*10)/10);
+  const big=G.rows.filter(r=>r.grp!=='All'&&r.d<=-2&&r.p<=-0.15).sort((a,b)=>a.p-b.p).slice(0,3);
+  const tr=r=>{ const bad=r.grp!=='All'&&r.d<=-2&&r.p<=-0.15, good=r.p>=0.1&&r.d>=1; return `<tr class="${bad?'psbad':good?'psgood':''}"><td>${esc(r.lab)}</td><td class="r">${fmt(r.lab,r.a)}</td><td class="r">${fmt(r.lab,r.b)}</td><td class="r"><b class="${r.p<-0.05?'dn':r.p>0.05?'up':''}">${r.p>=0?'+':''}${Math.round(r.p*100)}%</b></td></tr>`; };
+  const groups=['All','Where','When ordered','Bill size','Day of week'];
+  return `<div class="card wide"><h2>What changed <span class="n">a normal 4 weeks against the last ${G.B.n} days</span></h2>
+    <div class="psctl"><label class="n">Normal 4 weeks from <input type="date" class="fld" id="psRef" value="${esc(G.R.from)}"></label><span class="n">to ${esc(G.R.to)} · ${G.A.n} days · pick weeks with no festival or holiday rush</span></div>
+    ${big.length?`<p class="pscall">Fell most: ${big.map(r=>`<b>${esc(r.lab)}</b> ${Math.round(r.p*100)}%`).join(' · ')}</p>`:''}
+    <div class="scroll"><table><tr><th>Per day</th><th class="r">Normal</th><th class="r">Now</th><th class="r">Change</th></tr>
+    ${groups.map(g=>{ const L=G.rows.filter(r=>r.grp===g); return L.length?`<tr><td colspan="4" class="n" style="padding-top:10px"><b>${g}</b></td></tr>`+L.map(tr).join(''):''; }).join('')}</table></div>
+    ${G.falls.length?`<h3 class="ssh">Dishes selling fewer plates a day</h3><div class="scroll"><table>${G.falls.map(x=>`<tr><td>${esc(x.lab)}</td><td class="r">${Math.round(x.a*10)/10} → ${Math.round(x.b*10)/10}</td><td class="r"><b class="dn">${Math.round(x.p*100)}%</b></td></tr>`).join('')}</table></div>`:''}
+    ${G.rises.length?`<h3 class="ssh">Dishes selling more</h3><div class="scroll"><table>${G.rises.map(x=>`<tr><td>${esc(x.lab)}</td><td class="r">${Math.round(x.a*10)/10} → ${Math.round(x.b*10)/10}</td><td class="r"><b class="up">+${Math.round(x.p*100)}%</b></td></tr>`).join('')}</table></div>`:''}
+    <p class="note">A fall in plates of a dish whose price did not change means fewer people came, not a price problem. Staff food and pre-bookings are left out.</p></div>`; }
 /* sliders repaint only their numbers - a full redraw while dragging would drop the slider out of the finger */
 function psPaint(){ const B=psBase(); if(!B) return; const F=psFixed(), fx=F?F.v:0, S=psRun(B,PS.p,PS.sens), lo=psRun(B,PS.p,PS.sens*0.6), hi=psRun(B,PS.p,PS.sens*1.5);
   const T=$('psTiles'); if(T) T.innerHTML=psTiles(S,lo,hi,fx,S.gross0-fx);
@@ -3659,14 +3735,15 @@ function psPaint(){ const B=psBase(); if(!B) return; const F=psFixed(), fx=F?F.v
     const sv=el.querySelector('[data-pssv]'); if(sv&&o.save!=null){ sv.textContent='saves '+rs(o.save)+' vs 2 Halves'; sv.className=o.save<40?'dn':''; } }); }
 function psWire(){ if(TAB!=='price') return;
   $$('[data-psl]').forEach(s=>{ s.oninput=()=>{ PS.p[s.dataset.psl]=+s.value; psSave(); psPaint(); };
-    s.onpointerdown=()=>{ PS.drag=true; }; const up=()=>{ PS.drag=false; if(PS.pend){ PS.pend=false; setTimeout(render,0); } }; s.onpointerup=up; s.onpointercancel=up; s.onchange=up; });
+    s.onpointerdown=()=>{ PS.drag=true; }; const up=()=>{ PS.drag=false; if(PS.pend){ PS.pend=false; setTimeout(render,0); } }; s.onpointerup=up; s.onpointercancel=up; s.onchange=()=>{ PS.drag=false; PS.pend=false; setTimeout(render,0); }; });   /* let go = redraw once, so the trend shows these prices */
   $$('button[data-pss]').forEach(b=>{ b.onclick=()=>{ PS.sens=+b.dataset.pss; psSave(); render(); }; });
   const r=$('psReset'); if(r) r.onclick=()=>{ PS.p={}; psSave(); render(); };
   const g=$('psSug'); if(g) g.onclick=()=>{ const B=psBase(); if(!B) return; Object.keys(PS_SUG).forEach(k=>{ if(B.L.some(x=>x.n===k)) PS.p[k]=PS_SUG[k]; }); psSave(); render(); };
-  const a=$('psAll'); if(a) a.onclick=e=>{ e.preventDefault(); PS.all=!PS.all; render(); }; }
-const TSUB={buy:[['buy','Spends'],['cash','Cash & bank']],patterns:[['patterns','Patterns'],['growth','Why we grew'],['price','Price simulator'],['similar','Similar days'],['lab','Forecast lab'],['cmp','Compare']]};
+  const a=$('psAll'); if(a) a.onclick=e=>{ e.preventDefault(); PS.all=!PS.all; render(); };
+  const rf=$('psRef'); if(rf) rf.onchange=()=>{ if(!rf.value) return; PS.ref=rf.value; try{ localStorage.setItem('hayat-psref',PS.ref); }catch(e){} PS.base=null; render(); }; }
+const TSUB={buy:[['buy','Spends'],['cash','Cash & bank']],patterns:[['patterns','Patterns'],['growth','Why we grew'],['price','Price & trend'],['similar','Similar days'],['lab','Forecast lab'],['cmp','Compare']]};
 const TGRP={}; Object.entries(TSUB).forEach(([g,L])=>L.forEach(t=>TGRP[t[0]]=g)); const TLAST={};
-const PG_N={floor:['Live','what is happening now'],sales:['Sales','money by hour, running total, bills'],buy:['Spends','money paid out'],cash:['Cash & bank','drawer and bank'],items:['Items','what sold, food cost, juice'],bills:['Bills','every bill'],patterns:['Insights · Patterns',''],similar:['Insights · Similar days','days that went like this one'],lab:['Insights · Forecast lab',''],growth:['Insights · Why we grew','week by week, what grew, what we did'],price:['Insights · Price simulator','change a price, see plates, sales and profit'],cmp:['Insights · Compare','']};
+const PG_N={floor:['Live','what is happening now'],sales:['Sales','money by hour, running total, bills'],buy:['Spends','money paid out'],cash:['Cash & bank','drawer and bank'],items:['Items','what sold, food cost, juice'],bills:['Bills','every bill'],patterns:['Insights · Patterns',''],similar:['Insights · Similar days','days that went like this one'],lab:['Insights · Forecast lab',''],growth:['Insights · Why we grew','week by week, what grew, what we did'],price:['Insights · Price & trend','the trend, what changed, and what a price change would do'],cmp:['Insights · Compare','']};
 function pgHead(){ const n=PG_N[TAB]; if(!n) return ''; return `<div class="pghead"><b>${n[0]}</b><span>${esc(rpName(DAY))}${DAY===bizToday()&&!/today/i.test(rpName(DAY))?' · live':''}${n[1]?' · '+n[1]:''}</span>${TAB==='sales'||TAB==='floor'?`<a href="#" class="pgsim" data-tab="similar">🔍 Similar days</a>`:''}</div>`; }
 function subNav(){ const g=TGRP[TAB]; if(!g) return ''; TLAST[g]=TAB; return `<div class="subnav">${TSUB[g].map(t=>`<button type="button" class="${TAB===t[0]?'on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`; }
 function dockH(){ const d=$('dock'); if(d) document.documentElement.style.setProperty('--dockh',d.offsetHeight+'px'); const b=$('dockMoreBtn'); if(b) b.setAttribute('aria-expanded',String(!$('dockSheet').hidden)); }
