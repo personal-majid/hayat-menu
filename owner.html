@@ -573,7 +573,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v304';
+const BOARD='v305';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -3675,11 +3675,11 @@ function psProject(mult){ const H=psDays(), wd={}, base=[]; let pb=0;
   H.forEach(d=>{ pb+=+(INDEX[d].big||0); if(psMT(d)) return; const w=new Date(d+'T12:00:00').getDay(); (wd[w]=wd[w]||[]).push(nrev(d)); base.push(nrev(d)); });
   pb=H.length?pb/H.length:0; const avg=mean(base)||0, out=[];
   for(let i=0;i<42;i++){ const d=addDays(bizToday(),i), w=new Date(d+'T12:00:00').getDay(), b=wd[w]&&wd[w].length?mean(wd[w]):avg; out.push({d,v:b*(psMT(d)?1.10:1)*mult+pb}); } return out; }
-function psSeg(days){ const o={n:0,sales:0,bills:0,c:{},item:{},wd:{},ses:{L:{v:0,n:0},E:{v:0,n:0}}};
+function psSeg(days){ const o={n:0,sales:0,bills:0,c:{},item:{},wd:{},ses:{L:{v:0,n:0},E:{v:0,n:0}},cs:{}};
   days.forEach(d=>{ const doc=CACHE[d]; if(!doc||!doc.records) return; o.n++; let nb=0;
     Object.values(doc.records).forEach(r=>{ if(!isSale(r)||isLarge(r,d)) return; const v=saleV(r); o.sales+=v; o.bills++; nb++;
-      const h=+(String(r.createdAt||r.settledAt||'').slice(11,13)), hh=h<5?h+24:h, add=k=>{ o.c[k]=(o.c[k]||0)+1; }, ss=o.ses[h>=5&&h<16?'L':'E']; ss.v+=v; ss.n++;
-      add('k:'+(r.kind==='counter'?'Walk-in counter':r.kind==='delivery'?'Delivery':'Dine-in'));
+      const h=+(String(r.createdAt||r.settledAt||'').slice(11,13)), hh=h<5?h+24:h, add=k=>{ o.c[k]=(o.c[k]||0)+1; }, sk=h>=5&&h<16?'L':'E', ss=o.ses[sk]; ss.v+=v; ss.n++; const ck=(r.kind==='counter'?'CO':r.kind==='delivery'?'Delivery':'Dine-in')+'|'+sk, cx=o.cs[ck]=o.cs[ck]||{v:0,n:0}; cx.v+=v; cx.n++;
+      add('k:'+(r.kind==='counter'?'CO · walk-in counter':r.kind==='delivery'?'Delivery':'Dine-in'));
       add('h:'+(hh<13?'11:00–13:00':hh<15?'13:00–15:00':hh<18?'15:00–18:00':hh<20?'18:00–20:00':hh<22?'20:00–22:00':'22:00–close'));
       add('s:'+(v<200?'under ₹200':v<400?'₹200–400':v<700?'₹400–700':v<1200?'₹700–1,200':'₹1,200 and up'));
       (r.items||[]).forEach(i=>{ const k=String(i.n||'').trim().toUpperCase().replace(/\s+/g,' '); if(k&&i.q>0) o.item[k]=(o.item[k]||0)+i.q; }); });
@@ -3690,6 +3690,8 @@ function psDiag(){ const R=psRefDays(), A=psSeg(R.days), B=psSeg(psDays()); if(!
   row('All','Customer bills a day',A.bills/A.n,B.bills/B.n); row('All','Sales a day (₹)',A.sales/A.n,B.sales/B.n); row('All','Average bill (₹)',A.sales/A.bills,B.sales/B.bills);
   row('Lunch and evening','Lunch sales a day, before 4 pm (₹)',A.ses.L.v/A.n,B.ses.L.v/B.n); row('Lunch and evening','Lunch bills a day',A.ses.L.n/A.n,B.ses.L.n/B.n);
   row('Lunch and evening','Evening sales a day, after 4 pm (₹)',A.ses.E.v/A.n,B.ses.E.v/B.n); row('Lunch and evening','Evening bills a day',A.ses.E.n/A.n,B.ses.E.n/B.n);
+  ['Dine-in','CO','Delivery'].forEach(c=>['L','E'].forEach(sk=>{ const a=A.cs[c+'|'+sk]||{v:0,n:0}, b=B.cs[c+'|'+sk]||{v:0,n:0}, nm=c+' '+(sk==='L'?'lunch':'evening');
+    row('Channel, lunch and evening',nm+' · sales a day (₹)',a.v/A.n,b.v/B.n); row('Channel, lunch and evening',nm+' · bills a day',a.n/A.n,b.n/B.n); }));
   const keys=new Set(Object.keys(A.c).concat(Object.keys(B.c)));
   [['k:','Where'],['h:','When ordered'],['s:','Bill size']].forEach(([p,g])=>[...keys].filter(k=>k.startsWith(p)).sort().forEach(k=>row(g,k.slice(2),(A.c[k]||0)/A.n,(B.c[k]||0)/B.n)));
   ['Mon–Thu','Friday','Sat–Sun'].forEach(g=>{ const a=A.wd[g], b=B.wd[g]; if(a&&b) row('Day of week',g+' (bills a day)',a.b/a.n,b.b/b.n); });
@@ -3740,7 +3742,7 @@ function psDiagCard(){ const G=psDiag(); if(!G) return `<div class="card wide"><
   const fmt=(lab,v)=>/\(₹\)$/.test(lab)?rs(v):(Math.round(v*10)/10);
   const big=G.rows.filter(r=>r.grp!=='All'&&r.d<=-2&&r.p<=-0.15).sort((a,b)=>a.p-b.p).slice(0,3);
   const tr=r=>{ const bad=r.grp!=='All'&&r.d<=-2&&r.p<=-0.15, good=r.p>=0.1&&r.d>=1; return `<tr class="${bad?'psbad':good?'psgood':''}"><td>${esc(r.lab)}</td><td class="r">${fmt(r.lab,r.a)}</td><td class="r">${fmt(r.lab,r.b)}</td><td class="r"><b class="${r.p<-0.05?'dn':r.p>0.05?'up':''}">${r.p>=0?'+':''}${Math.round(r.p*100)}%</b></td></tr>`; };
-  const groups=['All','Lunch and evening','Where','When ordered','Bill size','Day of week'];
+  const groups=['All','Lunch and evening','Channel, lunch and evening','Where','When ordered','Bill size','Day of week'];
   return `<div class="card wide"><h2>What changed <span class="n">a normal 4 weeks against the last ${G.B.n} days</span></h2>
     <div class="psctl"><label class="n">Normal 4 weeks from <input type="date" class="fld" id="psRef" value="${esc(G.R.from)}"></label><span class="n">to ${esc(G.R.to)} · ${G.A.n} days · pick weeks with no festival or holiday rush</span></div>
     ${big.length?`<p class="pscall">Fell most: ${big.map(r=>`<b>${esc(r.lab)}</b> ${Math.round(r.p*100)}%`).join(' · ')}</p>`:''}
