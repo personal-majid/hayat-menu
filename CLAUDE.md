@@ -917,3 +917,12 @@ What that means, and what to say if it comes up:
 - Period view (week / month / range) Overview: "Sales by day" is now pdCard(from,to) (state PD, localStorage hayat-pd): bars stacked Dine-in / CO / Delivery (channel colours) or Total, or lines; Day / Week / Month (avg a day, or avg a week ×7); ₹ / bills (plates when a dish is chosen) / average; all day / lunch / evening; filter = one dish group (select) or one dish (type); events as markers; tap a day bar = open the day. Summary table per channel vs the previous period of the same length (prevPeriod) + share. Finished days only (today left out), day docs via dgLoad/dgDay.
 - pdTable: dish groups or dishes (inside the chosen group), Top 10–30, ₹ a day by Dine-in / CO / Delivery + stacked bar, total, share, plates a day, vs the previous period; tap a row = chart it.
 - Top items card: select Top 10/15/20/25/30 (data-topsel, one delegated change listener) instead of the 10/15 buttons.
+
+## v310 — handoff phase 1 (ChatGPT review, 25 Nov)
+- Live order: lastGap ("Last order received" — not "customer", bills carry no customer id) in its own card first, then Tables (floor), then New orders, then the rest.
+- Bills per hour: "Guests" only appears when some dine bill has covers (pax>0); the title says how many of n dine bills carry covers; with none, a note says people cannot be counted (VMENU guests are blank on every bill — the old chart was bills × 1, never footfall).
+- Past day top box compares with the usual same weekday (last 4, pre-bookings out), never yesterday (from the earlier ChatGPT patch). Its CSS polish block (owner-ui-polish-2026-11) adopted; its "folds closed by default" REJECTED (Majid asked for graphs open, v298).
+- hourDetail(i) under the tapped hour (hourCompare): bills MADE in that hour — sales, bills, avg bill, discounts (total < items), channel split bar + rows, top 6 dishes.
+- pmCard (period overview, after pdCard): Lunch / Evening / All day × Dine / CO / Delivery / All — ₹ a day / ₹ a week / bills a day / avg bill / discounts a day, vs the previous same-length period; open days only; part-week noted.
+- tmDishes (Live, today only): tomorrow's plates per dish from the last 6 same weekdays (median, P25–P75, lunch share) scaled by fcModel(tomorrow).plan ÷ their average (capped 0.8–1.2); mandi / alfaham families in Full-equivalents (rice out); pre-bookings named separately; no kg (recipes / stock / waste not recorded).
+- Verified: FC_MODE='day' is forced on purpose (Majid + Oct replay); v288 fcPick already swaps in a lab method only when it wins out of sample.
