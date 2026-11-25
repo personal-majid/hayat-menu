@@ -955,3 +955,8 @@ What that means, and what to say if it comes up:
 
 ## v317 — competitor reader setup guide in the app
 - compGuide(H,hasData) at the top of Insights → Competitors until the phone gives live readings: 5 steps (F-Droid apps with links · paste the install line with a Copy button · sign in via Termux:X11 + bb-login · test with bb-run · battery Unrestricted). Steps tick from settings/crowd_health (phone seen, not signed out, live > 0); the guide disappears once live data exists.
+
+## v318 — today's bills load first · rest of today by channel · rain in the lab
+- Boot: watchDay() (today's vm_daylog listener) starts right after sign-in, BEFORE days() and the settings listeners; until the first snapshot (DOCWAIT) the page says "Loading today's sales…" instead of drawing dayStart() (that screen showed outlook / yesterday / week numbers as if no bill existed). After days() rebuilds INDEX: syncIndexToday() + render().
+- chFc() on Live (today): the forecast's rest (F.rest by business hour) split per hour by the last 4 same weekdays' Dine / CO / Delivery mix (chMix from dgDay bs; hour < ₹1,500 → session mix), lunch < 16:00. Next 60 min by channel, bills = ₹ ÷ channel avg bill in the session. chBack(): last 28 finished days, fcModel(d).plan × prior-4-weekday shares vs dgDay b — first run 25 Nov: day ±21%, split alone lunch Dine ±19% / CO ±52% / Delivery ±76%, evening Dine ±19% / CO ±38% / Delivery ±37%.
+- Lab signal 'wx' = log(1 + rain mm 11:00–00:00) via wxFeat (past days = what fell, so a best case). LAB_GROUPS 'wx'; cache key has WX.at; kept out of the per-day effect list. First result: no clear effect (86 days) — so the forecast does not use it.
