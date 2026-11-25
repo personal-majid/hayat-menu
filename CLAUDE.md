@@ -939,3 +939,6 @@ What that means, and what to say if it comes up:
 
 ## v313 — Today lab includes pre-bookings
 - Majid, 25 Nov 22:57: box said ₹59.5K so far, "Today · how it ends" said ₹52K (likely 50.5–58.4K). The lab's ways work on walk-in sales (soldRecs: large orders out, like history), so a ₹9K pre-booking vanished. todayLab now adds PB = preFor(DAY).add to so far, every way's close and range, with "incl. ₹X pre-booked". The top box's "vs usual by now" says "pre-booking ₹X left out of this" when one exists.
+
+## v314 — large orders review (period view)
+- lgReview(from,to) after pmCard in the period Overview: straight from the day docs (isSale && isLarge — works although settings/large_orders is empty): orders, ₹, share of all sales, average, discounts, vs the previous period; by week / month (follows PD.u); by channel, hall, lunch / evening, weekday; top 10 dishes; every order (day link, time, where, ₹, main dishes, paid / open). Finished days only (today joins tomorrow morning). The old lgCard (marked list + unusual hours) stays in More analysis.
