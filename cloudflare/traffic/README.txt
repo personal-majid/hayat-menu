@@ -12,7 +12,11 @@ Cost: free. Cloudflare Workers free plan (100,000 requests a day; this uses 96 c
 TomTom: ~3 requests a run = ~288 a day; TomTom's free tier is 2,500 a day. The app's own readings come on top
 (at most a few dozen a day). No card is needed for either.
 
-SET UP (about 10 minutes, once)
+DEPLOYED 25 Nov 2026 with wrangler:  cd cloudflare/traffic  &&  npx wrangler deploy
+   (worker hayat-traffic, https://hayat-traffic.majidkhn.workers.dev, cron */15; keys are read from the site's
+   public config.js, so no secrets are set. Opening the URL shows the last run; it only runs again after 10 min.)
+
+SET UP BY HAND INSTEAD (only if wrangler is not available)
 1. dash.cloudflare.com -> sign in (the same account as the Instagram / bill-reader workers is fine).
 2. Workers & Pages -> Create -> Create Worker -> name it  hayat-traffic  -> Deploy.
 3. Edit code -> delete everything -> paste the whole of worker.js from this folder -> Deploy.

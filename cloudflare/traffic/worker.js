@@ -15,10 +15,11 @@
    Day = business day (05:00 cut, India time); slot = the 15-minute slot it ran in. Writing the same slot twice just
    overwrites it (safe to retry). Nothing is ever deleted.
 
-   Settings (Cloudflare → the worker → Settings → Variables and Secrets):
-     FIREBASE_API_KEY  the web API key from config.js (it is already public in the site)        — required
-     FIREBASE_PROJECT  h-menu                                                                     — optional
-     TOMTOM_KEY        secret; if missing, the key saved in the owner app (settings/traffic.key) is used
+   Keys — nothing has to be typed in: both are read from the site's public config.js (SITE_CONFIG, default
+   https://personal-majid.github.io/hayat-menu/config.js) when not set on the worker:
+     FIREBASE_API_KEY  the web API key (config.js firebase.apiKey)
+     TOMTOM_KEY        secret if set; else the key saved in the owner app (settings/traffic.key); else config.js traffic.tomtomKey
+     FIREBASE_PROJECT  h-menu (optional)
    Writes go through the Firestore REST API with the web key, which works because the live rules are open
    (Majid's choice). If the rules are ever made strict, this worker needs a service-account token instead. */
 const TT = 'https://api.tomtom.com';
@@ -27,16 +28,20 @@ const DEF_POINTS = [{ id: 'shop', n: 'NH 966 at Hayat', p: [11.0065785, 76.12705
 
 export default {
   async scheduled(ev, env, ctx){ ctx.waitUntil(run(env)); },
-  /* GET / = run once now and show what was written (handy to test after setup) */
-  async fetch(req, env){ const r = await run(env); return new Response(JSON.stringify(r, null, 1), { headers: { 'content-type': 'application/json' } }); }
+  /* GET / = the last run's result; it runs now only when the last run is over 10 minutes old (the URL is public, so
+     opening it repeatedly never spends extra TomTom calls) */
+  async fetch(req, env){ const J = o => new Response(JSON.stringify(o, null, 1), { headers: { 'content-type': 'application/json' } });
+    try{ const site = await siteKeys(env), h = await firestore(Object.assign({}, env, { FIREBASE_API_KEY: env.FIREBASE_API_KEY || site.fb })).get('settings/trf_health');
+      if(h && h.at && Date.now() - new Date(h.at).getTime() < 10 * 60000) return J(Object.assign({ note: 'last run (runs by itself every 15 minutes)' }, h)); }catch(e){}
+    return J(await run(env)); }
 };
 
 export async function run(env, now){
   now = now || new Date();
-  const fs = firestore(env), { day, slot } = slotOf(now), at = now.toISOString();
+  const site = await siteKeys(env), fs = firestore(Object.assign({}, env, { FIREBASE_API_KEY: env.FIREBASE_API_KEY || site.fb })), { day, slot } = slotOf(now), at = now.toISOString();
   const res = { at, day, slot, routes: 0, points: 0, err: [] };
   let cfg = {}; try{ cfg = (await fs.get('settings/traffic')) || {}; }catch(e){ res.err.push('read settings: ' + e.message); }
-  const key = env.TOMTOM_KEY || cfg.key; if(!key){ res.err.push('no TomTom key (TOMTOM_KEY secret or the key saved in the owner app)'); await health(fs, res); return res; }
+  const key = env.TOMTOM_KEY || cfg.key || site.tt; if(!key){ res.err.push('no TomTom key (TOMTOM_KEY secret or the key saved in the owner app)'); await health(fs, res); return res; }
   /* 1. route times */
   const routes = Array.isArray(cfg.routes) && cfg.routes.length ? cfg.routes : DEF_ROUTES, R = [];
   for(const r of routes){ try{
@@ -56,6 +61,11 @@ export async function run(env, now){
   if(Object.keys(S).length){ try{ await fs.patch(`traffic_flow/${day}`, { s: { [slot]: S }, pts: names, at }, [`s.\`${slot}\``, ...Object.keys(names).map(k => `pts.\`${k}\``), 'at']); res.points = Object.keys(S).length; }catch(e){ res.err.push('write flow: ' + e.message); } }
   await health(fs, res); return res;
 }
+/* the public site config: firebase apiKey and traffic.tomtomKey (both already visible to anyone who opens the site) */
+async function siteKeys(env){ if(env.FIREBASE_API_KEY && env.TOMTOM_KEY) return {}; try{
+    const t = await (await fetch(env.SITE_CONFIG || 'https://personal-majid.github.io/hayat-menu/config.js', { cf: { cacheTtl: 3600 } })).text();
+    const m = (re) => { const x = t.match(re); return x ? x[1] : ''; };
+    return { fb: m(/apiKey\s*:\s*["']([^"']+)["']/), tt: m(/tomtomKey\s*:\s*["']([^"']+)["']/) }; }catch(e){ return {}; } }
 async function health(fs, res){ try{ await fs.patch('settings/trf_health', { at: res.at, ok: !res.err.length, routes: res.routes, points: res.points, err: res.err.join(' · ').slice(0, 500), day: res.day, slot: res.slot }, null); }catch(e){} }
 
 /* business day (05:00 cut) and 15-minute slot, India time (UTC+5:30, no DST) */
