@@ -58,7 +58,7 @@ cat > "$BIN/bb-run" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
 set -a; . "$ENV_FILE"; set +a
 termux-wake-lock
-cd "$APP_DIR" && node scrape.mjs >> "\$HOME/busyboard.log" 2>&1
+cd "$APP_DIR" && node scrape.mjs "\$@" >> "\$HOME/busyboard.log" 2>&1
 code=\$?
 termux-wake-unlock
 exit \$code
@@ -67,7 +67,7 @@ EOF
 cat > "$BIN/bb-cron" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
 # bb-cron on | off | status
-ENTRY="7 11-23,0 * * * $BIN/bb-run"
+ENTRY="*/2 11-23,0 * * * $BIN/bb-run --if-asked"
 case "\${1:-status}" in
   on)
     sv-enable crond 2>/dev/null || true
@@ -77,7 +77,7 @@ case "\${1:-status}" in
     echo "\$ENTRY" >> "\$TMP"
     crontab "\$TMP"; rm -f "\$TMP"
     termux-wake-lock 2>/dev/null || true
-    echo "cron ON - hourly at :07, 11 am to midnight"
+    echo "cron ON - checks every 2 min (11 am to midnight), reads only when the owner app asks"
     ;;
   off)
     TMP=\$(mktemp)
@@ -108,7 +108,7 @@ else
   sv-enable crond 2>/dev/null || true
   TMP=$(mktemp)
   crontab -l 2>/dev/null | grep -v 'bb-run' > "$TMP" || true
-  echo "7 11-23,0 * * * $BIN/bb-run" >> "$TMP"
+  echo "*/2 11-23,0 * * * $BIN/bb-run --if-asked" >> "$TMP"
   crontab "$TMP"
   rm -f "$TMP"
   crontab -l

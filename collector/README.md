@@ -1,7 +1,8 @@
 # Hayat competitor collector (Android phone)
 
 Reads Google Maps "Popular times" for the competitor list with a real Chromium on an Android phone (signed in to Google
-once), every hour from 11 am to midnight, and writes the readings straight to the Hayat database (crowd/, crowd_hist/,
+once), ONLY when someone opens the owner app's Competitors page (it checks every 2 minutes from 11 am to midnight, reads within
+~3 minutes of being asked, at most once an hour), and writes the readings straight to the Hayat database (crowd/, crowd_hist/,
 settings/crowd_health). The owner app shows them under Insights > Competitors — on any phone, iPhone included.
 
 Why a phone and not the owner app itself: Google Maps refuses to open inside another website, and a web page may not read
