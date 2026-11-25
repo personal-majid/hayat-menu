@@ -952,3 +952,6 @@ What that means, and what to say if it comes up:
 - Forecast box "Next hour": when the next clock hour is after closing (shophours: Mon–Fri 00:00, Sat/Sun 00:30) it says "shop closes HH:MM · the last ~₹X comes before that" instead of "~0 bills".
 - todayBox: under Dine, "first orders ₹X · add-ons ₹Y (z%) · n of m tables ordered more" — add-on = items whose kotAt is >3 min after the bill's first KOT, scaled to the bill's money; tap = dine bills.
 - Competitors ON DEMAND (Majid: look up when I open the page, not in the background): compPage writes settings/crowd_req {at,by} when the last read is >50 min old (at most every 10 min); the collector cron is now */2 11–23,0 running `bb-run --if-asked` (scrape.mjs exits unless crowd_req is <15 min old, newer than the last read, and the last read is >50 min old). The page shows "⏳ asked the phone…" and reloads its data when settings/crowd_health changes.
+
+## v317 — competitor reader setup guide in the app
+- compGuide(H,hasData) at the top of Insights → Competitors until the phone gives live readings: 5 steps (F-Droid apps with links · paste the install line with a Copy button · sign in via Termux:X11 + bb-login · test with bb-run · battery Unrestricted). Steps tick from settings/crowd_health (phone seen, not signed out, live > 0); the guide disappears once live data exists.
