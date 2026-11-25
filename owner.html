@@ -637,7 +637,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v312';
+const BOARD='v313';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -692,7 +692,7 @@ function todayBox(){
   const tot=rows.reduce((n,x)=>n+x.v,0), nb=rows.reduce((n,x)=>n+x.n,0), uT=rows.reduce((n,x)=>n+x.u,0), uN=rows.reduce((n,x)=>n+x.un,0), ab=nb?tot/nb:0, paid=tot-uT;
   /* compare: usual same weekday by now (pre-bookings out on both sides), else yesterday by now */
   let cmp=''; if(live){ const U=usualByNow(), big=R.filter(r=>r.kind!=='staff'&&isLarge(r,DAY)).reduce((n,r)=>n+val(r),0);
-    if(U&&U.v>0){ const p=Math.round(100*((tot-big)-U.v)/U.v); cmp=`<span class="${p>=0?'up':'dn'}">${p>=0?'▲':'▼'} ${Math.abs(p)}% <small>vs usual ${U.wd} by now (${kfmt(U.v)})</small></span>`; }
+    if(U&&U.v>0){ const p=Math.round(100*((tot-big)-U.v)/U.v); cmp=`<span class="${p>=0?'up':'dn'}">${p>=0?'▲':'▼'} ${Math.abs(p)}% <small>vs usual ${U.wd} by now (${kfmt(U.v)})${big>0?` · pre-booking ${kfmt(big)} left out of this`:''}</small></span>`; }
     else if(YDOC&&YDOC.records){ const ys=dayStartMs(YDOC.day||addDays(DAY,-1)), cut=NOW-dayStartMs(DAY), yv=Object.values(YDOC.records).filter(r=>r.kind!=='staff'&&r.status==='settled'&&r.createdAt&&(T(r.createdAt).getTime()-ys)<=cut).reduce((n,r)=>n+(r.total||0),0);
       if(yv>0){ const p=Math.round(100*(tot-yv)/yv); cmp=`<span class="${p>=0?'up':'dn'}">${p>=0?'▲':'▼'} ${Math.abs(p)}% <small>vs yesterday by now (${kfmt(yv)})</small></span>`; } } }
   else { /* v310: a past day against its usual same weekday (last 4, pre-bookings out on both sides) — never yesterday */
@@ -3263,13 +3263,15 @@ function todayLab(){ if(DAY!==bizToday()||!INDEX||!Object.keys(INDEX).length) re
   const S0=simBase(), v=S0.nowMin, so=S0.A.reduce((a,b)=>a+(b||0),0), tw=rpWd(DAY);
   if(!(so>0)||v<60) return `<div class="card wide tmr"><h2>Today · how it will end</h2><div class="note">Come back after the first hour of sales.</div></div>`;
   const M=tdMeth(DAY,S0.A,v,so,TMR.f,TMR.n), BT=tdBacktest(v), pc=x=>Math.round(x*100)+'%', at=rpClock(v);
+  /* v313: the ways forecast walk-in sales (pre-bookings out, as history is); the pre-booking is added back so the close matches the top box */
+  const PB=(()=>{ try{ return preFor(DAY).add||0; }catch(e){ return 0; } })(), pbN=PB?` · incl. ${rs(PB)} pre-booked`:'';
   const fst=M.F?{n:1,med:M.F,p25:Math.max(so,M.F*(1-(FC_BAND[Math.min(18,S0.hc)]||.1))),p75:M.F*(1+(FC_BAND[Math.min(18,S0.hc)]||.1))}:null;
   const meth=[['F','App forecast',fst,BT.F,'the live forecast'],['S','Days like today',M.S,BT.S,'so far + what they sold after '+at],['R','Last 4 '+tw+'s + today',M.R,BT.R,'so far + what they sold after '+at],['B','Last 4 '+tw+'s',M.B,BT.B,'their totals, ignores today']].filter(x=>x[2]);
   const best=meth.filter(x=>x[3]&&x[3].n>=8).sort((a,b)=>a[3].mape-b[3].mape)[0];
-  const head=best?`<div class="tmbest"><small>Best way right now · ${esc(best[1])}</small><b>${rs(best[2].med)}</b><em>likely ${rs(best[2].p25)} – ${rs(best[2].p75)} · sold so far ${rs(so)}</em>
+  const head=best?`<div class="tmbest"><small>Best way right now · ${esc(best[1])}</small><b>${rs(best[2].med+PB)}</b><em>likely ${rs(best[2].p25+PB)} – ${rs(best[2].p75+PB)} · sold so far ${rs(so+PB)}${pbN}</em>
     <div class="tmproof${best[3].mape>.15?' rough':''}">${best[3].mape>.15?'⚠ Rough today — use as a guide. ':'✓ '}Proof: replayed at <b>${at}</b> on each of the last <b>${best[3].n} days</b> (using only what was known then), it missed the close by <b>${pc(best[3].mape)}</b> on average${Math.abs(best[3].bias)>=.03?` and guessed ${best[3].bias>0?'high':'low'} by ${pc(Math.abs(best[3].bias))}`:''}; the real close fell inside its range on <b>${best[3].hit} of ${best[3].hn}</b> days.</div></div>`:'';
   const tbl=`<div class="scroll"><table class="tmt"><tr><th>Way</th><th class="r">Close</th><th class="r">Likely range</th><th class="r">Missed by<span class="wy">at ${at}</span></th><th class="r">Inside</th></tr>
-    ${meth.map(([k,n,st,bt,why])=>`<tr${best&&best[0]===k?' class="on"':''}><td>${best&&best[0]===k?'★ ':''}${esc(n)}<span class="wy">${esc(why||'')}</span></td><td class="r"><b>${rs(st.med)}</b></td><td class="r">${kfmt(st.p25)}–${kfmt(st.p75)}</td><td class="r">${bt?pc(bt.mape)+'<span class="wy">'+(bt.bias>=0?'high ':'low ')+pc(Math.abs(bt.bias))+'</span>':'—'}</td><td class="r">${bt?bt.hit+'/'+bt.hn:'—'}</td></tr>`).join('')}</table></div>
+    ${meth.map(([k,n,st,bt,why])=>`<tr${best&&best[0]===k?' class="on"':''}><td>${best&&best[0]===k?'★ ':''}${esc(n)}<span class="wy">${esc(why||'')}</span></td><td class="r"><b>${rs(st.med+PB)}</b></td><td class="r">${kfmt(st.p25+PB)}–${kfmt(st.p75+PB)}</td><td class="r">${bt?pc(bt.mape)+'<span class="wy">'+(bt.bias>=0?'high ':'low ')+pc(Math.abs(bt.bias))+'</span>':'—'}</td><td class="r">${bt?bt.hit+'/'+bt.hn:'—'}</td></tr>`).join('')}</table></div>
     <p class="note">The best way changes through the day: early on the app forecast and past ${tw}s know more; by evening the days that went like today usually win. ★ = lowest miss at this time.</p>`;
   const lst=M.SL?`<h3 class="ssh">Days like today so far · ${at}</h3><div class="scroll"><table class="tmt"><tr><th>Day</th><th class="r">Match</th><th class="r">By ${at}</th><th class="r">After</th><th class="r">Closed at</th></tr>
     ${M.SL.map(o=>{ const b=cumTill(fcHours(o.x),v), e=nrev(o.x); return `<tr><td><a href="#" data-day="${o.x}">${esc(rpName(o.x))}</a>${dayTags(o.x).L.length?' <span class="n">'+esc(dayTags(o.x).L.join(', '))+'</span>':''}</td><td class="r">${Math.round(100*o.m)}%</td><td class="r">${rs(b)}</td><td class="r">+${rs(Math.max(0,e-b))}</td><td class="r"><b>${rs(e)}</b></td></tr>`; }).join('')}</table></div>`:'<p class="note">No days found — try Any day.</p>';

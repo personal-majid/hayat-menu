@@ -936,3 +936,6 @@ What that means, and what to say if it comes up:
 ## v312 — type rows open filtered bills · period chart lines with Total, compare, auto events
 - todayBox rows carry data-bfk (dine / counter / delivery / staff; Total = ''); a capture-phase click listener sets BF.kind before the row's data-tab opens Bills, so tapping CO shows counter bills only.
 - pdCard: Lines + "Dine · CO · Delivery" also draws a bold Total line; "Compare with: nothing / previous period / same days last month" (PD.cmp) draws the same lines dashed from that period, matched by position (bars: the total only). pdEvents(from,to,days): office events + price changes from dgChanges (only the chosen dish / group when filtered) + offer runs = 2+ days in a row with 3+ discounted CO or Delivery bills and ≥ ₹300 off in the run (round-offs ignored); markers on the chart + a list under it.
+
+## v313 — Today lab includes pre-bookings
+- Majid, 25 Nov 22:57: box said ₹59.5K so far, "Today · how it ends" said ₹52K (likely 50.5–58.4K). The lab's ways work on walk-in sales (soldRecs: large orders out, like history), so a ₹9K pre-booking vanished. todayLab now adds PB = preFor(DAY).add to so far, every way's close and range, with "incl. ₹X pre-booked". The top box's "vs usual by now" says "pre-booking ₹X left out of this" when one exists.
