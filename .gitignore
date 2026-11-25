@@ -53,3 +53,8 @@ daily_slips/
 
 # marketing videos hold real sales numbers - never publish
 marketing/
+
+# the phone collector is served from the site, so its code must be committed
+!collector/*.mjs
+!collector/package.json
+.wrangler/

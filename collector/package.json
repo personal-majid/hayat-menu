@@ -1,0 +1,14 @@
+{
+  "name": "busyboard-android",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "login": "node login.mjs",
+    "check": "node login.mjs --check",
+    "scrape": "node scrape.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.49.0"
+  }
+}
