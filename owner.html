@@ -573,7 +573,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v307';
+const BOARD='v308';
 let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
 
@@ -3812,11 +3812,12 @@ const trSave=()=>{ try{ localStorage.setItem('hayat-tr',JSON.stringify(TR)); }ca
 const TR_CH={all:'All customers',dine:'Dine-in',counter:'CO · counter',delivery:'Delivery'};
 const TR_COL=['#12805d','#6656d0','#c4532a','#1d66b8','#a86400','#7a3f9e','#2f7d32','#b03a64'];
 const tcase=t=>String(t).toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
-function trName(id){ const t=id.slice(2); return id[0]==='c'?TR_CH[t]:id[0]==='x'?'Discounts given':id[0]==='g'?t:tcase(t); }
+const trSplit=id=>{ const t=id.slice(2), i=t.lastIndexOf('@'); return i>0?[t.slice(0,i),t.slice(i+1)]:[t,'all']; };
+function trName(id){ const [t,c]=trSplit(id), cs=c!=='all'?' · '+TR_CH[c]:''; return id[0]==='c'?TR_CH[t]:id[0]==='x'?'Discounts given'+cs:id[0]==='g'?t+cs:tcase(t)+cs; }
 const TR_WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const wdOf=d=>new Date(d+'T12:00:00').getDay();
 /* one series, one day: m = 'v' ₹ · 'n' bills or plates · 'a' average (₹ a bill / ₹ a plate) */
-function trRaw(d,id,ses){ const x=dgDay(d); if(!x) return null; const t=id.slice(2), k=(ses||TR.ses)+(id[0]==='c'?t:'all');
+function trRaw(d,id,ses){ const x=dgDay(d); if(!x) return null; const [t,c]=trSplit(id), k=(ses||TR.ses)+(id[0]==='c'?t:c);
   if(id[0]==='x') return x.dc[k]||[0,0]; return (id[0]==='c'?x.b[k]:id[0]==='g'?(x.g[t]||{})[k]:(x.ic[t]||{})[k])||[0,0]; }
 function trAgg(days,id,m,ses){ let v=0,n=0,c=0; days.forEach(d=>{ const r=trRaw(d,id,ses); if(!r) return; v+=r[0]; n+=r[1]; c++; }); if(!c) return null; return m==='v'?v/c:m==='n'?n/c:(n?v/n:null); }
 const monOf=d=>{ const x=new Date(d+'T12:00:00'); x.setDate(x.getDate()-((x.getDay()+6)%7)); return ymd(x); };
@@ -3869,7 +3870,8 @@ function trSmart(R){ const L=trSeries(R), last=R.all[R.all.length-1], wd=TR_WD[w
     <p class="note">Rare = happens about 1 day in 20 for that line; unusual = about 1 in 10. Customer bills only, pre-bookings over ₹4,000 left out. Discounts = bills whose total is below their items (the offers).</p></div>`; }
 /* ---------- the compare chart ---------- */
 function trChart(R){ const S=TR.s.slice(0,8), m=TR.m, days=R.show;
-  const P=TR.u==='w'?(()=>{ const W={}; days.forEach(d=>{ (W[monOf(d)]=W[monOf(d)]||[]).push(d); }); return Object.keys(W).sort().map(k=>({k,D:W[k],lab:new Date(k+'T12:00:00').getDate()+' '+new Date(k+'T12:00:00').toLocaleDateString('en-IN',{month:'short'}),part:W[k].length<7})); })()
+  const P=TR.u==='m'?(()=>{ const M={}; days.forEach(d=>{ (M[d.slice(0,7)]=M[d.slice(0,7)]||[]).push(d); }); return Object.keys(M).sort().map(k=>{ const n=new Date(+k.slice(0,4),+k.slice(5,7),0).getDate(); return {k,D:M[k],lab:new Date(k+'-01T12:00:00').toLocaleDateString('en-IN',{month:'short',year:'2-digit'}),part:M[k].length<n-3}; }); })()
+    :TR.u==='w'?(()=>{ const W={}; days.forEach(d=>{ (W[monOf(d)]=W[monOf(d)]||[]).push(d); }); return Object.keys(W).sort().map(k=>({k,D:W[k],lab:new Date(k+'T12:00:00').getDate()+' '+new Date(k+'T12:00:00').toLocaleDateString('en-IN',{month:'short'}),part:W[k].length<7})); })()
     :days.map(d=>({k:d,D:[d],lab:new Date(d+'T12:00:00').getDate()+'',wd:'SMTWTFS'[wdOf(d)]}));
   const val=(id,D)=>trAgg(D,id,m), roll=(id,d)=>{ const D=R.all.filter(x=>x<=d&&x>dgAdd(d,-7)&&CACHE[x]); return D.length>=4?val(id,D):null; };
   const lines=S.map((id,i)=>({id,c:TR_COL[i%TR_COL.length],v:P.map(p=>val(id,p.D)),sm:TR.u==='d'?P.map(p=>roll(id,p.k)):null}));
@@ -3879,7 +3881,7 @@ function trChart(R){ const S=TR.s.slice(0,8), m=TR.m, days=R.show;
   const path=a=>{ let o='',pen=false; a.forEach((v,i)=>{ if(v==null){ pen=false; return; } o+=(pen?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1); pen=true; }); return o; };
   const grid=[0,.25,.5,.75,1].map(f=>`<line x1="${l0}" x2="${W-r0}" y1="${Y(mx*f)}" y2="${Y(mx*f)}" class="trg"/><text x="${l0-4}" y="${Y(mx*f)+4}" text-anchor="end" class="trax">${fmt(mx*f)}</text>`).join('');
   const step=Math.ceil(P.length/14), xl=P.map((p,i)=>i%step?'':`<text x="${X(i)}" y="${H-12}" text-anchor="middle" class="trax">${p.lab}</text>${p.wd?`<text x="${X(i)}" y="${H-1}" text-anchor="middle" class="trax trwd">${p.wd}</text>`:''}`).join('');
-  const posOf=d=>{ const i=TR.u==='w'?P.findIndex(p=>p.k===monOf(d)):P.findIndex(p=>p.k===d); return i; };
+  const posOf=d=>{ const i=TR.u==='m'?P.findIndex(p=>p.k===d.slice(0,7)):TR.u==='w'?P.findIndex(p=>p.k===monOf(d)):P.findIndex(p=>p.k===d); return i; };
   const EV=Object.entries(EVENTS||{}).map(([k,e])=>Object.assign({k},e)).filter(e=>e&&e.d>=R.a&&e.d<=R.b).sort((a,b)=>a.d<b.d?-1:1);
   const evm=EV.map(e=>{ const i=posOf(e.d); if(i<0) return ''; const nm=((LAB_KINDS.find(k=>k[0]===e.kind)||[0,e.kind])[1])+(e.note?' · '+e.note:'');
     return `<line x1="${X(i)}" x2="${X(i)}" y1="${t0-6}" y2="${H-b0}" class="trev"/><text x="${X(i)}" y="${t0-8}" text-anchor="middle" class="trevi"><title>${esc(e.d+' · '+nm)}</title>${EV_IC[e.kind]||'•'}</text>`; }).join('');
@@ -3887,18 +3889,20 @@ function trChart(R){ const S=TR.s.slice(0,8), m=TR.m, days=R.show;
   const half=Math.max(1,Math.floor(P.length/4)), sumr=lines.map(l=>{ const a=l.v.slice(0,half).filter(v=>v!=null), z=l.v.slice(-half).filter(v=>v!=null), A=a.length?a.reduce((x,y)=>x+y,0)/a.length:null, Z=z.length?z.reduce((x,y)=>x+y,0)/z.length:null;
     return `<tr><td><i class="trdot" style="background:${l.c}"></i>${esc(trName(l.id))} <a href="#" class="trx" data-trdel="${esc(l.id)}">✕</a></td><td class="r">${A==null?'—':fmt(A)}</td><td class="r">${Z==null?'—':fmt(Z)}</td><td class="r">${A&&Z!=null?`<b class="${Z<A*.95?'dn':Z>A*1.05?'up':''}">${Z>=A?'+':''}${Math.round((Z/A-1)*100)}%</b>`:'—'}</td></tr>`; }).join('');
   const chip=(k,v,l)=>`<button class="chip${String(TR[k])===String(v)?' on':''}" data-tr="${k}:${v}">${l}</button>`;
+  const DC=TR.dch||'all', dsuf=DC==='all'?'':'@'+DC;
   const on=id=>TR.s.includes(id), tg=(id,l)=>`<button class="chip${on(id)?' on':''}" data-trs="${esc(id)}">${l}</button>`;
   const G={}, IT={}; R.show.forEach(d=>{ const x=dgDay(d); if(!x) return; Object.entries(x.g).forEach(([g,mm])=>{ G[g]=(G[g]||0)+((mm.Tall||[0])[0]); }); Object.entries(x.ic).forEach(([n,mm])=>{ IT[n]=(IT[n]||0)+((mm.Tall||[0])[0]); }); });
   const ml=m==='v'?'₹ a day':m==='n'?(S.some(id=>id[0]==='c')?'bills / plates a day':'plates a day'):'average (₹ a bill / ₹ a plate)';
   return `<div class="card wide"><h2>Compare over time <span class="n">${esc(ml)}${TR.ses==='L'?' · lunch':TR.ses==='E'?' · evening':''}</span></h2>
-    <div class="chips trchips">${chip('u','d','Day')}${chip('u','w','Week')} · ${chip('r',28,'4 weeks')}${chip('r',56,'8 weeks')}${chip('r',84,'12 weeks')}${chip('r','c','From – to')}
+    <div class="chips trchips">${chip('u','d','Day')}${chip('u','w','Week')}${chip('u','m','Month')} · ${chip('r',28,'4 weeks')}${chip('r',56,'8 weeks')}${chip('r',84,'12 weeks')}${chip('r',182,'6 months')}${chip('r','c','From – to')}
       ${TR.r==='c'?`<input type="date" id="trFrom" value="${TR.from||R.a}"> – <input type="date" id="trTo" value="${TR.to||R.b}">`:''}</div>
     <div class="chips trchips">${chip('m','v','₹')}${chip('m','n','Bills / plates')}${chip('m','a','Average')} · ${chip('ses','T','All day')}${chip('ses','L','Lunch')}${chip('ses','E','Evening')}</div>
-    <div class="chips trchips">${tg('c:all','All')}${tg('c:dine','Dine-in')}${tg('c:counter','CO')}${tg('c:delivery','Delivery')}${tg('x:disc','Discounts')}
-      <select id="trG"><option value="">＋ Dish group</option>${Object.keys(G).sort((a,b)=>G[b]-G[a]).map(g=>`<option${on('g:'+g)?' disabled':''}>${esc(g)}</option>`).join('')}</select>
-      <input id="trI" list="trIL" placeholder="＋ Dish (type a name)"><datalist id="trIL">${Object.keys(IT).sort((a,b)=>IT[b]-IT[a]).slice(0,120).map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
+    <div class="chips trchips">${tg('c:all','All')}${tg('c:dine','Dine-in')}${tg('c:counter','CO')}${tg('c:delivery','Delivery')}${tg('x:disc'+dsuf,'Discounts')}
+      <select id="trG"><option value="">＋ Dish group</option>${Object.keys(G).sort((a,b)=>G[b]-G[a]).map(g=>`<option${on('g:'+g+dsuf)?' disabled':''}>${esc(g)}</option>`).join('')}</select>
+      <input id="trI" list="trIL" placeholder="＋ Dish (type a name)"></div>
+    <div class="chips trchips"><span class="n">Dish lines sold through:</span>${['all','dine','counter','delivery'].map(c=>`<button class="chip${DC===c?' on':''}" data-trdc="${c}">${c==='all'?'All':TR_CH[c]}</button>`).join('')}<span class="n">— pick, then add the dish; add it again under another channel to compare</span><datalist id="trIL">${Object.keys(IT).sort((a,b)=>IT[b]-IT[a]).slice(0,120).map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
     <div class="trwrap">${S.length?svg:'<p class="note">Pick something to compare above.</p>'}</div>
-    ${TR.u==='d'?'<p class="note">Thin line = each day, thick line = average of the last 7 days (so weekdays do not zig-zag the trend).</p>':'<p class="note">Each point = average a day of that Monday–Sunday week; the last one may be a part week.</p>'}
+    ${TR.u==='d'?'<p class="note">Thin line = each day, thick line = average of the last 7 days (so weekdays do not zig-zag the trend).</p>':(TR.u==='m'?'<p class="note">Each point = average a day of that month (Average = ₹ per bill or per plate). A month not finished yet is a part month.</p>':'<p class="note">Each point = average a day of that Monday–Sunday week; the last one may be a part week.</p>')}
     <div class="scroll"><table><tr><th>Line</th><th class="r">First quarter</th><th class="r">Last quarter</th><th class="r">Change</th></tr>${sumr}</table></div>
     <h3>Events on the chart</h3><div class="trevl">${EV.length?EV.map(e=>`<span class="chip">${EV_IC[e.kind]||'•'} ${esc(e.d.slice(5))} ${esc((LAB_KINDS.find(k=>k[0]===e.kind)||[0,e.kind])[1])}${e.note?' · '+esc(e.note):''}</span>`).join(' '):'<span class="note">None in these dates.</span>'}</div>
     <div class="trevadd"><input type="date" id="trEd" value="${R.b}"><select id="trEk">${LAB_KINDS.map(k=>`<option value="${k[0]}">${esc(k[1])}</option>`).join('')}</select><input id="trEn" placeholder="what happened (e.g. Alfaham offer + payasam)"><button class="chip on" id="trEs">＋ Add event</button></div></div>`; }
@@ -3935,14 +3939,15 @@ function trSugg(R){ const D=R.all.slice(-28).filter(d=>CACHE[d]&&dgDay(d)); if(D
   const LW=R.all.slice(-7).filter(d=>CACHE[d]&&dgDay(d)), od=LW.reduce((a,d)=>{ const x=dgDay(d).dc.Tall||[0,0]; return [a[0]+x[0],a[1]+x[1]]; },[0,0]);
   if(od[1]>=5){ const bl=LW.flatMap(d=>dgDay(d).bs), wd=bl.filter(b=>b[3]>0), pa=wd.filter(b=>b[0]!=='dine').length;
     out.push(`<li><b>Offers given (last 7 days)</b> — ${od[1]} bills got a discount, ${rs(od[0])} in all (${rs(od[0]/od[1])} a bill); ${Math.round(pa/wd.length*100)}% were CO / delivery. An offer pays only if it brings bills that would not have come: watch CO + delivery <i>bills a day</i> on the chart above (with the event marked), not just how many people used it.</li>`); }
-  return `<div class="card wide"><h2>Suggestions · combos and price points <span class="n">from the last ${D.length} days of bills</span></h2><ul class="trsg">${out.join('')||'<li>Nothing stands out yet.</li>'}</ul>
+  return `<div class="card wide"><h2>Suggestions · combos and price points <span class="n">from the last ${D.length} days of bills · <a href="#" data-tab="price">▶ play with prices</a></span></h2><ul class="trsg">${out.join('')||'<li>Nothing stands out yet.</li>'}</ul>
     <p class="note">These are pointers from the numbers, not decisions. After any change, mark it as an event above and compare the same weekdays before and after.</p></div>`; }
 function trWire(){ if(TAB!=='trend') return;
   $$('button[data-tr]').forEach(b=>{ b.onclick=()=>{ const [k,v]=b.dataset.tr.split(':'); TR[k]=k==='r'&&v!=='c'?+v:v; trSave(); render(); }; });
   $$('button[data-trs]').forEach(b=>{ b.onclick=()=>{ const id=b.dataset.trs; TR.s=TR.s.includes(id)?TR.s.filter(x=>x!==id):TR.s.concat(id).slice(-8); trSave(); render(); }; });
+  $$('button[data-trdc]').forEach(b=>{ b.onclick=()=>{ TR.dch=b.dataset.trdc; trSave(); render(); }; });
   $$('[data-trdel]').forEach(a=>{ a.onclick=e=>{ e.preventDefault(); TR.s=TR.s.filter(x=>x!==a.dataset.trdel); trSave(); render(); }; });
-  const g=$('trG'); if(g) g.onchange=()=>{ if(!g.value) return; TR.s=TR.s.concat('g:'+g.value).slice(-8); trSave(); render(); };
-  const i=$('trI'); if(i) i.onchange=()=>{ const v=i.value.trim().toUpperCase().replace(/\s+/g,' '); if(!v) return; TR.s=TR.s.concat('i:'+v).slice(-8); trSave(); render(); };
+  const g=$('trG'); if(g) g.onchange=()=>{ if(!g.value) return; TR.s=TR.s.concat('g:'+g.value+((TR.dch||'all')==='all'?'':'@'+TR.dch)).slice(-8); trSave(); render(); };
+  const i=$('trI'); if(i) i.onchange=()=>{ const v=i.value.trim().toUpperCase().replace(/\s+/g,' '); if(!v) return; TR.s=TR.s.concat('i:'+v+((TR.dch||'all')==='all'?'':'@'+TR.dch)).slice(-8); trSave(); render(); };
   ['trFrom','trTo'].forEach(id=>{ const el=$(id); if(el) el.onchange=()=>{ TR[id==='trFrom'?'from':'to']=el.value; trSave(); render(); }; });
   const es=$('trEs'); if(es) es.onclick=async()=>{ const d=$('trEd').value, kind=$('trEk').value, note=$('trEn').value.trim(); if(!/^\d{4}-\d\d-\d\d$/.test(d)) return;
     const id=d+'|'+Date.now().toString(36), v={d,kind,note,oneoff:false,at:new Date().toISOString()}; EVENTS[id]=v; LAB.res=null; render();
