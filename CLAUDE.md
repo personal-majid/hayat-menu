@@ -1184,3 +1184,6 @@ What that means, and what to say if it comes up:
 - FIXTURES (owner.html, Coming up only, NOT in the forecast): Kerala Blasters 29 Nov – 16 Jan (keralablastersfc.in), India v Sri Lanka ODIs/T20s 13–27 Dec and v Zimbabwe 3–9 Jan (bcci.tv; 1st ODI venue may have moved to Visakhapatnam), UAE Eid Al Etihad 2–4 Dec (fahr.gov.ae), Mandala Pooja 27 Dec, Makaravilakku 14 Jan. HOLI + Mannam Jayanti 2027-01-02.
 - prepPublish remembers a publish only after it saved; prepLoad retries a failed read after 2 min; kds prep dialog escapes the name; KDS undo puts the ticket back if the delete fails; verCheck never self-reloads while a dialog / sheet is open.
 - tools/export_data.py: prebooking column = the app's rule (over ₹5,000 AND a main dish ×8+, or an LG_SEED bill); column renamed prebooking (was prebooking_over_4000).
+
+## v355 — Live: last delivery · last counter
+- lastGap(): after "Last order received" two more tiles — 🛵 Last delivery (kind delivery) and 🎟 Last counter (CO) (any non-dine, non-delivery customer bill), by createdAt, minutes ago ticking, time · where · ₹, tap = the bill; "—, no … order yet today" when none. Left border in the channel colour (.chd / .chc). Grid 2 × 2.
