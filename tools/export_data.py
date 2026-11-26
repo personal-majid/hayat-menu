@@ -20,7 +20,15 @@ BASE = 'https://firestore.googleapis.com/v1/projects/h-menu/databases/(default)/
 OUT = os.path.join(os.path.expanduser('~'), 'Documents', 'Hayat-data')
 CACHE = os.path.join(OUT, 'cache')
 DAYS = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 180
-PRE = 4000
+PRE = 5000   # same rule as the owner app (v320): over Rs 5,000 AND bulk-shaped, or one of the known bulk bills
+LG_NOTMAIN = re.compile(r'POROTTA|CHAPATI|PATHIRI|ROTI|NAAN|RICE|TEA|COFFEE|LIME|JUICE|SODA|7UP|PEPSI|DEW|COLA|WATER|LTR|ML\b|MOJITO|SHAKE|SALAD|MAYO|KUBBOOS|BREAD')
+LG_SEED = {"2026-07-16|k4", "2026-07-18|k93", "2026-08-01|k2", "2026-08-08|k1", "2026-08-11|k1", "2026-08-16|k92", "2026-08-16|k8", "2026-08-19|k29", "2026-09-02|k4",
+           "2026-09-19|k67", "2026-09-19|k128", "2026-09-20|k6", "2026-10-07|k140", "2026-10-08|k14", "2026-10-17|k15", "2026-11-02|k80", "2026-11-12|k54", "2026-11-22|k13"}
+def is_prebooking(d, k, r, v):
+    if f'{d}|{k}' in LG_SEED: return 1
+    if v <= PRE: return 0
+    q = [float(i.get('q') or 0) for i in (r.get('items') or []) if i.get('n') and not LG_NOTMAIN.search(str(i.get('n')).upper())]
+    return int(max(q or [0]) >= 8)
 
 def get(path):
     for t in range(3):
@@ -117,7 +125,7 @@ def main():
             if h < 0: continue
             bid = hashlib.sha1((d + k).encode()).hexdigest()[:10]
             ses = 'lunch' if 5 <= h < 16 else 'evening'
-            pre = int(v > PRE)
+            pre = is_prebooking(d, k, r, v)
             bills.append([d, bid, ch, ses, r.get('section') or '', t[11:16], v, r.get('discount') or 0, r.get('pax') or '', pre, r.get('status')])
             for it in r.get('items') or []:
                 n = str(it.get('n') or '').strip().upper()
@@ -128,8 +136,8 @@ def main():
     def write(name, head, rows):
         with open(os.path.join(folder, name), 'w', newline='', encoding='utf-8') as f:
             w = csv.writer(f); w.writerow(head); w.writerows(rows)
-    write('bills.csv', ['day', 'bill_id', 'channel', 'session', 'hall', 'ordered_at', 'total_rs', 'discount_rs', 'guests', 'prebooking_over_4000', 'status'], bills)
-    write('items.csv', ['day', 'bill_id', 'channel', 'session', 'hall', 'item', 'group', 'size', 'qty', 'unit_price_rs', 'amount_rs', 'prebooking_over_4000'], items)
+    write('bills.csv', ['day', 'bill_id', 'channel', 'session', 'hall', 'ordered_at', 'total_rs', 'discount_rs', 'guests', 'prebooking', 'status'], bills)
+    write('items.csv', ['day', 'bill_id', 'channel', 'session', 'hall', 'item', 'group', 'size', 'qty', 'unit_price_rs', 'amount_rs', 'prebooking'], items)
     # daily: whole shop, by channel x session (pre-bookings out)
     D = defaultdict(lambda: defaultdict(float))
     for b in bills:
@@ -183,7 +191,7 @@ Business day 05:00-05:00. Customer bills only; staff food removed. No names, pho
 
 - channel: Dine (table), CO (walk-in counter takeaway), Delivery.
 - session: lunch = bills made before 16:00, evening = 16:00 to closing.
-- prebooking_over_4000 = 1: big pre-booked orders; analyse separately, they are lumpy.
+- prebooking = 1: bulk pre-booked orders (over Rs 5,000 with a main dish x8 or more, or a known bulk bill - same rule as the app); analyse separately, they are lumpy.
 - Sabarimala season (many avoid meat) runs 17 Nov - 27 Dec. Salary days (29th-4th) lift evenings.
 
 ## Questions

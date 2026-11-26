@@ -648,7 +648,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v353';
+const BOARD='v354';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -883,7 +883,7 @@ const agoTxt=ms=>{ const m=Math.max(0,Math.floor((Date.now()-ms)/60000)); return
    ncBack(): the same model replayed every 10 min of the last 14 finished days, using only earlier days — the card shows
    how often the wait landed within ±5 min, how honest the % are, how often the channel and the ±20% amount were right. */
 const NC_CH=[['dine','Dine-in'],['counter','CO'],['delivery','Delivery']], NC_C={};
-const NC_SIDE=/POROTTA|PAROTTA|PARATHA|CHAPP?ATH?I|NAAN|KUBOOS|KHUBOOS|BREAD|WATER|TEA|COFFEE|JUICE|LIME|SODA|SHAKE|MOJITO|LASSI|ML|LTR|PARCEL|CARRY|MAYO|SALAD|PICKLE|CHUTNEY|EXTRA/;   /* v342: side breads / drinks are not a kitchen cue */
+const NC_SIDE=/POROTTA|PAROTTA|PARATHA|CHAPP?ATH?I|NAAN|KUBOOS|KHUBOOS|BREAD|WATER|\bTEA\b|COFFEE|JUICE|LIME|SODA|SHAKE|MOJITO|LASSI|\bML\b|LTR|PARCEL|CARRY|MAYO|SALAD|PICKLE|CHUTNEY|EXTRA/;   /* v342: side breads / drinks are not a kitchen cue */
 const bizMin=t=>{ const x=new Date(t); return ((x.getHours()*60+x.getMinutes())-BH0*60+1440)%1440; };
 function ncRate(day){ if(NC_C[day]) return NC_C[day]; const D=tmDow(day,6); if(D.length<3) return null; const R={}, V={}, F={}; NC_CH.forEach(([c])=>{ R[c]=new Float32Array(1440); V[c]=[]; F[c]={}; });
   D.forEach(d=>{ const x=dgDay(d); if(!x) return; x.bs.forEach(([ch,,v,,mn,fm])=>{ if(!R[ch]||mn==null||mn<0) return; for(let m=Math.max(0,mn-10);m<=Math.min(1439,mn+10);m++) R[ch][m]+=1/21; V[ch].push([mn,v]); Object.keys(fm||{}).forEach(f=>{ if(NC_SIDE.test(f)||DR_SOFT.test(f)) return; (F[ch][f]=F[ch][f]||[]).push(mn); }); }); });
@@ -955,12 +955,12 @@ async function newsLoad(){ if(NEWS.busy||Date.now()-NEWS.at<10*60e3||!FB||!FB.fs
    Live right after Needs you, newest first (max 3, last 48 h); tap = the article. */
 /* same rules as the worker's why(): items saved before v352 get their note here */
 function newsWhy(c, t){ const T = t.toLowerCase();
-  if(c === 'price'){ if(/chicken|broiler|poultry|കോഴി/.test(T)) return 'Chicken is our biggest cost — a rise hits every mandi and alfaham plate'; if(/lpg|cylinder|gas/.test(T)) return 'Gas cost for the kitchen'; if(/fish|mathi|seer|ayala/.test(T)) return 'Fish dishes cost (king fish, fry)'; if(/rice|basmati/.test(T)) return 'Mandi rice cost'; if(/onion|tomato|vegetable/.test(T)) return 'Vegetable cost'; if(/biryani|sadya|catering|food/.test(T)) return 'Food prices around us — customers compare'; if(/petrol|diesel|fuel/.test(T)) return 'Delivery and transport cost'; return ''; }
+  if(c === 'price'){ if(/chicken|broiler|poultry|കോഴി/.test(T)) return 'Chicken is our biggest cost — a rise hits every mandi and alfaham plate'; if(/lpg|cylinder|gas/.test(T)) return 'Gas cost for the kitchen'; if(/fish|mathi|seer|ayala/.test(T)) return 'Fish dishes cost (king fish, fry)'; if(/\brice\b|basmati/.test(T)) return 'Mandi rice cost'; if(/onion|tomato|vegetable/.test(T)) return 'Vegetable cost'; if(/biryani|sadya|catering|food/.test(T)) return 'Food prices around us — customers compare'; if(/petrol|diesel|fuel/.test(T)) return 'Delivery and transport cost'; return ''; }
   if(c === 'shutdown') return 'A hartal / bandh can close the highway and empty the restaurant';
   if(c === 'school') return 'School holidays bring families out (Onam break ran +21%)';
   if(c === 'weather') return /red|orange|heavy/.test(T) && /malappuram|districts|kerala/.test(T) && !/thiruvananthapuram|kochi|ernakulam/.test(T) ? 'Heavy-rain alert — fewer travellers on the road, more parcels' : '';
   if(c === 'road') return 'Road trouble on our route — fewer stops, late deliveries';
-  if(c === 'football') return /blasters/.test(T) && /vs|match|preview|prediction|fixture|kick-?off|clash/.test(T) ? 'Kerala Blasters match — evening crowd can shift' : /sevens/.test(T) ? 'Local sevens football crowd nearby' : '';
+  if(c === 'football') return /blasters/.test(T) && /\bvs\b|match|preview|prediction|fixture|kick-?off|clash/.test(T) ? 'Kerala Blasters match — evening crowd can shift' : /sevens/.test(T) ? 'Local sevens football crowd nearby' : '';
   if(c === 'gulf') return 'Gulf news moves Malappuram family spending';
   if(c === 'local') return /festival|nercha|uroos|pooram|fest\b|expo|exhibition|wedding|marriage/.test(T) ? 'Local event — crowds nearby' : /accident|road|traffic|closed|block/.test(T) ? 'Local road trouble' : '';
   return ''; }
@@ -979,11 +979,25 @@ function newsCard(){ if(DAY!==bizToday()) return ''; newsLoad(); const L=NEWS.it
 document.addEventListener('click',async e=>{ const b=e.target.closest&&e.target.closest('[data-newsok]'); if(b){ const [d,id]=b.dataset.newsok.split('|'), it=NEWS.items.find(x=>x.id===id&&x.day===d); if(!it) return; it.ok=!it.ok;
     try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'news',d),{items:{[id]:{ok:it.ok,okBy:(FB&&FB.name)||'',okAt:tsNow()}}},{merge:true}); }catch(x){} render(); return; }
   const a=e.target.closest&&e.target.closest('[data-newsall]'); if(a){ NEWS.all=!NEWS.all; render(); } });
+/* v354: dated fixtures from official pages (checked 26 Nov 2026) - shown in Coming up only, NOT in the forecast (no measured
+   effect yet; use the ⚽ / 🏏 nudge on the day if the shop looks quiet). keralablastersfc.in/match-schedule · bcci.tv home season
+   2026-27 · fahr.gov.ae (UAE Eid Al Etihad) · Kerala Calling Nov 2026 (Sabarimala). */
+const FIXTURES=[
+ ['2026-11-29','⚽ Kerala Blasters at FC Goa · 5 pm'],['2026-12-06','⚽ Kerala Blasters v Churchill Brothers (Kochi) · 5 pm'],
+ ['2026-12-10','⚽ Kerala Blasters v Sporting Club Delhi (Kochi) · 5 pm'],['2026-12-14','⚽ Kerala Blasters v Punjab FC (Kochi) · 7:30 pm'],
+ ['2026-12-20','⚽ Kerala Blasters at Odisha FC · 7:30 pm'],['2027-01-03','⚽ Kerala Blasters at Bengaluru FC · 7:30 pm'],
+ ['2027-01-10','⚽ Kerala Blasters at Mohun Bagan · 5 pm'],['2027-01-16','⚽ Kerala Blasters v East Bengal (Kochi) · 7:30 pm'],
+ ['2026-12-13','🏏 India v Sri Lanka, 1st ODI · 2 pm'],['2026-12-16','🏏 India v Sri Lanka, 2nd ODI · 2 pm'],['2026-12-19','🏏 India v Sri Lanka, 3rd ODI · 2 pm'],
+ ['2026-12-22','🏏 India v Sri Lanka, 1st T20 · 7 pm'],['2026-12-24','🏏 India v Sri Lanka, 2nd T20 · 7 pm'],['2026-12-27','🏏 India v Sri Lanka, 3rd T20 · 7 pm'],
+ ['2027-01-03','🏏 India v Zimbabwe, 1st ODI · 2 pm'],['2027-01-06','🏏 India v Zimbabwe, 2nd ODI · 2 pm'],['2027-01-09','🏏 India v Zimbabwe, 3rd ODI · 2 pm'],
+ ['2026-12-02','🇦🇪 UAE National Day holiday 2–4 Dec (Gulf families call / travel)'],
+ ['2026-12-27','🛕 Sabarimala Mandala Pooja (temple closes that night)'],['2027-01-14','🛕 Sabarimala Makaravilakku (peak pilgrims)']];
 function comingUp(){ const t=bizToday(), end=addDays(t,28), L=calList().filter(e=>!e.off&&(e.d1||e.d0)>=t&&e.d0<=end); let E=[]; try{ E=calEffects(); }catch(e){}
   const effOf=e=>{ const own=E.find(x=>x.k==='hol:'+e.name); if(own) return own; return E.find(x=>x.k===(e.kind==='public'||e.kind==='festival'||e.kind==='local'?'hol':e.kind))||null; };
   const dl=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'}), kn=k=>(CAL_KINDS.find(x=>x[0]===k)||[0,k])[1];
   const items=L.map(e=>{ const f=effOf(e), on=e.d0<=t; return {d:on?t:e.d0,t:`${on?'<b>now</b> · till '+dl(e.d1||e.d0):dl(e.d0)+(e.d1&&e.d1!==e.d0?' – '+dl(e.d1):'')}`,n:e.name||kn(e.kind),f}; });
   Object.values(EVENTS||{}).forEach(e=>{ if(e&&e.d>=t&&e.d<=end) items.push({d:e.d,t:dl(e.d),n:((LAB_KINDS.find(k=>k[0]===e.kind)||[0,e.kind])[1])+(e.note?': '+e.note:''),f:null}); });
+  FIXTURES.forEach(([d,n])=>{ if(d>=t&&d<=end) items.push({d,t:dl(d),n:n+' · not in the forecast',f:null}); });
   { let pay=0,dip=0; for(let i=0;i<=28;i++){ const d=addDays(t,i), n=+d.slice(8);
       if(!pay&&(n===29||(n===1&&i>0))){ pay=1; items.push({d,t:dl(d)+' →',n:'Salary days (29th–4th): evenings and CO up',f:{mean:0.15,n:0,g:1}}); }
       if(!dip&&n===22){ dip=1; items.push({d,t:dl(d)+' – '+dl(addDays(d,6)),n:'4th week of the month: the slowest week',f:{mean:-0.10,n:0,g:1}}); }
@@ -1485,7 +1499,7 @@ async function verCheck(){ try{ const t=await (await fetch('./sw.js?v='+Date.now
     if(VER.latest>cur&&!document.getElementById('verBar')){ const b=document.createElement('button'); b.id='verBar'; b.type='button'; b.textContent=`🔄 New version v${VER.latest} ready · tap to update (you have v${cur})`; b.onclick=()=>verReload(); document.body.appendChild(b); } }catch(e){} }
 async function verReload(){ try{ if(navigator.serviceWorker){ const R=await navigator.serviceWorker.getRegistrations(); await Promise.all(R.map(r=>r.update().catch(()=>{}))); } }catch(e){} location.reload(); }
 setInterval(verCheck,5*60e3); setTimeout(verCheck,8000);
-document.addEventListener('visibilitychange',()=>{ if(document.hidden){ VER.hidAt=Date.now(); return; } const away=VER.hidAt?Date.now()-VER.hidAt:0; verCheck().then(()=>{ const cur=+String(BOARD).replace(/\D/g,''); if(away>10*60e3&&VER.latest>cur&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) verReload(); }); });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden){ VER.hidAt=Date.now(); return; } const away=VER.hidAt?Date.now()-VER.hidAt:0; verCheck().then(()=>{ const cur=+String(BOARD).replace(/\D/g,''); const busy=(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))||document.querySelector('dialog[open],.sheet.open,.sheetbg.open,#fcset.open,.fcset.open'); if(away>10*60e3&&VER.latest>cur&&!busy) verReload(); }); });
 /* v343: CHICKEN PREP (Majid: "they half-cook alfaham … at night they put chicken back in the freezer — we need to control it").
    Birds sold per session from the bills: Full = 1 bird, Half = ½, Qtr = ¼. ALFAHAM group = grilled chicken dishes (alfaham, peri peri,
    honey, honey chilli, dynamic, creamy, afghani, pepper, kanthari; not beef). CHICKEN MANDI (steamed) counted apart.
@@ -1507,8 +1521,8 @@ function prepBack(q){ const all=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(
 /* v344: the plan goes to prep/{day}.plan so the kitchen screen shows it; written when a number changes, at most every 10 min */
 let PREPW={k:'',at:0};
 function prepPublish(o){ if(!FB||!FB.fs) return; const k=JSON.stringify([o.am,o.pm,o.night,o.lunchDone,o.q,o.tmr&&o.tmr.am,o.cm]); if(k===PREPW.k&&Date.now()-PREPW.at<30*60e3) return; if(Date.now()-PREPW.at<10*60e3&&PREPW.k) return;
-  PREPW={k,at:Date.now()}; try{ FB.fs.setDoc(FB.fs.doc(FB.db,'prep',DAY),{day:DAY,plan:Object.assign({},o,{at:tsNow(),v:BOARD})},{merge:true}).catch(()=>{}); }catch(e){} }
-async function prepLoad(d){ if(PREPL[d]||!FB||!FB.fs) return; PREPL[d]=1; try{ const sn=await FB.fs.getDoc(FB.fs.doc(FB.db,'prep',d)); PREP[d]=sn.exists()?sn.data():{}; }catch(e){ PREP[d]={}; } render(); }
+  const was=PREPW; PREPW={k,at:Date.now()}; try{ FB.fs.setDoc(FB.fs.doc(FB.db,'prep',DAY),{day:DAY,plan:Object.assign({},o,{at:tsNow(),v:BOARD})},{merge:true}).catch(()=>{ PREPW=was; }); }catch(e){ PREPW=was; } }
+async function prepLoad(d){ if(PREPL[d]||!FB||!FB.fs) return; PREPL[d]=1; try{ const sn=await FB.fs.getDoc(FB.fs.doc(FB.db,'prep',d)); PREP[d]=sn.exists()?sn.data():{}; }catch(e){ PREP[d]={}; setTimeout(()=>{ delete PREPL[d]; },120e3); } render(); }
 function prepCard(){ const live=DAY===bizToday(); const P=prepFor(DAY,PREPQ); const D=tmDow(DAY,6); if(!P){ if(D.some(d=>CACHE[d]===undefined)&&!DG.busy) setTimeout(()=>dgLoad(D.filter(d=>CACHE[d]===undefined)),0); return D.length>=3?`<div class="card wide"><h2>🍗 Chicken prep</h2><p class="note">Loading past ${rpWd(DAY)}s…</p></div>`:''; }
   prepLoad(DAY); const R=PREP[DAY]||{}, now=birdsOf(DAY)||{L:0,E:0,cL:0,cE:0}, v=live?nowMinOf():1440, lunchDone=v>=(16-BH0)*60;
   const up=x=>Math.max(0,Math.ceil(x-0.15)), r1=x=>Math.round(x*10)/10;
@@ -3780,7 +3794,7 @@ function spendExplorer(sp){
    (Kerala holidays, Eid; learned once we have our own) → corrected live by how the
    day is actually running. Every number is shown, so a wrong factor is visible.
    ============================================================ */
-const HOLI={'2026-01-26':['Republic Day',1.2],'2026-03-20':['Eid al-Fitr',1.8],'2026-03-21':['Eid 2nd day',1.5],'2026-04-03':['Good Friday',1.1],'2026-04-14':['Vishu',1.2],'2026-05-01':['May Day',1.15],'2026-05-27':['Bakrid',1.8],'2026-05-28':['Bakrid 2nd day',1.4],'2026-06-26':['Muharram',1.1],'2026-08-15':['Independence Day',1.2],'2026-08-25':['Milad-un-Nabi',1.2],'2026-08-26':['Thiruvonam',1.3],'2026-08-27':['Onam 3rd',1.2],'2026-10-02':['Gandhi Jayanti',1.15],'2026-10-19':['Mahanavami',1.15],'2026-10-20':['Vijayadashami',1.15],'2026-08-28':['Sree Narayana Guru Jayanti',1.1],'2026-11-08':['Deepavali',1.1],'2026-12-25':['Christmas',1.3],'2026-12-31':["New Year's Eve",1.2],'2027-01-01':['New Year',1.2],'2027-01-26':['Republic Day',1.2],'2027-03-10':['Eid al-Fitr',1.8],'2027-03-11':['Eid 2nd day',1.5]};
+const HOLI={'2026-01-26':['Republic Day',1.2],'2026-03-20':['Eid al-Fitr',1.8],'2026-03-21':['Eid 2nd day',1.5],'2026-04-03':['Good Friday',1.1],'2026-04-14':['Vishu',1.2],'2026-05-01':['May Day',1.15],'2026-05-27':['Bakrid',1.8],'2026-05-28':['Bakrid 2nd day',1.4],'2026-06-26':['Muharram',1.1],'2026-08-15':['Independence Day',1.2],'2026-08-25':['Milad-un-Nabi',1.2],'2026-08-26':['Thiruvonam',1.3],'2026-08-27':['Onam 3rd',1.2],'2026-10-02':['Gandhi Jayanti',1.15],'2026-10-19':['Mahanavami',1.15],'2026-10-20':['Vijayadashami',1.15],'2026-08-28':['Sree Narayana Guru Jayanti',1.1],'2026-11-08':['Deepavali',1.1],'2026-12-25':['Christmas',1.3],'2026-12-31':["New Year's Eve",1.2],'2027-01-01':['New Year',1.2],'2027-01-02':['Mannam Jayanti',1.1],'2027-01-26':['Republic Day',1.2],'2027-03-10':['Eid al-Fitr',1.8],'2027-03-11':['Eid 2nd day',1.5]};
 Object.assign(HOLI,{'2025-01-26':['Republic Day',1.2],'2025-03-31':['Eid al-Fitr',1.8],'2025-04-01':['Eid 2nd day',1.4],'2025-04-14':['Vishu',1.2],'2025-04-18':['Good Friday',1.1],'2025-05-01':['May Day',1.15],'2025-06-07':['Bakrid',1.8],'2025-07-06':['Muharram',1.1],'2025-08-15':['Independence Day',1.2],'2025-09-04':['Onam (Uthradam)',1.2],'2025-09-05':['Thiruvonam / Milad-un-Nabi',1.3],'2025-09-06':['Onam 3rd',1.2],'2025-10-02':['Gandhi Jayanti / Vijayadashami',1.15],'2025-10-20':['Deepavali',1.1],'2025-12-25':['Christmas',1.3]});
 const wom=d=>Math.min(3,Math.floor((+d.slice(8,10)-1)/7));          /* week of month 0..3 */
 /* three ways to build the hour profile; the one that would have missed least over the last 28 days is the one used */

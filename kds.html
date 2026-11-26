@@ -178,7 +178,7 @@ function bindRecent(){ document.querySelectorAll('[data-u]').forEach(b=>b.onclic
 async function bump(id,inv,round){ const k=tickets().find(x=>x.id===id); DONE[id]={local:true}; RECENT.push({id,lab:k?(k.o.type==='Parcel'?'Parcel #'+(k.o.token||''):(SEC[k.o.section]||'')+' '+(k.o.table||'')):id}); render();
   try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'kds',id),{screen:ST.screen,inv:Number(inv)||inv,round,doneAt:FB.fs.serverTimestamp(),kotAt:k&&k.t?new Date(k.t):null,items:k?k.items.map(i=>i.n):[],table:k?(k.o.table||null):null,section:k?(k.o.section||null):null,parcel:k?k.o.type==='Parcel':false}); }
   catch(e){ delete DONE[id]; RECENT=RECENT.filter(r=>r.id!==id); render(); alert('Could not save: '+(e.code||e.message)); } }
-async function unbump(id){ delete DONE[id]; RECENT=RECENT.filter(r=>r.id!==id); render(); try{ await FB.fs.deleteDoc(FB.fs.doc(FB.db,'kds',id)); }catch(e){} }
+async function unbump(id){ const d0=DONE[id], r0=RECENT.slice(); delete DONE[id]; RECENT=RECENT.filter(r=>r.id!==id); render(); try{ await FB.fs.deleteDoc(FB.fs.doc(FB.db,'kds',id)); }catch(e){ if(d0) DONE[id]=d0; RECENT=r0; render(); alert('Could not undo: '+(e.code||e.message)); } }
 let AC=null; function beep(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); [0,0.18].forEach(d=>{ const o=AC.createOscillator(), g=AC.createGain(); o.frequency.value=880; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(0.25,AC.currentTime+d); g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+d+0.15); o.start(AC.currentTime+d); o.stop(AC.currentTime+d+0.16); }); }catch(e){} }
 function feed(){ const f=$('feed'); if(!META){ f.className='pill bad'; f.textContent='no data from the shop PC yet'; return; }
   const last=Math.max(tms(META.openAt)||0,tms(META.lastRunAt)||0), m=(Date.now()-last)/60000;
@@ -215,7 +215,7 @@ function prepDlg(){ const P=(PREPD&&PREPD.plan)||{}, R=PREPD||{}, dl=$('pdlg'), 
    <label>Morning half-cooked<input type="number" min="0" step="0.5" inputmode="decimal" id="pAm" value="${v(R.am)}"></label>
    <label>Afternoon half-cooked<input type="number" min="0" step="0.5" inputmode="decimal" id="pPm" value="${v(R.pm)}"></label>
    <label>Back to the freezer tonight<input type="number" min="0" step="0.5" inputmode="decimal" id="pBack" value="${v(R.back)}"></label>
-   ${R.at?`<div class="note">last saved ${new Date(R.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})}${R.by?' by '+R.by:''}</div>`:''}
+   ${R.at?`<div class="note">last saved ${new Date(R.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})}${R.by?' by '+String(R.by).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])):''}</div>`:''}
    <div class="row"><button class="hb" id="pX" type="button">Close</button><button class="hb" id="pSave" type="button" style="font-weight:800">Save</button></div>`;
   $('pX').onclick=()=>dl.close(); $('pSave').onclick=async()=>{ const o={}; [['am','pAm'],['pm','pPm'],['back','pBack']].forEach(([k,id])=>{ const x=$(id).value; if(x!=='') o[k]=+x; }); o.at=new Date().toISOString(); o.by=(window.KDS_WHO||'kitchen');
     try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'prep',HayatClean.bizDate()),o,{merge:true}); dl.close(); }catch(e){ alert('Could not save: '+(e.code||e.message)); } };
