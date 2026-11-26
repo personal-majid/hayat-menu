@@ -1106,3 +1106,10 @@ What that means, and what to say if it comes up:
 - verCheck(): every 5 min + on coming back, fetch sw.js (no-store), read hayat-vNNN; newer than BOARD → #verBar "🔄 New version vNNN ready · tap to update" (verReload: SW update + reload); back after 10+ min away with a newer version → reloads by itself (not while typing). Reason: Majid's installed phone app stayed open for days on a pre-v334 copy, so the bill check never appeared.
 - billHourFc(r) under ncCheck in drill(): the forecast for the hour the bill was made (locked morning m0.h when saved, else fcModel prof×f), whole shop + this bill's channel (chMix share) vs bills made in that hour, share %, and the bill's share of the hour.
 - nextCust: headline "Next customer expected in a–b min" (25th–75th percentile of the wait, ncAt q25/q75); 5/10/15-min bars and "next 5 min" removed; "Next 30 min: ~N"; rush = ≥2.5 expected in 30 min → Next 3 customers shown open with a Get ready line (🍽/🛍/🛵 counts, "keep a rider free" when a delivery is in it, cook: main dishes). NC_SIDE: breads, drinks, extras left out of dish guesses.
+
+## v343 — Alfaham chicken prep (Live)
+- Majid: the kitchen half-cooks alfaham chicken and puts it back in the freezer at night — control it with the forecast.
+- birdsOf(d) from dgDay ic: Full 1 / Half ½ / Qtr ¼ bird; PREP_ALF (alfaham, alfham, peri peri, honey, dynamic, afghani, kanthari, pepper; PREP_NOT beef/fish/mutton/prawn), Chicken mandi (steamed, PREP_CM) apart; lunch / evening from dgDay L/E (16:00).
+- prepFor(day,q): percentile q of the last 6 same weekdays × (fcModel plan ÷ their average sales, 0.8–1.25). Card: Morning batch (lunch), Afternoon batch (evening × today's lunch pace half weight − morning batch left, once recorded), likely left at closing, tomorrow morning (take out tonight), chicken mandi line. PREPQ 0.5 / 0.7 / 0.9 (localStorage hayat-prepq).
+- Kitchen record prep/{day} {am, pm, back, by, at}: cooked vs sold (bills) → should be left vs recorded back (gap > 1 bird in red).
+- prepBack(q) last 28 days: test data (14 days) Lean 71% enough / 2.1 left / 1.0 short; Normal 79% / 2.8 / 0.7; Safe 86% / 4.4 / 0.3 birds a day at lunch.
