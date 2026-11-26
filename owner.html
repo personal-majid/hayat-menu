@@ -648,7 +648,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v352';
+const BOARD='v353';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -776,10 +776,10 @@ function kpis(){
   return `${staleBar()}${todayBox()}${SAFE(fcCheck,'fcCheck')()}
   ${live&&FCSET.open?`<div class="fcset">${scnBar()}</div>`:''}${live?`<div class="fcline">${trfHint()}</div>`:''}
   ${TAB==='floor'?'':avgStrip()}<details class="moreg kmore" data-mg="kpi2"${MOREG.kpi2!==false?' open':''}><summary><b>More numbers</b><small>seats · table time · cash / card · paid out</small></summary><div class="kpis">
-    <div class="kpi"><small>Seats</small><b>${tables.length?Math.round(100*seatsBusy/Math.max(1,seats))+'%':'—'}</b><em>${busy.size} of ${tables.length} tables · ${seatsBusy}/${seats} chairs</em></div>
+    <div class="kpi"><small>${seats?'Seats':'Tables busy'}</small><b>${!tables.length?'—':seats?Math.round(100*seatsBusy/seats)+'%':Math.round(100*busy.size/tables.length)+'%'}</b><em>${!tables.length?'no floor plan from the shop PC yet':busy.size+' of '+tables.length+' tables'}${!tables.length?'':seats?` · ${seatsBusy}/${seats} chairs`:' · chair counts not set on the shop PC floor plan'}</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
-    <div class="kpi click" data-tab="buy" title="open purchases & payments"><small>Paid out</small><b>${rs(DOC.paidOut||0)}</b><em>${DOC.paymentCount||0} entries${DOC.draftTotal?' · <b>'+rs(DOC.draftTotal)+' being entered</b>':''}${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
+    <div class="kpi click" data-tab="buy" title="open purchases & payments"><small>Paid out</small><b>${(DOC.paidOut||0)||!live?rs(DOC.paidOut||0):'—'}</b><em>${!(DOC.paidOut||0)&&live?`nothing entered yet today (spends usually go in at night) · yesterday ${rs(((INDEX[addDays(DAY,-1)]||{}).paidOut)||0)}`:(DOC.paymentCount||0)+' entries'}${DOC.draftTotal?' · <b>'+rs(DOC.draftTotal)+' being entered</b>':''}${DOC.paidIn?' · in '+rs(DOC.paidIn):''}${rev&&DOC.paidOut?' · '+Math.round(100*DOC.paidOut/rev)+'% of sales':''}</em></div>
   </div></details>`;
 }
 let FCSET={open:false};
@@ -1471,7 +1471,7 @@ function fcApplies(day,F){ if(!F) return ''; const pc=x=>x==null?'':(x>=1?'+':'�
   if(F.cal&&F.cal!==1) ch(esc(F.why||'Holiday'),pc(F.cal),F.cal>=1?'up':'dn');
   const tm=addDays(day,1); if(HOLI[tm]) ch(`Eve of ${esc(HOLI[tm][0])}`,'not used','z','eves swing a lot (−23% to +48%); too few to trust yet');
   const sp=(k,lab,tip)=>{ if((LAB_SPANS[k]||[]).some(([a,b])=>day>=a&&day<=b)) ch(lab,'in "own misses"','z',tip); };
-  sp('vrat','Sabarimala season','not a separate factor yet: the last 10 days already carry it'); sp('school','School break','Onam break ran +21% (evening +25%); one break so far'); sp('gulf','Gulf vacation','families home from the Gulf'); sp('ramadan','Ramadan','');
+  sp('vrat','Sabarimala season','not a separate factor yet: the last 10 days already carry it'); if((LAB_SPANS.exams||[]).some(([a,b])=>day>=a&&day<=b)) ch('School exam days',pc(1+FC_HOL.exam),'dn','the Onam exam week (13–20 Aug) ran −14%, evenings −15% — families stay home'); sp('school','School break','Onam break ran +21% (evening +25%); one break so far'); sp('gulf','Gulf vacation','families home from the Gulf'); sp('ramadan','Ramadan','');
   if(new Date(day+'T12:00:00').getDay()===0) ch('Sunday · wedding season?','watch lunch','z','Sunday lunch fell to ~1.0× a weekday lunch on 15 and 22 Nov (1.2–1.6× before). Cooks: weddings. Mark it with the 💍 Wedding Sunday nudge (forecast settings) so the app learns the real size.');
   const ml=modLabel(day); if(ml) ch('Your nudges',esc(ml),'nd');
   const pb=(()=>{ try{ return preFor(day).add||0; }catch(e){ return 0; } })(); if(pb) ch('Pre-bookings',kfmt(pb),'up');
@@ -2000,8 +2000,8 @@ function ptWire(){
 /* calendar facts the forecast needs - approximate where marked; owner events override */
 const LAB_SPANS={
   ramadan:[['2025-03-01','2025-03-30'],['2026-02-18','2026-03-19'],['2027-02-08','2027-03-09']],
-  school:[['2025-04-01','2025-06-01'],['2025-08-29','2025-09-07'],['2025-12-24','2026-01-04'],['2026-04-01','2026-05-31'],['2026-08-21','2026-08-30'],['2026-12-19','2027-01-03']],   /* v320: Kerala state schools close ~18 Dec (exams 8–18 Dec), CBSE ~24 Dec */
-  exams:[['2025-03-03','2025-03-26'],['2026-03-05','2026-03-30'],['2026-12-08','2026-12-18']],
+  school:[['2025-04-01','2025-06-01'],['2025-08-29','2025-09-07'],['2025-12-24','2026-01-04'],['2026-04-01','2026-05-31'],['2026-08-21','2026-08-30'],['2026-12-18','2026-12-27']],   /* v320: Kerala state schools close ~18 Dec (exams 8–18 Dec), CBSE ~24 Dec */
+  exams:[['2025-03-03','2025-03-26'],['2026-03-05','2026-03-30'],['2026-08-13','2026-08-20'],['2026-12-08','2026-12-17']],   /* v353: Onam term exams 13–20 Aug (SSLC 13–20, Plus One/Two 14–20) measured −14% (evening −15%); Christmas exams 8–17 Dec (Careers360) */
   vrat:[['2025-11-17','2026-01-14'],['2026-11-17','2027-01-14']],   /* v319: Sabarimala Mandalam-Makaravilakku (Vrischikam 1 to Makaravilakku, approx.) - many keep a no-meat vratham */
   gulf:[['2025-07-04','2025-08-24'],['2025-12-08','2026-01-04'],['2026-03-16','2026-03-29'],['2026-07-03','2026-08-30'],['2026-12-14','2027-01-03']]
 };
@@ -3811,7 +3811,7 @@ function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(da
 let FC_RC={}; let FC_MONTH={t0:29,t1:4,d0:22,d1:28,dw:0.5};   /* v340: dip on the 22nd-28th (pattern study + replay), was 8th-21st */
 function fcModelRaw(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_RC[k]) return FC_RC[k]; const M=fcModel0(day,variant); if(day<bizToday()&&M) FC_RC[k]=M; return M; }
 const FC_SELF={n:10,lo:0.8,hi:1.25,skip:1,mid:0}; let FC_TREND={w:0.25,cap:0.15};   /* v345: holidays ±1 day and school breaks left out of the self-correction (Onam was copied into early September); growth at a quarter weight (it sat at its +15% cap for 58 days) */
-const fcSpecial=d=>{ for(const k of ['school','gulf','ramadan']) if(k!=='gulf'&&(LAB_SPANS[k]||[]).some(([a,b])=>d>=addDays(a,-1)&&d<=addDays(b,3))) return true; return !!(HOLI[d]||HOLI[addDays(d,-1)]||HOLI[addDays(d,1)]); };   /* holidays ±1 day and school / Ramadan breaks (+3 days after) */
+const fcSpecial=d=>{ for(const k of ['school','gulf','ramadan','exams']) if(k!=='gulf'&&(LAB_SPANS[k]||[]).some(([a,b])=>d>=addDays(a,-1)&&d<=addDays(b,3))) return true; return !!(HOLI[d]||HOLI[addDays(d,-1)]||HOLI[addDays(d,1)]); };   /* holidays ±1 day and school / Ramadan breaks (+3 days after) */
 function fcModelC(day,variant){ const M=fcModelRaw(day,variant); if(!M) return M;
   const P=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort().slice(-FC_SELF.n).map(d=>[d,fcModelRaw(d,variant)]).filter(([d,m])=>m&&m.plan>0&&m.cal===1&&nrev(d)>0&&!(FC_SELF.skip&&fcSpecial(d))&&!(FC_SELF.mid&&(+d.slice(8)>=22||+d.slice(8)<=4)));
   if(P.length<6) return Object.assign({},M,{self:1,selfN:P.length});
@@ -3836,12 +3836,13 @@ function fcModelS(day,variant){ const M=fcModelC(day,variant); if(!M||!(FC_SEG.w
    level and hour shape mixed with the last Sundays: w = wSingle (alone mid-week) / wBridge (touches a weekend) / wSeason (in a
    block of 4+ days off or a school break). School-break days, the eve and the day after a 3+ day block get their own lift.
    Used only when the same holiday has no past of its own (next year its own measured size takes over). */
-let FC_HOL={on:1,wSingle:0.3,wBridge:0.6,wSeason:0.9,wkend:1,school:0.2,after:0.15,eve:0,clean:0};   /* v348 replay: days near holidays / breaks ±19.3 → ±16.5%, live 1–7 pm −0.2…−0.5 pt; eve lift and cleaning holidays out of the weekday level both made it worse */
+let FC_HOL={on:1,wSingle:0.3,wBridge:0.6,wSeason:0.9,wkend:1,school:0.2,after:0.15,eve:0,clean:0,exam:-0.1};   /* v353 exam: Onam exam week ran −14% (one season) → −10% until more seasons are seen */   /* v348 replay: days near holidays / breaks ±19.3 → ±16.5%, live 1–7 pm −0.2…−0.5 pt; eve lift and cleaning holidays out of the weekday level both made it worse */
 function fcHolKind(day){ const dw=d=>new Date(d+'T12:00:00').getDay(), wk=d=>dw(d)===0||dw(d)===6, sch=d=>(LAB_SPANS.school||[]).some(([a,b])=>d>=a&&d<=b), off=d=>!!HOLI[d]||wk(d)||sch(d);
   const blk=d=>{ if(!off(d)) return null; let a=d,b=d; while(off(addDays(a,-1))) a=addDays(a,-1); while(off(addDays(b,1))) b=addDays(b,1); let hol=false,n=0; for(let x=a;x<=b;x=addDays(x,1)){ n++; if(HOLI[x]||sch(x)) hol=true; } return hol?{a,b,n}:null; };
   let w=0, x=1, lab=''; const B=blk(day);
   if(HOLI[day]){ if(wk(day)){ x=FC_HOL.wkend; lab=HOLI[day][0]+' (on a weekend)'; } else { const season=sch(day)||(B&&B.n>=4); w=season?FC_HOL.wSeason:(B&&B.n>=2?FC_HOL.wBridge:FC_HOL.wSingle); lab=HOLI[day][0]+(season?' · holiday season':B&&B.n>=2?' · long weekend':' · single holiday'); } }
   else if(sch(day)){ x*=1+FC_HOL.school; if(!wk(day)) w=FC_HOL.wSeason*0.5; lab='School break'; }
+  else if((LAB_SPANS.exams||[]).some(([a,b])=>day>=a&&day<=b)){ x*=1+FC_HOL.exam; lab='School exams'; }
   const prev=addDays(day,-1), nxt=addDays(day,1), Bp=blk(prev), Bn=blk(nxt);
   if(!B&&Bp&&Bp.n>=3&&Bp.b===prev){ x*=1+FC_HOL.after; lab=lab||'Day after a long break'; }
   if(!B&&Bn&&Bn.n>=3&&Bn.a===nxt){ x*=1+FC_HOL.eve; lab=lab||'Eve of a long break'; }
@@ -3879,7 +3880,7 @@ function fcModel0(day,variant){
     if(a.length>=3&&b.length){ pay=(a.reduce((x,y)=>x+y,0)/a.length)/(b.reduce((x,y)=>x+y,0)/b.length); } }
   let cal=1, why=''; const hol=HOLI[day]; if(FC_HOL.on&&!ownPast){ cal=HK.x; why=HK.lab; } else if(hol){ cal=hol[1]; why=hol[0]; const past=Object.keys(HOLI).filter(k=>k<day&&INDEX[k]&&HOLI[k][0]===hol[0]); if(past.length){ const own=past.map(k=>{ const dw=new Date(k+'T12:00:00').getDay(); const s2=days.filter(d=>d<k&&new Date(d+'T12:00:00').getDay()===dw).slice(-6); return s2.length>=2?nrev(k)/mean(s2):null; }).filter(Boolean); if(own.length) cal=own.reduce((a,b)=>a+b,0)/own.length; } }
   /* a holiday and a salary day do not add up: the bigger lift counts (2 Oct 2026 was both, and stacking overshot by 23%) */
-  const f=trend*pos*(pay>=1?Math.max(cal,pay):cal*pay); return {prof,base,trend,pos,cal,pay,why,f,n:same.length,plan:base*f,hol:HK};
+  const f=trend*pos*(cal<1||pay<1?cal*pay:Math.max(cal,pay));   /* v353: dips (exams, 4th week) always multiply; only two boosts take the bigger */ return {prof,base,trend,pos,cal,pay,why,f,n:same.length,plan:base*f,hol:HK};
 }
 /* live: how far the day has run vs its plan, then the rest of the day and the next hour.
    open = bills still open (they will be paid, so they count as done).
