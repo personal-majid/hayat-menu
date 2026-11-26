@@ -1093,3 +1093,11 @@ What that means, and what to say if it comes up:
 ## v340 — month dip moved to the 22nd–28th
 - FC_MONTH {t0:29,t1:4,d0:22,d1:28,dw:0.5} (was dip 8th–21st). window.__FC.month(o) to re-test.
 - Replay on all 121 days: morning 16.99 → 16.62% (unseen Oct–Nov 14.03 → 13.54%), 1 pm 14.33 → 14.22%; 3–9 pm +0.1–0.15 pt (noise). Overshoot on 22nd–28th days 6.7% → 3.7%, salary days 1st–4th +0.2% → −0.5%. Full weight, 21st–28th, turn = 1st–4th only, no dip: all worse or equal. Self-correction 7 / 14 days with the new dip: worse (10 kept). Small gain because the 10-day self-correction already absorbs most of the month swing.
+
+## v341 — what is in today's forecast · Coming up 4 weeks · wedding / football nudges
+- fcApplies(day,F): chips on the Forecast check strip (today) and in the forecast sheet ("What made the rest of the day"): usual weekday level, growth, own misses (self-correction), salary days / 4th week (≈0 shown as "in own misses"), holiday, eve of a holiday (not used — eves swing −23…+48%), Sabarimala / school break / Gulf / Ramadan spans ("in own misses": not separate factors), Sunday wedding note, nudges, pre-bookings, today's pace and how much it counts.
+- comingUp(): 4 weeks (was 14 days) + Salary days (29th–4th, usually +15%) and 4th week (22nd–28th, usually −10%) windows.
+- MODS += 💍 Wedding Sunday −10, ⚽ Big football match −8 (fc_mods; the nudge history learns their real size).
+- Tested and rejected (all 121 days): picking the best live method per hour from the previous 28 days, inverse-error blend of the top 3, and the average of 8 methods (day pace 0.15/0.35/0.6/1.0, plan only, recent, block, mix) — all within ±0.3 pt of the current method at 1/3/5/7/9 pm. The methods share one history, so they miss together; the rest of the error is the day itself (weddings, matches, events) → outside signals (ChatGPT part 05).
+- Sunday lunch ÷ Mon–Thu lunch: ~1.0× or below on 6, 13, 20 Sep, 4 Oct, 15 and 22 Nov (1.2–1.56× otherwise). Fits wedding Sundays (cooks); not proven.
+- WhatsApp trends image: Claude outputs/hayat-trends-26nov.jpg (main checkout, git-ignored).
