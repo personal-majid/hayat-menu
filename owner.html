@@ -649,7 +649,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v356';
+const BOARD='v357';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -998,6 +998,7 @@ function comingUp(){ const t=bizToday(), end=addDays(t,28), L=calList().filter(e
   const dl=d=>new Date(d+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'}), kn=k=>(CAL_KINDS.find(x=>x[0]===k)||[0,k])[1];
   const items=L.map(e=>{ const f=effOf(e), on=e.d0<=t; return {d:on?t:e.d0,t:`${on?'<b>now</b> · till '+dl(e.d1||e.d0):dl(e.d0)+(e.d1&&e.d1!==e.d0?' – '+dl(e.d1):'')}`,n:e.name||kn(e.kind),f}; });
   Object.values(EVENTS||{}).forEach(e=>{ if(e&&e.d>=t&&e.d<=end) items.push({d:e.d,t:dl(e.d),n:((LAB_KINDS.find(k=>k[0]===e.kind)||[0,e.kind])[1])+(e.note?': '+e.note:''),f:null}); });
+  if(inWed(t)||inWed(end)){ const sn=[0,1,2,3,4,5,6].map(i=>addDays(t,i)).find(d=>new Date(d+'T12:00:00').getDay()===0&&inWed(d)); if(sn) items.push({d:sn,t:dl(sn)+' and every Sunday',n:'💍 Wedding season Sundays: lunch runs lower (already in the forecast through the last Sundays; tap 💍 nudge for a big local wedding)',f:null}); }
   FIXTURES.forEach(([d,n])=>{ if(d>=t&&d<=end) items.push({d,t:dl(d),n:n+' · not in the forecast',f:null}); });
   { let pay=0,dip=0; for(let i=0;i<=28;i++){ const d=addDays(t,i), n=+d.slice(8);
       if(!pay&&(n===29||(n===1&&i>0))){ pay=1; items.push({d,t:dl(d)+' →',n:'Salary days (29th–4th): evenings and CO up',f:{mean:0.15,n:0,g:1}}); }
@@ -3855,6 +3856,15 @@ function fcModelS(day,variant){ const M=fcModelC(day,variant); if(!M||!(FC_SEG.w
    level and hour shape mixed with the last Sundays: w = wSingle (alone mid-week) / wBridge (touches a weekend) / wSeason (in a
    block of 4+ days off or a school break). School-break days, the eve and the day after a 3+ day block get their own lift.
    Used only when the same holiday has no past of its own (next year its own measured size takes over). */
+/* v357 WEDDING SUNDAYS (Majid: "weddings, especially on Sunday, we lose some business - identify wedding season, give a small weight").
+   Malabar wedding season: Chingam to before Ramadan (17 Aug - 8 Feb) and after Eid to Karkidakam (Mar/Apr - 16 Jul); off season =
+   Karkidakam (17 Jul - 16 Aug) and Ramadan. Data: Sunday lunch ran 1.74x a Mon-Thu lunch in Karkidakam, 1.22-1.27x after Chingam.
+   mode 'shift': Sunday x (1+w)^(in season - share of the 4 Sundays the level came from that were in season) - the level already
+   carries wedding Sundays mid-season, so the weight only works at the season's edges (no double count). mode 'flat': x(1+w) on
+   every season Sunday. Replay 26 Nov, 17 Sundays: off 13.8% (lean -1.2%) - flat -4/-6/-10% 13.8/14.0/14.6% (lean -4/-6/-9%),
+   shift -6% 14.5%. The 4-Sunday level already holds the wedding Sundays, so a weight double-counts -> OFF; season shown in Coming up. */
+let FC_WED={on:0,w:-0.06,mode:'shift',seasons:[['2026-08-17','2027-02-08'],['2027-03-12','2027-07-16'],['2027-08-17','2028-01-28']]};
+const inWed=d=>FC_WED.seasons.some(([a,b])=>d>=a&&d<=b);
 let FC_HOL={on:1,wSingle:0.3,wBridge:0.6,wSeason:0.9,wkend:1,school:0.2,after:0.15,eve:0,clean:0,exam:-0.1};   /* v353 exam: Onam exam week ran −14% (one season) → −10% until more seasons are seen */   /* v348 replay: days near holidays / breaks ±19.3 → ±16.5%, live 1–7 pm −0.2…−0.5 pt; eve lift and cleaning holidays out of the weekday level both made it worse */
 function fcHolKind(day){ const dw=d=>new Date(d+'T12:00:00').getDay(), wk=d=>dw(d)===0||dw(d)===6, sch=d=>(LAB_SPANS.school||[]).some(([a,b])=>d>=a&&d<=b), off=d=>!!HOLI[d]||wk(d)||sch(d);
   const blk=d=>{ if(!off(d)) return null; let a=d,b=d; while(off(addDays(a,-1))) a=addDays(a,-1); while(off(addDays(b,1))) b=addDays(b,1); let hol=false,n=0; for(let x=a;x<=b;x=addDays(x,1)){ n++; if(HOLI[x]||sch(x)) hol=true; } return hol?{a,b,n}:null; };
@@ -3899,7 +3909,8 @@ function fcModel0(day,variant){
     if(a.length>=3&&b.length){ pay=(a.reduce((x,y)=>x+y,0)/a.length)/(b.reduce((x,y)=>x+y,0)/b.length); } }
   let cal=1, why=''; const hol=HOLI[day]; if(FC_HOL.on&&!ownPast){ cal=HK.x; why=HK.lab; } else if(hol){ cal=hol[1]; why=hol[0]; const past=Object.keys(HOLI).filter(k=>k<day&&INDEX[k]&&HOLI[k][0]===hol[0]); if(past.length){ const own=past.map(k=>{ const dw=new Date(k+'T12:00:00').getDay(); const s2=days.filter(d=>d<k&&new Date(d+'T12:00:00').getDay()===dw).slice(-6); return s2.length>=2?nrev(k)/mean(s2):null; }).filter(Boolean); if(own.length) cal=own.reduce((a,b)=>a+b,0)/own.length; } }
   /* a holiday and a salary day do not add up: the bigger lift counts (2 Oct 2026 was both, and stacking overshot by 23%) */
-  const f=trend*pos*(cal<1||pay<1?cal*pay:Math.max(cal,pay));   /* v353: dips (exams, 4th week) always multiply; only two boosts take the bigger */ return {prof,base,trend,pos,cal,pay,why,f,n:same.length,plan:base*f,hol:HK};
+  let wed=1; if(FC_WED.on&&dow===0&&inWed(day)){ const L4=same.slice(-4), sh=L4.length?L4.filter(inWed).length/L4.length:1; wed=FC_WED.mode==='flat'?1+FC_WED.w:Math.pow(1+FC_WED.w,1-sh); }
+  const f=trend*pos*(cal<1||pay<1?cal*pay:Math.max(cal,pay))*wed;   /* v353: dips (exams, 4th week) always multiply; only two boosts take the bigger */ return {prof,base,trend,pos,cal,pay,why,f,n:same.length,plan:base*f,hol:HK,wed};
 }
 /* live: how far the day has run vs its plan, then the rest of the day and the next hour.
    open = bills still open (they will be paid, so they count as done).
@@ -6056,7 +6067,7 @@ async function go(){
     if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
 window.__OWN={ohOf,bh};
-window.__FC={shp:o=>{ Object.assign(FC_SHP,o); FC_MC={}; FC_RC={}; for(const k in FC_SC) delete FC_SC[k]; },mom:o=>{ Object.assign(FC_MOM,o); FC_MC={}; for(const k in FC_SC) delete FC_SC[k]; },hol:o=>{ Object.assign(FC_HOL,o); FC_MC={}; FC_RC={}; for(const k in FC_SC) delete FC_SC[k]; },seg:o=>{ Object.assign(FC_SEG,o); FC_MC={}; for(const k in FC_SC) delete FC_SC[k]; },trend:o=>{ Object.assign(FC_TREND,o); FC_MC={}; FC_RC={}; },month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
+window.__FC={wed:o=>{ Object.assign(FC_WED,o); FC_MC={}; FC_RC={}; for(const k in FC_SC) delete FC_SC[k]; },shp:o=>{ Object.assign(FC_SHP,o); FC_MC={}; FC_RC={}; for(const k in FC_SC) delete FC_SC[k]; },mom:o=>{ Object.assign(FC_MOM,o); FC_MC={}; for(const k in FC_SC) delete FC_SC[k]; },hol:o=>{ Object.assign(FC_HOL,o); FC_MC={}; FC_RC={}; for(const k in FC_SC) delete FC_SC[k]; },seg:o=>{ Object.assign(FC_SEG,o); FC_MC={}; for(const k in FC_SC) delete FC_SC[k]; },trend:o=>{ Object.assign(FC_TREND,o); FC_MC={}; FC_RC={}; },month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
 go();
 })();
 </script>

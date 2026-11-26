@@ -1190,3 +1190,8 @@ What that means, and what to say if it comes up:
 
 ## v356 — top bar slides away on scroll
 - Majid: "the top header is not fully collapsing on scroll down, I need a bigger viewport". The window scroll handler (next to #dock.hid) sets body.tophid on scroll down past 80 px, removes it on scroll up / near the top / while Find or the calendar is open. body.tophid: .top translateY(-105%), the main tab row stops being sticky (scrolls away), #fbar top 0. Bottom dock already hid. Phone 375 px: nothing fixed on screen while reading.
+
+## v357 — wedding Sundays tested · evening drop vs price change
+- FC_WED {on:0, w, mode shift|flat, seasons} + inWed(d) (Malabar wedding season 17 Aug – 8 Feb, 12 Mar – 16 Jul; off = Karkidakam + Ramadan); window.__FC.wed(o). Replay (17 Sundays Aug–Nov): off 13.8% (lean −1.2%); flat −4/−6/−10% 13.8/14.0/14.6% (lean −4/−6/−9%); shift −6% 14.5%. The 4-Sunday level already holds wedding Sundays → a weight double-counts, so OFF. Re-test at the next season start (17 Aug 2027: shift mode is made for the edge). Coming up shows "💍 Wedding season Sundays".
+- Evening vs price change (daily.csv, per day, 11–24 Oct vs 25 Oct – 14 Nov): dine evening bills 35.2 → 29.3 (−17%), dine lunch 33.9 → 34.0 (0%), CO evening 26.4 → 23.2, evening avg bill ₹566 → ₹561 despite ~12% higher prices (people buy less). Supports Majid's view that the price rise hit evenings. Late Sep – mid Oct evening (₹42–47K a week) was a peak above Jul–Sep normal (₹29–34K); 15–25 Nov fell further (Sabarimala + offers).
+- Cloudflare: hayat-traffic lives on the same Cloudflare account as BoardReady's board-ready (majidkhn.workers.dev) — the Google login Cloudflare marks "Last used". PowerShell blocks npx.ps1 → use cmd or `npx.cmd`.
