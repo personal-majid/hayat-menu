@@ -1053,3 +1053,13 @@ What that means, and what to say if it comes up:
 - Live lastGap(): "🚶 Last order received" and "🧾 Last bill paid" carry data-drill → drill(key).
 - drill(): order is header → bill timeline (KOTs, edits, bill printed, paid) → ncCheck (next-customer prediction) → large-order switch. Keep the bill above any prediction.
 - ncCheck: when the 6 past same weekdays are not loaded it loads them (dgLoad) and reopens the same bill, instead of asking to visit Live.
+
+## v335 — handoff gaps: demand ahead · running total by channel · measured closing range · forecast track record · dish pace · data tags
+- dq(k): small tag measured / forecast / estimate / not recorded (top box, new cards, Rest of today by channel, Tomorrow's dishes, Guests note).
+- chRestH(F): F.rest per hour split Dine / CO / Delivery by chMix(last 4 same weekdays); chClose(F) = per-channel close.
+- demandAhead() (Live, after New orders): last 60 min measured vs next 30 / 60 / 120 min forecast by channel (₹ + bills via the session's channel avg bill) + pre-bookings timed in the next 2 hours.
+- chRun() (Sales, after Running total): cumulative per channel, solid real / dashed forecast / dotted usual (last 4 same weekdays), 10-min steps; table so far / usual by now / by closing / usual day; Lunch and Evening close vs usual.
+- vm_forecast (what the app said every hour on the office login since 8 Oct; fcRecord now also saves act and ch = channel closes) → FCREC / fcRecLoad (getDocs, 30 min) → fcAcc(). fcRange(F): likely close = act + rest × 10th/90th percentile of (real rest ÷ said rest) on past days at this business hour (±1 h when <10), ≥8 records; coverage checked leave-one-out. Shown under By closing on the top box and as "How sure is this?" + "Forecast track record" in the forecast sheet; fcAccCard on top of Insights → Forecast lab. Next hour scored as ₹ off ÷ ₹ sold (mean of % blew up on quiet hours). Rows after midnight hidden.
+- First real read (26 Nov, 48 days): morning plan ±18% and 13% too high; from 11:00 on ±7–17%, even; real close inside the range 69–78% (aim 80%).
+- dishPace() (Live): top 10 food families (drinks out), plates today by now vs usual by now and "heading to" = today + usual after now × (forecast rest ÷ usual rest, 0.6–1.6).
+- Data in the DB (26 Nov): route trip times 10 Oct – 24 Nov only while the app was open (5–27 readings a day), every 15 min from the night of 25 Nov (hayat-traffic cron); road speed traffic_flow from 25 Nov. Busyness crowd_hist / crowd: EMPTY — the phone userscript has not saved a reading yet.
