@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Jost:wght@400;500;600;700&display=swap">
 <style>
+.vmban{background:#f8ecd2;border-color:#e0c48f}.vmban b{display:block;margin-bottom:4px}
 :root{--bg:#F5F4EF;--card:#FFFFFF;--ink:#1F2328;--muted:#5F6770;--line:#DDDAD2;--soft:#ECEAE3;--accent:#2F5A74;--good:#2E7D5B;--warn:#A8812F;--bad:#C2362C}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--bg:#121518;--card:#1B1F23;--ink:#E7E5E0;--muted:#9AA2AA;--line:#2E343A;--soft:#242A2F;--accent:#8DB8D3;--good:#5FB38A;--warn:#D2A85A;--bad:#E0675D} }
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 "Jost",system-ui,sans-serif}
@@ -90,7 +91,9 @@ const lsGet=(k,d)=>{ try{ return JSON.parse(localStorage.getItem(k))||d; }catch(
 function fresh(){ return {day:bizDay(),supplier:'',billNo:'',billTotal:'',note:'',lines:[{n:'',q:'',u:'kg',r:'',a:''}]}; }
 window.__RD=()=>RD;   /* test hook: the last read */
 function saveDraft(){ lsSet('hayat-stock-draft',{d:DRAFT,at:Date.now()}); }
-(function(){ const x=lsGet('hayat-stock-draft',null); DRAFT=x&&Date.now()-x.at<12*3600e3?x.d:fresh(); })();
+(function(){ const x=lsGet('hayat-stock-draft',null); DRAFT=x&&Date.now()-x.at<12*3600e3?x.d:fresh();
+  /* v331: opened from the owner app's spends check for a day missing in VMENU */
+  try{ const q=new URLSearchParams(location.search), d=q.get('day'); if(q.get('vm')==='1'&&/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&d<=bizDay()){ if(!(DRAFT.vm&&DRAFT.day===d)){ DRAFT=fresh(); DRAFT.day=d; DRAFT.vm=true; DRAFT.supplier='Daily spends'; saveDraft(); } history.replaceState(null,'',location.pathname); } }catch(e){} })();
 
 /* ---------- photo: camera or upload, shrunk to ~1400px JPEG so one bill is ~150-300 KB ---------- */
 async function shrink(file){ const img=await new Promise((ok,no)=>{ const u=URL.createObjectURL(file), i=new Image(); i.onload=()=>{ URL.revokeObjectURL(u); ok(i); }; i.onerror=no; i.src=u; });
@@ -144,9 +147,9 @@ function render(){ const A=$('app'); if(!CTX) return;
   $('savebar').hidden=TAB!=='new';
   const tabs=`<nav class="tabs">${[['new','＋ Bill'],['rel','Release'],['cnt','Count'],['bills','Bills'],['items','Items']].map(t=>`<button aria-pressed="${TAB===t[0]}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
   A.innerHTML=tabs+(TAB==='new'?newView():TAB==='rel'?relView():TAB==='cnt'?cntView():TAB==='bills'?billsView():itemsView());
-  wire(); if(!PIN||!PHOTO||TAB!=='new'){ document.body.classList.remove('pinned'); const w=$('pinPv'); if(w) w.remove(); } else pinView(); }
-function newView(){ const D=DRAFT, sups=Object.values(ITEMS.sup).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,12), tot=sumLines(), bt=num(D.billTotal), diff=bt?tot-bt:0;
-  return `<div class="card" id="shotCard"><h2>1 · Photo of the bill</h2>
+  wire(); { const v=$('vmOff'); if(v) v.onclick=()=>{ DRAFT.vm=false; saveDraft(); render(); }; } if(!PIN||!PHOTO||TAB!=='new'){ document.body.classList.remove('pinned'); const w=$('pinPv'); if(w) w.remove(); } else pinView(); }
+function newView(){ const D=DRAFT; const vmBan=D.vm?`<div class="card vmban"><b>Spends for ${esc(D.day)} that are missing in VMENU</b><p class="note">Take a photo of the WhatsApp spends list (or the bills) for that day, check the lines, then Save. The owner app shows them as "in the app, not yet in VMENU" until the cashier enters them. <button class="btn" id="vmOff">This is a normal bill</button></p></div>`:''; const sups=Object.values(ITEMS.sup).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,12), tot=sumLines(), bt=num(D.billTotal), diff=bt?tot-bt:0;
+  return vmBan+`<div class="card" id="shotCard"><h2>1 · Photo of the bill</h2>
     ${PHOTO?`<div class="pv"><img src="${PHOTO}" id="pvImg" alt="bill photo"><div class="row"><span class="note">Photo ready · ${Math.round(PHOTO.length*0.75/1024)} KB</span><button class="btn warn" id="pvDel">Remove</button></div></div>`:''}
     <div class="shot"><label><span>📷</span>Camera<input type="file" accept="image/*" capture="environment" id="cam"></label><label><span>🖼</span>Upload<input type="file" accept="image/*" id="upl"></label></div>
     <p class="note">Snap the bill flat and bright — the items are read automatically and the photo is kept as proof.</p>${PHOTO?'<button class="btn" id="rdAgain"'+(RD?' hidden':'')+'>🔎 Read this photo</button>':''}${readCard()}</div>
@@ -402,7 +405,7 @@ async function save(){ if(SAVING) return; const D=DRAFT, L=D.lines.map(l=>({c:l.
   SAVING=true; $('save').disabled=true; $('save').textContent='Saving…';
   const fs=CTX.fs, db=CTX.db, id=bizDay().replace(/-/g,'')+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), tot=Math.round(L.reduce((n,l)=>n+l.a,0)*100)/100, sup=nice(D.supplier);
   try{ if(PHOTO) await fs.setDoc(fs.doc(db,'stock_photos',id),{d:PHOTO,at:Date.now(),buy:id});
-    await fs.setDoc(fs.doc(db,'stock_buys',id),{v:1,day:D.day||bizDay(),at:Date.now(),by:{id:CTX.crewId||'',name:CTX.name||''},supplier:sup,billNo:String(D.billNo||'').trim(),lines:L,total:tot,billTotal:num(D.billTotal)||null,note:String(D.note||'').trim(),photo:PHOTO?id:null,src:'stock'});
+    await fs.setDoc(fs.doc(db,'stock_buys',id),{v:1,day:D.day||bizDay(),at:Date.now(),by:{id:CTX.crewId||'',name:CTX.name||''},supplier:sup,billNo:String(D.billNo||'').trim(),lines:L,total:tot,billTotal:num(D.billTotal)||null,note:String(D.note||'').trim(),photo:PHOTO?id:null,src:'stock',vmMissing:!!D.vm});
     const it={}, al={}; L.forEach((l,i)=>{ const k=slug(l.n), old=ITEMS.items[k]||{}, src=D.lines.filter(x=>x.n&&(num(x.q)||num(x.a)))[i]||{};
       it[k]={n:l.n,u:l.u,r:l.r||old.r||null,s:sup,at:Date.now(),big:!!old.big,c:old.c||src.c||StockRead.guessCat(l.n,l.u)};
       if(src.raw&&StockRead.norm(src.raw)!==StockRead.norm(l.n)) al[StockRead.norm(src.raw).replace(/ /g,'_')]=k; });   /* learn: next time this spelling is read, it is this item */
