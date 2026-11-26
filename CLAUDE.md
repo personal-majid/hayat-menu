@@ -1063,3 +1063,10 @@ What that means, and what to say if it comes up:
 - First real read (26 Nov, 48 days): morning plan ±18% and 13% too high; from 11:00 on ±7–17%, even; real close inside the range 69–78% (aim 80%).
 - dishPace() (Live): top 10 food families (drinks out), plates today by now vs usual by now and "heading to" = today + usual after now × (forecast rest ÷ usual rest, 0.6–1.6).
 - Data in the DB (26 Nov): route trip times 10 Oct – 24 Nov only while the app was open (5–27 readings a day), every 15 min from the night of 25 Nov (hayat-traffic cron); road speed traffic_flow from 25 Nov. Busyness crowd_hist / crowd: EMPTY — the phone userscript has not saved a reading yet.
+
+## v336 — forecast re-tuned: self-correction from its own last 10 days
+- Track record (v335) showed the morning plan 13% too high over 48 real days. Replay with the current code (each day only from days before it, 27 Sep – 25 Nov): plan ±18.0%, +10.9% high. Cause: Oct growth counted twice (4-weekday level already had it, growth factor at its +15% cap); Nov the level lagged the decline (+11%).
+- fcModel = fcModelC(raw): plan × k, k = median of nrev ÷ RAW plan over the last 10 finished days (holiday days out, capped 0.8–1.25, needs 6). Raw plans cached in FC_RC (cleared with FC_MC), so no recursion. FC_SELF {n:10,lo:.8,hi:1.25}; M.self / M.selfN / M.raw; shown in the forecast sheet as "own misses, last n days ±x%".
+- Tested 7/10/14/21/28 days × median/mean/geo × weight .75/1 × holidays in/out, picked on 27 Sep – 26 Oct: unseen 27 Oct – 25 Nov ±19.6% → ±12.6%, bias +15.5% → +0.2%; 14/21 days close behind.
+- Live pace re-checked on the new plan: FC_PACE 0.35, FC_PACE0 0.1 (0.25 same). 50 days, 1/3/5/7/9 pm: old 12.9/12.8/11.0/10.6/6.4% (bias +5–6%) → 11.8/10.6/10.0/9.7/6.1% (bias −1.5…+2%). Morning plan 18.8% → 13.9%.
+- window.__FC.self({lo,hi}) switches the correction for replays (lo=hi=1 = off).

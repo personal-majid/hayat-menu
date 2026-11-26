@@ -641,7 +641,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v335';
+const BOARD='v336';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -2457,7 +2457,7 @@ function calApply(){ calBase(); Object.keys(HOLI).forEach(k=>delete HOLI[k]); Ob
     if(e.off||!e.d0) return; const d1=e.d1||e.d0;
     if(e.kind==='public'||e.kind==='festival'||e.kind==='local'){ for(let d=e.d0; d<=d1; d=addDays(d,1)) if(!HOLI[d]) HOLI[d]=[e.name||e.kind,1]; }
     else if(LAB_SPANS[e.kind]) LAB_SPANS[e.kind].push([e.d0,d1]); });
-  FC_MC={}; FC_HC={}; FC_BT=null; LAB.res=null; }
+  FC_MC={}; FC_RC={}; FC_HC={}; FC_BT=null; LAB.res=null; }
 function calList(){ calBase(); const L=[]; Object.entries(HOLI0).forEach(([d,h])=>L.push({id:'app:hol:'+d,d0:d,d1:d,kind:/Eid|Bakrid|Vishu|Onam|Thiruvonam|Deepavali|Vijayadashami|Christmas|Milad|Muharram|Good Friday/i.test(h[0])?'festival':'public',name:h[0],src:'built in',app:1}));
   Object.entries(SPANS0).forEach(([k,S])=>S.forEach(([a,b])=>L.push({id:'app:'+k+':'+a,d0:a,d1:b,kind:k,name:(CAL_KINDS.find(x=>x[0]===k)||[0,k])[1],src:'built in (approx.)',app:1})));
   Object.entries(CAL).forEach(([id,e])=>{ if(!id.startsWith('app:')&&e&&e.d0) L.push(Object.assign({id},e)); });
@@ -3541,7 +3541,20 @@ const FC_VARIANTS={
 };
 let FC_BEST=null, FC_BT=null;
 let FC_MC={};   /* plans for past days, kept while one backtest runs (a past day's plan never changes) */
-function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_MC[k]) return FC_MC[k]; const M=fcModel0(day,variant); if(day<bizToday()) FC_MC[k]=M; return M; }
+function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_MC[k]) return FC_MC[k]; const M=fcModelC(day,variant); if(day<bizToday()) FC_MC[k]=M; return M; }
+/* v336: SELF-CORRECTION. The plan is multiplied by the middle value (median) of real ÷ plan over the last 10 finished days
+   (holidays left out; capped 0.8–1.25), using the RAW plans of those days, so nothing feeds on itself.
+   Replay 27 Sep – 25 Nov (each day only from days before it): morning plan miss ±18.0% → ±13.8%, leaning +10.9% → +0.7%;
+   tuned on 27 Sep – 26 Oct, unseen 27 Oct – 25 Nov ±19.6% → ±12.6%, +15.5% → +0.2%. 14 / 21 days scored close (not luck).
+   Why: the 4-weekday level lags when sales turn (Oct growth was double-counted by the growth factor; Nov decline came late). */
+let FC_RC={};
+function fcModelRaw(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_RC[k]) return FC_RC[k]; const M=fcModel0(day,variant); if(day<bizToday()&&M) FC_RC[k]=M; return M; }
+const FC_SELF={n:10,lo:0.8,hi:1.25};
+function fcModelC(day,variant){ const M=fcModelRaw(day,variant); if(!M) return M;
+  const P=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort().slice(-FC_SELF.n).map(d=>[d,fcModelRaw(d,variant)]).filter(([d,m])=>m&&m.plan>0&&m.cal===1&&nrev(d)>0);
+  if(P.length<6) return Object.assign({},M,{self:1,selfN:P.length});
+  const r=P.map(([d,m])=>nrev(d)/m.plan).sort((a,b)=>a-b), n=r.length, md=n%2?r[(n-1)/2]:(r[n/2-1]+r[n/2])/2, k=Math.min(FC_SELF.hi,Math.max(FC_SELF.lo,md));
+  return Object.assign({},M,{self:k,selfN:n,raw:M.plan,f:M.f*k,plan:M.plan*k}); }
 function fcModel0(day,variant){
   /* only finished days: tomorrow's plan must not learn from today's half-day */
   const days=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort(), dow=new Date(day+'T12:00:00').getDay();
@@ -3673,7 +3686,7 @@ function hoursSheet(){ const old=document.getElementById('drill'); if(old) old.r
   $('shSave').onclick=async()=>{ const dow={}; $$('[data-shd]',box).forEach(i=>{ if(i.value) dow[i.dataset.shd]=i.value; }); SHOPH={close:$('shClose').value||CLOSE_DEF,dow}; FC_HC={}; FC_BT=null;
     try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','shophours'),SHOPH); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
 /* v326: how much today's pace moves the rest of the day: weight = FC_PACE0 + share of the day expected so far × FC_PACE (was 0 + share × 0.25) */
-let FC_PACE=0.5, FC_PACE0=0.2, FC_CAP=[0.6,1.6];   /* replay 7 Oct-25 Nov, 50 days, cuts 1/3/5/7/9 pm: day-close miss 15.3/13.6/11.9/10.8/7.0% -> 12.9/12.8/11.0/10.6/6.4% */
+let FC_PACE=0.35, FC_PACE0=0.1, FC_CAP=[0.6,1.6];   /* v336: with the self-corrected plan, a little less pace: 1/3/5/7/9 pm 11.8/10.6/10.0/9.7/6.1% (0.5: 11.8/11.1/10.2/10.0/6.2) */   /* replay 7 Oct-25 Nov, 50 days, cuts 1/3/5/7/9 pm: day-close miss 15.3/13.6/11.9/10.8/7.0% -> 12.9/12.8/11.0/10.6/6.4% */
 function fcLive(day,H,nowH,frac,open,mode){
   const M=fcModel(day); if(!M) return null; open=+open||0; mode=mode||FC_MODE||'day';
   const P=M.prof.map(v=>v*M.f), pk=Math.max(1,...P), busy=P.map(v=>v>=0.5*pk);
@@ -3703,7 +3716,7 @@ function fcLive(day,H,nowH,frac,open,mode){
 }
 /* backtest: for each of the last 28 days, what would the plan have said at open, and at 4 pm with the live correction */
 function fcBacktest(){
-  if(FC_BT) return FC_BT; FC_MC={}; FC_HC={};
+  if(FC_BT) return FC_BT; FC_MC={}; FC_RC={}; FC_HC={};
   const days=Object.keys(INDEX).filter(d=>d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort().slice(-28);
   const out={};
   Object.keys(FC_VARIANTS).forEach(v=>{ let e=0,b=0,n=0; days.forEach(d=>{ const M=fcModel(d,v); if(!M) return; const act=nrev(d)||1; e+=Math.abs(M.plan-act)/act; b+=(M.plan-act)/act; n++; }); out[v]={mape:n?100*e/n:null,bias:n?100*b/n:null,n}; });
@@ -4161,7 +4174,7 @@ function fcSheet(){ const F=fcToday(); if(!F) return; const old=document.getElem
   const NE=nearEnds(F,6), TA=(()=>{ try{ return trfAhead(); }catch(e){ return null; } })(), TE=(()=>{ try{ return trfEffect(); }catch(e){ return null; } })(), nowMin=Math.round((NOW-dayStartMs(DAY))/60000);
   const why=`<div class="why"><div class="whyeq"><span><small>So far</small><b>${rs(sold)}</b><em>paid + unpaid, by order time</em></span><i>+</i><span><small>Still to come</small><b>${rs(rest)}</b><em>${hrs.length} hour${hrs.length===1?'':'s'} left</em></span><i>=</i><span class="t"><small>By closing</small><b>~${rs(fT)}</b><em>${F.mods&&F.mods!==1?'with your nudge':'the app\'s own'}</em></span></div>
     ${hrs.length?`<div class="whyh">${hrs.map(([h,v])=>`<div><span>${hlabel(h)}:00</span><i style="width:${Math.max(2,100*v/hm2)}%"></i><b>${rs(v)}</b></div>`).join('')}</div>`:''}
-    <h3>What made the rest of the day</h3><p class="note">Usual ${esc(rpWd(DAY))} (last ${Math.min(4,F.n)}) <b>${rs(F.base)}</b> for the day · growth ${QQ(F.trend)} · ${F.pay!==1?'part of the month '+QQ(F.pay)+' · ':''}${F.cal!==1?(esc(F.why||'holiday')+' '+QQ(F.cal)+' · '):''}today so far ran ${QQ(F.rDay)} of that plan, counted at a quarter${F.mods&&F.mods!==1?' · your nudge × '+F.mods.toFixed(2):''}${F.scn?' · outlook '+FC_SCN_N[F.scn].toLowerCase():''}.</p>
+    <h3>What made the rest of the day</h3><p class="note">Usual ${esc(rpWd(DAY))} (last ${Math.min(4,F.n)}) <b>${rs(F.base)}</b> for the day · growth ${QQ(F.trend)} · ${F.self&&F.self!==1?`own misses, last ${F.selfN} days ${QQ(F.self)} · `:''}${F.pay!==1?'part of the month '+QQ(F.pay)+' · ':''}${F.cal!==1?(esc(F.why||'holiday')+' '+QQ(F.cal)+' · '):''}today so far ran ${QQ(F.rDay)} of that plan, counted at a quarter${F.mods&&F.mods!==1?' · your nudge × '+F.mods.toFixed(2):''}${F.scn?' · outlook '+FC_SCN_N[F.scn].toLowerCase():''}.</p>
     ${F.pick?`<p class="note"><b>Method:</b> ${esc(F.pick.m==='app'?'the app\'s own':(F.pick.m==='blend'?'blend of the 3 best':LAB_M[F.pick.m].name.toLowerCase()))} — ${esc(F.pick.why||'')}${F.appTotal?` (the app's own said ${rs(F.appTotal)})`:''}. <a href="#" id="pickOff">${FC_PICK.auto?'use the app\'s own always':'let the best method run'}</a></p>`:(FC_PICK.auto?'':'<p class="note"><b>Method:</b> the app\'s own (you turned the lab winner off). <a href="#" id="pickOff">let the best method run</a></p>')}
     <h3>How sure is this?</h3>${(()=>{ let G=null; try{ G=fcRange(F); }catch(e){} return G&&G.lo!=null?`<p class="note">Likely close <b>${rs(G.lo+(preToday().add||0))} – ${rs(G.hi+(preToday().add||0))}</b>: on ${G.n} past days the rest of the day landed this far from what the app said at this hour (10th–90th percentile), and the real close fell inside such a range ${Math.round(100*G.cov)}% of the time.</p>`:`<p class="note">A measured range shows once 8 past days have a saved forecast at this hour (${G?G.n:0} so far).</p>`; })()}<details class="whyd"><summary>Forecast track record · every hour</summary>${fcAccHtml()}</details>
     <h3>Adjust · things the app cannot see</h3>${modsHtml(F)}
@@ -5716,7 +5729,7 @@ async function go(){
     if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
 window.__OWN={ohOf,bh};
-window.__FC={fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
+window.__FC={self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
 go();
 })();
 </script>
