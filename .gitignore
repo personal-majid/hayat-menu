@@ -58,3 +58,6 @@ marketing/
 !collector/*.mjs
 !collector/package.json
 .wrangler/
+
+# ChatGPT review packs (hold sales data; never publish)
+Claude outputs/
