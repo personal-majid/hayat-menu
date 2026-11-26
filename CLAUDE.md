@@ -1187,3 +1187,6 @@ What that means, and what to say if it comes up:
 
 ## v355 — Live: last delivery · last counter
 - lastGap(): after "Last order received" two more tiles — 🛵 Last delivery (kind delivery) and 🎟 Last counter (CO) (any non-dine, non-delivery customer bill), by createdAt, minutes ago ticking, time · where · ₹, tap = the bill; "—, no … order yet today" when none. Left border in the channel colour (.chd / .chc). Grid 2 × 2.
+
+## v356 — top bar slides away on scroll
+- Majid: "the top header is not fully collapsing on scroll down, I need a bigger viewport". The window scroll handler (next to #dock.hid) sets body.tophid on scroll down past 80 px, removes it on scroll up / near the top / while Find or the calendar is open. body.tophid: .top translateY(-105%), the main tab row stops being sticky (scrolls away), #fbar top 0. Bottom dock already hid. Phone 375 px: nothing fixed on screen while reading.
