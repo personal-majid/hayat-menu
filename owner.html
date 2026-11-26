@@ -643,7 +643,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v339';
+const BOARD='v340';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -3650,7 +3650,7 @@ function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(da
    Replay 27 Sep – 25 Nov (each day only from days before it): morning plan miss ±18.0% → ±13.8%, leaning +10.9% → +0.7%;
    tuned on 27 Sep – 26 Oct, unseen 27 Oct – 25 Nov ±19.6% → ±12.6%, +15.5% → +0.2%. 14 / 21 days scored close (not luck).
    Why: the 4-weekday level lags when sales turn (Oct growth was double-counted by the growth factor; Nov decline came late). */
-let FC_RC={};
+let FC_RC={}; let FC_MONTH={t0:29,t1:4,d0:22,d1:28,dw:0.5};   /* v340: dip on the 22nd-28th (pattern study + replay), was 8th-21st */
 function fcModelRaw(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_RC[k]) return FC_RC[k]; const M=fcModel0(day,variant); if(day<bizToday()&&M) FC_RC[k]=M; return M; }
 const FC_SELF={n:10,lo:0.8,hi:1.25};
 function fcModelC(day,variant){ const M=fcModelRaw(day,variant); if(!M) return M;
@@ -3677,10 +3677,10 @@ function fcModel0(day,variant){
   /* salary days (1st-4th): how much busier they ran than a normal day, learned from past months */
   /* month turn: 29th to 4th ran +14% / +17% above a normal same weekday (Jul-Oct 2026); the middle (8th-21st) ran below.
      Both lifts are learned from past months; the mid-month dip counts half (replay: unseen days 7.4% -> 5.9%) */
-  let pay=1; const dom=d=>+d.slice(8,10), inPay=d=>dom(d)>=29||dom(d)<=4, inMid=d=>dom(d)>=8&&dom(d)<=21;
+  let pay=1; const dom=d=>+d.slice(8,10), inPay=d=>dom(d)>=FC_MONTH.t0||dom(d)<=FC_MONTH.t1, inMid=d=>dom(d)>=FC_MONTH.d0&&dom(d)<=FC_MONTH.d1;
   const ratio=d=>{ const dw=new Date(d+'T12:00:00').getDay(), pr=days.filter(k=>k<d&&new Date(k+'T12:00:00').getDay()===dw).slice(-4); return pr.length>=2?fcRev(d)/mean(pr):null; };
   if(inMid(day)){ const a=days.filter(inMid).map(ratio).filter(Boolean), b=days.slice(-60).filter(d=>!inMid(d)).map(ratio).filter(Boolean);
-    if(a.length>=5&&b.length) pay=1+((a.reduce((x,y)=>x+y,0)/a.length)/(b.reduce((x,y)=>x+y,0)/b.length)-1)*0.5; }
+    if(a.length>=5&&b.length) pay=1+((a.reduce((x,y)=>x+y,0)/a.length)/(b.reduce((x,y)=>x+y,0)/b.length)-1)*FC_MONTH.dw; }
   if(inPay(day)){ const ratio0=d=>{ const dw=new Date(d+'T12:00:00').getDay(), pr=days.filter(k=>k<d&&new Date(k+'T12:00:00').getDay()===dw).slice(-4); return pr.length>=2?fcRev(d)/mean(pr):null; };
     const a=days.filter(inPay).map(ratio0).filter(Boolean), b=days.slice(-60).filter(d=>!inPay(d)).map(ratio0).filter(Boolean);
     if(a.length>=3&&b.length){ pay=(a.reduce((x,y)=>x+y,0)/a.length)/(b.reduce((x,y)=>x+y,0)/b.length); } }
@@ -5841,7 +5841,7 @@ async function go(){
     if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
 window.__OWN={ohOf,bh};
-window.__FC={shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
+window.__FC={month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
 go();
 })();
 </script>
