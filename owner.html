@@ -649,7 +649,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v357';
+const BOARD='v358';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -1647,7 +1647,7 @@ function floor(){
       const r=byT[String(t.name)]; if(!r){ const H=tableHistory(t.name), done=H.filter(x=>x.status==='settled'); const tt=done.length?done.map(x=>hm(x.createdAt)+'–'+hm(x.settledAt)+' '+rs(sum(x))+(x.waiter?' · '+x.waiter:'')).join('\n'):'free all day';
         return `<div class="tbl click" data-table="${esc(t.name)}" title="${esc(tt)}"><b>${esc(t.name)}</b><small>${t.chairs?t.chairs+' chairs':''}</small>${done.length?`<small>${done.length} turn${done.length>1?'s':''} · ${rs(done.reduce((n,x)=>n+sum(x),0))}</small>`:''}</div>`; }
       const age=mins(r.createdAt,tsNow()); const cls=r.status==='due'?'due':age>75?'late':'on';
-      return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><small class="tk">${esc(t.name)}${r.pax?' · '+r.pax+' pax':''}</small><b class="amt">${rs(sum(r))}</b><small>${esc(r.waiter||'')}${r.kotCount>1?' · '+r.kotCount+' KOT':''}</small><small>${r.status==='due'?'BILL PRINTED':(()=>{ const L=(r.items||[]).map(i=>lineState(i,r)); const c=L.filter(x=>x==='cooking').length, l=L.filter(x=>x==='late').length; return l?'<b>'+l+' late</b>'+(c?' · '+c+' cooking':''):c?c+' cooking':'served'; })()}</small></div>`;
+      return `<div class="tbl click ${cls}" data-drill="${esc(r.key)}" title="${esc(kotLines(r))}"><span class="age">${age}m</span><small class="tk">${esc(t.name)}${r.pax?' · '+r.pax+' pax':''}</small><b class="amt">${rs(sum(r))}</b><small>${esc(r.waiter||'')}${r.kotCount>1?' · '+r.kotCount+' KOT':''}</small><small>${r.status==='due'?(r.dueAt?`<b>Bill printed ${hm(r.dueAt)}</b> · ${Math.max(0,mins(r.dueAt,tsNow()))}m waiting to pay`:'<b>Bill printed</b>'):(()=>{ const L=(r.items||[]).map(i=>lineState(i,r)); const c=L.filter(x=>x==='cooking').length, l=L.filter(x=>x==='late').length; return l?'<b>'+l+' late</b>'+(c?' · '+c+' cooking':''):c?c+' cooking':'served'; })()}</small></div>`;
     }).join('');
       return busyN?`<div class="sechead">${esc(sec)} <span style="font-weight:600;letter-spacing:0;text-transform:none">· ${busyN} of ${secs[sec].length} busy</span></div>`+tiles
                   :`<details class="secfold"><summary>${esc(sec)} <span style="font-weight:600;letter-spacing:0;text-transform:none">· all ${secs[sec].length} free</span></summary><div class="floor">${tiles}</div></details>`; }).join('')+
