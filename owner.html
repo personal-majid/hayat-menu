@@ -643,7 +643,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v343';
+const BOARD='v344';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -1453,6 +1453,10 @@ function prepFor(day,q){ const D=tmDow(day,6); if(D.length<3||D.some(d=>CACHE[d]
 function prepBack(q){ const all=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0).sort().slice(-28); let n=0; const o={L:[0,0,0],E:[0,0,0]};
   all.forEach(d=>{ const P=prepFor(d,q), a=birdsOf(d); if(!P||!a) return; n++; ['L','E'].forEach(k=>{ const c=Math.ceil(P[k]); if(c>=a[k]) o[k][0]++; o[k][1]+=Math.max(0,c-a[k]); o[k][2]+=Math.max(0,a[k]-c); }); });
   return n?{n,L:{ok:o.L[0]/n,left:o.L[1]/n,short:o.L[2]/n},E:{ok:o.E[0]/n,left:o.E[1]/n,short:o.E[2]/n}}:null; }
+/* v344: the plan goes to prep/{day}.plan so the kitchen screen shows it; written when a number changes, at most every 10 min */
+let PREPW={k:'',at:0};
+function prepPublish(o){ if(!FB||!FB.fs) return; const k=JSON.stringify([o.am,o.pm,o.night,o.lunchDone,o.q,o.tmr&&o.tmr.am,o.cm]); if(k===PREPW.k&&Date.now()-PREPW.at<30*60e3) return; if(Date.now()-PREPW.at<10*60e3&&PREPW.k) return;
+  PREPW={k,at:Date.now()}; try{ FB.fs.setDoc(FB.fs.doc(FB.db,'prep',DAY),{day:DAY,plan:Object.assign({},o,{at:tsNow(),v:BOARD})},{merge:true}).catch(()=>{}); }catch(e){} }
 async function prepLoad(d){ if(PREPL[d]||!FB||!FB.fs) return; PREPL[d]=1; try{ const sn=await FB.fs.getDoc(FB.fs.doc(FB.db,'prep',d)); PREP[d]=sn.exists()?sn.data():{}; }catch(e){ PREP[d]={}; } render(); }
 function prepCard(){ const live=DAY===bizToday(); const P=prepFor(DAY,PREPQ); const D=tmDow(DAY,6); if(!P){ if(D.some(d=>CACHE[d]===undefined)&&!DG.busy) setTimeout(()=>dgLoad(D.filter(d=>CACHE[d]===undefined)),0); return D.length>=3?`<div class="card wide"><h2>🍗 Chicken prep</h2><p class="note">Loading past ${rpWd(DAY)}s…</p></div>`:''; }
   prepLoad(DAY); const R=PREP[DAY]||{}, now=birdsOf(DAY)||{L:0,E:0,cL:0,cE:0}, v=live?nowMinOf():1440, lunchDone=v>=(16-BH0)*60;
@@ -1464,6 +1468,7 @@ function prepCard(){ const live=DAY===bizToday(); const P=prepFor(DAY,PREPQ); co
   const row=(lab,when,n,sub)=>`<div class="pr"><small>${lab}</small><b>${n}</b><em>${when}</em>${sub?`<i>${sub}</i>`:''}</div>`;
   const saved=R.at?`saved ${T(R.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})}${R.by?' by '+esc(R.by):''}`:'not recorded yet';
   const sold=now.L+now.E, cooked=(R.am!=null?+R.am:0)+(R.pm!=null?+R.pm:0), should=cooked-sold;
+  if(live) prepPublish({am,pm,night:r1(night),lunchDone,soldL:r1(now.L),soldE:r1(now.E),uL:[r1(P.lo('L')),r1(P.hi('L'))],uE:[r1(P.lo('E')),r1(P.hi('E'))],cm:{L:up(P.cL),E:up(P.cE)},q:PREPQ,tmr:PT?{day:t,am:up(PT.L),pm:up(PT.E)}:null});
   return `<div class="card wide prepc"><h2>🍗 Alfaham chicken prep <span class="n">birds · Full = 1, Half = ½, Qtr = ¼ · from the last ${P.n} ${rpWd(DAY)}s${P.fac!==1?` × ${P.fac.toFixed(2)} (today's forecast)`:''}</span></h2>
     <div class="chips">how safe ${[[0.5,'Lean · least left over'],[0.7,'Normal'],[0.9,'Safe · rarely short']].map(([q,l])=>`<button class="chip${PREPQ===q?' on':''}" data-prepq="${q}">${l}</button>`).join('')}</div>
     <div class="prg">${row('☀️ Morning batch · for lunch',`take out, cut and half-cook before opening · lunch sold so far ${r1(now.L)}`,`${am} birds`,`usual ${r1(P.lo('L'))}–${r1(P.hi('L'))}`)}

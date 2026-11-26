@@ -57,6 +57,11 @@ main{padding:12px 14px 40px}
 dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;max-width:420px}
 dialog label{display:flex;gap:10px;align-items:center;font-size:17px;padding:6px 0}
 .inote{display:block;margin-top:3px;font-style:normal;font-weight:900;font-size:.92em;color:#7a3d00;background:#ffe9b8;border-radius:6px;padding:2px 7px;width:fit-content;max-width:100%} .knote.onote{background:#e8f1ff;color:#123}
+.pbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 14px;background:#fff4e0;color:#5a3a00;font-size:17px;font-weight:700;border-bottom:1px solid var(--line);cursor:pointer}
+.pbar b{font-size:20px;color:#2b1a00}.pbar .pb{background:#fff;border:1px solid #e6c98f;border-radius:10px;padding:3px 10px}.pbar .old{color:#9a3d00;font-weight:800}
+#pdlg{max-width:560px;width:calc(100vw - 30px)} #pdlg h3{margin:0 0 6px} #pdlg .pg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0} #pdlg .pg div{background:var(--bg,#f5f0e4);border-radius:10px;padding:8px 10px} #pdlg .pg small{display:block;font-size:13px;color:var(--muted)} #pdlg .pg b{font-size:26px}
+#pdlg label{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:18px;padding:6px 0} #pdlg input{width:110px;font-size:22px;padding:6px 8px;border:1px solid var(--line);border-radius:8px}
+#pdlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px} #pdlg .note{font-size:14px;color:var(--muted)}
 </style></head><body>
 <header>
   <h1>🍳 <span id="stName">Kitchen</span></h1>
@@ -71,6 +76,8 @@ dialog label{display:flex;gap:10px;align-items:center;font-size:17px;padding:6px
   <button class="hb" id="fs" title="Full screen">⤢</button>
 </header>
 <div class="cbar" id="cbar" hidden></div>
+<div class="pbar" id="pbar" hidden></div>
+<dialog id="pdlg"></dialog>
 <main id="main"><div class="empty">Loading…</div></main>
 <dialog id="dlg"><form method="dialog"><h3 style="margin-top:0">Stations on this screen</h3><div id="dlgBody"></div><p style="text-align:right;margin-bottom:0"><button class="hb" value="ok">Done</button></p></form></dialog>
 <script>
@@ -190,6 +197,31 @@ function cleanBar(){ const b=$('cbar'); if(!CPLAN){ b.hidden=true; return; }
   if(!late.length){ b.hidden=true; CLATE=''; return; }
   b.hidden=false; b.innerHTML='🧹 Late cleaning:'+late.slice(0,6).map(r=>'<span>'+H.area(CPLAN,r.t.area).icon+' '+r.t.name+' · '+r.late+'′</span>').join('')+(late.length>6?'<span>+'+(late.length-6)+' more</span>':'');
   const key=late.map(r=>r.id).join(','); if(key!==CLATE){ if(CLATE!==''||late.length) { if(ST.sound) beep(); } CLATE=key; } }
+
+/* v344: CHICKEN PREP on the kitchen screen — the owner app writes prep/{day}.plan (birds to half-cook for lunch and evening,
+   likely left at night, tomorrow's thaw); the kitchen records what it really did (am, pm, back). Full = 1 bird, Half ½, Qtr ¼. */
+let PREPD=null, PREPOFF=null, PREPDAY='';
+function subPrep(){ if(!FB) return; const d=HayatClean.bizDate(); if(d===PREPDAY) return; PREPDAY=d; if(PREPOFF) try{ PREPOFF(); }catch(e){} PREPD=null;
+  PREPOFF=FB.fs.onSnapshot(FB.fs.doc(FB.db,'prep',d),sn=>{ PREPD=sn.exists()?sn.data():{}; prepBar(); if($('pdlg').open) prepDlg(); },()=>{}); }
+const pAge=t=>{ if(!t) return null; const m=Math.round((Date.now()-new Date(t).getTime())/60000); return m; };
+function prepBar(){ const b=$('pbar'), P=PREPD&&PREPD.plan; if(!P){ b.hidden=true; return; } b.hidden=false; const age=pAge(P.at), R=PREPD||{};
+  b.innerHTML=`🍗 Alfaham chicken <span class="pb">Morning <b>${P.am}</b>${R.am!=null?' · done '+R.am:''}</span><span class="pb">Afternoon <b>${P.pm}</b>${R.pm!=null?' · done '+R.pm:''}</span>${P.tmr?`<span class="pb">Take out tonight for tomorrow <b>${P.tmr.am}</b></span>`:''}<span>left tonight ~${P.night}</span>${age!=null&&age>180?`<span class="old">plan is ${Math.round(age/60)} h old</span>`:''}<span style="margin-left:auto">tap to record ›</span>`; }
+function prepDlg(){ const P=(PREPD&&PREPD.plan)||{}, R=PREPD||{}, dl=$('pdlg'), v=x=>x==null?'':x;
+  dl.innerHTML=`<h3>🍗 Alfaham chicken · birds</h3><div class="note">Full = 1 bird · Half = ½ · Qtr = ¼ · plan from the owner app${P.at?' at '+new Date(P.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'}):''}</div>
+   <div class="pg"><div><small>☀️ Morning batch (lunch)</small><b>${v(P.am)}</b><small>usual ${P.uL?P.uL.join('–'):''} · sold so far ${v(P.soldL)}</small></div><div><small>🌤 Afternoon batch (evening)</small><b>${v(P.pm)}</b><small>${P.lunchDone?'updated after lunch':'updates after lunch'} · usual ${P.uE?P.uE.join('–'):''}</small></div>
+   <div><small>🌙 Likely left tonight</small><b>~${v(P.night)}</b><small>aim 0–2</small></div><div><small>📦 Take out tonight for tomorrow</small><b>${P.tmr?P.tmr.am:'—'}</b><small>${P.tmr?'evening batch ~'+P.tmr.pm:''}</small></div></div>
+   <div class="note">🍲 Chicken mandi (steamed): lunch ~${P.cm?P.cm.L:'—'} · evening ~${P.cm?P.cm.E:'—'}</div>
+   <h3 style="margin-top:12px">What the kitchen did</h3>
+   <label>Morning half-cooked<input type="number" min="0" step="0.5" inputmode="decimal" id="pAm" value="${v(R.am)}"></label>
+   <label>Afternoon half-cooked<input type="number" min="0" step="0.5" inputmode="decimal" id="pPm" value="${v(R.pm)}"></label>
+   <label>Back to the freezer tonight<input type="number" min="0" step="0.5" inputmode="decimal" id="pBack" value="${v(R.back)}"></label>
+   ${R.at?`<div class="note">last saved ${new Date(R.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})}${R.by?' by '+R.by:''}</div>`:''}
+   <div class="row"><button class="hb" id="pX" type="button">Close</button><button class="hb" id="pSave" type="button" style="font-weight:800">Save</button></div>`;
+  $('pX').onclick=()=>dl.close(); $('pSave').onclick=async()=>{ const o={}; [['am','pAm'],['pm','pPm'],['back','pBack']].forEach(([k,id])=>{ const x=$(id).value; if(x!=='') o[k]=+x; }); o.at=new Date().toISOString(); o.by=(window.KDS_WHO||'kitchen');
+    try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'prep',HayatClean.bizDate()),o,{merge:true}); dl.close(); }catch(e){ alert('Could not save: '+(e.code||e.message)); } };
+  if(!dl.open) dl.showModal(); }
+document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('#pbar')) prepDlg(); });
+setInterval(()=>{ subPrep(); prepBar(); },60000);
 let CLOGOFF=null, CLOGDAY='';
 function subLogs(){ if(!FB) return; const d=HayatClean.bizDate(); if(d===CLOGDAY) return; CLOGDAY=d; if(CLOGOFF) try{ CLOGOFF(); }catch(e){} CLOGS=[];   /* a tablet left on past 05:00 reads the NEW day's cleaning log */
   CLOGOFF=FB.fs.onSnapshot(FB.fs.query(FB.fs.collection(FB.db,'cleanlog'),FB.fs.where('day','==',d)),s=>{ CLOGS=s.docs.map(x=>x.data()); cleanBar(); },()=>{}); }
@@ -209,7 +241,7 @@ setInterval(()=>{ subLogs(); cleanBar(); },30000);
     let trialOff=null; fs.onSnapshot(fs.doc(db,'settings','captain'),d=>{ const on=!!(d.exists()&&d.data().kdsTrial); if(on===KDSTRIAL&&(trialOff||!on)) return; KDSTRIAL=on; if(trialOff){ trialOff(); trialOff=null; TRIAL=[]; }
       if(on) trialOff=fs.onSnapshot(fs.query(fs.collection(db,'trial_orders'),fs.where('at','>=',Date.now()-12*3600e3)),snap=>{ TRIAL=snap.docs.map(d=>Object.assign({id:d.id},d.data())); render(); },()=>{}); render(); },()=>{});
     fs.onSnapshot(fs.doc(db,'cleanplan','main'),d=>{ CPLAN=d.exists()&&d.data().tasks?Object.assign({},HayatClean.DEFAULT_PLAN,d.data()):HayatClean.DEFAULT_PLAN; cleanBar(); },()=>{});
-    subLogs();
+    subPrep(); window.KDS_WHO=(ctx&&(ctx.name||(ctx.me&&ctx.me.name)))||'kitchen'; subLogs();
   };
   if(!['office','kitchen','captain'].includes(ctx.role)){ $('main').innerHTML=''; await HayatAuth.form($('main'),ctx,['kitchen','office','captain'],go,'Sign in once on this tablet with the kitchen code.'); return; }
   go(); })();

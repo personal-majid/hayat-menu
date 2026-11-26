@@ -1113,3 +1113,8 @@ What that means, and what to say if it comes up:
 - prepFor(day,q): percentile q of the last 6 same weekdays × (fcModel plan ÷ their average sales, 0.8–1.25). Card: Morning batch (lunch), Afternoon batch (evening × today's lunch pace half weight − morning batch left, once recorded), likely left at closing, tomorrow morning (take out tonight), chicken mandi line. PREPQ 0.5 / 0.7 / 0.9 (localStorage hayat-prepq).
 - Kitchen record prep/{day} {am, pm, back, by, at}: cooked vs sold (bills) → should be left vs recorded back (gap > 1 bird in red).
 - prepBack(q) last 28 days: test data (14 days) Lean 71% enough / 2.1 left / 1.0 short; Normal 79% / 2.8 / 0.7; Safe 86% / 4.4 / 0.3 birds a day at lunch.
+
+## v344 — chicken prep on the kitchen screen
+- owner.html prepCard → prepPublish(): prep/{day}.plan {am, pm, night, lunchDone, soldL, soldE, uL, uE, cm{L,E}, q, tmr{day,am,pm}, at, v} — only when a number changes, at most every 10 min (30 min refresh). The plan updates only while some owner app is open (no server job).
+- kds.html: #pbar under the header (like the late-cleaning bar): Morning / Afternoon birds (+ "done n" when recorded), take out tonight for tomorrow, likely left; "plan is n h old" after 3 h. Tap → #pdlg: plan details + Morning half-cooked / Afternoon half-cooked / Back to the freezer tonight → setDoc prep/{bizDate} merge {am, pm, back, at, by (signed-in name)}. onSnapshot prep/{bizDate}, re-subscribes after 05:00 (subPrep every 60 s).
+- Hour-by-hour method switching: tested twice — Oct 2026 (won on tuning days, lost on unseen days) and 26 Nov on all days (best-per-hour pick / top-3 blend / average of 8 methods all within ±0.3 pt). Not used; the Forecast Lab's fcPick switches only when a method beats the app's own by ≥1 pt.
