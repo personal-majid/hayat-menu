@@ -643,7 +643,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v347';
+const BOARD='v348';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -1422,6 +1422,7 @@ function fcApplies(day,F){ if(!F) return ''; const pc=x=>x==null?'':(x>=1?'+':'�
   const inPay=dm>=FC_MONTH.t0||dm<=FC_MONTH.t1, inDip=dm>=FC_MONTH.d0&&dm<=FC_MONTH.d1;
   const pv=Math.abs((F.pay||1)-1)<0.01?'≈0, in own misses':pc(F.pay); if(inPay) ch('Salary days (29th–4th)',pv,'up'); else if(inDip) ch('4th week of the month (22nd–28th)',pv,'dn'); else ch('Normal part of the month','','z');
   if(F.seg&&F.seg.f!==1) ch(F.seg.pd==='pay'?'How the last salary days went vs forecast':'How the last 4th weeks went vs forecast',pc(F.seg.f),F.seg.f>=1?'up':'dn','half of the median miss on the last 6 such days');
+  if(F.hol&&F.hol.w>0) ch(esc(F.hol.lab||'Holiday'),`counted ${Math.round(100*F.hol.w)}% like a Sunday`,'up','a weekday holiday behaves partly like a Sunday: alone mid-week a little, touching a weekend more, in a holiday season almost fully');
   if(F.cal&&F.cal!==1) ch(esc(F.why||'Holiday'),pc(F.cal),F.cal>=1?'up':'dn');
   const tm=addDays(day,1); if(HOLI[tm]) ch(`Eve of ${esc(HOLI[tm][0])}`,'not used','z','eves swing a lot (−23% to +48%); too few to trust yet');
   const sp=(k,lab,tip)=>{ if((LAB_SPANS[k]||[]).some(([a,b])=>day>=a&&day<=b)) ch(lab,'in "own misses"','z',tip); };
@@ -3719,7 +3720,7 @@ function spendExplorer(sp){
    (Kerala holidays, Eid; learned once we have our own) → corrected live by how the
    day is actually running. Every number is shown, so a wrong factor is visible.
    ============================================================ */
-const HOLI={'2026-01-26':['Republic Day',1.2],'2026-03-20':['Eid al-Fitr',1.8],'2026-03-21':['Eid 2nd day',1.5],'2026-04-03':['Good Friday',1.1],'2026-04-14':['Vishu',1.2],'2026-05-01':['May Day',1.15],'2026-05-27':['Bakrid',1.8],'2026-05-28':['Bakrid 2nd day',1.4],'2026-06-26':['Muharram',1.1],'2026-08-15':['Independence Day',1.2],'2026-08-25':['Milad-un-Nabi',1.2],'2026-08-26':['Thiruvonam',1.3],'2026-08-27':['Onam 3rd',1.2],'2026-10-02':['Gandhi Jayanti',1.15],'2026-10-20':['Vijayadashami',1.15],'2026-11-08':['Deepavali',1.1],'2026-12-25':['Christmas',1.3],'2026-12-31':["New Year's Eve",1.2],'2027-01-01':['New Year',1.2],'2027-01-26':['Republic Day',1.2],'2027-03-10':['Eid al-Fitr',1.8],'2027-03-11':['Eid 2nd day',1.5]};
+const HOLI={'2026-01-26':['Republic Day',1.2],'2026-03-20':['Eid al-Fitr',1.8],'2026-03-21':['Eid 2nd day',1.5],'2026-04-03':['Good Friday',1.1],'2026-04-14':['Vishu',1.2],'2026-05-01':['May Day',1.15],'2026-05-27':['Bakrid',1.8],'2026-05-28':['Bakrid 2nd day',1.4],'2026-06-26':['Muharram',1.1],'2026-08-15':['Independence Day',1.2],'2026-08-25':['Milad-un-Nabi',1.2],'2026-08-26':['Thiruvonam',1.3],'2026-08-27':['Onam 3rd',1.2],'2026-10-02':['Gandhi Jayanti',1.15],'2026-10-19':['Mahanavami',1.15],'2026-10-20':['Vijayadashami',1.15],'2026-08-28':['Sree Narayana Guru Jayanti',1.1],'2026-11-08':['Deepavali',1.1],'2026-12-25':['Christmas',1.3],'2026-12-31':["New Year's Eve",1.2],'2027-01-01':['New Year',1.2],'2027-01-26':['Republic Day',1.2],'2027-03-10':['Eid al-Fitr',1.8],'2027-03-11':['Eid 2nd day',1.5]};
 Object.assign(HOLI,{'2025-01-26':['Republic Day',1.2],'2025-03-31':['Eid al-Fitr',1.8],'2025-04-01':['Eid 2nd day',1.4],'2025-04-14':['Vishu',1.2],'2025-04-18':['Good Friday',1.1],'2025-05-01':['May Day',1.15],'2025-06-07':['Bakrid',1.8],'2025-07-06':['Muharram',1.1],'2025-08-15':['Independence Day',1.2],'2025-09-04':['Onam (Uthradam)',1.2],'2025-09-05':['Thiruvonam / Milad-un-Nabi',1.3],'2025-09-06':['Onam 3rd',1.2],'2025-10-02':['Gandhi Jayanti / Vijayadashami',1.15],'2025-10-20':['Deepavali',1.1],'2025-12-25':['Christmas',1.3]});
 const wom=d=>Math.min(3,Math.floor((+d.slice(8,10)-1)/7));          /* week of month 0..3 */
 /* three ways to build the hour profile; the one that would have missed least over the last 28 days is the one used */
@@ -3768,16 +3769,35 @@ function fcModelS(day,variant){ const M=fcModelC(day,variant); if(!M||!(FC_SEG.w
     const kw=FC_SEG.wd?k(all.filter(x=>new Date(x+'T12:00:00').getDay()===dw)):1, km=FC_SEG.mp&&pd!=='mid'?k(all.filter(x=>part(x)===pd)):1;
     const f=Math.min(1.2,Math.max(0.85,(1+(kw-1)*FC_SEG.wd)*(1+(km-1)*FC_SEG.mp))); S={kw,km,pd,f}; if(day<bizToday()) FC_SC[ck]=S; }
   if(S.f===1) return Object.assign({},M,{seg:S}); return Object.assign({},M,{seg:S,f:M.f*S.f,plan:M.plan*S.f}); }
+/* v348: HOLIDAYS BY SHAPE (Majid: a single mid-week holiday is no big deal, a holiday touching a weekend matters, long festival
+   / school breaks are huge, a holiday that falls on a weekend adds nothing). A weekday holiday is treated as partly a SUNDAY —
+   level and hour shape mixed with the last Sundays: w = wSingle (alone mid-week) / wBridge (touches a weekend) / wSeason (in a
+   block of 4+ days off or a school break). School-break days, the eve and the day after a 3+ day block get their own lift.
+   Used only when the same holiday has no past of its own (next year its own measured size takes over). */
+let FC_HOL={on:1,wSingle:0.3,wBridge:0.6,wSeason:0.9,wkend:1,school:0.2,after:0.15,eve:0,clean:0};   /* v348 replay: days near holidays / breaks ±19.3 → ±16.5%, live 1–7 pm −0.2…−0.5 pt; eve lift and cleaning holidays out of the weekday level both made it worse */
+function fcHolKind(day){ const dw=d=>new Date(d+'T12:00:00').getDay(), wk=d=>dw(d)===0||dw(d)===6, sch=d=>(LAB_SPANS.school||[]).some(([a,b])=>d>=a&&d<=b), off=d=>!!HOLI[d]||wk(d)||sch(d);
+  const blk=d=>{ if(!off(d)) return null; let a=d,b=d; while(off(addDays(a,-1))) a=addDays(a,-1); while(off(addDays(b,1))) b=addDays(b,1); let hol=false,n=0; for(let x=a;x<=b;x=addDays(x,1)){ n++; if(HOLI[x]||sch(x)) hol=true; } return hol?{a,b,n}:null; };
+  let w=0, x=1, lab=''; const B=blk(day);
+  if(HOLI[day]){ if(wk(day)){ x=FC_HOL.wkend; lab=HOLI[day][0]+' (on a weekend)'; } else { const season=sch(day)||(B&&B.n>=4); w=season?FC_HOL.wSeason:(B&&B.n>=2?FC_HOL.wBridge:FC_HOL.wSingle); lab=HOLI[day][0]+(season?' · holiday season':B&&B.n>=2?' · long weekend':' · single holiday'); } }
+  else if(sch(day)){ x*=1+FC_HOL.school; if(!wk(day)) w=FC_HOL.wSeason*0.5; lab='School break'; }
+  const prev=addDays(day,-1), nxt=addDays(day,1), Bp=blk(prev), Bn=blk(nxt);
+  if(!B&&Bp&&Bp.n>=3&&Bp.b===prev){ x*=1+FC_HOL.after; lab=lab||'Day after a long break'; }
+  if(!B&&Bn&&Bn.n>=3&&Bn.a===nxt){ x*=1+FC_HOL.eve; lab=lab||'Eve of a long break'; }
+  return {w,x,lab,n:B?B.n:0}; }
 function fcModel0(day,variant){
   /* only finished days: tomorrow's plan must not learn from today's half-day */
   const days=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort(), dow=new Date(day+'T12:00:00').getDay();
-  const vv=variant||FC_BEST||'trim', all=days.filter(d=>new Date(d+'T12:00:00').getDay()===dow).slice(-12), same=all.slice(-6);
+  const vv=variant||FC_BEST||'trim', all=days.filter(d=>new Date(d+'T12:00:00').getDay()===dow&&!(FC_HOL.on&&FC_HOL.clean&&fcSpecial(d))).slice(-12), same=all.slice(-6);
   if(same.length<2) return null;
   /* LEVEL from the last 4 same weekdays (x1, x0.7, x0.49...), hour PATTERN from the last 6 (plain average, top and bottom
      dropped). Sundays jumped to ~Rs 88K for three weeks and the 6-week level kept saying 72K (Majid, 11 Oct). Replay, 51 days:
      bias -10.8% -> -4.9%, error 19.0% -> 18.8%. */
-  const lv=FC_VARIANTS[vv](same.slice(-4)), base=lv.reduce((a,b)=>a+b,0);
-  const shp=Array(24).fill(0); for(let h=0;h<24;h++){ let v=same.map(d=>fcHours(d)[h]); if(v.length>=5) v=v.slice().sort((a,b)=>a-b).slice(1,-1); shp[h]=v.reduce((a,b)=>a+b,0)/(v.length||1); }
+  const ownPast=HOLI[day]&&Object.keys(HOLI).some(k=>k<day&&INDEX[k]&&HOLI[k][0]===HOLI[day][0]), HK=FC_HOL.on&&!ownPast?fcHolKind(day):{w:0,x:1,lab:''};
+  const lv=FC_VARIANTS[vv](same.slice(-4)); let base=lv.reduce((a,b)=>a+b,0);
+  const shpOf=L=>{ const o=Array(24).fill(0); for(let h=0;h<24;h++){ let v=L.map(d=>fcHours(d)[h]); if(v.length>=5) v=v.slice().sort((a,b)=>a-b).slice(1,-1); o[h]=v.reduce((a,b)=>a+b,0)/(v.length||1); } return o; };
+  let shp=shpOf(same);
+  if(HK.w>0&&dow!==0){ const sun=days.filter(d=>new Date(d+'T12:00:00').getDay()===0&&!fcSpecial(d)).slice(-6); if(sun.length>=3){ const sb=FC_VARIANTS[vv](sun.slice(-4)).reduce((a,b)=>a+b,0), ss=shpOf(sun), t1=shp.reduce((a,b)=>a+b,0)||1, t2=ss.reduce((a,b)=>a+b,0)||1;
+      base=(1-HK.w)*base+HK.w*sb; shp=shp.map((v,h)=>(1-HK.w)*v/t1+HK.w*ss[h]/t2); } }
   const st=shp.reduce((a,b)=>a+b,0); let prof=st>0?shp.map(v=>v/st*base):lv;
   { const k=0.1, sm=prof.map((v,h)=>v*(1-2*k)+(h>0?prof[h-1]:0)*k+(h<23?prof[h+1]:0)*k), t=sm.reduce((a,b)=>a+b,0)||1; prof=sm.map(v=>v/t*base); }
   const mean=L=>L.length?L.reduce((n,d)=>n+fcRev(d),0)/L.length:0;
@@ -3794,9 +3814,9 @@ function fcModel0(day,variant){
   if(inPay(day)){ const ratio0=d=>{ const dw=new Date(d+'T12:00:00').getDay(), pr=days.filter(k=>k<d&&new Date(k+'T12:00:00').getDay()===dw).slice(-4); return pr.length>=2?fcRev(d)/mean(pr):null; };
     const a=days.filter(inPay).map(ratio0).filter(Boolean), b=days.slice(-60).filter(d=>!inPay(d)).map(ratio0).filter(Boolean);
     if(a.length>=3&&b.length){ pay=(a.reduce((x,y)=>x+y,0)/a.length)/(b.reduce((x,y)=>x+y,0)/b.length); } }
-  let cal=1, why=''; const hol=HOLI[day]; if(hol){ cal=hol[1]; why=hol[0]; const past=Object.keys(HOLI).filter(k=>k<day&&INDEX[k]&&HOLI[k][0]===hol[0]); if(past.length){ const own=past.map(k=>{ const dw=new Date(k+'T12:00:00').getDay(); const s2=days.filter(d=>d<k&&new Date(d+'T12:00:00').getDay()===dw).slice(-6); return s2.length>=2?nrev(k)/mean(s2):null; }).filter(Boolean); if(own.length) cal=own.reduce((a,b)=>a+b,0)/own.length; } }
+  let cal=1, why=''; const hol=HOLI[day]; if(FC_HOL.on&&!ownPast){ cal=HK.x; why=HK.lab; } else if(hol){ cal=hol[1]; why=hol[0]; const past=Object.keys(HOLI).filter(k=>k<day&&INDEX[k]&&HOLI[k][0]===hol[0]); if(past.length){ const own=past.map(k=>{ const dw=new Date(k+'T12:00:00').getDay(); const s2=days.filter(d=>d<k&&new Date(d+'T12:00:00').getDay()===dw).slice(-6); return s2.length>=2?nrev(k)/mean(s2):null; }).filter(Boolean); if(own.length) cal=own.reduce((a,b)=>a+b,0)/own.length; } }
   /* a holiday and a salary day do not add up: the bigger lift counts (2 Oct 2026 was both, and stacking overshot by 23%) */
-  const f=trend*pos*(pay>=1?Math.max(cal,pay):cal*pay); return {prof,base,trend,pos,cal,pay,why,f,n:same.length,plan:base*f};
+  const f=trend*pos*(pay>=1?Math.max(cal,pay):cal*pay); return {prof,base,trend,pos,cal,pay,why,f,n:same.length,plan:base*f,hol:HK};
 }
 /* live: how far the day has run vs its plan, then the rest of the day and the next hour.
    open = bills still open (they will be paid, so they count as done).
@@ -5951,7 +5971,7 @@ async function go(){
     if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
 window.__OWN={ohOf,bh};
-window.__FC={seg:o=>{ Object.assign(FC_SEG,o); FC_MC={}; for(const k in FC_SC) delete FC_SC[k]; },trend:o=>{ Object.assign(FC_TREND,o); FC_MC={}; FC_RC={}; },month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
+window.__FC={hol:o=>{ Object.assign(FC_HOL,o); FC_MC={}; FC_RC={}; for(const k in FC_SC) delete FC_SC[k]; },seg:o=>{ Object.assign(FC_SEG,o); FC_MC={}; for(const k in FC_SC) delete FC_SC[k]; },trend:o=>{ Object.assign(FC_TREND,o); FC_MC={}; FC_RC={}; },month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
 go();
 })();
 </script>
