@@ -1198,3 +1198,9 @@ What that means, and what to say if it comes up:
 
 ## v358 — table card shows when the bill was printed
 - floor(): a 'due' table card says "Bill printed hh:mm · n m waiting to pay" (r.dueAt) instead of a bare BILL PRINTED. VMENU's record has billPrinted / dueCount / dueAt; status 'due' = printed. Checked 26 Nov 21:53: S 3 / S 4 were open with billPrinted false in VMENU, so the card was right not to call them printed.
+
+## v359 — Offer check (Dish analysis): pick dishes, mark offer dates, see the lines
+- Majid, 26 Nov: "line diagram… give offer on chicken mandi and alfaham mandi then select a dish or dish category and see how it went through different days".
+- ofCard() at the top of Insights → Dish analysis (state OF in localStorage hayat-of): up to 6 lines — dish groups (g:Name), dishes (d:NAME, search box with every dish sold), Customer bills (x:bills), Discounts given ₹ (x:disc, bill total < item sum). Plates / ₹ / Per 100 bills; All day / Lunch / Evening; All / Dine / CO / Delivery; 1 / 2 / 4 weeks around the offer; 7-day average. Offer from–to (to empty = still running), saved Offer events (settings/events kind offer) as one-tap chips. Offer days shaded, every event marked. ₹ lines get their own right scale (dashed) when mixed with plates. Tap / hover a day = its numbers + "open the day".
+- Before / During / After table: Before = for each offer day the same weekday 1 and 2 weeks earlier (not inside the offer), After = up to 14 finished days after; whole-shop bills row for scale. Dish detail row has "📈 Follow this dish over dates" (ofTrack). Customer bills only, pre-bookings out (dgDay).
+- Test hook window.__OWN.tab(t) / .of(). Test: scratchpad oh/t-of.mjs (17 × laptop + phone) with a fake Firebase (oh/fake.mjs: 60 generated days, planted mandi offer +80%).
