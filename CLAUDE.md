@@ -1023,3 +1023,10 @@ What that means, and what to say if it comes up:
 
 ## v328 — Bills table without inner scrollbars
 - bills(): .billscroll (max-height none — the page scrolls, no box-in-box vertical scroll) + .billtbl (width 100%, 13px, nowrap cells except Items .its (200–340px, wraps), KOTs .kts and Edits .eds (wrap, 150px)); under 1500px the Edits column is hidden (open the bill for edits). At 1440px the table fits (was 1886px in a 1361px box with a 415px-tall inner scroll).
+
+## v329 — traffic 12 pm–11 pm · steadier live pace · Gemini key name
+- Traffic history (trfHist): TRH.span 'noon' (default, clock hours 12–23, Majid: "12 to 11 pm") | 'all'. Coverage: 10 Oct – 24 Nov only while the app was open (1–8 readings per day 12–23, some days none); every 15 min from the hayat-traffic cron since the night of 25 Nov. Data lives in Hayat's Firestore (settings/trf_YYYY-MM, traffic_flow/{day}), written by the hayat-traffic Worker — NOT BoardReady (it only shares the Cloudflare account).
+- fcLive: today's pace (rDay) from COMPLETE hours only, plus the current hour once it is half gone (expC/actC) — the replay was tuned on whole hours; the hour in progress swung the forecast with every table. Total still includes the partial hour.
+- Pull-forward check (Majid: "2–3 pm moved to 1–2 pm"): history 110+ days, adjacent hours' deviations vs the last 4 same weekdays — mostly POSITIVE links (an extra ₹1,000 at 1 pm comes with +₹87 at 2 pm; 12→1 pm +₹212, 9→10 pm +₹254), only 5→6 pm negative (−₹238). No general "busy hour steals the next" effect, so it is not built into the forecast; the complete-hours pace keeps a one-hour burst from swinging it.
+- Next-customer "Next 3 customers" toggle = full-width rounded button (.nctog).
+- Gemini: BoardReady's worker holds GEMINI_API_KEY (secret names: GEMINI_API_KEY, YT_KEY); hayat-traffic has no secrets. The worker now reads env.GEMINI_KEY || env.GEMINI_API_KEY; Majid must add the key to hayat-traffic once (secrets cannot be copied between workers).

@@ -107,7 +107,8 @@ async function ai(req, env){
   if(req.method === 'OPTIONS') return new Response(null, { status: 204, headers: H });
   if(req.method !== 'POST') return out({ error: 'POST only' }, 405);
   if(!ok) return out({ error: 'not allowed from this site' }, 403);
-  if(!env.GEMINI_KEY) return out({ error: 'Gemini is not set up yet: run "npx wrangler secret put GEMINI_KEY" in cloudflare/traffic and paste the key from aistudio.google.com/apikey' }, 503);
+  const KEY = env.GEMINI_KEY || env.GEMINI_API_KEY;   /* either name (BoardReady uses GEMINI_API_KEY) */
+  if(!KEY) return out({ error: 'Gemini is not set up yet: run "npx wrangler secret put GEMINI_KEY" in cloudflare/traffic and paste the key from aistudio.google.com/apikey' }, 503);
   let b; try{ b = await req.json(); }catch(e){ return out({ error: 'bad request' }, 400); }
   const prompt = String(b.prompt || '').slice(0, 8000), data = String(b.data || '').slice(0, 200000);
   if(!prompt) return out({ error: 'empty prompt' }, 400);
@@ -115,7 +116,7 @@ async function ai(req, env){
   const models = [env.GEMINI_MODEL || 'gemini-flash-latest', env.GEMINI_FALLBACK || 'gemini-flash-lite-latest'];
   let last = '';
   for(const m of models){ for(let i = 0; i < 2; i++){
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_KEY }, body: JSON.stringify(body) });
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': KEY }, body: JSON.stringify(body) });
     if(r.ok){ const j = await r.json(); const text = (((j.candidates || [])[0] || {}).content || {}).parts ? j.candidates[0].content.parts.map(x => x.text || '').join('') : ''; return out({ text: text || '(empty answer)', model: m }); }
     last = r.status + ' ' + (await r.text()).slice(0, 200);
     if(r.status !== 503 && r.status !== 429) return out({ error: 'Gemini: ' + last }, 502);
