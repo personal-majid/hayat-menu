@@ -74,7 +74,12 @@ export const NEWS_Q = [
   ['weather', 'Malappuram rain alert'], ['road', 'NH 966 OR "Kozhikode Palakkad highway" accident OR block'],
   ['football', 'Kerala Blasters match'], ['football', 'sevens football Malappuram'], ['cricket', 'India cricket match today'],
   ['gulf', 'Gulf Malayali jobs OR Saudi expatriates Kerala'], ['price', 'Kerala chicken price'],
-  ['shutdown', 'ഹർത്താൽ'], ['school', 'മലപ്പുറം അവധി']
+  ['shutdown', 'ഹർത്താൽ'], ['school', 'മലപ്പുറം അവധി'],
+  /* v352: more of the district + every cost line a mandi kitchen buys */
+  ['local', 'Manjeri OR Tirur OR Nilambur OR Ponnani OR Kondotty OR Valanchery OR Areekode'], ['local', 'Malappuram festival OR nercha OR uroos OR pooram'],
+  ['road', 'Malappuram traffic OR Perinthalmanna traffic OR Angadippuram OR Pandikkad road'], ['price', 'Kerala LPG price OR commercial cylinder price'],
+  ['price', 'Kerala fish price OR mathi price OR seer fish'], ['price', 'Kerala vegetable price OR onion price OR tomato price'], ['price', 'Kerala rice price OR basmati price'],
+  ['local', 'മലപ്പുറം'], ['price', 'കോഴി വില']
 ];
 /* a headline must name what matters for its kind, else it is dropped (first dry run 26 Nov: "Eagle Thane Strikers" under
    hartal, car-sale ads under local, cricket team pages under cricket) */
@@ -87,17 +92,28 @@ export const CAT_RULES = [
   ['football', t => /Kerala Blasters|sevens|Malappuram FC|Santosh Trophy|Super League Kerala|ഫുട്ബോൾ/i.test(t)],
   ['cricket', t => /\bIndia\b|\bIND\b|IPL|Kerala Cricket League|Sanju/i.test(t) && /vs|match|final|series|World Cup/i.test(t) && !/scorecards|statistics|squads/i.test(t)],
   ['gulf', t => /Gulf|Saudi|UAE|Qatar|Oman|Kuwait|Bahrain|expat|pravasi|NRK|പ്രവാസി/i.test(t) && /Kerala|Keralam|Malayali|Indian|India|മലയാളി/i.test(t)],
-  ['price', t => /price|rate|cost|inflation|വില/i.test(t) && /chicken|broiler|biryani|sadya|food|catering|LPG|fuel|petrol|diesel|vegetable|rice|egg/i.test(t)],
-  ['local', t => /Malappuram|Perinthalmanna|Makkaraparamba|Mankada|Kottakkal|മലപ്പുറം/i.test(t) && !/for sale|second hand|gold rate|cartrade|prediction & tips/i.test(t)]];
+  ['price', t => /price|rate|cost|inflation|വില/i.test(t) && /chicken|broiler|poultry|biryani|sadya|catering|LPG|cylinder|vegetable|onion|tomato|rice|basmati|egg|fish|mathi|seer|കോഴി/i.test(t) && /Kerala|Keralam|Malappuram|Kozhikode|India|poultry body|കേരള/i.test(t) && !/Mumbai|Bengal|Nellore|Delhi|Bengaluru|Chennai|Hyderabad|Pune|TVS|bike|car/i.test(t)],
+  ['local', t => /Malappuram|Perinthalmanna|Makkaraparamba|Mankada|Kottakkal|Manjeri|Tirur|Nilambur|Ponnani|Kondotty|Valanchery|Areekode|Angadippuram|Pandikkad|മലപ്പുറം|പെരിന്തൽമണ്ണ|മഞ്ചേരി/i.test(t) && !/for sale|second hand|gold rate|cartrade|prediction & tips/i.test(t)]];
 const ent = t => String(t || '').replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/<[^>]+>/g, '').trim();
 export function parseRss(xml){ const out = []; const re = /<item>([\s\S]*?)<\/item>/g; let m; while((m = re.exec(xml))){ const g = tag => { const x = new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)</' + tag + '>').exec(m[1]); return x ? ent(x[1]) : ''; };
     out.push({ t: g('title'), l: g('link'), p: g('pubDate'), s: g('source') }); } return out; }
 const hid = s => { let h = 2166136261; for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+/* v352: does it matter for Hayat, and why (shown on the app's "⭐ Matters for Hayat") */
+export function why(c, t){ const T = t.toLowerCase();
+  if(c === 'price'){ if(/chicken|broiler|poultry|കോഴി/.test(T)) return 'Chicken is our biggest cost — a rise hits every mandi and alfaham plate'; if(/lpg|cylinder|gas/.test(T)) return 'Gas cost for the kitchen'; if(/fish|mathi|seer|ayala/.test(T)) return 'Fish dishes cost (king fish, fry)'; if(/rice|basmati/.test(T)) return 'Mandi rice cost'; if(/onion|tomato|vegetable/.test(T)) return 'Vegetable cost'; if(/biryani|sadya|catering|food/.test(T)) return 'Food prices around us — customers compare'; if(/petrol|diesel|fuel/.test(T)) return 'Delivery and transport cost'; return ''; }
+  if(c === 'shutdown') return 'A hartal / bandh can close the highway and empty the restaurant';
+  if(c === 'school') return 'School holidays bring families out (Onam break ran +21%)';
+  if(c === 'weather') return /red|orange|heavy/.test(T) && /malappuram|districts|kerala/.test(T) && !/thiruvananthapuram|kochi|ernakulam/.test(T) ? 'Heavy-rain alert — fewer travellers on the road, more parcels' : '';
+  if(c === 'road') return 'Road trouble on our route — fewer stops, late deliveries';
+  if(c === 'football') return /blasters/.test(T) && /vs|match|preview|prediction|fixture|kick-?off|clash/.test(T) ? 'Kerala Blasters match — evening crowd can shift' : /sevens/.test(T) ? 'Local sevens football crowd nearby' : '';
+  if(c === 'gulf') return 'Gulf news moves Malappuram family spending';
+  if(c === 'local') return /festival|nercha|uroos|pooram|fest\b|expo|exhibition|wedding|marriage/.test(T) ? 'Local event — crowds nearby' : /accident|road|traffic|closed|block/.test(T) ? 'Local road trouble' : '';
+  return ''; }
 export async function news(fs, now){ const { day } = slotOf(now), have = ((await fs.get('news/' + day)) || {}).items || {}, add = {}, seen = now.toISOString(); let n = 0, err = 0;
   for(const [q0, q] of NEWS_Q){ const ml = /[\u0D00-\u0D7F]/.test(q), u = 'https://news.google.com/rss/search?q=' + encodeURIComponent(q + ' when:2d') + (ml ? '&hl=ml&gl=IN&ceid=IN:ml' : '&hl=en-IN&gl=IN&ceid=IN:en');
     try{ const r = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0 (hayat-news)' } }); if(!r.ok){ err++; continue; } const L = parseRss(await r.text()).slice(0, 12);
       for(const it of L){ if(!it.t) continue; const pt = new Date(it.p).getTime(); if(pt && now.getTime() - pt > 72 * 3600e3) continue; const id = hid(it.t.toLowerCase().replace(/\s+-\s+[^-]+$/, ''));
-        if(have[id] || add[id]) continue; const cr = CAT_RULES.find(([k, f]) => f(it.t)); if(!cr) continue; const c = cr[0]; add[id] = { t: it.t.slice(0, 220), l: it.l, s: it.s.slice(0, 60), p: pt ? new Date(pt).toISOString() : '', c, q: q0, seen }; n++; } }catch(e){ err++; } }
+        if(have[id] || add[id]) continue; const cr = CAT_RULES.find(([k, f]) => f(it.t)); if(!cr) continue; const c = cr[0]; const w = why(c, it.t); add[id] = { t: it.t.slice(0, 220), l: it.l, s: it.s.slice(0, 60), p: pt ? new Date(pt).toISOString() : '', c, q: q0, seen, imp: w ? 1 : 0, why: w }; n++; } }catch(e){ err++; } }
   const ids = Object.keys(add); if(ids.length) await fs.patch('news/' + day, { items: add, day }, ids.map(k => 'items.`' + k + '`').concat(['day']));
   await fs.patch('settings/news_health', { at: seen, n: Object.keys(have).length + ids.length, new: ids.length, err }); return { new: ids.length, err }; }
 /* the public site config: firebase apiKey and traffic.tomtomKey (both already visible to anyone who opens the site) */
