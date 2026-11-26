@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hayat busy reader
 // @namespace    hayat-menu
-// @version      1.0
+// @version      1.1
 // @description  Tap a place on Hayat's Competitors page, Google Maps opens, this reads "now vs usual" busyness and saves it to Hayat's owner app.
 // @match        https://personal-majid.github.io/hayat-menu/*
 // @match        https://www.google.com/maps/*
@@ -26,7 +26,7 @@
 
   /* ---- on Hayat's own page: remember which place was tapped ---- */
   if(location.hostname==='personal-majid.github.io'){
-    document.documentElement.dataset.hayatBusy='1.0';
+    document.documentElement.dataset.hayatBusy='1.1';
     document.addEventListener('click',e=>{ const a=e.target&&e.target.closest&&e.target.closest('[data-busy-pid]'); if(!a) return;
       setV('pending',JSON.stringify({pid:a.dataset.busyPid,name:a.dataset.busyName||'',area:a.dataset.busyArea||'',kind:a.dataset.busyKind||'food',at:Date.now()})); },true);
     return;
@@ -54,6 +54,8 @@
     box(`Hayat · reading <b>${P.name||'this place'}</b>… scroll to <b>Popular times</b> if it does not appear.`);
     const t0=Date.now();
     const tick=async()=>{ const r=read();
+      const key=((P.name||'').split(/\s+/).find(x=>x.length>=4)||'').toLowerCase();
+      if((r.live||Object.keys(r.byHour).length)&&key&&!((document.body.innerText||'').toLowerCase().includes(key))){ box(`This page does not look like <b>${P.name}</b> — not saved. Open the right business and tap it again from Hayat.`,true); return; }
       if(r.live||(Object.keys(r.byHour).length&&Date.now()-t0>12000)){
         const at=new Date().toISOString(), day=bizDay(), hh=String(ist().getUTCHours()).padStart(2,'0'), hour=ist().getUTCHours();
         const usual=r.live?r.live.usual:(r.byHour[hour]!=null?r.byHour[hour]:null);

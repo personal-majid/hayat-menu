@@ -31,6 +31,7 @@ export default {
   /* GET / = the last run's result; it runs now only when the last run is over 10 minutes old (the URL is public, so
      opening it repeatedly never spends extra TomTom calls) */
   async fetch(req, env){ const J = o => new Response(JSON.stringify(o, null, 1), { headers: { 'content-type': 'application/json' } });
+    if(new URL(req.url).pathname === '/ai') return ai(req, env);   /* v323: Ask Gemini from the owner app */
     try{ const site = await siteKeys(env), h = await firestore(Object.assign({}, env, { FIREBASE_API_KEY: env.FIREBASE_API_KEY || site.fb })).get('settings/trf_health');
       if(h && h.at && Date.now() - new Date(h.at).getTime() < 10 * 60000) return J(Object.assign({ note: 'last run (runs by itself every 15 minutes)' }, h)); }catch(e){}
     return J(await run(env)); }
@@ -91,3 +92,32 @@ export function enc(v){ if(v === null || v === undefined) return { nullValue: nu
 export function dec(v){ if('mapValue' in v){ const o = {}; Object.entries(v.mapValue.fields || {}).forEach(([k, x]) => o[k] = dec(x)); return o; }
   if('arrayValue' in v) return (v.arrayValue.values || []).map(dec); if('integerValue' in v) return +v.integerValue; if('doubleValue' in v) return v.doubleValue;
   if('stringValue' in v) return v.stringValue; if('booleanValue' in v) return v.booleanValue; return null; }
+
+/* ---------------- v323: ASK GEMINI ----------------
+   POST /ai {prompt, data} from the owner app (https://personal-majid.github.io only) -> Gemini -> {text, model}.
+   The key is the Worker secret GEMINI_KEY (from https://aistudio.google.com/apikey), set once with
+     npx wrangler secret put GEMINI_KEY        (in cloudflare/traffic)
+   It never reaches the browser. Model: env.GEMINI_MODEL or gemini-flash-latest; busy (503) / rate-limited (429)
+   -> one retry, then env.GEMINI_FALLBACK or gemini-flash-lite-latest (same pattern as the scheduler project). */
+const AI_ORIGINS = ['https://personal-majid.github.io', 'http://localhost:8125'];
+async function ai(req, env){
+  const origin = req.headers.get('origin') || '', ok = AI_ORIGINS.includes(origin);
+  const H = { 'content-type': 'application/json', 'access-control-allow-origin': ok ? origin : AI_ORIGINS[0], 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'vary': 'origin' };
+  const out = (o, st) => new Response(JSON.stringify(o), { status: st || 200, headers: H });
+  if(req.method === 'OPTIONS') return new Response(null, { status: 204, headers: H });
+  if(req.method !== 'POST') return out({ error: 'POST only' }, 405);
+  if(!ok) return out({ error: 'not allowed from this site' }, 403);
+  if(!env.GEMINI_KEY) return out({ error: 'Gemini is not set up yet: run "npx wrangler secret put GEMINI_KEY" in cloudflare/traffic and paste the key from aistudio.google.com/apikey' }, 503);
+  let b; try{ b = await req.json(); }catch(e){ return out({ error: 'bad request' }, 400); }
+  const prompt = String(b.prompt || '').slice(0, 8000), data = String(b.data || '').slice(0, 200000);
+  if(!prompt) return out({ error: 'empty prompt' }, 400);
+  const body = { contents: [{ role: 'user', parts: [{ text: prompt + '\n\n=== DATA (from the Hayat owner app) ===\n' + data }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 4096 } };
+  const models = [env.GEMINI_MODEL || 'gemini-flash-latest', env.GEMINI_FALLBACK || 'gemini-flash-lite-latest'];
+  let last = '';
+  for(const m of models){ for(let i = 0; i < 2; i++){
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_KEY }, body: JSON.stringify(body) });
+    if(r.ok){ const j = await r.json(); const text = (((j.candidates || [])[0] || {}).content || {}).parts ? j.candidates[0].content.parts.map(x => x.text || '').join('') : ''; return out({ text: text || '(empty answer)', model: m }); }
+    last = r.status + ' ' + (await r.text()).slice(0, 200);
+    if(r.status !== 503 && r.status !== 429) return out({ error: 'Gemini: ' + last }, 502);
+    await new Promise(z => setTimeout(z, 1500)); } }
+  return out({ error: 'Gemini is busy right now, try again in a minute (' + last + ')' }, 503); }
