@@ -643,7 +643,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v345';
+const BOARD='v346';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -1417,6 +1417,7 @@ function fcApplies(day,F){ if(!F) return ''; const pc=x=>x==null?'':(x>=1?'+':'�
   if(F.self&&F.self!==1) ch(`Own misses, last ${F.selfN} days`,pc(F.self),F.self>=1?'up':'dn','the forecast corrects itself by how far it missed lately');
   const inPay=dm>=FC_MONTH.t0||dm<=FC_MONTH.t1, inDip=dm>=FC_MONTH.d0&&dm<=FC_MONTH.d1;
   const pv=Math.abs((F.pay||1)-1)<0.01?'≈0, in own misses':pc(F.pay); if(inPay) ch('Salary days (29th–4th)',pv,'up'); else if(inDip) ch('4th week of the month (22nd–28th)',pv,'dn'); else ch('Normal part of the month','','z');
+  if(F.seg&&F.seg.f!==1) ch(F.seg.pd==='pay'?'How the last salary days went vs forecast':'How the last 4th weeks went vs forecast',pc(F.seg.f),F.seg.f>=1?'up':'dn','half of the median miss on the last 6 such days');
   if(F.cal&&F.cal!==1) ch(esc(F.why||'Holiday'),pc(F.cal),F.cal>=1?'up':'dn');
   const tm=addDays(day,1); if(HOLI[tm]) ch(`Eve of ${esc(HOLI[tm][0])}`,'not used','z','eves swing a lot (−23% to +48%); too few to trust yet');
   const sp=(k,lab,tip)=>{ if((LAB_SPANS[k]||[]).some(([a,b])=>day>=a&&day<=b)) ch(lab,'in "own misses"','z',tip); };
@@ -3736,7 +3737,7 @@ const FC_VARIANTS={
 };
 let FC_BEST=null, FC_BT=null;
 let FC_MC={};   /* plans for past days, kept while one backtest runs (a past day's plan never changes) */
-function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_MC[k]) return FC_MC[k]; const M=fcModelC(day,variant); if(day<bizToday()) FC_MC[k]=M; return M; }
+function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_MC[k]) return FC_MC[k]; const M=fcModelS(day,variant); if(day<bizToday()) FC_MC[k]=M; return M; }
 /* v336: SELF-CORRECTION. The plan is multiplied by the middle value (median) of real ÷ plan over the last 10 finished days
    (holidays left out; capped 0.8–1.25), using the RAW plans of those days, so nothing feeds on itself.
    Replay 27 Sep – 25 Nov (each day only from days before it): morning plan miss ±18.0% → ±13.8%, leaning +10.9% → +0.7%;
@@ -3751,6 +3752,18 @@ function fcModelC(day,variant){ const M=fcModelRaw(day,variant); if(!M) return M
   if(P.length<6) return Object.assign({},M,{self:1,selfN:P.length});
   const r=P.map(([d,m])=>nrev(d)/m.plan).sort((a,b)=>a-b), n=r.length, md=n%2?r[(n-1)/2]:(r[n/2-1]+r[n/2])/2, k=Math.min(FC_SELF.hi,Math.max(FC_SELF.lo,md));
   return Object.assign({},M,{self:k,selfN:n,raw:M.plan,f:M.f*k,plan:M.plan*k}); }
+/* v346: TYPE-OF-DAY CORRECTION. After the self-correction, the plan is nudged by how the (self-corrected) forecast did on the
+   last n days of the same kind: same weekday (Saturdays ran high) and the same part of the month (salary days 29th–4th ran
+   low, 4th week 22nd–28th). k = median(real ÷ forecast) over those days (special days left out), applied at weight w,
+   total capped 0.85–1.2. Each past forecast used only days before it, so nothing peeks ahead. */
+let FC_SEG={wd:0,mp:0.5,n:6};   /* v346: part of month at half weight; weekday correction tested and rejected (Saturdays have no steady bias) */ const FC_SC={};
+function fcModelS(day,variant){ const M=fcModelC(day,variant); if(!M||!(FC_SEG.wd||FC_SEG.mp)) return M; const ck=day+'|'+(variant||FC_BEST||'trim')+'|'+FC_SEG.wd+'|'+FC_SEG.mp+'|'+FC_SEG.n;
+  let S=day<bizToday()?FC_SC[ck]:null; if(!S){ const all=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0&&nrev(d)>0&&!fcSpecial(d)).sort(), dw=new Date(day+'T12:00:00').getDay(), dm=+day.slice(8);
+    const part=x=>{ const n=+x.slice(8); return n>=FC_MONTH.t0||n<=FC_MONTH.t1?'pay':n>=FC_MONTH.d0&&n<=FC_MONTH.d1?'dip':'mid'; }, pd=part(day);
+    const k=L=>{ const r=L.slice(-FC_SEG.n).map(x=>{ const m=fcModelC(x,variant); return m&&m.plan>0?nrev(x)/m.plan:null; }).filter(v=>v!=null).sort((a,b)=>a-b); if(r.length<3) return 1; const n=r.length; return n%2?r[(n-1)/2]:(r[n/2-1]+r[n/2])/2; };
+    const kw=FC_SEG.wd?k(all.filter(x=>new Date(x+'T12:00:00').getDay()===dw)):1, km=FC_SEG.mp&&pd!=='mid'?k(all.filter(x=>part(x)===pd)):1;
+    const f=Math.min(1.2,Math.max(0.85,(1+(kw-1)*FC_SEG.wd)*(1+(km-1)*FC_SEG.mp))); S={kw,km,pd,f}; if(day<bizToday()) FC_SC[ck]=S; }
+  if(S.f===1) return Object.assign({},M,{seg:S}); return Object.assign({},M,{seg:S,f:M.f*S.f,plan:M.plan*S.f}); }
 function fcModel0(day,variant){
   /* only finished days: tomorrow's plan must not learn from today's half-day */
   const days=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort(), dow=new Date(day+'T12:00:00').getDay();
@@ -5934,7 +5947,7 @@ async function go(){
     if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
 window.__OWN={ohOf,bh};
-window.__FC={trend:o=>{ Object.assign(FC_TREND,o); FC_MC={}; FC_RC={}; },month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
+window.__FC={seg:o=>{ Object.assign(FC_SEG,o); FC_MC={}; for(const k in FC_SC) delete FC_SC[k]; },trend:o=>{ Object.assign(FC_TREND,o); FC_MC={}; FC_RC={}; },month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
 go();
 })();
 </script>
