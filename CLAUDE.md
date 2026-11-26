@@ -1070,3 +1070,10 @@ What that means, and what to say if it comes up:
 - Tested 7/10/14/21/28 days × median/mean/geo × weight .75/1 × holidays in/out, picked on 27 Sep – 26 Oct: unseen 27 Oct – 25 Nov ±19.6% → ±12.6%, bias +15.5% → +0.2%; 14/21 days close behind.
 - Live pace re-checked on the new plan: FC_PACE 0.35, FC_PACE0 0.1 (0.25 same). 50 days, 1/3/5/7/9 pm: old 12.9/12.8/11.0/10.6/6.4% (bias +5–6%) → 11.8/10.6/10.0/9.7/6.1% (bias −1.5…+2%). Morning plan 18.8% → 13.9%.
 - window.__FC.self({lo,hi}) switches the correction for replays (lo=hi=1 = off).
+
+## v337 — locked morning and 5 PM forecasts (Forecast check strip)
+- Majid: the forecast moves with sales; the morning forecast and the 5 PM forecast must be protected so he can see what was said, the revised one and where the day ended.
+- vm_forecast/{day}.m0 {t, h[24] business hours, ts, v} and .p17 {t, so, ts, src live|rebuilt, v}: written by fcLock() only when the field is missing (getDoc first, FCL state). m0 = fcModel(day) (only finished days, same at any hour). p17 = fcAt(day, 5 PM) (bills made before 5 PM only), so a phone opened later still writes the 5 PM view (src rebuilt). Any role writes (rules open).
+- fcCheck() under the top box on Live and Sales: 🔒 Morning said · 🔒 At 5 PM said · Now says (fcToday neutral, moves) / Really ended (nrev) with % vs now / real. Walk-in money, pre-bookings out. Old days fall back to plan / at[12].
+- Forecast track record "Last 10 days" adds Morning 🔒 and At 5 pm 🔒 columns.
+- Full replay (every day in the DB, 121 of 135 replayable from 28 Jul): v336 still better at every cut — plan 18.3 → 17.0%, 1/3/5/7/9 pm 14.7/13.8/12.5/10.8/6.7 → 14.3/13.0/12.2/10.6/6.6%. Replay on ALL days from now on (Majid).
