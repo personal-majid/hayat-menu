@@ -1048,3 +1048,8 @@ What that means, and what to say if it comes up:
 ## v333 — "compare with" switch · tap Bills / Avg bill / Next 60 min
 - weekdayAvg(day) now follows CMPSEL (localStorage hayat-cmpsel, default 'wd4'): wd4 last 4 same weekdays · w2 last 14 finished days · lastwd last same weekday · wom same weekday in the same week of month (PT_WK, last 3) · sim2 top 2 similar days (simDays, specials out) · wd every same weekday (old behaviour, weekdayAvg0). Returns {H, n, label, days}. Used by Sales by hour (the "avg" line; its checkbox label = the choice), Running total (usual line + key "… by now") and the hour sheet. Select "compare with" sits in the Sales-by-hour checkbox row.
 - fcxSheet(kind) from the top box forecast row (buttons .fcx data-fcx bills|avg|next): today by this minute vs avg of the last 4 same weekdays, last same weekday, yesterday (dgDay bs between minutes) — bills by channel (+ expected bills by close vs a usual day), avg bill by channel (+ last 7 days), next 60 min forecast vs what really came in the same 60 minutes on those days (+ next customer guess). Uses whyData().
+
+## v334 — last order / last bill paid open the bill · bill above, prediction below
+- Live lastGap(): "🚶 Last order received" and "🧾 Last bill paid" carry data-drill → drill(key).
+- drill(): order is header → bill timeline (KOTs, edits, bill printed, paid) → ncCheck (next-customer prediction) → large-order switch. Keep the bill above any prediction.
+- ncCheck: when the 6 past same weekdays are not loaded it loads them (dgLoad) and reopens the same bill, instead of asking to visit Live.
