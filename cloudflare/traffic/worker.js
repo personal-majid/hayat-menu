@@ -60,8 +60,46 @@ export async function run(env, now){
       S[p.id] = { sp: f.currentSpeed, ff: f.freeFlowSpeed, tt: f.currentTravelTime, ftt: f.freeFlowTravelTime, cf: f.confidence, cl: !!f.roadClosure }; names[p.id] = p.n;
     }catch(e){ res.err.push((p.n || p.id) + ': ' + e.message); } }
   if(Object.keys(S).length){ try{ await fs.patch(`traffic_flow/${day}`, { s: { [slot]: S }, pts: names, at }, [`s.\`${slot}\``, ...Object.keys(names).map(k => `pts.\`${k}\``), 'at']); res.points = Object.keys(S).length; }catch(e){ res.err.push('write flow: ' + e.message); } }
+  /* 3. v350: news & events, at most once an hour */
+  try{ const nh = await fs.get('settings/news_health'); if(!nh || !nh.at || now.getTime() - new Date(nh.at).getTime() > 55 * 60000) res.news = await news(fs, now); }catch(e){ res.err.push('news: ' + e.message); }
   await health(fs, res); return res;
 }
+/* v350 NEWS & EVENTS (ChatGPT review P05-001/005/007/010/020/023): free Google News RSS searches for what can move a day at
+   Hayat - hartal / bandh, district school holidays, rain alerts, NH 966 road trouble, football / cricket, Gulf jobs, food prices,
+   local news. One doc per business day news/{day} {items:{id:{t,l,s,p,c,q,seen}}}; only NEW items are written (1 read + 1 write).
+   Headlines are shown in the app for the owner to confirm; they never change the forecast by themselves. */
+export const NEWS_Q = [
+  ['local', 'Malappuram'], ['local', 'Perinthalmanna OR Makkaraparamba OR Mankada OR Kottakkal'],
+  ['shutdown', 'hartal Kerala OR bandh Kerala OR harthal Malappuram'], ['school', 'Malappuram collector holiday schools'],
+  ['weather', 'Malappuram rain alert'], ['road', 'NH 966 OR "Kozhikode Palakkad highway" accident OR block'],
+  ['football', 'Kerala Blasters match'], ['football', 'sevens football Malappuram'], ['cricket', 'India cricket match today'],
+  ['gulf', 'Gulf Malayali jobs OR Saudi expatriates Kerala'], ['price', 'Kerala chicken price'],
+  ['shutdown', 'ഹർത്താൽ'], ['school', 'മലപ്പുറം അവധി']
+];
+/* a headline must name what matters for its kind, else it is dropped (first dry run 26 Nov: "Eagle Thane Strikers" under
+   hartal, car-sale ads under local, cricket team pages under cricket) */
+const PLACE = /Malappuram|Perinthalmanna|Makkaraparamba|Mankada|Kottakkal|Manjeri|Valanchery|Kerala|Keralam|മലപ്പുറം|കേരള/i;
+export const CAT_RULES = [
+  ['shutdown', t => /hartal|harthal|bandh|ഹർത്താൽ/i.test(t) && !/cricket|T20|strikers/i.test(t)],
+  ['school', t => /holiday|അവധി/i.test(t) && /school|college|collector|educational|വിദ്യാലയ/i.test(t)],
+  ['weather', t => /alert|heavy rain|downpour|flood|cyclone|മഴ/i.test(t) && PLACE.test(t)],
+  ['road', t => /accidents?|road block|blocked|diversion|traffic jam|landslide|അപകടം|ഗതാഗത/i.test(t) && !/firing|shooting/i.test(t) && /NH ?966|highway|Malappuram|Perinthalmanna|Mankada|Kottakkal|Palakkad|Kozhikode/i.test(t) && !/Ras Al|UAE|Saudi|Dubai/i.test(t)],
+  ['football', t => /Kerala Blasters|sevens|Malappuram FC|Santosh Trophy|Super League Kerala|ഫുട്ബോൾ/i.test(t)],
+  ['cricket', t => /\bIndia\b|\bIND\b|IPL|Kerala Cricket League|Sanju/i.test(t) && /vs|match|final|series|World Cup/i.test(t) && !/scorecards|statistics|squads/i.test(t)],
+  ['gulf', t => /Gulf|Saudi|UAE|Qatar|Oman|Kuwait|Bahrain|expat|pravasi|NRK|പ്രവാസി/i.test(t) && /Kerala|Keralam|Malayali|Indian|India|മലയാളി/i.test(t)],
+  ['price', t => /price|rate|cost|inflation|വില/i.test(t) && /chicken|broiler|biryani|sadya|food|catering|LPG|fuel|petrol|diesel|vegetable|rice|egg/i.test(t)],
+  ['local', t => /Malappuram|Perinthalmanna|Makkaraparamba|Mankada|Kottakkal|മലപ്പുറം/i.test(t) && !/for sale|second hand|gold rate|cartrade|prediction & tips/i.test(t)]];
+const ent = t => String(t || '').replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/<[^>]+>/g, '').trim();
+export function parseRss(xml){ const out = []; const re = /<item>([\s\S]*?)<\/item>/g; let m; while((m = re.exec(xml))){ const g = tag => { const x = new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)</' + tag + '>').exec(m[1]); return x ? ent(x[1]) : ''; };
+    out.push({ t: g('title'), l: g('link'), p: g('pubDate'), s: g('source') }); } return out; }
+const hid = s => { let h = 2166136261; for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+export async function news(fs, now){ const { day } = slotOf(now), have = ((await fs.get('news/' + day)) || {}).items || {}, add = {}, seen = now.toISOString(); let n = 0, err = 0;
+  for(const [q0, q] of NEWS_Q){ const ml = /[\u0D00-\u0D7F]/.test(q), u = 'https://news.google.com/rss/search?q=' + encodeURIComponent(q + ' when:2d') + (ml ? '&hl=ml&gl=IN&ceid=IN:ml' : '&hl=en-IN&gl=IN&ceid=IN:en');
+    try{ const r = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0 (hayat-news)' } }); if(!r.ok){ err++; continue; } const L = parseRss(await r.text()).slice(0, 12);
+      for(const it of L){ if(!it.t) continue; const pt = new Date(it.p).getTime(); if(pt && now.getTime() - pt > 72 * 3600e3) continue; const id = hid(it.t.toLowerCase().replace(/\s+-\s+[^-]+$/, ''));
+        if(have[id] || add[id]) continue; const cr = CAT_RULES.find(([k, f]) => f(it.t)); if(!cr) continue; const c = cr[0]; add[id] = { t: it.t.slice(0, 220), l: it.l, s: it.s.slice(0, 60), p: pt ? new Date(pt).toISOString() : '', c, q: q0, seen }; n++; } }catch(e){ err++; } }
+  const ids = Object.keys(add); if(ids.length) await fs.patch('news/' + day, { items: add, day }, ids.map(k => 'items.`' + k + '`').concat(['day']));
+  await fs.patch('settings/news_health', { at: seen, n: Object.keys(have).length + ids.length, new: ids.length, err }); return { new: ids.length, err }; }
 /* the public site config: firebase apiKey and traffic.tomtomKey (both already visible to anyone who opens the site) */
 async function siteKeys(env){ if(env.FIREBASE_API_KEY && env.TOMTOM_KEY) return {}; try{
     const t = await (await fetch(env.SITE_CONFIG || 'https://personal-majid.github.io/hayat-menu/config.js', { cf: { cacheTtl: 3600 } })).text();
