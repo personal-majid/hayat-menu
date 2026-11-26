@@ -1,6 +1,6 @@
 /* Hayat menu — offline cache.
    Bump CACHE below whenever you upload changes, so tablets pick them up. */
-const CACHE = "hayat-v346";
+const CACHE = "hayat-v347";
 const CORE = [
   "./","./index.html","./app.css","./premium.css","./config.js","./menu-data.js","./lang.js",
   "./assets/icons.js","./assets/qr.js","./shop.js","./call.js",
@@ -14,7 +14,7 @@ const CORE = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));   // "reload": never install from the browser's 10-minute HTTP cache
+  e.waitUntil(caches.open(CACHE).then(c => Promise.allSettled(CORE.map(u => c.add(new Request(u, { cache: "reload" }))))).then(() => self.skipWaiting()));   // v347: one missing file no longer blocks the whole update   // "reload": never install from the browser's 10-minute HTTP cache
 });
 
 self.addEventListener("activate", e => {

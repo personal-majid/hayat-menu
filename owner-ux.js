@@ -18,7 +18,8 @@
     set: function(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
   var DEV = (function(){ try{ var d = localStorage.getItem('hayat-dev'); if(!d){ d = Math.random().toString(36).slice(2, 10); localStorage.setItem('hayat-dev', d); } return d; }catch(e){ return 'nodev'; } })();
-  function today(){ try{ if(O() && O().day) return O().day(); }catch(e){} var d = new Date(Date.now() - 5 * 3600e3); return d.toISOString().slice(0, 10); }
+  function ymdL(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }   /* v347: LOCAL date (toISOString is UTC: the day flipped at 10:30 IST) */
+  function today(){ try{ if(O() && O().day) return O().day(); }catch(e){} return ymdL(new Date(Date.now() - 5 * 3600e3)); }
 
   /* plain names for the cards (the function behind each card) */
   var NAMES = {
@@ -147,7 +148,7 @@
   /* ---------- "What I look at" ---------- */
   function fmt(s){ if(s < 60) return s + ' s'; var m = Math.round(s / 60); return m < 60 ? m + ' min' : (m / 60).toFixed(1) + ' h'; }
   async function report(){
-    var days = 7, d0 = new Date(Date.now() - 5 * 3600e3 - days * 864e5).toISOString().slice(0, 10);
+    var days = 7, d0 = ymdL(new Date(Date.now() - 5 * 3600e3 - days * 864e5));
     var docs = [{ id: U.day + '_' + DEV, data: U }], o = O(), f = o.fs && o.fs(), who = {};
     if(f){ try{ flush(true); var q = await f.fs.getDocs(f.fs.query(f.fs.collection(f.db, 'owner_ux'), f.fs.where('day', '>=', d0)));
       docs = q.docs.map(function(x){ return { id: x.id, data: x.data() }; }); if(!docs.some(function(x){ return x.id === U.day + '_' + DEV; })) docs.push({ id: U.day + '_' + DEV, data: U }); }catch(e){} }

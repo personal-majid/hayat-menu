@@ -643,7 +643,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v346';
+const BOARD='v347';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -1316,19 +1316,23 @@ function dishPace(){ if(DAY!==bizToday()) return ''; const D=tmDow(DAY,4); if(D.
    vm_forecast/{day}.p17 = the forecast as it stood at 5:00 PM {t, ts, src:'live'|'rebuilt', v} — fcAt(day, 5 PM) uses only
                            bills made before 5 PM, so a phone opened later still writes the 5 PM view ('rebuilt').
    Written only when the field is missing (read first). Walk-in money (pre-bookings out), same as "real" = nrev(day). */
+/* v347 (ChatGPT review P06-003..007, verified): locks and hourly entries are written in a TRANSACTION that only adds what is
+   still missing, so two phones cannot both write a different "first" value; local state is updated only after it succeeded. */
+async function fcOnce(day,fn){ const fs=FB.fs, ref=fs.doc(FB.db,'vm_forecast',day);
+  return fs.runTransaction(FB.db,async tx=>{ const sn=await tx.get(ref), cur=sn.exists()?sn.data():{}, add=fn(cur)||{}; if(Object.keys(add).length) tx.set(ref,Object.assign({day},add),{merge:true}); return Object.assign({},cur,add,add.at?{at:Object.assign({},cur.at||{},add.at)}:{}); }); }
 const FCL_5PMf=()=>(17-BH0)*60; let FCL={day:null,doc:null,busy:false,at:0};
 async function fcLockLoad(d){ if(!FB||!FB.fs||FCL.busy) return; FCL.busy=true; try{ const sn=await FB.fs.getDoc(FB.fs.doc(FB.db,'vm_forecast',d)); FCL={day:d,doc:sn.exists()?sn.data():{},busy:false,at:Date.now()}; render(); }catch(e){ FCL.busy=false; FCL.at=Date.now(); } }
 function fcLock(){ const d=DAY; if(!FB||!FB.fs||!DOC) return; if(FCL.day!==d){ if(!FCL.busy&&Date.now()-FCL.at>3000) fcLockLoad(d); return; } const D=FCL.doc||{}, w={};
   if(d===bizToday()){ if(!D.m0){ let M=null; try{ if(!FC_BT) fcBacktest(); M=fcModel(d); }catch(e){} if(M&&M.plan>0) w.m0={t:Math.round(M.plan),h:M.prof.map(v=>Math.round(v*M.f)),ts:tsNow(),v:BOARD}; }
     const v=nowMinOf(); if(!D.p17&&v>=FCL_5PMf()){ let G=null; try{ G=fcAt(d,FCL_5PMf()); }catch(e){} if(G&&G.total>0) w.p17={t:Math.round(G.total),so:Math.round(G.soFar||0),h:G.F.rest.map(x=>Math.round(x)),ts:tsNow(),src:v<FCL_5PMf()+60?'live':'rebuilt',v:BOARD}; }
     if(v>=FCL_5PMf()) fcLockTomorrow(); }
-  if(!Object.keys(w).length) return; Object.assign(D,w); FCL.doc=D;
-  try{ FB.fs.setDoc(FB.fs.doc(FB.db,'vm_forecast',d),Object.assign({day:d},w),{merge:true}).catch(()=>{}); }catch(e){} }
+  if(!Object.keys(w).length||FCL.saving) return; FCL.saving=true;
+  fcOnce(d,cur=>{ const o={}; Object.keys(w).forEach(k=>{ if(!cur[k]) o[k]=w[k]; }); return o; }).then(doc=>{ if(FCL.day===d) FCL.doc=doc; FCL.saving=false; render(); }).catch(()=>{ FCL.saving=false; FCL.at=Date.now(); }); }
 /* the forecast for TOMORROW as it stood the evening before (e0): written once after 5 PM by the first phone; next morning m0 adds today */
 let FCLT={day:null,busy:false,done:false};
 async function fcLockTomorrow(){ const t=addDays(bizToday(),1); if(FCLT.busy||(FCLT.day===t&&FCLT.done)) return; FCLT={day:t,busy:true,done:false};
-  try{ const sn=await FB.fs.getDoc(FB.fs.doc(FB.db,'vm_forecast',t)); const D=sn.exists()?sn.data():{}; if(!D.e0){ if(!FC_BT) fcBacktest(); const M=fcModel(t);
-      if(M&&M.plan>0) await FB.fs.setDoc(FB.fs.doc(FB.db,'vm_forecast',t),{day:t,e0:{t:Math.round(M.plan),h:M.prof.map(v=>Math.round(v*M.f)),ts:tsNow(),why:{base:Math.round(M.base),trend:M.trend,self:M.self||1,pay:M.pay,cal:M.cal,hol:M.why||''},v:BOARD}},{merge:true}); }
+  try{ if(!FC_BT) fcBacktest(); const M=fcModel(t);
+      if(M&&M.plan>0){ const e0={t:Math.round(M.plan),h:M.prof.map(v=>Math.round(v*M.f)),ts:tsNow(),why:{base:Math.round(M.base),trend:M.trend,self:M.self||1,pay:M.pay,cal:M.cal,hol:M.why||''},v:BOARD}; await fcOnce(t,cur=>cur.e0?{}:{e0}); }
     FCLT={day:t,busy:false,done:true}; }catch(e){ FCLT={day:t,busy:false,done:false}; } }
 function fcCheck(){ const d=DAY, live=d===bizToday(); fcLock(); const D=FCL.day===d?FCL.doc:(FCREC.d&&FCREC.d[d])||null; if(!D) return '';
   const m0=D.m0?D.m0.t:(D.plan||null), p17=D.p17?D.p17.t:(D.at&&D.at[12]&&D.at[12].total)||null; if(!m0&&!p17&&!live) return '';
@@ -3391,7 +3395,7 @@ document.addEventListener('click',e=>{ const t=e.target&&e.target.closest&&e.tar
 function bills(){
   const all=recs();
   const R=all.slice().sort((a,b)=>String(b.settledAt||b.createdAt||'').localeCompare(String(a.settledAt||a.createdAt||'')));
-  let rows=R; if(Q) rows=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(Q));
+  let rows=R; if(Q) rows=rows.filter(r=>{ let t=BILLTXT.get(r); if(t==null){ t=JSON.stringify(r).toLowerCase(); BILLTXT.set(r,t); } return t.includes(Q); });
   if(BF.kind) rows=rows.filter(r=>r.kind===BF.kind); if(BF.status) rows=rows.filter(r=>BF.status==='open'?r.status!=='settled':r.status===BF.status);
   if(BF.waiter) rows=rows.filter(r=>r.waiter===BF.waiter); if(BF.section) rows=rows.filter(r=>r.section===BF.section);
   const stay=r=>mins(r.createdAt,r.settledAt||tsNow())||0;
@@ -4158,12 +4162,12 @@ function fcAt(d,v){ const doc=d===DAY?DOC:(RP.docs[d]||null); if(!doc||!doc.reco
 function fcDay(day){ if(!FC_BT) fcBacktest(); const M=fcModel(day); return M?M.plan:null; }
 /* keep what was said, to score it later: vm_forecast/{day}.at[h] = {total,next} */
 let FC_SAVED={};
+const BILLTXT=new WeakMap();
 function fcRecord(F){ if(!F||!FB||!FB.fs) return; const h=F.nowH; const k=DAY+':'+h; if(FC_SAVED[k]) return; FC_SAVED[k]=1;
   const r2=x=>x==null?null:Math.round(x*1000)/1000, pb=(()=>{ try{ return preToday().add||0; }catch(e){ return 0; } })();
   const why={base:Math.round(F.base||0),trend:r2(F.trend),self:r2(F.self||1),selfN:F.selfN||0,pay:r2(F.pay),cal:r2(F.cal),hol:F.why||'',pace:r2(F.rDay),share:r2(F.share),cnt:r2(F.rDay!=null?Math.min(1,FC_PACE0+F.share*FC_PACE):0),pick:F.pick&&F.pick.m||'app',mods:r2(modMult(DAY)),modl:modLabel(DAY)||'',pb:Math.round(pb),rest:F.rest.map(v=>Math.round(v)),v:BOARD};
   const e=Object.assign({total:Math.round(F.total),next:Math.round(F.next),corr:F.corr,act:Math.round(F.act||0),ts:tsNow(),why},(()=>{ try{ const c=chClose(F); return c?{ch:c}:{}; }catch(e){ return {}; } })());
-  if(FCL.day===DAY){ const D=FCL.doc=FCL.doc||{}; D.at=D.at||{}; D.at[h]=e; }
-  try{ FB.fs.setDoc(FB.fs.doc(FB.db,'vm_forecast',DAY),{day:DAY,plan:Math.round(F.plan),f:{trend:F.trend,pos:F.pos,cal:F.cal},at:{[h]:e}},{merge:true}).catch(()=>{}); }catch(e){} }
+  const day=DAY; fcOnce(day,cur=>(cur.at&&cur.at[h])?{}:{plan:Math.round(F.plan),f:{trend:F.trend,pos:F.pos,cal:F.cal},at:{[h]:e}}).then(doc=>{ if(FCL.day===day) FCL.doc=doc; }).catch(()=>{ setTimeout(()=>{ delete FC_SAVED[k]; },120e3); }); }
 /* pre-bookings the owner expects today: vm_prebook/{day} = {e:{id:{amt,time,note,at}}}. The forecast adds
    the larger of (entered) and (pre-booking bills already in today), so a booking is not counted twice. */
 let PBK={};   /* vm_prebook/{day}.e for today and tomorrow */
@@ -5360,7 +5364,7 @@ function dgDay(d){ const live=d===bizToday(); if(!live&&DG.dd[d]) return DG.dd[d
   if(!live) DG.dd[d]=o; return o; }
 function dgDays(){ return Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0).sort().slice(-(DG.n+28)); }
 async function dgLoad(days){ if(!ESS){ if(!DG.wait){ DG.wait=1; setTimeout(()=>{ DG.wait=0; dgLoad(days); },1500); } return; } DG.busy=true;   /* v322: past-day loads wait until the top cards have their data */
-  render(); for(const d of days){ if(CACHE[d]===undefined) await loadDay(d); } DG.busy=false; render(); }
+  render(); const L=days.filter(d=>CACHE[d]===undefined); let i=0; await Promise.all(Array.from({length:Math.min(4,L.length)},async()=>{ while(i<L.length){ const d=L[i++]; try{ await loadDay(d); }catch(e){} } })); DG.busy=false; render(); }
 /* price changes: the price most plates were billed at moved, was steady on the 2 sold days before, and held on the next sold day */
 function dgChanges(days){ const seq={}, Q={};   /* only dishes selling 1+ plate a day: a 0.2-a-day dish moving price is noise */
   days.forEach(d=>{ const x=dgDay(d); if(!x) return; Object.entries(x.it).forEach(([n,v])=>{ Q[n]=(Q[n]||0)+v[1]; }); Object.entries(x.pr).forEach(([k,m])=>{ const t=Object.entries(m).sort((a,b)=>b[1]-a[1])[0]; if(t&&t[1]>=1) (seq[k]=seq[k]||[]).push([d,+t[0]]); }); });
