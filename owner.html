@@ -643,7 +643,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v344';
+const BOARD='v345';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -3744,9 +3744,10 @@ function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(da
    Why: the 4-weekday level lags when sales turn (Oct growth was double-counted by the growth factor; Nov decline came late). */
 let FC_RC={}; let FC_MONTH={t0:29,t1:4,d0:22,d1:28,dw:0.5};   /* v340: dip on the 22nd-28th (pattern study + replay), was 8th-21st */
 function fcModelRaw(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_RC[k]) return FC_RC[k]; const M=fcModel0(day,variant); if(day<bizToday()&&M) FC_RC[k]=M; return M; }
-const FC_SELF={n:10,lo:0.8,hi:1.25};
+const FC_SELF={n:10,lo:0.8,hi:1.25,skip:1,mid:0}; let FC_TREND={w:0.25,cap:0.15};   /* v345: holidays ±1 day and school breaks left out of the self-correction (Onam was copied into early September); growth at a quarter weight (it sat at its +15% cap for 58 days) */
+const fcSpecial=d=>{ for(const k of ['school','gulf','ramadan']) if(k!=='gulf'&&(LAB_SPANS[k]||[]).some(([a,b])=>d>=addDays(a,-1)&&d<=addDays(b,3))) return true; return !!(HOLI[d]||HOLI[addDays(d,-1)]||HOLI[addDays(d,1)]); };   /* holidays ±1 day and school / Ramadan breaks (+3 days after) */
 function fcModelC(day,variant){ const M=fcModelRaw(day,variant); if(!M) return M;
-  const P=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort().slice(-FC_SELF.n).map(d=>[d,fcModelRaw(d,variant)]).filter(([d,m])=>m&&m.plan>0&&m.cal===1&&nrev(d)>0);
+  const P=Object.keys(INDEX).filter(d=>d<day&&d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort().slice(-FC_SELF.n).map(d=>[d,fcModelRaw(d,variant)]).filter(([d,m])=>m&&m.plan>0&&m.cal===1&&nrev(d)>0&&!(FC_SELF.skip&&fcSpecial(d))&&!(FC_SELF.mid&&(+d.slice(8)>=22||+d.slice(8)<=4)));
   if(P.length<6) return Object.assign({},M,{self:1,selfN:P.length});
   const r=P.map(([d,m])=>nrev(d)/m.plan).sort((a,b)=>a-b), n=r.length, md=n%2?r[(n-1)/2]:(r[n/2-1]+r[n/2])/2, k=Math.min(FC_SELF.hi,Math.max(FC_SELF.lo,md));
   return Object.assign({},M,{self:k,selfN:n,raw:M.plan,f:M.f*k,plan:M.plan*k}); }
@@ -3764,7 +3765,7 @@ function fcModel0(day,variant){
   { const k=0.1, sm=prof.map((v,h)=>v*(1-2*k)+(h>0?prof[h-1]:0)*k+(h<23?prof[h+1]:0)*k), t=sm.reduce((a,b)=>a+b,0)||1; prof=sm.map(v=>v/t*base); }
   const mean=L=>L.length?L.reduce((n,d)=>n+fcRev(d),0)/L.length:0;
   const last28=days.slice(-28), prev28=days.slice(-56,-28);
-  let trend=1; if(prev28.length>=14&&last28.length>=14){ const r=mean(last28)/mean(prev28); trend=Math.min(1.15,Math.max(0.85,r)); }
+  let trend=1; if(prev28.length>=14&&last28.length>=14){ const r=mean(last28)/mean(prev28); trend=1+(Math.min(1+FC_TREND.cap,Math.max(1-FC_TREND.cap,r))-1)*FC_TREND.w; }
   let pos=1;   /* week of month: tested, no help once salary days are in - kept at x1 */
   /* salary days (1st-4th): how much busier they ran than a normal day, learned from past months */
   /* month turn: 29th to 4th ran +14% / +17% above a normal same weekday (Jul-Oct 2026); the middle (8th-21st) ran below.
@@ -5933,7 +5934,7 @@ async function go(){
     if(DOC){ stamp(); render(); } healthPill(); },60000);
 }
 window.__OWN={ohOf,bh};
-window.__FC={month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
+window.__FC={trend:o=>{ Object.assign(FC_TREND,o); FC_MC={}; FC_RC={}; },month:o=>{ Object.assign(FC_MONTH,o); FC_MC={}; FC_RC={}; },shift:(on,S,pen)=>{ FC_SHIFT=on; if(S) FC_SHIFTS=S; if(pen!=null) FC_SHIFTPEN=pen; },self:o=>{ Object.assign(FC_SELF,o); FC_MC={}; FC_RC={}; },fcLive:(...a)=>fcLive(...a),fcModel:(...a)=>fcModel(...a),index:()=>INDEX,nrev:d=>nrev(d),bt:()=>{ if(!FC_BT) fcBacktest(); },set:(p,p0,cap)=>{ FC_PACE=p; FC_PACE0=p0||0; if(cap) FC_CAP=cap; }};   /* test hook: replay the live forecast */   /* test hook */
 go();
 })();
 </script>
