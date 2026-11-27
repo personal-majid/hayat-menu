@@ -490,6 +490,28 @@ details.moreg>.grid,details.moreg>.kpis{padding:0 10px 10px} details.moreg.kmore
 body.finding #main{padding-top:calc(var(--fbh,60px) + 4px)} mark.fhl{scroll-margin:calc(var(--toph,52px) + var(--fbh,60px) + 12px) 0 calc(var(--dockh,80px) + 12px);background:#ffe27a;color:#1B1A17;border-radius:3px;padding:0 1px} mark.fhl.fcur{background:#ff9a3d;outline:2px solid #c45a00;box-shadow:0 0 0 4px rgba(255,154,61,.35)}
 .fpulse{animation:fpulse 1.3s ease-out} @keyframes fpulse{0%{box-shadow:0 0 0 0 rgba(255,154,61,.75)}100%{box-shadow:0 0 0 14px rgba(255,154,61,0)}}
 @media (prefers-reduced-motion:reduce){ .fpulse{animation:none} }
+.trl{display:flex;flex-direction:column;gap:6px} .trrow{display:grid;grid-template-columns:minmax(0,1.4fr) auto minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;text-align:left;font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;min-height:44px}
+.trrow:hover{border-color:var(--ink,#555)} .trrow.dn{opacity:.85} .trn{font-weight:600;justify-self:start;text-align:left} .trv{justify-self:start;text-align:left} .trl:not(.all) .trrow.more{display:none} .trall{margin-top:8px} .trn small{font-weight:400;color:var(--mut,#777)} .trv small{color:var(--mut,#777)}
+.trt{font-size:12px;border-radius:999px;padding:2px 8px;white-space:nowrap} .trt.hot{background:#fde4d4;color:#9a3a0a} .trt.new{background:#e2ecfb;color:#1f4c8f} .trt.up{background:#e1f2e6;color:#1d6a34} .trt.down{background:#f6e0e0;color:#8f2424}
+.trsub{font-size:12px;font-weight:600;color:var(--mut,#777);margin:6px 2px 0}
+@media(max-width:640px){ .trrow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n t" "a b"} .trrow .trn{grid-area:n} .trrow .trt{grid-area:t} .trrow .trv:nth-of-type(3){grid-area:a} .trrow .trv:nth-of-type(4){grid-area:b} }
+.trh{display:flex;flex-direction:column;gap:3px} .trhr{display:grid;grid-template-columns:44px 1fr 40px 40px;align-items:center;gap:6px;position:relative;font-size:13px} .trhr.now span{font-weight:700}
+.trhr i{grid-column:2;grid-row:1;height:14px;background:var(--k-dine,#2a8f86);border-radius:3px;display:block} .trhr em{grid-column:2;grid-row:1;height:0;border-top:2px dashed var(--ink,#333);display:block;align-self:center} .trhr b{text-align:right} .trhr small{text-align:right;color:var(--mut,#777)}
+.bigb{margin:8px 0 10px;border:1px solid #e7c98a;background:#fff8e6;border-radius:12px;padding:8px 10px} .bigbh{font-size:14px;margin-bottom:6px} .bigbh small{color:#8a6d2b}
+.bigbl{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px} .bigbi{flex:0 0 auto;min-width:150px;max-width:230px;text-align:left;font:inherit;color:inherit;background:#fff;border:1px solid #ecd9ad;border-radius:10px;padding:6px 9px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.bigbi b{font-size:16px} .bigbi span,.bigbi small{font-size:12px;color:#6b5a33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .bigbi.lg{border-color:#c9a2e0;background:#faf3ff} .bigbi em{font-style:normal;font-weight:600;color:#6b3f8f} .bigbm{align-self:center;font-size:12px;color:#8a6d2b;white-space:nowrap}
+html[data-theme="dark"] .bigb{background:#2b2414;border-color:#5e4a1f} html[data-theme="dark"] .bigbi{background:#1f1b12;border-color:#4d3e1c} html[data-theme="dark"] .bigbi span,html[data-theme="dark"] .bigbi small,html[data-theme="dark"] .bigbh small{color:#cdb98a}
+html[data-theme="dark"] .trt.hot{background:#4a2a14;color:#ffc9a3} html[data-theme="dark"] .trt.new{background:#1d2e4a;color:#b8d2ff} html[data-theme="dark"] .trt.up{background:#183a24;color:#a9e2bb} html[data-theme="dark"] .trt.down{background:#3d1c1c;color:#f3b5b5}
+.sheet>h2{position:sticky;top:-16px;z-index:5;background:var(--bg);margin:-16px -16px 8px;padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.sheet h2 .x{min-width:44px;min-height:40px;font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:640px){ .sheet>h2{top:-12px;margin:-12px -12px 8px;padding:10px 12px} }
+#tblvX{min-width:44px;min-height:40px;font-size:20px}
+.stmc{stroke:var(--ink,#333);stroke-width:1.5;stroke-dasharray:3 3} .stmct{font-weight:700} .stk.stdash{background:none!important;border-top:3px dashed;height:0;width:18px;display:inline-block;vertical-align:middle}
+.bar{position:relative} .bseg{position:absolute;left:0;right:0;border-top:1px solid rgba(255,255,255,.7);box-sizing:border-box;pointer-events:none}
+.bseg.kdine{background:var(--k-dine,#2a8f86)} .bseg.kcounter{background:var(--k-counter,#7a5bb5)} .bseg.kdelivery{background:var(--k-delivery,#e0734f)}
+html[data-theme="dark"] .bseg{border-top-color:rgba(0,0,0,.55)}
+.chkey{display:inline-flex;gap:6px;align-items:center;font-size:12px} .chkey i{display:inline-block;width:10px;height:10px;border-radius:2px} .chkey .kdine{background:var(--k-dine,#2a8f86)} .chkey .kcounter{background:var(--k-counter,#7a5bb5)} .chkey .kdelivery{background:var(--k-delivery,#e0734f)}
+.cmpchips{margin-top:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px} .cmpchips .chip{font-size:12px;white-space:nowrap;flex:0 0 auto} .cmpchips .n{white-space:nowrap}
 </style>
 <style id="v283">
 /* v283 one colour code everywhere: Dine teal · CO purple · Delivery coral · Staff grey · unpaid amber · forecast blue · up green · down red */
@@ -654,7 +676,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v363';
+const BOARD='v364';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -775,7 +797,7 @@ function simpleMain(live){
   if(TAB==='days') return daysSimple();
   if(TAB==='items') return `<div class="pghead"><b>Dishes</b><span>${esc(rpName(DAY))}</span></div><div class="grid">${topDishes(15)}</div>`;
   if(TAB==='buy'||TAB==='cash') return `<div class="pghead"><b>Money</b><span>${esc(rpName(DAY))}</span></div><div class="subnav">${[['buy','Spends'],['cash','Cash & bank']].map(t=>`<button type="button" class="${TAB===t[0]?'on':''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div><div class="grid">${TAB==='buy'?daySpendCard(DOC,DAY):cashCard(DAY)}</div><div class="sfull"><button type="button" data-full="${TAB}">Every entry and bill →</button></div>`;
-  return staleBar()+todayBox()+`<div class="grid">${needsYou()}${hourly()}${topDishes(5)}</div><div class="sfull"><button type="button" data-full="sales">📊 Full analysis →</button></div>`; }
+  return staleBar()+todayBox()+SAFE(bigBills,'bigBills')()+`<div class="grid">${needsYou()}${hourly()}${topDishes(5)}</div><div class="sfull"><button type="button" data-full="sales">📊 Full analysis →</button></div>`; }
 function simpleWire(){ $$('[data-sday]').forEach(b=>b.onclick=()=>{ TAB='floor'; window.scrollTo(0,0); if(b.dataset.sday===DAY) render(); else setDay(b.dataset.sday); });
   $$('[data-sper]').forEach(b=>b.onclick=()=>{ const p=periodPresets()[+b.dataset.sper]; MODE='period'; PTAB='overview'; loadPeriod(p[1],p[2],p[0]); });
   $$('[data-full]').forEach(b=>b.onclick=e=>{ e.preventDefault(); setView('full'); TAB=b.dataset.full; window.scrollTo(0,0); render(); });
@@ -790,7 +812,7 @@ function kpis(){
   const cash=settled.reduce((n,r)=>n+(r.cash||0),0), card=settled.reduce((n,r)=>n+(r.card||0),0);
   const tables=FLOOR?FLOOR.tables.filter(t=>t.active):[]; const busy=new Set(open.filter(r=>r.kind==='dine').map(r=>r.table));
   const seats=tables.reduce((n,t)=>n+(t.chairs||0),0), seatsBusy=tables.filter(t=>busy.has(t.name)).reduce((n,t)=>n+(t.chairs||0),0);
-  return `${staleBar()}${todayBox()}${SAFE(fcCheck,'fcCheck')()}
+  return `${staleBar()}${todayBox()}${SAFE(bigBills,'bigBills')()}${SAFE(fcCheck,'fcCheck')()}
   ${live&&FCSET.open?`<div class="fcset">${scnBar()}</div>`:''}${live?`<div class="fcline">${trfHint()}</div>`:''}
   ${TAB==='floor'?'':avgStrip()}<details class="moreg kmore" data-mg="kpi2"${MOREG.kpi2!==false?' open':''}><summary><b>More numbers</b><small>seats · table time · cash / card · paid out</small></summary><div class="kpis">
     <div class="kpi"><small>${seats?'Seats':'Tables busy'}</small><b>${!tables.length?'—':seats?Math.round(100*seatsBusy/seats)+'%':Math.round(100*busy.size/tables.length)+'%'}</b><em>${!tables.length?'no floor plan from the shop PC yet':busy.size+' of '+tables.length+' tables'}${!tables.length?'':seats?` · ${seatsBusy}/${seats} chairs`:' · chair counts not set on the shop PC floor plan'}</em></div>
@@ -1377,6 +1399,67 @@ function fcAccHtml(){ const A=fcAcc(); if(!A) return `<p class="note">Loading wh
     <p class="note">"Inside likely range" = how often the real close fell inside the range the top box now shows (10th–90th percentile of past misses; checked by leaving each day out, so 80% means the range is honest).</p>${chH}
     <h3>Last 10 days</h3><div class="scroll"><table class="datab"><tr><th>Day</th><th class="r">Morning 🔒</th><th class="r">At 2 pm</th><th class="r">At 5 pm 🔒</th><th class="r">At 7 pm</th><th class="r">Real</th></tr>${dl}</table></div>`; }
 function fcAccCard(){ return `<div class="card wide"><h2>How good was the forecast? ${dq('m','scored on real past days')}</h2>${fcAccHtml()}</div>`; }
+/* v364: TRENDING (Majid, 27 Nov: "trending vs usual AND the last few minutes; a dish that sells little but is trending today
+   must show too; tap = what is happening"). Plates of every size, by ORDER time, customer bills, pre-bookings out (dgDay bs).
+   Usual = the last 4 same weekdays at the same business minute; last 30 min = the same 30 minutes on those days. */
+const TR_SKIP=/PARCEL|CARRY|COVER|\bBAG\b|PACKING|CONTAINER/;
+const billWhere=r=>{ if(r.kind==='delivery') return 'Delivery'; if(r.kind==='counter') return 'Counter'; const sec=String(r.section||'').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()); return [sec,r.table?'T'+r.table:''].filter(Boolean).join(' · ')||'Dine'; };
+function trendData(){ if(DAY!==bizToday()) return null; const D=tmDow(DAY,4); if(D.length<3||D.some(d=>CACHE[d]===undefined)) return {wait:D.filter(d=>CACHE[d]===undefined)};
+  const x=dgDay(DAY); if(!x||!x.bs.length) return null; const v=nowMinOf(), a0=Math.max(0,v-30);
+  const agg=(bs,lo,hi)=>{ const o={}; bs.forEach(([,,,,mn,fm])=>{ if(mn==null||mn<lo||mn>hi) return; Object.entries(fm||{}).forEach(([f,q])=>{ if(TR_SKIP.test(f)) return; o[f]=(o[f]||0)+q[1]; }); }); return o; };
+  const T=agg(x.bs,0,v), T30=agg(x.bs,a0,v), TB={}; x.bs.forEach(([,,,,mn,fm])=>{ if(mn==null||mn>v) return; Object.keys(fm||{}).forEach(f=>{ TB[f]=(TB[f]||0)+1; }); }), U=D.map(d=>dgDay(d)).filter(Boolean); if(U.length<3) return null;
+  const Un=U.map(y=>agg(y.bs,0,v)), U30=U.map(y=>agg(y.bs,a0,v)), Ua=U.map(y=>agg(y.bs,0,1440)), av=(L,f)=>L.reduce((s,o)=>s+(o[f]||0),0)/L.length;
+  const fams=[...new Set(Object.keys(T).concat(...Un.map(Object.keys)))];
+  const rows=fams.map(f=>{ const t=T[f]||0, un=av(Un,f), t30=T30[f]||0, u30=av(U30,f), ua=av(Ua,f), z=(t-un)/Math.sqrt(un+1), z30=(t30-u30)/Math.sqrt(u30+1);
+    const nb=TB[f]||0, rare=t>=2&&nb>=2&&un<0.75, up=t>=3&&nb>=2&&t>=un*1.4&&z>=1.2, hot=t30>=2&&nb>=2&&t30>=2*Math.max(u30,0.5)&&z30>=1, down=un>=4&&t<=un*0.6&&z<=-1.2;
+    return {f,t,un,t30,u30,ua,z,z30,nb,rare,up,hot,down,drink:DR_SOFT.test(f)||DR_JUICE.test(f)}; });
+  const rising=rows.filter(r=>r.hot||r.up||r.rare).sort((a,b)=>(b.hot-a.hot)||(Math.max(b.z,b.z30)-Math.max(a.z,a.z30))).slice(0,12);
+  const falling=rows.filter(r=>r.down&&!r.hot).sort((a,b)=>a.z-b.z).slice(0,6);
+  return {rising,falling,n:U.length,v,a0}; }
+function trendNow(){ const K=trendData(); if(!K) return ''; if(K.wait){ if(!DG.busy) setTimeout(()=>dgLoad(K.wait),0); return `<div class="card wide trnow"><h2>📈 Trending now</h2><p class="note">Loading the last 4 ${rpWd(DAY)}s…</p></div>`; }
+  const r1=x=>x>=10?Math.round(x):Math.round(x*10)/10, pc=(a,b)=>b>=1?Math.round(100*(a/b-1)):null;
+  const tag=r=>r.hot?'<span class="trt hot">🔥 last 30 min</span>':r.rare?'<span class="trt new">🆕 rare</span>':'<span class="trt up">▲ today</span>';
+  const row=(r,dn)=>{ const p=pc(r.t,r.un); return `<button type="button" class="trrow${dn?' dn':''}" data-trend="${esc(r.f)}"><span class="trn">${esc(tcase(r.f))}${r.drink?' <small>drink</small>':''}</span>${dn?'<span class="trt down">▼ slow</span>':tag(r)}
+    <span class="trv"><b>${r1(r.t)}</b> <small>vs ${r1(r.un)} usual${p!=null&&Math.abs(p)>=10?` · ${p>0?'+':''}${p}%`:''}</small></span><span class="trv"><b>${r1(r.t30)}</b> <small>last 30 min vs ${r1(r.u30)}</small></span></button>`; };
+  if(!K.rising.length&&!K.falling.length) return `<div class="card wide trnow"><h2>📈 Trending now <span class="n">plates vs the last ${K.n} ${rpWd(DAY)}s by this time</span></h2><p class="note">Nothing selling clearly faster or slower than usual right now.</p></div>`;
+  return `<div class="card wide trnow"><h2>📈 Trending now <span class="n">plates vs the last ${K.n} ${rpWd(DAY)}s by this time · tap a dish</span></h2>
+    <div class="trl${TRN.all?' all':''}">${K.rising.map((r,i)=>row(r).replace('class="trrow',`class="trrow${i>=(innerWidth<640?5:8)?' more':''}`)).join('')}${K.falling.length?`<div class="trsub">Slower than usual</div>${K.falling.map((r,i)=>row(r,1).replace('class="trrow',`class="trrow${i>=(innerWidth<640?3:4)?' more':''}`)).join('')}`:''}</div>
+    ${K.rising.length>(innerWidth<640?5:8)||K.falling.length>(innerWidth<640?3:4)?`<button type="button" class="chip trall">${TRN.all?'Show fewer':'Show all '+(K.rising.length+K.falling.length)}</button>`:''}
+    <p class="note">🔥 = last 30 minutes at least twice the usual · 🆕 = sold today but usually not by now · ▲ = today well above usual. Only dishes on 2+ bills (one big table is not a trend). Every size counts as a plate.</p></div>`; }
+function trendSheet(f){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
+  const K=trendData()||{}, R=(K.rising||[]).concat(K.falling||[]).find(r=>r.f===f), r1=x=>x>=10?Math.round(x):Math.round(x*10)/10;
+  const bills=recs().filter(isSale).map(r=>{ const its=(r.items||[]).filter(i=>i.n&&i.q>0&&sizeOf(String(i.n).trim().toUpperCase().replace(/\s+/g,' ')).fam===f); return its.length?{r,its}:null; }).filter(Boolean).sort((a,b)=>String(b.r.createdAt||'').localeCompare(String(a.r.createdAt||'')));
+  const H=Array(24).fill(0), D=tmDow(DAY,4), UH=Array(24).fill(0); (dgDay(DAY)||{bs:[]}).bs.forEach(b=>{ const q=(b[5]||{})[f]; if(q&&b[4]!=null) H[Math.floor(b[4]/60)]+=q[1]; });
+  D.forEach(d=>{ const y=dgDay(d); if(y) y.bs.forEach(b=>{ const q=(b[5]||{})[f]; if(q&&b[4]!=null) UH[Math.floor(b[4]/60)]+=q[1]/D.length; }); });
+  const hrs=[...Array(24).keys()].filter(i=>H[i]||UH[i]>=0.3), mx=Math.max(1,...hrs.map(i=>Math.max(H[i],UH[i])));
+  const nowH=Math.floor(nowMinOf()/60);
+  box.innerHTML=`<div class="sheet"><h2>${esc(tcase(f))} <button class="x" id="drillX">✕</button></h2>
+    ${R?`<p class="sub">Today <b>${r1(R.t)}</b> plates by now vs usual <b>${r1(R.un)}</b> (last ${D.length} ${rpWd(DAY)}s) · last 30 min <b>${r1(R.t30)}</b> vs ${r1(R.u30)} · a usual whole day ${r1(R.ua)}.</p>`:''}
+    <h3>By hour · today vs usual</h3><div class="trh">${hrs.map(i=>`<div class="trhr${i===nowH?' now':''}"><span>${hlabel(i)}</span><i style="width:${Math.round(100*H[i]/mx)}%"></i><em style="width:${Math.round(100*UH[i]/mx)}%"></em><b>${r1(H[i])}</b><small>${r1(UH[i])}</small></div>`).join('')}</div>
+    <p class="note">Bar = today, line = usual. Plates of every size.</p>
+    <h3>Today's bills with it · ${bills.length}</h3>${bills.length?`<div class="scroll"><table class="datab"><tr><th>Ordered</th><th>Where</th><th>What</th><th class="r">Bill</th></tr>${bills.slice(0,40).map(({r,its})=>`<tr data-drill="${esc(r.key||r.id||'')}"><td>${esc(String(r.createdAt||'').slice(11,16))}</td><td>${esc(billWhere(r))}</td><td>${its.map(i=>`${i.q}× ${esc(tcase(i.n))}`).join(', ')}</td><td class="r">${rs(saleV(r))}</td></tr>`).join('')}</table></div>`:'<p class="note">None yet today.</p>'}</div>`;
+  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box){ box.remove(); return; } const d=e.target.closest('[data-drill]'); if(d&&d.dataset.drill){ box.remove(); drill(d.dataset.drill); } }; $('drillX').onclick=()=>box.remove(); }
+const TRN={all:false}; document.addEventListener('click',e=>{ if(!e.target.closest) return; const b=e.target.closest('[data-trend]'); if(b){ trendSheet(b.dataset.trend); return; } if(e.target.closest('.trall')){ TRN.all=!TRN.all; render(); } });
+/* v364: BIG BILLS up top (Majid: "large bill notices important"). Today's customer bills of ₹2,000+, newest first, on Live and
+   Sales right under the top box; pre-bookings (isLarge) say so. Tap = the bill. */
+const BIGB=2000;
+function bigBills(){ if(MODE!=='day'||!DOC) return ''; const L=recs().filter(r=>isSale(r)&&saleV(r)>=BIGB).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))); if(!L.length) return '';
+  const tot=L.reduce((a,r)=>a+saleV(r),0), sold=recs().filter(isSale).reduce((a,r)=>a+saleV(r),0), now=tsNow();
+  const it=r=>(r.items||[]).filter(i=>i.n&&i.q>0).sort((a,b)=>(b.a||0)-(a.a||0)).slice(0,2).map(i=>`${i.q}× ${tcase(i.n)}`).join(', ');
+  return `<div class="bigb"><div class="bigbh">💰 <b>${L.length} big bill${L.length>1?'s':''}</b> ${DAY===bizToday()?'today':''} · ${rs(tot)} <small>(${sold?Math.round(100*tot/sold):0}% of sales · ₹${BIGB.toLocaleString('en-IN')}+)</small></div>
+    <div class="bigbl">${L.slice(0,6).map(r=>{ const m=DAY===bizToday()?mins(r.createdAt,now):null, lg=isLarge(r,DAY); return `<button type="button" class="bigbi${lg?' lg':''}" data-drill="${esc(r.key||r.id||'')}"><b>${rs(saleV(r))}</b><span>${esc(String(r.createdAt||'').slice(11,16))}${m!=null&&m>=0&&m<120?` · ${m} min ago`:''} · ${esc(billWhere(r))}${lg?' · <em>pre-booking</em>':''}${r.status!=='settled'?' · open':''}</span><small>${esc(it(r))}</small></button>`; }).join('')}${L.length>6?`<span class="bigbm">+${L.length-6} more</span>`:''}</div></div>`; }
+/* v364: POP-UPS (Majid: big ✕ that stays on screen, double tap closes, phone Back closes the pop-up and not the page).
+   Works for every .sheetwrap and the full-screen tables / new orders view (#tblv) — no change needed in each sheet. */
+(function(){ const pops=()=>[...document.querySelectorAll('body>.sheetwrap,body>#tblv')]; let pushed=0, ignore=0;
+  function closeEl(t){ if(!t) return; if(t.id==='tblv'){ TBLV=false; tblView(); } else t.remove(); }
+  new MutationObserver(()=>{ const n=pops().length; if(n>pushed){ while(pushed<n){ history.pushState({hayatPop:pushed+1},''); pushed++; } } else if(n<pushed){ const k=pushed-n; pushed=n; ignore++; history.go(-k); } }).observe(document.body,{childList:true});
+  window.addEventListener('popstate',()=>{ if(ignore>0){ ignore--; return; } const L=pops(); if(L.length){ pushed=L.length-1; closeEl(L[L.length-1]); } });
+  const INT='button,a,input,select,textarea,label,summary,svg,canvas,[data-drill],[data-day],[data-h],[data-table],[data-trend],.chip,.tab,.x';
+  let lt=0, lx=0, ly=0;
+  document.addEventListener('touchend',e=>{ const p=e.target.closest&&e.target.closest('.sheetwrap,#tblv'); if(!p||e.target.closest(INT)||e.changedTouches.length!==1) { lt=0; return; } const t=e.changedTouches[0], now=Date.now();
+    if(now-lt<320&&Math.abs(t.clientX-lx)<30&&Math.abs(t.clientY-ly)<30){ lt=0; e.preventDefault(); closeEl(p); return; } lt=now; lx=t.clientX; ly=t.clientY; },{passive:false});
+  document.addEventListener('dblclick',e=>{ const p=e.target.closest&&e.target.closest('.sheetwrap,#tblv'); if(!p||e.target.closest(INT)) return; if(e.target===p||e.target.closest('.sheet>h2,.tblvh')){ window.getSelection&&getSelection().removeAllRanges(); closeEl(p); } });
+})();
 function dishPace(){ if(DAY!==bizToday()) return ''; const D=tmDow(DAY,4); if(D.length<3||D.some(d=>CACHE[d]===undefined)) return ''; const x=dgDay(DAY); if(!x||!x.bs.length) return '';
   const v=nowMinOf(), skip=n=>DR_SOFT.test(n)||/WATER|\bTEA\b|COFFEE|SODA|LIME|JUICE|SHAKE|MOJITO|LASSI|\bML\b|LTR|PARCEL|CARRY|COVER|BAG/.test(n);
   const agg=(bs,to)=>{ const o={}; let V=0; bs.forEach(([,,val,,mn,fm])=>{ if(mn==null||mn>to) return; V+=val; Object.entries(fm||{}).forEach(([f,a])=>{ if(skip(f)) return; o[f]=(o[f]||0)+a[1]; }); }); return {o,V}; };
@@ -1755,7 +1838,10 @@ function hlabel(i){ return String((i+BH0)%24); }
 const kfmt=v=>v>=1e5?'₹'+(v/1e5).toFixed(v%1e5?1:0)+'L':v>=1000?'₹'+(v/1000).toFixed(v%1000?1:0)+'K':'₹'+Math.round(v);
 function yscale(max,fmt){ if(!(max>0)) return {top:1,step:1,html:''}; const raw=max/4, p=Math.pow(10,Math.floor(Math.log10(raw))), m=raw/p, step=(m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; const top=Math.ceil(max/step-0.02)*step; let out=''; for(let v=step; v<=top*1.001; v+=step){ const pc=100*v/top; out+=`<i class="yg mn" style="bottom:${100*(v-step/2)/top}%"></i><i class="yg" style="bottom:${pc}%"></i><b class="yl" style="bottom:${pc}%">${(fmt||kfmt)(v)}</b>`; } return {top,step,html:out}; }
 function ygrid(max,fmt){ return yscale(max,fmt).html; }
-function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH,F,U,LG){ const n=hi-lo+1; const Y=yscale(max); max=Y.top;
+let HCUT=null;   /* v364: set by hourly() just before it calls hbars — each hour's bills (amount, channel) for the thin cut lines */
+function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH,F,U,LG){ const n=hi-lo+1; const Y=yscale(max); max=Y.top; const CUT=HCUT; HCUT=null;
+  const segs=(i,v)=>{ const L=CUT&&CUT[i]; if(!L||!L.length||!(v>0)) return ''; const tot=L.reduce((a,x)=>a+x[0],0); if(!(tot>0)) return ''; const px=(height||200)*v/max; if(!OV.ch&&px/L.length<3) return '';
+    let c=0; return L.map(([a,k])=>{ const b=100*c/tot, h=100*a/tot; c+=a; return `<i class="bseg${OV.ch?' k'+k:''}" style="bottom:${b.toFixed(2)}%;height:${h.toFixed(2)}%"></i>`; }).join(''); };
   const uv=i=>!U?0:U.H?(U.H[i]||0):(U.i===i?U.v:0), un=i=>!U?0:U.N?(U.N[i]||0):(U.i===i?U.n:0);
   const seg=(b,v,c,t,lab)=>{ const bt=Math.min(100,100*b/max), ht=Math.min(100-bt,100*v/max), over=100*(b+v)/max>100.5; return `<div class="bar ${c}${over?' over':''}" style="position:absolute;left:0;right:0;bottom:${bt}%;height:${Math.max(3,ht)}%" data-t="${t}"></div>${lab?`<b class="unl ${c}l" style="bottom:${Math.min(80,bt+ht)}%">${over?'▲ ':''}${lab}</b>`:''}`; };
   const lb=(i,v)=>{ const L=LG&&LG[i]; if(!(L>0)) return ''; const u=uv(i); return seg((v||0)+u,L,'lg',`${hlabel(i)}:00 large order ${rs(L)} · not in averages`,'+'+kfmt(L)+' large'); };
@@ -1767,8 +1853,8 @@ function hbars(H,lo,hi,max,other,otherTag,cls,height,avgH,F,U,LG){ const n=hi-lo
     if(other&&otherTag==='y ') o+=m(other[i],'ym'); if(avgH) o+=m(avgH[i],'avgm'); return o; };
   const wrap=!!(avgH||(other&&otherTag==='y '));
   return `<div class="bars axed" style="grid-template-columns:repeat(${n},1fr)${height?';height:'+height+'px':''}">`+Y.html+H.slice(lo,hi+1).map((v,j)=>{ const i=lo+j;
-    if(F&&i>=F.nowH&&F.fcH[i]>v){ const bar=`<div class="bc"><div class="bar fc${F.fcH[i]>max*1.005?' over':''}${HSEL===i?' cur':''}" data-h="${i}" style="height:${Math.min(100,Math.max(2,100*F.fcH[i]/max))}%" data-t="${hlabel(i)}:00 forecast ${rs(F.fcH[i])}${v?' · so far '+rs(v):''}"></div>${cur(i)?cl(i,v,Math.max(F.fcH[i],v+uv(i)+((LG&&LG[i])||0))):''}${v?`<div class="bar" data-h="${i}" style="position:absolute;left:0;right:0;bottom:0;height:${Math.max(2,100*v/max)}%"></div>`:''}${ub(i,v,nolab(i))}${lb(i,v)}${mk(i)}</div>`; return bar; }
-    const bar=`<div class="bar${cls?' '+cls:''}${HSEL===i?' cur':''}" data-h="${i}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}"></div>`;
+    if(F&&i>=F.nowH&&F.fcH[i]>v){ const bar=`<div class="bc"><div class="bar fc${F.fcH[i]>max*1.005?' over':''}${HSEL===i?' cur':''}" data-h="${i}" style="height:${Math.min(100,Math.max(2,100*F.fcH[i]/max))}%" data-t="${hlabel(i)}:00 forecast ${rs(F.fcH[i])}${v?' · so far '+rs(v):''}"></div>${cur(i)?cl(i,v,Math.max(F.fcH[i],v+uv(i)+((LG&&LG[i])||0))):''}${v?`<div class="bar" data-h="${i}" style="position:absolute;left:0;right:0;bottom:0;height:${Math.max(2,100*v/max)}%">${segs(i,v)}</div>`:''}${ub(i,v,nolab(i))}${lb(i,v)}${mk(i)}</div>`; return bar; }
+    const bar=`<div class="bar${cls?' '+cls:''}${HSEL===i?' cur':''}" data-h="${i}" style="height:${Math.max(2,100*v/max)}%" data-t="${hlabel(i)}:00 ${rs(v)}${other?' · '+(otherTag||'')+rs(other[i]):''}${avgH?' · avg '+rs(avgH[i]):''}">${segs(i,v)}</div>`;
     return wrap||uv(i)>0||(LG&&LG[i]>0)||cur(i)?`<div class="bc">${bar}${ub(i,v,nolab(i))}${lb(i,v)}${mk(i)}${cur(i)?cl(i,v,v+uv(i)+((LG&&LG[i])||0)):''}</div>`:bar; }).join('')+'</div>'; }
 /* the same weekday's hourly average, from the day index (no reads) */
 /* v333: what "usual" means on Sales by hour, Running total and the hour sheet — one switch (CMPSEL, localStorage hayat-cmpsel) */
@@ -2535,8 +2621,9 @@ function hourly(){
   /* the axis = the highest real hour of this day (large orders and the forecast never stretch it; they are capped with ▲) */
   const max=Math.max(1,top,...(HF&&F?HF.filter((v,i)=>i>=F.nowH):[]));   /* the forecast still to come sets the scale too - Majid wants the real shape, not capped boxes */
   const nl=SR.filter(r=>isLarge(r)).length, lgNote=(span?'':wxNote(DAY)+trfNote())+(nl?`<div class="note" style="margin:4px 0 0">⚑ ${nl} large order${nl>1?'s':''} ${rs(SR.filter(r=>isLarge(r)).reduce((n,r)=>n+sum(r),0))} shown as grey caps · not in averages</div>`:'');
-  const ov=span?'':`<div class="ovs">${[['y','yesterday',!!YDOC],['avg',(wa&&wa.label)||('avg '+dow),!!wa],['fc','forecast',DAY===bizToday()]].filter(o=>o[2]).map(o=>`<label><input type="checkbox" data-ov="${o[0]}"${OV[o[0]]?' checked':''}> ${o[1]}</label>`).join('')}${U?`<span class="unkey"><i></i>${DAY===bizToday()?'open now':'not paid'} ${rs(U.v)}</span>`:''}<label class="cmpsel">compare with <select data-cmpsel>${CMP_OPTS.map(([k,l])=>`<option value="${k}"${CMPSEL===k?' selected':''}>${l}</option>`).join('')}</select></label></div>`;
-  return `<div class="card hourcard"><h2>Sales by hour ${span||DAY===undefined?'':`<button type="button" class="slbtn${SL.open?' on':''}" id="slTog2" title="time slider: see the day as it stood at any time">⏱</button>`}<span class="n">${span?'avg per day · '+nd+' days':'tap an hour · <a href="#" data-rpgo>▶ replay the day</a>'}</span></h2>${span?'':SAFE(takeHour,'takeHour')()}${hbars(H,lo,hi,max,showY?HY:null,'y ',null,span?180:210,showA?wa.H:null,F,U,HL)}${hx(lo,hi)}${ov}${lgNote}${span?'':lgStrip()}${span?'':hourCompare(H)}</div>`;
+  const ov=span?'':`<div class="ovs">${[['y','yesterday',!!YDOC],['avg',(wa&&wa.label)||('avg '+dow),!!wa],['fc','forecast',DAY===bizToday()]].filter(o=>o[2]).map(o=>`<label><input type="checkbox" data-ov="${o[0]}"${OV[o[0]]?' checked':''}> ${o[1]}</label>`).join('')}${U?`<span class="unkey"><i></i>${DAY===bizToday()?'open now':'not paid'} ${rs(U.v)}</span>`:''}<label><input type="checkbox" data-ov="ch"${OV.ch?' checked':''}> 🎨 by channel</label>${OV.ch?'<span class="chkey"><i class="kdine"></i>Dine <i class="kcounter"></i>CO <i class="kdelivery"></i>Delivery</span>':''}</div>
+    <div class="chips cmpchips"><span class="n">Compare with:</span>${[['wd4','4 same days'],['lastwd','last same day'],['w2','last 2 weeks'],['wom','same week of month'],['sim2','2 similar days']].map(([k,l])=>`<button type="button" class="chip${CMPSEL===k&&OV.avg?' on':''}" data-cmpchip="${k}">${l}</button>`).join('')}</div>`;
+  return `<div class="card hourcard"><h2>Sales by hour ${span||DAY===undefined?'':`<button type="button" class="slbtn${SL.open?' on':''}" id="slTog2" title="time slider: see the day as it stood at any time">⏱</button>`}<span class="n">${span?'avg per day · '+nd+' days':'tap an hour · <a href="#" data-rpgo>▶ replay the day</a>'}</span></h2>${span?'':SAFE(takeHour,'takeHour')()}${(()=>{ if(!span){ const C=Array.from({length:24},()=>[]); SR.filter(r=>normal(r)).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))).forEach(r=>rparts(r).forEach(([t,a])=>{ const i=bh(t); if(i>=0&&a>0) C[i].push([a,r.kind==='dine'||r.kind==='delivery'?r.kind:'counter']); })); HCUT=C; } return ''; })()}${hbars(H,lo,hi,max,showY?HY:null,'y ',null,span?180:210,showA?wa.H:null,F,U,HL)}${hx(lo,hi)}${ov}${lgNote}${span?'':lgStrip()}${span?'':hourCompare(H)}</div>`;
 }
 
 function breakdown(){
@@ -5290,7 +5377,9 @@ function stRange(){ const t=bizToday(), first=Object.keys(INDEX).filter(d=>nrev(
   if(ST.r==='3m'){ const x=new Date(ref.slice(0,8)+'01T12:00:00'); x.setMonth(x.getMonth()-2); return [ymd(x),mEnd(ref)]; }
   if(ST.r==='all') return [first,mEnd(ref)];
   if(ST.r==='period'&&MODE==='period'&&PER&&PER.from) return [PER.from,PER.to];
-  return [mStart(ref),mEnd(ref)]; }
+  /* v364 (Majid): early in the month still show at least 15 days back; in the last week show the next week too, with the month close marked */
+  const a0=mStart(ref), b0=mEnd(ref), back=addDays(ref,-15), endWk=(+b0.slice(8)-(+ref.slice(8)))<=7?addDays(b0,7):b0;
+  return [back<a0?back:a0, endWk]; }
 function stLarge(d,s){ const doc=d===bizToday()?(DAY===d?DOC:null):CACHE[d]; if(!doc||!doc.records) return [];
   return Object.values(doc.records).filter(r=>isSale(r)&&isLarge(r,d)).filter(r=>{ const h=+String(r.createdAt||r.settledAt||'').slice(11,13), L=h>=5&&h<16;
     return s==='all'||(s==='dine'&&r.kind==='dine')||(s==='dineL'&&r.kind==='dine'&&L)||(s==='dineE'&&r.kind==='dine'&&!L)||(s==='counter'&&r.kind==='counter')||(s==='delivery'&&r.kind==='delivery')||(s==='L'&&L)||(s==='E'&&!L); }).map(saleV); }
@@ -5325,22 +5414,29 @@ function stCard(){ const [a,b]=stRange(), t=bizToday(), key=stKey(ST.s), col=(ST
   if(ri.length>=3){ const sm=ri.map(i=>{ let s=0,w=0; ri.forEach(j=>{ const k=Math.exp(-(((j-i)/3)**2)/2); s+=k*real[days[j]]; w+=k; }); return [X(i),Y(s/w)]; });
     let p=`M${sm[0][0].toFixed(1)},${sm[0][1].toFixed(1)}`; for(let k=0;k<sm.length-1;k++){ const p0=sm[k-1]||sm[k], p1=sm[k], p2=sm[k+1], p3=sm[k+2]||p2; p+=` C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`; }
     o+=`<path d="${p}" fill="none" stroke="${col}" stroke-width="${ph?3:4}" stroke-linecap="round" class="sttr"/>`;
+    /* v364: the same smoothing carried over the forecast days (real + forecast), drawn dashed from the last real day */
+    const fi=days.map((d,i)=>d>=t&&proj[d]!=null?i:-1).filter(i=>i>=0);
+    if(fi.length){ const lastR=ri[ri.length-1], all=ri.concat(fi), vv=i=>days[i]<t?real[days[i]]:(days[i]===t?Math.max(real[days[i]]||0,proj[days[i]]):proj[days[i]]);
+      const pts=[lastR].concat(fi).map(i=>{ let s2=0,w=0; all.forEach(j=>{ const k=Math.exp(-(((j-i)/3)**2)/2); s2+=k*vv(j); w+=k; }); return [X(i),Y(s2/w)]; });
+      pts[0]=sm[sm.length-1]; let q=`M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`; for(let k=1;k<pts.length;k++) q+=` L${pts[k][0].toFixed(1)},${pts[k][1].toFixed(1)}`;
+      o+=`<path d="${q}" fill="none" stroke="${col}" stroke-width="${ph?2.5:3}" stroke-dasharray="7 6" stroke-linecap="round" class="sttrf"/>`; }
     const lg=(i)=>stLarge(days[i],ST.s); ri.forEach((i,k)=>{ lg(i).sort((x,y)=>y-x).forEach((v,j)=>{ const c=v<8000?'#f2c14e':v<15000?'#e8862a':v<30000?'#c0392b':'#6d1a36'; o+=`<circle cx="${sm[k][0].toFixed(1)}" cy="${(sm[k][1]-12-j*11).toFixed(1)}" r="${(5+Math.min(v,50000)/50000*4).toFixed(1)}" fill="${c}" stroke="#fff" stroke-width="1.5"><title>${esc(rpName(days[i]))} · large order ${rs(v)}</title></circle>`; }); }); }
   const months=[...new Set(days.map(d=>d.slice(0,7)))], mrow=[];
   months.forEach(m=>{ const I=days.map((d,i)=>d.slice(0,7)===m?i:-1).filter(i=>i>=0), R=I.filter(i=>real[days[i]]!=null&&days[i]<t);
     const sumR=R.reduce((s,i)=>s+real[days[i]],0), so=I.filter(i=>days[i]<=t&&real[days[i]]!=null).reduce((s,i)=>s+real[days[i]],0);
     const hasF=I.some(i=>proj[days[i]]!=null), pr=hasF?I.reduce((s,i)=>{ const d=days[i]; return s+(d<t?(real[d]||0):d===t?Math.max(real[d]||0,proj[d]||0):(proj[d]||0)); },0):null;
     const avg=R.length?sumR/R.length:null; if(avg!=null&&months.length>1) o+=`<line x1="${(l0+bw*I[0]).toFixed(1)}" x2="${(l0+bw*(I[I.length-1]+1)).toFixed(1)}" y1="${Y(avg).toFixed(1)}" y2="${Y(avg).toFixed(1)}" class="stavg"/><text x="${(l0+bw*(I[0]+I[I.length-1]+1)/2).toFixed(0)}" y="${(Y(avg)-5).toFixed(0)}" text-anchor="middle" class="stavgt">${new Date(m+'-01T12:00:00').toLocaleDateString('en-IN',{month:'short'})} ${rs(avg)}/day</text>`;
-    mrow.push({m,n:R.length,so,avg,proj:pr}); });
+    const mEndD=ymd(new Date(+m.slice(0,4),+m.slice(5,7),0)), part=days[I[0]].slice(8)!=='01'?'last':days[I[I.length-1]]!==mEndD?'first':''; mrow.push({m,n:R.length,so,avg,proj:pr,part,len:I.length}); });
+  days.forEach((d,i)=>{ if(i>0&&d.slice(8)==='01'){ const m=mrow.find(r=>r.m===days[i-1].slice(0,7)), x=(l0+bw*i).toFixed(1); o+=`<line x1="${x}" x2="${x}" y1="${t0-6}" y2="${H-b0}" class="stmc"/><text x="${(+x-4).toFixed(1)}" y="${t0+(ph?20:22)}" text-anchor="end" class="gt stmct">${new Date(days[i-1]+'T12:00:00').toLocaleDateString('en-IN',{month:'short'})} closes${m&&m.proj!=null?' · ~'+kfmt(m.proj):m?' · '+kfmt(m.so):''}</text>`; } });
   const lab=days.map((d,i)=>{ const dd=+d.slice(8); const show=n<=40?(ph?dd%5===1||i===0:true):(dd===1||dd===15); return show?`<text x="${X(i).toFixed(1)}" y="${H-b0+15}" text-anchor="middle" class="gt">${dd}${dd===1||i===0?' '+new Date(d+'T12:00:00').toLocaleDateString('en-IN',{month:'short'}):''}</text>`:''; }).join('');
   const nowx=t>=a&&t<=b?`<line x1="${(l0+bw*days.indexOf(t)).toFixed(1)}" x2="${(l0+bw*days.indexOf(t)).toFixed(1)}" y1="${t0-4}" y2="${H-b0}" class="stnow"/><text x="${(l0+bw*days.indexOf(t)+3).toFixed(1)}" y="${t0+8}" class="gt">today</text>`:'';
   const svg=`<svg viewBox="0 0 ${W} ${H}" class="stsvg" role="img" aria-label="sales trend">${o}${nowx}${lab}</svg>`;
   const cur=mrow.find(r=>r.m===t.slice(0,7)), prevM=(()=>{ const x=new Date(t.slice(0,8)+'01T12:00:00'); x.setMonth(x.getMonth()-1); return ymd(x).slice(0,7); })();
   const prevSum=(()=>{ let s=0,c=0; Object.keys(INDEX).filter(d=>d.startsWith(prevM)&&nrev(d)>0).forEach(d=>{ const x=dgDay(d); if(x){ s+=(x.b[key]||[0])[0]; c++; } }); return c?s:null; })();
-  const box=mrow.map(r=>`<div><small>${new Date(r.m+'-01T12:00:00').toLocaleDateString('en-IN',{month:'long'})}${r.m===t.slice(0,7)?' · so far':''}</small><b>${rs(r.so)}</b><em>${r.avg!=null?rs(r.avg)+' a day · '+r.n+' days':''}</em>${r.proj!=null?`<em class="stpjt">→ month ${rs(r.proj)} (forecast)</em>`:''}</div>`).join('');
+  const box=mrow.map(r=>`<div><small>${new Date(r.m+'-01T12:00:00').toLocaleDateString('en-IN',{month:'long'})}${r.part?` · ${r.part} ${r.len} days`:''}${r.m===t.slice(0,7)?' · so far':''}</small><b>${rs(r.so)}</b><em>${r.avg!=null?rs(r.avg)+' a day · '+r.n+' days':''}</em>${r.proj!=null?`<em class="stpjt">→ ${r.part?'these days':'month'} ${rs(r.proj)} (forecast)</em>`:''}</div>`).join('');
   const sname=(ST_S.find(x=>x[0]===ST.s)||ST_S[0])[1];
   return `<div class="card wide stc">${head}<div class="stbox">${box}${cur&&cur.proj!=null&&prevSum?`<div><small>vs ${new Date(prevM+'-01T12:00:00').toLocaleDateString('en-IN',{month:'long'})}</small><b class="${cur.proj<prevSum?'dn':'up'}">${cur.proj>=prevSum?'+':'−'}${rs(Math.abs(cur.proj-prevSum)).replace('−','')}</b><em>${rs(prevSum)} whole month</em></div>`:''}</div>${svg}
-    <div class="ptkey"><span><i class="trdot" style="background:${col}"></i>${esc(sname)} · each day (tap = open)</span><span><i class="stk" style="background:${col}"></i>trend</span>${fut.length?'<span><i class="stk stpjk"></i>forecast</span>':''}<span><i class="stk stwkk"></i>Sat + Sun</span><span>large orders <i class="trdot" style="background:#f2c14e"></i>₹5–8K <i class="trdot" style="background:#e8862a"></i>8–15K <i class="trdot" style="background:#c0392b"></i>15–30K <i class="trdot" style="background:#6d1a36"></i>30K+</span>${ev.length?'<span>🎉 holiday · 🏷 offer · 🍽 new dish… (hover)</span>':''}</div></div>`; }
+    <div class="ptkey"><span><i class="trdot" style="background:${col}"></i>${esc(sname)} · each day (tap = open)</span><span><i class="stk" style="background:${col}"></i>trend</span>${fut.length?'<span><i class="stk stpjk"></i>forecast</span><span><i class="stk stdash" style="border-color:'+col+'"></i>trend ahead</span>':''}<span><i class="stk stwkk"></i>Sat + Sun</span><span>large orders <i class="trdot" style="background:#f2c14e"></i>₹5–8K <i class="trdot" style="background:#e8862a"></i>8–15K <i class="trdot" style="background:#c0392b"></i>15–30K <i class="trdot" style="background:#6d1a36"></i>30K+</span>${ev.length?'<span>🎉 holiday · 🏷 offer · 🍽 new dish… (hover)</span>':''}</div></div>`; }
 function stWire(){ $$('[data-st]').forEach(b=>b.onclick=()=>{ const [k,v]=b.dataset.st.split('|'); ST[k]=v; stSave(); render(); });
   const f=$('stFrom'), g=$('stTo'); if(f) f.onchange=()=>{ ST.from=f.value; stSave(); render(); }; if(g) g.onchange=()=>{ ST.to=g.value; stSave(); render(); }; }
 function pdCard(from,to){ const days=pdDays(from,to); if(!days.length) return '';
@@ -5468,6 +5564,7 @@ function pdWire(){ if(MODE==='day') return;
   const i=$('pdI'); if(i) i.onchange=()=>{ const v=i.value.trim().toUpperCase().replace(/\s+/g,' '); PD.f=v?'i:'+v:''; pdSave(); render(); };
   const nn=$('pdN'); if(nn) nn.onchange=()=>{ PD.n=+nn.value; pdSave(); render(); };
   $$('button[data-pmm]').forEach(b=>{ b.onclick=()=>{ PM.m=b.dataset.pmm; try{ localStorage.setItem('hayat-pm',JSON.stringify(PM)); }catch(e){} render(); }; }); }
+document.addEventListener('click',e=>{ const c=e.target.closest&&e.target.closest('[data-cmpchip]'); if(!c) return; const k=c.dataset.cmpchip; if(CMPSEL===k&&OV.avg){ OV.avg=false; } else { CMPSEL=k; OV.avg=true; } try{ localStorage.setItem('hayat-cmpsel',CMPSEL); localStorage.setItem('hayat-ov',JSON.stringify(OV)); }catch(x){} render(); });
 document.addEventListener('change',e=>{ const t=e.target; if(t&&t.matches&&t.matches('select[data-cmpsel]')){ CMPSEL=t.value; try{ localStorage.setItem('hayat-cmpsel',CMPSEL); }catch(x){} render(); return; } if(t&&t.matches&&t.matches('select[data-topsel]')){ TOPN=+t.value; try{ localStorage.setItem('hayat-topn',TOPN); }catch(x){} render(); } });
 /* v307: TRENDS — compare channels, dish groups and dishes day by day or week by week, with events on the chart;
    "What is different" finds what moved yesterday, today so far, this week, and what has been rising or falling for weeks
@@ -6010,7 +6107,7 @@ function render0(){ tabCarry(); if(VIEW!=='simple'&&TAB==='days') TAB='floor';
   else if(VIEW==='simple'&&(()=>{ if(!['floor','days','buy','cash','items'].includes(TAB)) TAB='floor'; const sm=simpleMain(live); if(sm==null) return false; m.innerHTML=sm+`<div class="note">Day log ${esc(DOC.updatedAt||'')} · board ${BOARD} · <a href="#" data-full="sales">full analysis</a></div>`; return true; })()){}
   else m.innerHTML=((TAB==='floor'||TAB==='sales')?kpis():'')+pgHead()+subNav()+
     (TAB==='sales'?`<div class="grid">${SAFE(stCard,'stCard')()}${SAFE(noticeCard,'noticeCard')()}${hourly()}${runLine()}${SAFE(chRun,'chRun')()}${SAFE(likeCard,'likeCard')()}${SAFE(dayMatrix,'dayMatrix')()}${billsCard()}</div>${SL.open&&TCUT!=null?`<div class="note sltag">⏱ showing the day as of <b>${tcutLabel()}</b> · <a href="#" id="slTog">back to now</a></div>`:''}<div class="grid">${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); const T=R.reduce((n,r)=>n+r.v,0); return topItems(R,T); })()}</div>${moreG('sales','More breakdowns','by section · type · payment · pace · bill times · waiters · upselling · tables · voids · discounts',breakdown()+pace()+closures()+waiters()+upsell()+tables()+voids()+discounts())}`:
-     TAB==='floor'?`<div class="grid">${live?alerts():''}${SAFE(newsTop,'newsTop')()}${floor()}${newOrders()}${SAFE(demandAhead,'demandAhead')()}${SAFE(riderCard,'riderCard')()}${SAFE(prepCard,'prepCard')()}${SAFE(nextCust,'nextCust')()}${SAFE(dishPace,'dishPace')()}${SAFE(comingUp,'comingUp')()}${SAFE(newsCard,'newsCard')()}${lastGap()?`<div class="card wide lgcard">${lastGap()}</div>`:''}</div>${moreG('live','More live details','unpaid list · today & tomorrow outlook · days like today · by channel · tomorrow\'s dishes · kitchens · road traffic',`<div class="grid">${unrealized()}${outlook()}${SAFE(likeCard,'likeCard')()}${SAFE(chFc,'chFc')()}${SAFE(tmDishes,'tmDishes')()}${kitchens()}${trafficCard()}</div>`)}`:
+     TAB==='floor'?`<div class="grid">${live?alerts():''}${SAFE(newsTop,'newsTop')()}${floor()}${newOrders()}${SAFE(trendNow,'trendNow')()}${SAFE(demandAhead,'demandAhead')()}${SAFE(riderCard,'riderCard')()}${SAFE(prepCard,'prepCard')()}${SAFE(nextCust,'nextCust')()}${SAFE(dishPace,'dishPace')()}${SAFE(comingUp,'comingUp')()}${SAFE(newsCard,'newsCard')()}${lastGap()?`<div class="card wide lgcard">${lastGap()}</div>`:''}</div>${moreG('live','More live details','unpaid list · today & tomorrow outlook · days like today · by channel · tomorrow\'s dishes · kitchens · road traffic',`<div class="grid">${unrealized()}${outlook()}${SAFE(likeCard,'likeCard')()}${SAFE(chFc,'chFc')()}${SAFE(tmDishes,'tmDishes')()}${kitchens()}${trafficCard()}</div>`)}`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${SAFE(spMissCard,'spMissCard')(DAY.slice(0,8)+'01',DAY)}${daySpendCard(DOC,DAY)}${drafts()}${payments()}</div>`:
      TAB==='patterns'?patterns():
