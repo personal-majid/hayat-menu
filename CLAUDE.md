@@ -1226,3 +1226,13 @@ What that means, and what to say if it comes up:
 - Spends: "15 Nov missing, probably entered on 16 Nov" pairing; same amount twice on one day.
 - End-of-day summary card to share; alert when a channel slows for an hour.
 - Pop-ups: big ✕ that stays on screen, double-tap closes, phone Back closes the pop-up (not the page).
+
+## v361 — Today box step 1: open vs late payments · speeding up / slowing · bills done/open · 🧾 new orders · table times · top bar
+- Majid, 27 Nov feedback (conservative: change in place, remove only what he called redundant).
+- todayBox: the three "by now" boxes (last same weekday / avg of last 4 / yesterday) are gone — Why covers them; the ▼% · Why › pill stays.
+- Late payments: counter / delivery bills open more than LATE = 20 min (staff food, late delivery cash) are not "open now": row Unpaid shows only recent ones; Total row "+ late ₹X · n"; hero "paid ₹… · open ₹… · late payments ₹… · n" (paid = total − open − late).
+- tbMomentum(R): per channel, last 60 min and today by now vs the same business minutes on the last 4 same weekdays (tmDow + dgDay bs, bills made, pre-bookings out). Row under each channel: "last 60 min ₹X vs usual ₹Y" + ▲ speeding up (≥1.25×) / ▼ slowing (≤0.75×) / ● steady / ● quiet hour (usual < ₹300) + "±n% vs usual by now". Loads past days once (dgLoad).
+- Bills forecast box: "Dine 19 (2 open) → ~30".
+- Top bar: 🧾 #ordBtn (badge = customer bills made in the last 15 min, ordBadge() after each render) opens newOrders() full screen (TBLV='ord'); 🍽 tables view gets "⏱ Table time ~n min · counter ~n min" (median order→paid of today's paid bills; counter under ₹100 left out = staff). Phone top bar: every button 36 px high, centred.
+- Tests: oh/t-st 38, oh/t-of 34 green; oh/top.mjs screenshots phone / laptop.
+- NEXT (step 1 rest): Trending card (vs usual + last 30 min, low-volume dishes, tap = detail), large bill notices up top. Then busyness collector (crowd_hist still empty).
