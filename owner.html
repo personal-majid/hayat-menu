@@ -654,7 +654,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v362';
+const BOARD='v363';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -937,12 +937,15 @@ function ncTrack(v,p,bs){ let L={day:'',g:[]}; try{ L=JSON.parse(localStorage.ge
   L.g=L.g.slice(-150); try{ localStorage.setItem('hayat-nclog',JSON.stringify(L)); }catch(e){}
   const done=L.g.filter(g=>g.r&&g.r.w!=null), n=done.length;
   return {n,hit:n?done.filter(g=>Math.abs(g.med-g.r.w)<=5).length/n:null,ch:n?done.filter(g=>g.ch===g.r.ch).length/n:null,am:n?done.filter(g=>g.lo!=null&&g.r.a>=g.lo&&g.r.a<=g.hi).length/n:null,recent:done.slice(-4).reverse()}; }
+/* v363: the 14-day replay takes ~2 s the first time; it runs after the page is drawn, never inside a redraw */
+let NCBL=0; function ncBackLater(){ const all=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0).sort(), T=all.slice(-14); if(T.length<7) return null; if(NCB.k===T[T.length-1]+'|'+all.length) return NCB.r;
+  if(!NCBL){ NCBL=1; (window.requestIdleCallback||(f=>setTimeout(f,1500)))(()=>{ NCBL=0; try{ ncBack(); }catch(e){} render(); },{timeout:4000}); } return null; }
 function nextCust(){ if(DAY!==bizToday()||!DOC) return ''; const D=tmDow(DAY,6), all=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0).sort().slice(-14);
   const need=[...new Set(D.concat(all,...all.map(d=>tmDow(d,6))))].filter(d=>CACHE[d]===undefined);
   if(need.length){ if(!DG.busy) setTimeout(()=>dgLoad(need),0); return `<div class="card wide nccard"><h2>Next customer</h2><p class="note">Learning from ${need.length} past days… (once; kept on this device)</p></div>`; }
   const v=bizMin(NOW), cl=closeMin(DAY), x=dgDay(DAY)||{bs:[]}, so=x.bs.filter(b=>b[4]!=null&&b[4]<=v).length;
   if(v>=cl) return `<div class="card wide nccard"><h2>Next customer</h2><p class="note">Closed for today.</p></div>`;
-  const p=ncAt(DAY,v,so,cl); if(!p) return ''; const TK=ncTrack(v,p,x.bs), B=ncBack(), pc=x=>Math.round(x*100)+'%', hm=m=>{ const t=new Date(NOW+m*60000); return t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); };
+  const p=ncAt(DAY,v,so,cl); if(!p) return ''; const TK=ncTrack(v,p,x.bs), B=ncBackLater(), pc=x=>Math.round(x*100)+'%', hm=m=>{ const t=new Date(NOW+m*60000); return t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); };
   const nm=Object.fromEntries(NC_CH), ic={dine:'🍽',counter:'🛍',delivery:'🛵'};
   const rush=!!(p.win[30]&&p.win[30].n>=2.5), det=(rush||NC_OPEN)?`<div class="ncdet"><h3>Next 3 customers</h3><div class="scroll"><table><tr><th>#</th><th>Around</th><th>Most likely</th><th>Probably orders</th><th class="r">About</th></tr>${p.seq.map((x,i)=>`<tr><td>${i+1}</td><td><b>${hm(x.t)}</b><small>in ~${x.t} min</small></td><td>${ic[x.ch]} ${nm[x.ch]}<small>${Math.round(x.p*100)}% sure</small></td><td>${x.dish?esc(tcase(x.dish)):'—'}</td><td class="r">${x.amt?rs(Math.round(x.amt/10)*10):'—'}</td></tr>`).join('')||'<tr><td colspan="5" class="note">Nobody expected before closing.</td></tr>'}</table></div>
     ${(()=>{ const cn={}, ds={}; p.seq.forEach(x=>{ cn[x.ch]=(cn[x.ch]||0)+1; if(x.dish) ds[x.dish]=(ds[x.dish]||0)+1; }); const lab={dine:'dine-in',counter:'counter',delivery:'delivery'};
@@ -1527,13 +1530,16 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden){ VER.hidA
 const PREP_ALF=/ALFAHAM|ALFHAM|PERI ?PERI|HONEY|DYNAMIC|AFGHANI|KANTHARI|PEPPER/, PREP_NOT=/BEEF|FISH|MUTTON|PRAWN|RICE ONLY|^MANDI RICE/, PREP_CM=/CHICKEN MANDI|MANDI CHICKEN/;
 let PREPQ=0.7; try{ PREPQ=+localStorage.getItem('hayat-prepq')||0.7; }catch(e){}
 let PREP={}, PREPL={};
-function birdsOf(d){ const x=dgDay(d); if(!x) return null; const o={L:0,E:0,cL:0,cE:0}; Object.entries(x.ic).forEach(([n,m])=>{ const z=sizeOf(n), f=z.s||0; if(!f) return;
+const BIRDS=new WeakMap(), PREPM={};   /* v363: a finished day's birds and plan never change for the same history */
+function birdsOf(d){ const x=dgDay(d); if(!x) return null; if(d<bizToday()&&BIRDS.has(x)) return BIRDS.get(x); const o={L:0,E:0,cL:0,cE:0}; if(d<bizToday()) BIRDS.set(x,o); Object.entries(x.ic).forEach(([n,m])=>{ const z=sizeOf(n), f=z.s||0; if(!f) return;
     const alf=PREP_ALF.test(n)&&!PREP_NOT.test(n)&&!PREP_CM.test(n), cm=PREP_CM.test(n)&&!PREP_NOT.test(n); if(!alf&&!cm) return;
     const L=(m.Lall||[0,0])[1]*f, E=(m.Eall||[0,0])[1]*f; if(alf){ o.L+=L; o.E+=E; } else { o.cL+=L; o.cE+=E; } }); return o; }
-function prepFor(day,q){ const D=tmDow(day,6); if(D.length<3||D.some(d=>CACHE[d]===undefined)) return null; const B=D.map(birdsOf).filter(Boolean); if(B.length<3) return null;
+function prepFor(day,q){ const D=tmDow(day,6); if(D.length<3||D.some(d=>CACHE[d]===undefined)) return null; if(!FC_BT) fcBacktest(); const mk=FC_GEN+'|'+day+'|'+q+'|'+D.join(); if(PREPM[mk]) return PREPM[mk]; return PREPM[mk]=prepFor0(day,q,D); }
+function prepFor0(day,q,D){ const B=D.map(birdsOf).filter(Boolean); if(B.length<3) return null;
   let fac=1; try{ if(!FC_BT) fcBacktest(); const M=fcModel(day), u=D.reduce((a,d)=>a+nrev(d),0)/D.length; if(M&&u>0) fac=Math.min(1.25,Math.max(0.8,M.plan/u)); }catch(e){}
   const Q=k=>qtl(B.map(b=>b[k]),q)*fac, M5=k=>qtl(B.map(b=>b[k]),0.5)*fac; return {L:Q('L'),E:Q('E'),cL:Q('cL'),cE:Q('cE'),mL:M5('L'),mE:M5('E'),lo:k=>qtl(B.map(b=>b[k]),0.25)*fac,hi:k=>qtl(B.map(b=>b[k]),0.9)*fac,fac,n:B.length}; }
-function prepBack(q){ const all=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0).sort().slice(-28); let n=0; const o={L:[0,0,0],E:[0,0,0]};
+function prepBack(q){ const all=Object.keys(INDEX).filter(d=>d<bizToday()&&nrev(d)>0).sort().slice(-28); if(!FC_BT) fcBacktest(); const ld=all.filter(d=>CACHE[d]!==undefined).length, mk='bk|'+FC_GEN+'|'+q+'|'+all.join()+'|'+ld; if(PREPM[mk]!==undefined) return PREPM[mk]; return PREPM[mk]=prepBack0(q,all); }
+function prepBack0(q,all){ let n=0; const o={L:[0,0,0],E:[0,0,0]};
   all.forEach(d=>{ const P=prepFor(d,q), a=birdsOf(d); if(!P||!a) return; n++; ['L','E'].forEach(k=>{ const c=Math.ceil(P[k]); if(c>=a[k]) o[k][0]++; o[k][1]+=Math.max(0,c-a[k]); o[k][2]+=Math.max(0,a[k]-c); }); });
   return n?{n,L:{ok:o.L[0]/n,left:o.L[1]/n,short:o.L[2]/n},E:{ok:o.E[0]/n,left:o.E[1]/n,short:o.E[2]/n}}:null; }
 /* v344: the plan goes to prep/{day}.plan so the kitchen screen shows it; written when a number changes, at most every 10 min */
@@ -2741,7 +2747,7 @@ function calApply(){ calBase(); Object.keys(HOLI).forEach(k=>delete HOLI[k]); Ob
     if(e.off||!e.d0) return; const d1=e.d1||e.d0;
     if(e.kind==='public'||e.kind==='festival'||e.kind==='local'){ for(let d=e.d0; d<=d1; d=addDays(d,1)) if(!HOLI[d]) HOLI[d]=[e.name||e.kind,1]; }
     else if(LAB_SPANS[e.kind]) LAB_SPANS[e.kind].push([e.d0,d1]); });
-  FC_MC={}; FC_RC={}; FC_HC={}; FC_BT=null; LAB.res=null; }
+  FC_BT=null; LAB.res=null; }
 function calList(){ calBase(); const L=[]; Object.entries(HOLI0).forEach(([d,h])=>L.push({id:'app:hol:'+d,d0:d,d1:d,kind:/Eid|Bakrid|Vishu|Onam|Thiruvonam|Deepavali|Vijayadashami|Christmas|Milad|Muharram|Good Friday/i.test(h[0])?'festival':'public',name:h[0],src:'built in',app:1}));
   Object.entries(SPANS0).forEach(([k,S])=>S.forEach(([a,b])=>L.push({id:'app:'+k+':'+a,d0:a,d1:b,kind:k,name:(CAL_KINDS.find(x=>x[0]===k)||[0,k])[1],src:'built in (approx.)',app:1})));
   Object.entries(CAL).forEach(([id,e])=>{ if(!id.startsWith('app:')&&e&&e.d0) L.push(Object.assign({id},e)); });
@@ -3927,7 +3933,7 @@ const FC_VARIANTS={
 };
 let FC_BEST=null, FC_BT=null;
 let FC_MC={};   /* plans for past days, kept while one backtest runs (a past day's plan never changes) */
-function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(day<bizToday()&&FC_MC[k]) return FC_MC[k]; const M=fcModelS(day,variant); if(day<bizToday()) FC_MC[k]=M; return M; }
+function fcModel(day,variant){ const k=day+'|'+(variant||FC_BEST||'trim'); if(FC_MC[k]!==undefined) return FC_MC[k]; const M=fcModelS(day,variant); FC_MC[k]=M; return M; }
 /* v336: SELF-CORRECTION. The plan is multiplied by the middle value (median) of real ÷ plan over the last 10 finished days
    (holidays left out; capped 0.8–1.25), using the RAW plans of those days, so nothing feeds on itself.
    Replay 27 Sep – 25 Nov (each day only from days before it): morning plan miss ±18.0% → ±13.8%, leaning +10.9% → +0.7%;
@@ -4115,7 +4121,7 @@ function hoursSheet(){ const old=document.getElementById('drill'); if(old) old.r
     <table><tr><th>Day</th><th>Closes</th><th class="m">Last order usually</th></tr>${W.map((w,i)=>`<tr><td>${w}</td><td><input type="time" class="fld" data-shd="${i}" value="${SHOPH&&SHOPH.dow&&SHOPH.dow[i]||''}"></td><td class="m">${lastOrderUsual(dayOf(i))||'—'}</td></tr>`).join('')}</table>
     <div class="tabs" style="margin-top:10px"><button class="tab on" id="shSave">Save</button></div></div>`;
   document.body.appendChild(box); box.onclick=e=>{ if(e.target===box) box.remove(); }; $('drillX').onclick=()=>box.remove();
-  $('shSave').onclick=async()=>{ const dow={}; $$('[data-shd]',box).forEach(i=>{ if(i.value) dow[i.dataset.shd]=i.value; }); SHOPH={close:$('shClose').value||CLOSE_DEF,dow}; FC_HC={}; FC_BT=null;
+  $('shSave').onclick=async()=>{ const dow={}; $$('[data-shd]',box).forEach(i=>{ if(i.value) dow[i.dataset.shd]=i.value; }); SHOPH={close:$('shClose').value||CLOSE_DEF,dow}; FC_BT=null;
     try{ await FB.fs.setDoc(FB.fs.doc(FB.db,'settings','shophours'),SHOPH); }catch(e){ alert('Could not save: '+(e.code||e)); return; } box.remove(); render(); }; }
 /* v326: how much today's pace moves the rest of the day: weight = FC_PACE0 + share of the day expected so far × FC_PACE (was 0 + share × 0.25) */
 let FC_SHIFT=0, FC_SHIFTS=[-60,-30,0,30,60], FC_SHIFTPEN=1.0; let FC_PACE=0.35, FC_PACE0=0.1, FC_CAP=[0.6,1.6];   /* v336: with the self-corrected plan, a little less pace: 1/3/5/7/9 pm 11.8/10.6/10.0/9.7/6.1% (0.5: 11.8/11.1/10.2/10.0/6.2) */   /* replay 7 Oct-25 Nov, 50 days, cuts 1/3/5/7/9 pm: day-close miss 15.3/13.6/11.9/10.8/7.0% -> 12.9/12.8/11.0/10.6/6.4% */
@@ -4152,8 +4158,15 @@ function fcLive(day,H,nowH,frac,open,mode){
   return Object.assign({},M,{P,fcH,rest,total,next,corr,C,busy,share,act,exp,nowH,open,mode,rDay,rRec,rBusy,rSlump,shift});
 }
 /* backtest: for each of the last 28 days, what would the plan have said at open, and at 4 pm with the live correction */
+/* v363: the forecast learns only from finished days + settings. fcSig() fingerprints exactly that; the backtest and every
+   saved plan are kept until it changes (a re-read of the same history used to wipe them and redo 28 days of replays). */
+let FC_KEEP=null, FC_GEN=0;
+function fcSig(){ let h=5381; const add=t=>{ t=String(t); for(let i=0;i<t.length;i++) h=((h<<5)+h+t.charCodeAt(i))|0; }; const td=bizToday(); add(td);
+  for(const d in INDEX){ if(d>=td) continue; const x=INDEX[d]; if(!x||!x.hours) continue; let t=0; for(const v of x.hours) t+=+v||0; add(d+':'+Math.round(t)+':'+Math.round(x.rev||0)+':'+Math.round(x.big||0)); }
+  add(JSON.stringify(SHOPH||0)); add(Object.keys(HOLI).sort().join()); add(JSON.stringify(LAB_SPANS)); return h; }
 function fcBacktest(){
-  if(FC_BT) return FC_BT; FC_MC={}; FC_RC={}; FC_HC={};
+  if(FC_BT) return FC_BT; const sig=fcSig(); if(FC_KEEP&&FC_KEEP.sig===sig){ FC_BT=FC_KEEP; return FC_BT; }
+  if(window.__PERF) window.__PERF.bt=(window.__PERF.bt||0)+1; FC_GEN++; FC_MC={}; FC_RC={}; FC_HC={}; for(const k in FC_SC) delete FC_SC[k];
   const days=Object.keys(INDEX).filter(d=>d<bizToday()&&INDEX[d].hours&&INDEX[d].rev>0).sort().slice(-28);
   const out={};
   Object.keys(FC_VARIANTS).forEach(v=>{ let e=0,b=0,n=0; days.forEach(d=>{ const M=fcModel(d,v); if(!M) return; const act=nrev(d)||1; e+=Math.abs(M.plan-act)/act; b+=(M.plan-act)/act; n++; }); out[v]={mape:n?100*e/n:null,bias:n?100*b/n:null,n}; });
@@ -4168,7 +4181,7 @@ function fcBacktest(){
   let e4=0,n4=0,eh=0,nh=0; days.forEach(d=>{ const H=INDEX[d].hours, cut=h=>H.map((v,i)=>i<h?v:0); const F=fcLive(d,cut(11),11,0); if(!F) return; e4+=Math.abs(F.total-nrev(d))/Math.max(1,nrev(d))+0*INDEX[d].rev; n4++;
     for(let h=4;h<18;h++){ const G=fcLive(d,cut(h),h,0); if(G&&H[h+1]>200){ eh+=Math.abs(G.next-H[h+1])/H[h+1]; nh++; } } });
   out.best=FC_BEST; out.at4pm=n4?100*e4/n4:null; out.nextHour=nh?100*eh/nh:null; out.days=days.length;
-  FC_BT=out; return out;
+  out.sig=sig; FC_KEEP=FC_BT=out; return out;
 }
 const FC_BAND={6:.25,7:.25,8:.247,9:.19,10:.177,11:.164,12:.161,13:.149,14:.138,15:.136,16:.129,17:.121,18:.099};
 const fcBand=h=>h<6?.25:h>18?.09:FC_BAND[h];
@@ -5949,16 +5962,28 @@ function anchorGet(){ if(window.scrollY<40) return null; const top=(document.que
   const L=[...document.querySelectorAll('#main [data-ck]')], seen={}; let part=null; for(const e of L){ const k=e.dataset.ck; seen[k]=(seen[k]||0)+1; const r=e.getBoundingClientRect(); if(r.top>=top-2&&r.top<innerHeight-40&&r.height>0) return {k,n:seen[k],t:r.top}; if(!part&&r.bottom>top+8) part={k,n:seen[k],t:r.top}; } return part; }
 function anchorSet(a){ if(!a) return; const L=[...document.querySelectorAll('#main [data-ck]')].filter(e=>e.dataset.ck===a.k), e=L[a.n-1]; if(!e) return; const d=e.getBoundingClientRect().top-a.t; if(Math.abs(d)>1){ ANC_SET=1; window.scrollTo({top:window.scrollY+d,behavior:'instant'}); setTimeout(()=>{ ANC_SET=0; },0); } }
 let ANC=null, ANC_H=0, ANC_SET=0;
+/* v363: a card still loading keeps the height it had last time on this page (per device), so nothing jumps when it fills in */
+const CKH=(()=>{ try{ return JSON.parse(localStorage.getItem('hayat-ckh')||'{}'); }catch(e){ return {}; } })(); let CKH_T=null;
+function ckHold(){ const pg=(window.__OWNUX&&__OWNUX.page())||'', wide=innerWidth>=900?'w':'p', M=CKH[pg+'|'+wide]=CKH[pg+'|'+wide]||{}; let ch=0;
+  document.querySelectorAll('#main [data-ck]').forEach(e=>{ const k=e.dataset.ck, loading=/Loading|⏳|Checking/.test((e.textContent||'').slice(0,400))&&e.offsetHeight<260;
+    if(loading){ if(M[k]) e.style.minHeight=Math.min(M[k],900)+'px'; } else { const h=e.offsetHeight; if(h>40&&Math.abs((M[k]||0)-h)>20){ M[k]=h; ch=1; } } });
+  if(ch&&!CKH_T) CKH_T=setTimeout(()=>{ CKH_T=null; try{ localStorage.setItem('hayat-ckh',JSON.stringify(CKH)); }catch(e){} },3000); }
 function ancTake(){ const m=document.getElementById("main"); ANC=anchorGet(); ANC_H=m?m.offsetHeight:0; }
 (function(){ const m=document.getElementById('main'); if(!m||!window.ResizeObserver) return;
   new ResizeObserver(()=>{ try{ if(ANC) anchorSet(ANC); ancTake(); }catch(e){} }).observe(m);
   window.addEventListener('scroll',()=>{ if(ANC_SET) return; ancTake(); },{passive:true}); })();
-function render(){ try{ if(TBLV) setTimeout(tblView,0); setTimeout(ordBadge,0); }catch(e){} if(PS.drag){ PS.pend=true; return; } FC_MEMO={}; const AN=anchorGet(); try{ render0(); } finally{ FC_MEMO=null; } try{ if(window.OwnerUX) OwnerUX.after(); }catch(e){ console.warn('OwnerUX',e); } try{ anchorSet(AN); ancTake(); }catch(e){} }
+/* v363: live data arrives in bursts (55+ snapshots while the app opens). A tap / key redraws at once; anything else is
+   gathered and drawn once: at most every 0.4 s, 1.2 s while the first data is still arriving. */
+const RQ={t:null,last:0,boot:Date.now()};
+function render(){ const ev=window.event, user=ev&&ev.isTrusted&&/^(click|input|change|keydown|keyup|submit|pointerup|touchend|popstate|hashchange)$/.test(ev.type);
+  if(user) return renderNow(); const gap=(!ESS||Date.now()-RQ.boot<15000)?1200:400, wait=RQ.last+gap-Date.now();
+  if(wait<=0&&!RQ.t) return renderNow(); if(!RQ.t) RQ.t=setTimeout(()=>{ RQ.t=null; renderNow(); },Math.max(0,wait)); }
+function renderNow(){ if(RQ.t){ clearTimeout(RQ.t); RQ.t=null; } RQ.last=Date.now(); try{ if(TBLV) setTimeout(tblView,0); setTimeout(ordBadge,0); }catch(e){} if(PS.drag){ PS.pend=true; return; } FC_MEMO={}; const AN=anchorGet(), P0=window.__PERF, t0=P0?performance.now():0; try{ render0(); if(P0){ P0.n++; const dt=performance.now()-t0; P0.ms+=dt; P0.list.push(Math.round(dt)); } } finally{ FC_MEMO=null; } try{ if(window.OwnerUX) OwnerUX.after(); }catch(e){ console.warn('OwnerUX',e); } try{ ckHold(); }catch(e){} try{ anchorSet(AN); ancTake(); }catch(e){} }
 /* v298: a card that cannot draw shows a small note in its place - it no longer blanks the rest of the page.
    Every card's first element also carries data-ck="<its function>" so usage + Arrange know which card it is. */
 const CARD_ERR={};
 function ckTag(h,name){ return h.replace(/^(\s*<(?:div|details|section)\b)(?![^>]*data-ck=)/,'$1 data-ck="'+name+'"'); }
-function SAFE(f,name){ return function(){ try{ const h=f.apply(this,arguments); return typeof h==='string'&&h?ckTag(h,name):h; }
+function SAFE(f,name){ return function(){ const P=window.__PERF, t0=P?performance.now():0; try{ const h=f.apply(this,arguments); if(P){ const c=P.c[name]=P.c[name]||[0,0]; c[0]++; c[1]+=performance.now()-t0; } return typeof h==='string'&&h?ckTag(h,name):h; }
   catch(e){ CARD_ERR[name]=String(e&&e.message||e); console.warn('card '+name,e); return `<div class="card wide carderr" data-ck="${name}"><h2>⚠ This card could not draw <span class="n">${esc(name)}</span></h2><div class="note">${esc(CARD_ERR[name].slice(0,160))} · the rest of the page is fine</div></div>`; } }; }
 bills=SAFE(bills,'bills'); billsCard=SAFE(billsCard,'billsCard'); breakdown=SAFE(breakdown,'breakdown'); cashCard=SAFE(cashCard,'cashCard'); closures=SAFE(closures,'closures');
 compare=SAFE(compare,'compare'); daySpendCard=SAFE(daySpendCard,'daySpendCard'); discounts=SAFE(discounts,'discounts'); drafts=SAFE(drafts,'drafts'); fcostCard=SAFE(fcostCard,'fcostCard');
@@ -5968,7 +5993,7 @@ runLine=SAFE(runLine,'runLine'); similar=SAFE(similar,'similar'); spDupCard=SAFE
 trafficCard=SAFE(trafficCard,'trafficCard'); trends=SAFE(trends,'trends'); unrealized=SAFE(unrealized,'unrealized'); upsell=SAFE(upsell,'upsell'); voids=SAFE(voids,'voids'); waiters=SAFE(waiters,'waiters');
 weekCard=SAFE(weekCard,'weekCard'); todayBox=SAFE(todayBox,'todayBox'); alerts=SAFE(alerts,'alerts'); topItems=SAFE(topItems,'topItems'); catCard=SAFE(catCard,'catCard'); avgStrip=SAFE(avgStrip,'avgStrip');
 /* the page keys Arrange + usage use; the helper (owner-ux.js) talks to the board only through this */
-window.__OWNUX={ page:()=>MODE==='period'?'p/'+PTAB:(VIEW==='simple'?'s/':'d/')+TAB, view:()=>VIEW, render:()=>render(), errors:()=>Object.assign({},CARD_ERR),
+window.__OWNUX={ page:()=>MODE==='period'?'p/'+PTAB:(VIEW==='simple'?'s/':'d/')+TAB, view:()=>VIEW, render:()=>renderNow(), errors:()=>Object.assign({},CARD_ERR),
   who:()=>FB?(FB.name||FB.crewId||''):'', fs:()=>FB?{fs:FB.fs,db:FB.db}:null, day:()=>bizToday() };   /* fcToday is asked ~6× a render: compute once per render */
 function render0(){ tabCarry(); if(VIEW!=='simple'&&TAB==='days') TAB='floor';
   if(SL.open&&(MODE!=='day'||TAB!=='sales')) slClose(true);
@@ -6222,9 +6247,9 @@ async function go(){
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_meta','health'),d=>{ HEALTH=d.exists()?d.data():null; healthPill(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','fc_pick'),d=>{ FC_PICK=Object.assign({auto:true},d.exists()?d.data():{}); render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','fc_mods'),d=>{ FCM=(d.exists()&&d.data().d)||{}; render(); },()=>{});
-  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','shophours'),d=>{ SHOPH=d.exists()?d.data():null; FC_HC={}; FC_BT=null; render(); },()=>{});
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','shophours'),d=>{ SHOPH=d.exists()?d.data():null; FC_BT=null; render(); },()=>{});
   ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','large_orders'),d=>{ LARGE=(d.exists()&&d.data().b)||{}; LGSCAN=Object.assign(LGSCAN,(d.exists()&&d.data().s)||{}); applyLarge(); syncIndexToday(); FC_BT=null; render(); },()=>{});
-  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','ohours'),d=>{ OHFIRST(); const x=d.exists()?d.data():null; if(x&&x.v===OH_V&&x.d){ OHS=Object.assign({},x.d,OHS); applyLarge(); FC_HC={}; FC_BT=null; render(); } setTimeout(ohScan,8000); },()=>{ OHFIRST(); setTimeout(ohScan,8000); });
+  ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'settings','ohours'),d=>{ OHFIRST(); const x=d.exists()?d.data():null; if(x&&x.v===OH_V&&x.d){ OHS=Object.assign({},x.d,OHS); applyLarge(); FC_BT=null; render(); } setTimeout(ohScan,8000); },()=>{ OHFIRST(); setTimeout(ohScan,8000); });
   const PBW={}, pbWatch=day=>{ if(PBW[day]) return; PBW[day]=1; ctx.fs.onSnapshot(ctx.fs.doc(ctx.db,'vm_prebook',day),d=>{ PBK[day]=(d.exists()&&d.data().e)||{}; render(); },()=>{}); };
   [bizToday(),tomorrow()].forEach(pbWatch);
   const DAYSP=days(); await Promise.all([DAYSP,ohReady]); syncIndexToday(); ESS=true; render(); setTimeout(preScan,5000);   /* days() rebuilds INDEX - put today's live entry back */
