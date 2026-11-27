@@ -512,6 +512,10 @@ html[data-theme="dark"] .trt.hot{background:#4a2a14;color:#ffc9a3} html[data-the
 html[data-theme="dark"] .bseg{border-top-color:rgba(0,0,0,.55)}
 .chkey{display:inline-flex;gap:6px;align-items:center;font-size:12px} .chkey i{display:inline-block;width:10px;height:10px;border-radius:2px} .chkey .kdine{background:var(--k-dine,#2a8f86)} .chkey .kcounter{background:var(--k-counter,#7a5bb5)} .chkey .kdelivery{background:var(--k-delivery,#e0734f)}
 .cmpchips{margin-top:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px} .cmpchips .chip{font-size:12px;white-space:nowrap;flex:0 0 auto} .cmpchips .n{white-space:nowrap}
+.dgml{display:flex;flex-direction:column;gap:4px} .dgmr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(60px,1.4fr) auto 64px;gap:10px;align-items:center;text-align:left;font:inherit;color:inherit;background:none;border:0;border-bottom:1px solid var(--line);padding:7px 2px;cursor:pointer;min-height:40px}
+.dgmr:hover{background:var(--soft2)} .dgmn{font-weight:600;justify-self:start} .dgmb{position:relative;height:12px;background:var(--soft2,#eee);border-radius:4px} .dgmb i{display:block;height:100%;background:var(--k-dine,#2a8f86);border-radius:4px} .dgmb em{position:absolute;top:-3px;bottom:-3px;width:0;border-left:2px dashed var(--ink,#333)}
+.dgmv{white-space:nowrap;justify-self:end} .dgmv small{color:var(--muted,#777)} .dgmp{text-align:right;font-weight:700;font-size:13px;display:flex;flex-direction:column} .dgmp small{font-weight:400;color:var(--muted,#777);font-size:11px} .dgmp.up{color:#1d6a34} .dgmp.dn{color:#a12a2a}
+@media(max-width:640px){ .dgmr{grid-template-columns:minmax(0,1fr) auto 58px;grid-template-areas:"n v p" "b b p"} .dgmn{grid-area:n} .dgmb{grid-area:b} .dgmv{grid-area:v} .dgmp{grid-area:p} }
 </style>
 <style id="v283">
 /* v283 one colour code everywhere: Dine teal · CO purple · Delivery coral · Staff grey · unpaid amber · forecast blue · up green · down red */
@@ -676,7 +680,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v365';
+const BOARD='v366';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -5724,6 +5728,21 @@ function trWire(){ if(TAB!=='trend') return;
 let DG={n:28,ses:'T',ch:'all',m:'v',busy:false,dd:{}};
 try{ const o=JSON.parse(localStorage.getItem('hayat-dg')||'{}'); ['n','ses','ch','m'].forEach(k=>{ if(o[k]!=null) DG[k]=o[k]; }); }catch(e){}
 const dgSave=()=>{ try{ localStorage.setItem('hayat-dg',JSON.stringify({n:DG.n,ses:DG.ses,ch:DG.ch,m:DG.m})); }catch(e){} };
+/* v366: Dish groups shortcut on Sales (Majid spends ~2 h on Insights → Dish groups; 27 Nov "yes" to a shortcut).
+   Today's dish groups so far vs the last 4 same weekdays by the same minute (whole day for a past day); tap = the full page. */
+function dgMini(){ if(MODE!=='day'||!DOC||String(DOC.day||'').includes('→')) return ''; const live=DAY===bizToday(), D=tmDow(DAY,4);
+  const head=`<h2>🍽 Dish groups ${live?'today':esc(rpName(DAY))} <span class="n">vs the last ${D.length} ${rpWd(DAY)}s ${live?'by this time':'(whole day)'} · <a href="#" data-dgopen>all dish groups ›</a></span></h2>`;
+  if(D.length<3) return ''; const need=D.filter(d=>CACHE[d]===undefined); if(need.length){ if(!DG.busy) setTimeout(()=>dgLoad(need),0); return `<div class="card wide dgmini">${head}<p class="note">Loading the last 4 ${rpWd(DAY)}s…</p></div>`; }
+  const x=dgDay(DAY); if(!x) return ''; const v=live?nowMinOf():1440;
+  const agg=bs=>{ const o={}; bs.forEach(([,,,,mn,fm])=>{ if(mn==null||mn>v) return; Object.entries(fm||{}).forEach(([f,a])=>{ const g=dgFam(f), z=o[g]=o[g]||[0,0]; z[0]+=a[0]; z[1]+=a[1]; }); }); return o; };
+  const T=agg(x.bs), U=D.map(d=>dgDay(d)).filter(Boolean).map(y=>agg(y.bs)); if(!U.length) return '';
+  const uv=(g,i)=>U.reduce((a,o)=>a+((o[g]||[0,0])[i]),0)/U.length;
+  const G=[...new Set(Object.keys(T).concat(...U.map(Object.keys)))].filter(g=>g!=='Other').map(g=>({g,t:(T[g]||[0,0])[0],tq:(T[g]||[0,0])[1],u:uv(g,0),uq:uv(g,1)})).filter(r=>r.t>0||r.u>=300).sort((a,b)=>Math.max(b.t,b.u)-Math.max(a.t,a.u)).slice(0,innerWidth<640?6:9);
+  if(!G.length) return ''; const mx=Math.max(...G.map(r=>Math.max(r.t,r.u)),1), r1=x=>x>=10?Math.round(x):Math.round(x*10)/10;
+  const rows=G.map(r=>{ const p=r.u>=200?Math.round(100*(r.t/r.u-1)):null, cl=p==null?'':p>=15?'up':p<=-15?'dn':'';
+    return `<button type="button" class="dgmr" data-dgopen><span class="dgmn">${esc(r.g)}</span><span class="dgmb"><i style="width:${(100*r.t/mx).toFixed(1)}%"></i><em style="left:${(100*r.u/mx).toFixed(1)}%"></em></span><span class="dgmv"><b>${kfmt(r.t)}</b> <small>${r1(r.tq)} plates</small></span><span class="dgmp ${cl}">${p==null?'—':(p>0?'+':'')+p+'%'}<small>usual ${kfmt(r.u)}</small></span></button>`; }).join('');
+  return `<div class="card wide dgmini">${head}<div class="dgml">${rows}</div><p class="note">Bar = today ${live?'so far':''}, line = usual. Customer bills, pre-bookings out. Tap any row for the full Dish groups page (day by day, ₹ or plates, lunch / evening, channel).</p></div>`; }
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-dgopen]'); if(!b) return; e.preventDefault(); MODE='day'; TAB='dgrp'; window.scrollTo(0,0); renderNow(); });
 function dgFam(n){ n=String(n||'').toUpperCase();
   if(/KING ?FISH/.test(n)) return 'King fish';
   if(/PRAWN|POMFRET|AILA|FISH|SQUID|KOONTHAL|MATHI|HAMMOOR|CHEMBALLY|MANDAL/.test(n)) return 'Other fish & prawns';
@@ -6106,7 +6125,7 @@ function render0(){ tabCarry(); if(VIEW!=='simple'&&TAB==='days') TAB='floor';
   if(MODE==='period'){ m.innerHTML=(PTAB==='money'||PTAB==='cash'?`<div class="subnav">${[['money','Spends'],['cash','Cash & bank']].map(t=>`<button type="button" class="${PTAB===t[0]?'on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`:'')+period()+`<div class="note">board ${BOARD}</div>`; }
   else if(VIEW==='simple'&&(()=>{ if(!['floor','days','buy','cash','items'].includes(TAB)) TAB='floor'; const sm=simpleMain(live); if(sm==null) return false; m.innerHTML=sm+`<div class="note">Day log ${esc(DOC.updatedAt||'')} · board ${BOARD} · <a href="#" data-full="sales">full analysis</a></div>`; return true; })()){}
   else m.innerHTML=((TAB==='floor'||TAB==='sales')?kpis():'')+pgHead()+subNav()+
-    (TAB==='sales'?`<div class="grid">${SAFE(stCard,'stCard')()}${SAFE(noticeCard,'noticeCard')()}${hourly()}${runLine()}${SAFE(chRun,'chRun')()}${SAFE(likeCard,'likeCard')()}${SAFE(dayMatrix,'dayMatrix')()}${billsCard()}</div>${SL.open&&TCUT!=null?`<div class="note sltag">⏱ showing the day as of <b>${tcutLabel()}</b> · <a href="#" id="slTog">back to now</a></div>`:''}<div class="grid">${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); const T=R.reduce((n,r)=>n+r.v,0); return topItems(R,T); })()}</div>${moreG('sales','More breakdowns','by section · type · payment · pace · bill times · waiters · upselling · tables · voids · discounts',breakdown()+pace()+closures()+waiters()+upsell()+tables()+voids()+discounts())}`:
+    (TAB==='sales'?`<div class="grid">${SAFE(stCard,'stCard')()}${SAFE(noticeCard,'noticeCard')()}${hourly()}${runLine()}${SAFE(dgMini,'dgMini')()}${SAFE(chRun,'chRun')()}${SAFE(likeCard,'likeCard')()}${SAFE(dayMatrix,'dayMatrix')()}${billsCard()}</div>${SL.open&&TCUT!=null?`<div class="note sltag">⏱ showing the day as of <b>${tcutLabel()}</b> · <a href="#" id="slTog">back to now</a></div>`:''}<div class="grid">${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); const T=R.reduce((n,r)=>n+r.v,0); return topItems(R,T); })()}</div>${moreG('sales','More breakdowns','by section · type · payment · pace · bill times · waiters · upselling · tables · voids · discounts',breakdown()+pace()+closures()+waiters()+upsell()+tables()+voids()+discounts())}`:
      TAB==='floor'?`<div class="grid">${live?alerts():''}${SAFE(newsTop,'newsTop')()}${floor()}${newOrders()}${SAFE(trendNow,'trendNow')()}${SAFE(demandAhead,'demandAhead')()}${SAFE(riderCard,'riderCard')()}${SAFE(prepCard,'prepCard')()}${SAFE(nextCust,'nextCust')()}${SAFE(dishPace,'dishPace')()}${SAFE(comingUp,'comingUp')()}${SAFE(newsCard,'newsCard')()}${lastGap()?`<div class="card wide lgcard">${lastGap()}</div>`:''}</div>${moreG('live','More live details','unpaid list · today & tomorrow outlook · days like today · by channel · tomorrow\'s dishes · kitchens · road traffic',`<div class="grid">${unrealized()}${outlook()}${SAFE(likeCard,'likeCard')()}${SAFE(chFc,'chFc')()}${SAFE(tmDishes,'tmDishes')()}${kitchens()}${trafficCard()}</div>`)}`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${SAFE(spMissCard,'spMissCard')(DAY.slice(0,8)+'01',DAY)}${daySpendCard(DOC,DAY)}${drafts()}${payments()}</div>`:
