@@ -30,7 +30,7 @@
     kitchens:'Kitchens', trafficCard:'Road traffic', bills:'Bills list', daySpendCard:'Spends day by day', drafts:'Bills being entered',
     payments:'Payments', cashCard:'Cash & bank', fcostCard:'Food cost', juiceCard:'Juice counter', similar:'Similar days', compare:'Compare days',
     needsYou:'Needs you', topDishes:'Top dishes', trends:'Trends', weekCard:'Week on week', instaCard:'Instagram', lgCard:'Pre-bookings',
-    spDupCard:'Possible duplicates', trendNow:'Trending now', dishPace:'Dishes so far vs usual', demandAhead:'Demand ahead', chFc:'Rest of today by channel',
+    spDupCard:'Possible duplicates', trendNow:'Trending now', dgMini:'Dish groups today', dishPace:'Dishes so far vs usual', demandAhead:'Demand ahead', chFc:'Rest of today by channel',
     fcCheck:'Forecast check', chRun:'Running total by channel', dayMatrix:'Lunch and evening', stCard:'Sales trend', likeCard:'Days like today',
     'mg:kpi2':'More numbers', bigBills:'Big bills', noticeCard:'What to notice', nextCust:'Next customer', comingUp:'Coming up', prepCard:'Chicken prep',
     riderCard:'Riders', tmDishes:"Tomorrow's dishes", newsTop:'Matters for Hayat', newsCard:'News', 'mg:live':'More live details', 'mg:sales':'More breakdowns'
