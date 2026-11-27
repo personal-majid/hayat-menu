@@ -1212,3 +1212,27 @@ What that means, and what to say if it comes up:
 - Projection: days from today to the range end = fcModel(d).plan × the series' share of all sales on the same weekday over the last 6 weeks (stShare); today = max(so far, that). Dashed green bars; box per month: so far, ₹ a day, "→ month ₹X (forecast)"; vs last whole month.
 - Placement: first card on the day Sales tab; first card on period Overview. The old pdCard "Sales by day" moved into the period "More analysis" fold (not deleted).
 - Test: scratchpad oh/t-st.mjs (19 × laptop + phone = 38; fake data now has today's log + INDEX hours so fcModel works); oh/t-of.mjs 34 still green.
+
+## WISHLIST (Majid, 27 Nov) — parked; when he asks, remind him in short words
+- WhatsApp (iPhone only — WhatsApp Web is NOT possible on his phone): "Send to Hayat" iOS Shortcut in the share sheet → app Inbox; nightly Shortcut uploads the accounts group's photos (Save to Photos: Always for that group only) → read spends / sales / cash amounts, compare with VMENU + cash tab; kitchen group = "Export chat without media" → Send to Hayat → list unanswered updates; app → WhatsApp fast send (card image + text, wa.me for people, share sheet for groups, contacts stored in the app). Staff statuses cannot be read on iPhone.
+- "What to notice" as the brain: situation → what is happening → what to do → did it help (track record per action). Customer-flow alert (no new table for N min vs usual), roads busier / quieter than usual alert (traffic IS saved: route trip times every 15 min since 25 Nov, road speed since 25 Nov).
+- Pushes log: ＋ Add a push (WhatsApp status / Insta reel / flex-board / offer / influencer / other) · dish or group · channel · from–to; offers: suggest exact dishes + ₹ off from the bills' discounts; push results (dish 3 days after).
+- Sales trend card: prominent; average line continues over forecast days; month end → show an extra week with a "month closes" marker; month start → at least 15 days before.
+- Share / save any card as an image (long-press or a small ⤴ in the card corner, no floating icon) + whole-screen share.
+- Sales by hour: thin cut line between bills inside each bar (must not clash with yesterday / 4-weekday / forecast lines); open hours only; channel colours; compare chips.
+- Running total: All / Dine / Counter / Delivery switch; 🔥 markers on hours a dish pushed (tap = its bills).
+- Bills per hour: compare chips (yesterday, last same weekday, 4 same weekdays, similar days) + channel switch.
+- Trending: vs usual AND the last 30 min; low-volume dishes trending today included (tap = what is happening); dishes that trend on a weekday / time get a highlight.
+- Spends: "15 Nov missing, probably entered on 16 Nov" pairing; same amount twice on one day.
+- End-of-day summary card to share; alert when a channel slows for an hour.
+- Pop-ups: big ✕ that stays on screen, double-tap closes, phone Back closes the pop-up (not the page).
+
+## v361 — Today box step 1: open vs late payments · speeding up / slowing · bills done/open · 🧾 new orders · table times · top bar
+- Majid, 27 Nov feedback (conservative: change in place, remove only what he called redundant).
+- todayBox: the three "by now" boxes (last same weekday / avg of last 4 / yesterday) are gone — Why covers them; the ▼% · Why › pill stays.
+- Late payments: counter / delivery bills open more than LATE = 20 min (staff food, late delivery cash) are not "open now": row Unpaid shows only recent ones; Total row "+ late ₹X · n"; hero "paid ₹… · open ₹… · late payments ₹… · n" (paid = total − open − late).
+- tbMomentum(R): per channel, last 60 min and today by now vs the same business minutes on the last 4 same weekdays (tmDow + dgDay bs, bills made, pre-bookings out). Row under each channel: "last 60 min ₹X vs usual ₹Y" + ▲ speeding up (≥1.25×) / ▼ slowing (≤0.75×) / ● steady / ● quiet hour (usual < ₹300) + "±n% vs usual by now". Loads past days once (dgLoad).
+- Bills forecast box: "Dine 19 (2 open) → ~30".
+- Top bar: 🧾 #ordBtn (badge = customer bills made in the last 15 min, ordBadge() after each render) opens newOrders() full screen (TBLV='ord'); 🍽 tables view gets "⏱ Table time ~n min · counter ~n min" (median order→paid of today's paid bills; counter under ₹100 left out = staff). Phone top bar: every button 36 px high, centred.
+- Tests: oh/t-st 38, oh/t-of 34 green; oh/top.mjs screenshots phone / laptop.
+- NEXT (step 1 rest): Trending card (vs usual + last 30 min, low-volume dishes, tap = detail), large bill notices up top. Then busyness collector (crowd_hist still empty).
