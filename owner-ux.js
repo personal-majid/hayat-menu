@@ -30,11 +30,15 @@
     kitchens:'Kitchens', trafficCard:'Road traffic', bills:'Bills list', daySpendCard:'Spends day by day', drafts:'Bills being entered',
     payments:'Payments', cashCard:'Cash & bank', fcostCard:'Food cost', juiceCard:'Juice counter', similar:'Similar days', compare:'Compare days',
     needsYou:'Needs you', topDishes:'Top dishes', trends:'Trends', weekCard:'Week on week', instaCard:'Instagram', lgCard:'Pre-bookings',
-    spDupCard:'Possible duplicates'
+    spDupCard:'Possible duplicates', trendNow:'Trending now', dishPace:'Dishes so far vs usual', demandAhead:'Demand ahead', chFc:'Rest of today by channel',
+    fcCheck:'Forecast check', chRun:'Running total by channel', dayMatrix:'Lunch and evening', stCard:'Sales trend', likeCard:'Days like today',
+    'mg:kpi2':'More numbers', bigBills:'Big bills', noticeCard:'What to notice', nextCust:'Next customer', comingUp:'Coming up', prepCard:'Chicken prep',
+    riderCard:'Riders', tmDishes:"Tomorrow's dishes", newsTop:'Matters for Hayat', newsCard:'News', 'mg:live':'More live details', 'mg:sales':'More breakdowns'
   };
   var PAGES = { 'd/floor':'Live', 'd/sales':'Sales', 'd/buy':'Spends', 'd/cash':'Cash & bank', 'd/items':'Items', 'd/bills':'Bills',
     'd/patterns':'Patterns', 'd/growth':'Why we grew', 'd/similar':'Similar days', 'd/lab':'Forecast lab', 'd/cmp':'Compare',
     's/floor':'Simple · Today', 's/days':'Simple · Days', 's/buy':'Simple · Money', 's/cash':'Simple · Cash', 's/items':'Simple · Dishes',
+    'd/dgrp':'Dish groups', 'd/trend':'Trends', 'd/price':'Price & trend', 'd/ai':'Ask Gemini', 'd/dish':'Dish analysis', 'd/comp':'Competitors', 'd/cal':'Calendar', 'd/drivers':'What moved sales', 'd/traffic':'Traffic', 'd/items':'Dishes',
     'p/overview':'Period · Sales', 'p/money':'Period · Spends', 'p/cash':'Period · Cash', 'p/items':'Period · Items', 'p/people':'Period · People', 'p/voids':'Period · Voids' };
 
   /* ---------- which element is a card, and its key ---------- */
@@ -95,14 +99,49 @@
   document.addEventListener('visibilitychange', function(){ if(document.hidden) flush(); });
   window.addEventListener('pagehide', function(){ flush(); });
 
+  /* ---------- Auto order (v365) ----------
+     Majid, 27 Nov: "the items I visit often should move to the top". Scores = the last 14 days of owner_ux
+     (seconds on screen + 20 per tap, × 0.8 per day back), same kind of screen first (phone vs laptop).
+     Worked out ONCE a business day and frozen for that day — a layout that moves while you read loses your place.
+     Only cards with real use swap places among themselves; new / unused cards keep their slots; pinned cards stay;
+     a page arranged by hand keeps its hand order. Off / re-sort: More → 📊 What I look at, or ✎ Arrange. */
+  var AUTO = LS.get('hayat-autoord', { on: true }), AGG = LS.get('hayat-uxagg', null), aggBusy = false;
+  var PIN = ['alerts', 'needsYou', 'staleBar', 'todayBox'], THR = 120;
+  function score(page, k){ return AGG && AGG.sc && AGG.sc[page + '|' + k] || 0; }
+  async function aggLoad(force){
+    if(aggBusy) return; if(!force && AGG && AGG.day === today()) return; var o = O(), f = o && o.fs && o.fs(); if(!f) return;
+    aggBusy = true;
+    try{
+      var d0 = ymdL(new Date(Date.now() - 5 * 3600e3 - 14 * 864e5)), q = await f.fs.getDocs(f.fs.query(f.fs.collection(f.db, 'owner_ux'), f.fs.where('day', '>=', d0)));
+      var docs = q.docs.map(function(x){ return x.data() || {}; }), wide = innerWidth >= 900;
+      var same = docs.filter(function(d){ return !!d.wide === wide; }), sd = {}; same.forEach(function(d){ sd[d.day] = 1; });
+      if(Object.keys(sd).length >= 3) docs = same;
+      var t0 = new Date(today() + 'T12:00:00').getTime(), sc = {}, days = {};
+      docs.forEach(function(d){ var ago = Math.max(0, Math.round((t0 - new Date(d.day + 'T12:00:00').getTime()) / 864e5)), w = Math.pow(0.8, ago); days[d.day] = 1;
+        Object.keys(d.cards || {}).forEach(function(k){ var r = d.cards[k]; sc[k] = (sc[k] || 0) + w * ((r.s || 0) + 20 * (r.t || 0)); }); });
+      AGG = { day: today(), sc: sc, n: Object.keys(days).length, wide: wide }; LS.set('hayat-uxagg', AGG);
+    }catch(e){} aggBusy = false; try{ O().render(); }catch(e){}
+  }
+
   /* ---------- Arrange ---------- */
   var LAY = LS.get('hayat-layout', {}), ARR = false;
   function lay(p){ return LAY[p] = LAY[p] || { order: [], hide: [] }; }
+  function autoOrder(page, list){
+    var groups = []; list.forEach(function(c){ var g = c.parentElement; if(!g || !g.classList.contains('grid')) return; var x = groups.find(function(y){ return y.g === g; }); if(!x){ x = { g: g, L: [] }; groups.push(x); } x.L.push(c); });
+    var out = new Map();
+    groups.forEach(function(x){ var items = x.L, slots = [], S = [];
+      items.forEach(function(c, j){ var k = c.__uxk; if(PIN.indexOf(k) < 0 && score(page, k) >= THR){ slots.push(j); S.push(c); } });
+      var sorted = S.slice().sort(function(a, b){ return score(page, b.__uxk) - score(page, a.__uxk); }), arr = items.slice();
+      slots.forEach(function(j, i){ arr[j] = sorted[i]; });
+      arr.forEach(function(c, j){ out.set(c, j); c.classList.toggle('uxmoved', items.indexOf(c) !== j); }); });
+    return out;
+  }
   function apply(main, page, list){
-    var L = LAY[page] || { order: [], hide: [] };
+    var L = LAY[page] || { order: [], hide: [] }, hand = L.order && L.order.length, A = (!hand && AUTO.on && AGG && AGG.day === today()) ? autoOrder(page, list) : null;
     list.forEach(function(c, i){
       var k = c.__uxk, oi = L.order.indexOf(k);
-      c.style.order = oi >= 0 ? String(oi) : String(1000 + i);
+      c.style.order = A && A.has(c) ? String(A.get(c)) : oi >= 0 ? String(oi) : String(1000 + i);
+      if(!A) c.classList.remove('uxmoved');
       c.classList.toggle('uxhid', L.hide.indexOf(k) >= 0);
     });
     var bar = $('uxHidBar'); if(bar) bar.remove();
@@ -120,10 +159,11 @@
     if(!ARR) return;
     top = document.createElement('div'); top.id = 'uxArrTop'; top.className = 'uxarrtop';
     top.innerHTML = '<b>✎ Arrange ' + esc(PAGES[page] || page) + '</b><span>▲ ▼ move a card · 👁 hide or show it · only on this phone / PC</span>' +
-      '<button type="button" id="uxReset">Reset this page</button><button type="button" class="pri" id="uxDone">Done</button>';
+      '<button type="button" id="uxAuto">' + (AUTO.on ? '⇅ Auto order: on' : '⇅ Auto order: off') + '</button><button type="button" id="uxReset">Reset this page</button><button type="button" class="pri" id="uxDone">Done</button>';
     main.insertBefore(top, main.firstChild);
     $('uxDone').onclick = function(){ ARR = false; O().render(); };
     $('uxReset').onclick = function(){ delete LAY[page]; LS.set('hayat-layout', LAY); O().render(); };
+    $('uxAuto').onclick = function(){ AUTO.on = !AUTO.on; LS.set('hayat-autoord', AUTO); O().render(); };
     list.forEach(function(c){
       var g = c.parentElement, inGrid = g && g.classList.contains('grid'), k = c.__uxk;
       var b = document.createElement('div'); b.className = 'uxbar';
@@ -145,9 +185,45 @@
     });
   }
 
+  /* v365: cards that show much the same thing (checked against the code) — the less-used one is offered for hiding */
+  var OVERLAP = [
+    ['d/floor', 'trendNow', 'dishPace', 'both compare today\'s dishes with the usual by now'],
+    ['d/floor', 'demandAhead', 'chFc', 'both forecast the rest of today by Dine / CO / Delivery'],
+    ['d/floor', 'fcCheck', 'outlook', 'both show how today is expected to close'],
+    ['d/floor', 'unrealized', 'floor', 'unpaid bills are also on the tables and in the top box'],
+    ['d/floor', 'likeCard', 'outlook', '"Days like today" also sits on Sales'],
+    ['d/sales', 'runLine', 'chRun', 'running total, whole shop vs per channel'],
+    ['d/sales', 'mg:kpi2', 'todayBox', '"More numbers" repeats parts of the top box'],
+    ['d/sales', 'avgStrip', 'stCard', 'both give ₹ a day for the week / month'],
+    ['d/sales', 'pace', 'runLine', 'Pace is the running total said in words'],
+    ['d/sales', 'breakdown', 'dayMatrix', 'both split the day by channel / section']
+  ];
+  var LASTLIST = { page: '', keys: [] };
+  function cleanup(){
+    var o = O(), page = o && o.page && o.page(), sc = function(pg, k){ return Math.round(score(pg, k)); };
+    var rows = OVERLAP.map(function(x){ var a = sc(x[0], x[1]), b = sc(x[0], x[2]); if(!a || !b) return '';   /* a card with no use yet is new: give it time */
+      var lo = a <= b ? x[1] : x[2], hid = (LAY[x[0]] && LAY[x[0]].hide || []).indexOf(lo) >= 0;
+      return '<div class="uxr uxov"><span>' + esc(nameOf(x[1], '')) + ' ↔ ' + esc(nameOf(x[2], '')) + ' <small>' + esc(PAGES[x[0]] || x[0]) + ' · ' + esc(x[3]) + ' · use ' + a + ' vs ' + b + '</small></span><em></em>' +
+        (hid ? '<b>hidden</b>' : '<button type="button" class="uxhide" data-pg="' + x[0] + '" data-k="' + esc(lo) + '">Hide ' + esc(nameOf(lo, '')) + '</button>') + '</div>'; }).filter(Boolean);
+    var idle = [];
+    if(page && LASTLIST.page === page) LASTLIST.keys.forEach(function(k){ if(PIN.indexOf(k) >= 0) return; if(score(page, k) < 20 && (LAY[page] && LAY[page].hide || []).indexOf(k) < 0) idle.push(k); });
+    var top = page ? LASTLIST.keys.filter(function(k){ return score(page, k) >= THR; }).sort(function(a, b){ return score(page, b) - score(page, a); }).slice(0, 8) : [];
+    return '<h3>Auto order</h3><p class="uxsub">' + (AUTO.on ? '<b>On.</b> Once a day the cards you use most move up (by time on screen + taps, last 14 days' + (AGG ? ', ' + AGG.n + ' days of data, ' + (AGG.wide ? 'laptop' : 'phone') : '') + '). The order stays the same all day. Pages you arranged by hand keep your order.' : '<b>Off.</b> Cards stay in the app\'s order.') +
+      '</p><div class="uxbtns"><button type="button" id="uxAutoT">' + (AUTO.on ? 'Turn auto order off' : 'Turn auto order on') + '</button>' + (AUTO.on ? '<button type="button" id="uxAutoR">Re-sort now</button>' : '') + '</div>' +
+      (top.length ? '<p class="uxsub">On ' + esc(PAGES[page] || page) + ', most used first: ' + top.map(function(k){ return esc(nameOf(k, '')); }).join(' · ') + '</p>' : '') +
+      '<h3>Clean-up ideas</h3>' + (rows.length ? '<p class="uxsub">These pairs show much the same thing. Hiding the one you use less only hides it on this phone / PC; it comes back from "Hidden here" at the bottom of the page.</p><div class="uxl">' + rows.join('') + '</div>' : '<p class="uxsub">Nothing to suggest yet.</p>') +
+      (idle.length ? '<h3>Not looked at in 14 days · ' + esc(PAGES[page] || page) + '</h3><div class="uxl">' + idle.map(function(k){ return '<div class="uxr"><span>' + esc(nameOf(k, '')) + '</span><em></em><button type="button" class="uxhide" data-pg="' + page + '" data-k="' + esc(k) + '">Hide</button></div>'; }).join('') + '</div>' : '');
+  }
+  function cleanupWire(w){
+    var t = $('uxAutoT'); if(t) t.onclick = function(){ AUTO.on = !AUTO.on; LS.set('hayat-autoord', AUTO); O().render(); report(); };
+    var r = $('uxAutoR'); if(r) r.onclick = async function(){ r.textContent = 'Sorting…'; await aggLoad(true); report(); };
+    [].slice.call(w.querySelectorAll('.uxhide')).forEach(function(b){ b.onclick = function(){ var l = lay(b.dataset.pg); if(l.hide.indexOf(b.dataset.k) < 0) l.hide.push(b.dataset.k); LS.set('hayat-layout', LAY); O().render(); report(); }; });
+  }
+
   /* ---------- "What I look at" ---------- */
   function fmt(s){ if(s < 60) return s + ' s'; var m = Math.round(s / 60); return m < 60 ? m + ' min' : (m / 60).toFixed(1) + ' h'; }
   async function report(){
+    if(!AGG || AGG.day !== today()) await aggLoad();
     var days = 7, d0 = ymdL(new Date(Date.now() - 5 * 3600e3 - days * 864e5));
     var docs = [{ id: U.day + '_' + DEV, data: U }], o = O(), f = o.fs && o.fs(), who = {};
     if(f){ try{ flush(true); var q = await f.fs.getDocs(f.fs.query(f.fs.collection(f.db, 'owner_ux'), f.fs.where('day', '>=', d0)));
@@ -164,14 +240,14 @@
     var nd = Object.keys(dayset).length;
     var h = '<div class="uxrep"><div class="uxrh"><b>📊 What I look at</b><button type="button" id="uxX" aria-label="close">✕</button></div>' +
       '<p class="uxsub">Last ' + days + ' days · ' + nd + (nd === 1 ? ' day' : ' days') + ' of data · ' + esc(Object.keys(who).join(', ')) + ' · time counts only while a card is half on screen and someone is using the phone.' +
-      (nd < 3 ? ' <b>Give it 2–3 days</b> before deciding anything.' : '') + '</p>' +
+      (nd < 3 ? ' <b>Give it 2–3 days</b> before deciding anything.' : '') + '</p>' + cleanup() +
       '<h3>Pages</h3>' + (pr.length ? '<div class="uxl">' + pr.map(function(k){ return '<div class="uxr"><span>' + esc(PAGES[k] || k) + '</span><em>' + bar(P[k], P[pr[0]]) + '</em><b>' + fmt(P[k]) + ' · ' + Math.round(100 * P[k] / tot) + '%</b></div>'; }).join('') + '</div>' : '<p class="uxsub">Nothing yet.</p>') +
       '<h3>Cards, most watched first</h3>' + (cr.length ? '<div class="uxl">' + cr.slice(0, 30).map(function(k){ var c = C[k], pg = k.split('|')[0], ck = k.split('|').slice(1).join('|');
         return '<div class="uxr"><span>' + esc(nameOf(ck, c.n)) + ' <small>' + esc(PAGES[pg] || pg) + '</small></span><em>' + bar(c.s, C[cr[0]].s) + '</em><b>' + fmt(c.s) + (c.t ? ' · ' + c.t + ' taps' : '') + '</b></div>'; }).join('') + '</div>' : '<p class="uxsub">Nothing yet.</p>') +
       (Object.keys(M).length ? '<h3>Folded parts opened</h3><div class="uxl">' + Object.keys(M).sort(function(a, b){ return M[b] - M[a]; }).map(function(k){ return '<div class="uxr"><span>' + esc(k.split('|')[1].replace('mg:', 'More: ')) + ' <small>' + esc(PAGES[k.split('|')[0]] || '') + '</small></span><em></em><b>' + M[k] + '×</b></div>'; }).join('') + '</div>' : '') +
-      '<p class="uxsub">Next: after 2–3 days we use this to move the most-watched cards up and fold the rest — together, one page at a time (✎ Arrange this page).</p></div>';
+      '</div>';
     var w = $('uxRep'); if(!w){ w = document.createElement('div'); w.id = 'uxRep'; w.className = 'uxsheet'; document.body.appendChild(w); }
-    w.innerHTML = h; w.hidden = false; $('uxX').onclick = function(){ w.hidden = true; };
+    w.innerHTML = h; w.hidden = false; $('uxX').onclick = function(){ w.hidden = true; }; cleanupWire(w);
     w.onclick = function(e){ if(e.target === w) w.hidden = true; };
   }
 
@@ -188,7 +264,8 @@
     if(page !== curPage){ curPage = page; var p = U.pages[page] = U.pages[page] || { n: 0, s: 0 }; p.n++; dirty = true; }
     var list = cardsIn(main);
     list.forEach(function(c){ c.__uxk = keyOf(c); c.__uxt = titleOf(c); if(c.__uxk) c.dataset.uxk = c.__uxk; });
-    list = list.filter(function(c){ return c.__uxk; });
+    list = list.filter(function(c){ return c.__uxk; }); LASTLIST = { page: page, keys: list.map(function(c){ return c.__uxk; }) };
+    if(AUTO.on && (!AGG || AGG.day !== today())) setTimeout(aggLoad, 1500);
     apply(main, page, list); arrangeUI(main, page, list); observe(list); menu();
   }
 
@@ -209,7 +286,9 @@
     '.uxrep h3{margin:16px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)} .uxsub{font-size:12.5px;color:var(--muted);margin:6px 0}' +
     '.uxl{display:flex;flex-direction:column;gap:4px} .uxr{display:grid;grid-template-columns:minmax(0,1.3fr) 1fr auto;gap:10px;align-items:center;font-size:13.5px;padding:5px 0;border-bottom:1px solid var(--line)}' +
     '.uxr span small{display:block;color:var(--muted);font-size:11px} .uxr em{height:8px;background:var(--soft2);border-radius:4px;overflow:hidden;display:block} .uxr em i{display:block;height:100%;background:var(--s1,#2a78d6);border-radius:4px} .uxr b{font-variant-numeric:tabular-nums;font-size:12.5px;white-space:nowrap}' +
-    '.carderr{border:1px dashed var(--line2)!important;opacity:.85}';
+    '.carderr{border:1px dashed var(--line2)!important;opacity:.85}' +
+    '.uxbtns{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0} .uxbtns button,.uxhide{height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}' +
+    '.uxov{grid-template-columns:minmax(0,1fr) auto} .uxov em{display:none} .uxov span{white-space:normal} body.uxarr .uxmoved{box-shadow:0 0 0 2px var(--gold)}';
   document.head.appendChild(css);
 
   window.OwnerUX = { after: after, flush: flush, report: report, arrange: function(on){ ARR = on !== false; O().render(); }, _u: function(){ return U; }, _lay: function(){ return LAY; } };
