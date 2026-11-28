@@ -526,7 +526,21 @@ html[data-theme="dark"] .bseg{border-top-color:rgba(0,0,0,.55)}
 /* v368: card pictures */
 .cardpic{flex:none;margin-left:6px;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:15px;line-height:1;cursor:pointer;opacity:.75;display:inline-flex;align-items:center;justify-content:center}
 .cardpic:hover{opacity:1}
-body:has(#tblv) .sheetwrap{z-index:115} @media (max-width:420px){ .lgap{grid-template-columns:1fr 1fr!important;gap:6px} .lgap .lg{padding:7px 8px} .lgap .lg b{font-size:17px} .lgap .lg em{font-size:11.5px} } .ordmore{margin-top:10px;width:100%;min-height:40px;border:1px solid var(--line);border-radius:10px;background:var(--card);font:inherit;font-weight:600;cursor:pointer} /* v370: a bill opened from 🧾 / 🍽 comes up ON TOP of the list */
+body:has(#tblv) .sheetwrap{z-index:115}
+.dsheet .dsch{margin:2px 0 10px}
+.dskp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 6px}
+.dskp>div{background:var(--soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column}
+.dskp small{font-size:11.5px;color:var(--muted);font-weight:700}.dskp b{font-size:22px;font-weight:800}.dskp b.up{color:#1e7a3c}.dskp b.dn{color:#b3261e}.dskp em{font-style:normal;font-size:11.5px;color:var(--muted)}
+.dsmix{font-size:13px;color:var(--muted);margin:4px 0 8px}
+.dsh{display:flex;flex-direction:column;gap:3px}
+.dshr{display:grid;grid-template-columns:58px 1fr 46px 46px;align-items:center;gap:8px;font-size:13px;padding:2px 4px;border-radius:6px}
+.dshr.hd{font-size:11.5px;color:var(--muted);font-weight:700}.dshr.hd b,.dshr.hd small{font-weight:700;color:var(--muted)}
+.dshr.now{background:var(--soft)}.dshr.now span:first-child{font-weight:700}.dshr.we{background:color-mix(in srgb,var(--line) 45%,transparent)}
+.dshr b{text-align:right;font-weight:700}.dshr small{text-align:right;color:var(--muted)}
+.dsbar{position:relative;height:16px;display:block}
+.dsbar i{position:absolute;left:0;top:2px;bottom:2px;background:color-mix(in srgb,var(--k-dine,#2a8f86) 70%,var(--card));border-radius:3px}
+.dsbar em{position:absolute;top:0;bottom:0;width:0;border-left:3px solid var(--ink);margin-left:-1px}
+.tpr.rowlink{cursor:pointer} @media (max-width:420px){ .lgap{grid-template-columns:1fr 1fr!important;gap:6px} .lgap .lg{padding:7px 8px} .lgap .lg b{font-size:17px} .lgap .lg em{font-size:11.5px} } .ordmore{margin-top:10px;width:100%;min-height:40px;border:1px solid var(--line);border-radius:10px;background:var(--card);font:inherit;font-weight:600;cursor:pointer} /* v370: a bill opened from 🧾 / 🍽 comes up ON TOP of the list */
 .hkey{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:8px 0 2px;align-items:center}
 .hkey span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .hkey .hk{display:inline-block;width:16px;height:11px;border-radius:2px;flex:none}
@@ -707,7 +721,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v370';
+const BOARD='v371';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -1476,19 +1490,55 @@ function trendNow(){ const K=trendData(); if(!K) return ''; if(K.wait){ if(!DG.b
     <div class="trl${TRN.all?' all':''}">${K.rising.map((r,i)=>row(r).replace('class="trrow',`class="trrow${i>=(innerWidth<640?5:8)?' more':''}`)).join('')}${K.falling.length?`<div class="trsub">Slower than usual</div>${K.falling.map((r,i)=>row(r,1).replace('class="trrow',`class="trrow${i>=(innerWidth<640?3:4)?' more':''}`)).join('')}`:''}</div>
     ${K.rising.length>(innerWidth<640?5:8)||K.falling.length>(innerWidth<640?3:4)?`<button type="button" class="chip trall">${TRN.all?'Show fewer':'Show all '+(K.rising.length+K.falling.length)}</button>`:''}
     <p class="note">🔥 = last 30 minutes at least twice the usual · 🆕 = sold today but usually not by now · ▲ = today well above usual. Only dishes on 2+ bills (one big table is not a trend). Every size counts as a plate.</p></div>`; }
-function trendSheet(f){ const old=document.getElementById('drill'); if(old) old.remove(); const box=document.createElement('div'); box.className='sheetwrap'; box.id='drill';
-  const K=trendData()||{}, R=(K.rising||[]).concat(K.falling||[]).find(r=>r.f===f), r1=x=>x>=10?Math.round(x):Math.round(x*10)/10;
-  const bills=recs().filter(isSale).map(r=>{ const its=(r.items||[]).filter(i=>i.n&&i.q>0&&sizeOf(String(i.n).trim().toUpperCase().replace(/\s+/g,' ')).fam===f); return its.length?{r,its}:null; }).filter(Boolean).sort((a,b)=>String(b.r.createdAt||'').localeCompare(String(a.r.createdAt||'')));
-  const H=Array(24).fill(0), D=tmDow(DAY,4), UH=Array(24).fill(0); (dgDay(DAY)||{bs:[]}).bs.forEach(b=>{ const q=(b[5]||{})[f]; if(q&&b[4]!=null) H[Math.floor(b[4]/60)]+=q[1]; });
-  D.forEach(d=>{ const y=dgDay(d); if(y) y.bs.forEach(b=>{ const q=(b[5]||{})[f]; if(q&&b[4]!=null) UH[Math.floor(b[4]/60)]+=q[1]/D.length; }); });
-  const hrs=[...Array(24).keys()].filter(i=>H[i]||UH[i]>=0.3), mx=Math.max(1,...hrs.map(i=>Math.max(H[i],UH[i])));
-  const nowH=Math.floor(nowMinOf()/60);
-  box.innerHTML=`<div class="sheet"><h2>${esc(tcase(f))} <button class="x" id="drillX">✕</button></h2>
-    ${R?`<p class="sub">${K.sel==='now'?'Today':K.sel==='day'?'Whole day':'That hour'} <b>${r1(R.t)}</b> plates vs usual <b>${r1(R.un)}</b> (last ${D.length} ${rpWd(DAY)}s)${K.sel==='now'?` · last 30 min <b>${r1(R.t30)}</b> vs ${r1(R.u30)}`:''} · a usual whole day ${r1(R.ua)}.</p>`:''}
-    <h3>By hour · today vs usual</h3><div class="trh">${hrs.map(i=>`<div class="trhr${i===nowH?' now':''}"><span>${hlabel(i)}</span><i style="width:${Math.round(100*H[i]/mx)}%"></i><em style="width:${Math.round(100*UH[i]/mx)}%"></em><b>${r1(H[i])}</b><small>${r1(UH[i])}</small></div>`).join('')}</div>
-    <p class="note">Bar = today, line = usual. Plates of every size.</p>
-    <h3>Today's bills with it · ${bills.length}</h3>${bills.length?`<div class="scroll"><table class="datab"><tr><th>Ordered</th><th>Where</th><th>What</th><th class="r">Bill</th></tr>${bills.slice(0,40).map(({r,its})=>`<tr data-drill="${esc(r.key||r.id||'')}"><td>${esc(String(r.createdAt||'').slice(11,16))}</td><td>${esc(billWhere(r))}</td><td>${its.map(i=>`${i.q}× ${esc(tcase(i.n))}`).join(', ')}</td><td class="r">${rs(saleV(r))}</td></tr>`).join('')}</table></div>`:'<p class="note">None yet today.</p>'}</div>`;
-  document.body.appendChild(box); box.onclick=e=>{ if(e.target===box){ box.remove(); return; } const d=e.target.closest('[data-drill]'); if(d&&d.dataset.drill){ box.remove(); drill(d.dataset.drill); } }; $('drillX').onclick=()=>box.remove(); }
+/* v371: ONE dish sheet for every dish (Majid, 28 Nov: "the dish screen from trending was awesome, we need it for all dish items").
+   Opened from Trending, Top dishes and the dish-group shortcut. Today = by hour vs the usual + today's bills; 14 / 28 days = day by day.
+   A bill opened from it comes up ON TOP and closing it returns here (the sheet is no longer removed). */
+const DS={span:'day'};
+function dsDays(n){ let d=DAY<bizToday()?DAY:addDays(bizToday(),-1); const out=[]; for(let i=0;i<n;i++){ out.unshift(d); d=addDays(d,-1); } return out; }
+function dsOf(b,f){ const q=(b[5]||{})[f]; return q?q:null; }
+function dishSheet(f){ let box=document.getElementById('dishs'); if(!box){ box=document.createElement('div'); box.className='sheetwrap'; box.id='dishs'; document.body.appendChild(box);
+    box.addEventListener('click',e=>{ if(e.target===box){ box.remove(); return; } if(e.target.closest('#dishsX')){ box.remove(); return; }
+      const c=e.target.closest('[data-dsspan]'); if(c){ DS.span=c.dataset.dsspan==='day'?'day':+c.dataset.dsspan; dishSheet(box.dataset.f); return; }
+      const d=e.target.closest('[data-drill]'); if(d&&d.dataset.drill){ drill(d.dataset.drill); return; }
+      const dy=e.target.closest('[data-dsday]'); if(dy){ box.remove(); setDay(dy.dataset.dsday); } }); }
+  box.dataset.f=f; const sc=box.querySelector('.sheet')?box.querySelector('.sheet').scrollTop:0;
+  const r1=x=>x>=10?Math.round(x):Math.round(x*10)/10, today=DAY===bizToday(), nowV=today?nowMinOf():1e9, D=tmDow(DAY,4), name=esc(tcase(f));
+  const need=(DS.span==='day'?D:dsDays(DS.span*2)).filter(d=>d!==bizToday()&&CACHE[d]===undefined), loading=need.length>0;
+  if(loading&&!DS.ld){ DS.ld=1; dgLoad(need).then(()=>{ DS.ld=0; if(document.getElementById('dishs')) dishSheet(f); }); }
+  const chips=`<div class="chips dsch">${[['day',today?'Today':'That day'],[14,'Last 14 days'],[28,'Last 28 days']].map(([k,l])=>`<button type="button" class="chip${DS.span===k?' on':''}" data-dsspan="${k}">${l}</button>`).join('')}</div>`;
+  let body='';
+  if(DS.span==='day'){
+    const H=Array(24).fill(0), HV=Array(24).fill(0), UH=Array(24).fill(0), dd=dgDay(DAY)||{bs:[]}; let ch={dine:0,counter:0,delivery:0};
+    dd.bs.forEach(b=>{ const q=dsOf(b,f); if(q&&b[4]!=null){ const h=Math.floor(b[4]/60); H[h]+=q[1]; HV[h]+=q[0]; const k=b[0]==='dine'||b[0]==='delivery'?b[0]:'counter'; ch[k]+=q[1]; } });
+    let nU=0; D.forEach(d=>{ const y=dgDay(d); if(!y) return; nU++; y.bs.forEach(b=>{ const q=dsOf(b,f); if(q&&b[4]!=null) UH[Math.floor(b[4]/60)]+=q[1]; }); }); if(nU) for(let i=0;i<24;i++) UH[i]/=nU;
+    const T=H.reduce((a,x)=>a+x,0), TV=HV.reduce((a,x)=>a+x,0), UA=UH.reduce((a,x)=>a+x,0), nowH=Math.floor(nowV/60);
+    const UB=UH.reduce((a,x,i)=>a+(i<nowH?x:i===nowH?x*((nowV%60)/60):0),0);
+    const hrs=[...Array(24).keys()].filter(i=>H[i]||UH[i]>=0.3), mx=Math.max(1,...hrs.map(i=>Math.max(H[i],UH[i])));
+    const pc=(a,b)=>b>0?Math.round(100*(a-b)/b):null, p=today?pc(T,UB):pc(T,UA);
+    body=`<div class="dskp"><div><small>${today?'Today so far':'That day'}</small><b>${r1(T)}</b><em>plates · ${rs(TV)}</em></div>
+      <div><small>Usual ${today?'by now':'whole day'}</small><b>${nU?r1(today?UB:UA):'…'}</b><em>${nU?`last ${nU} ${rpWd(DAY)}s`:'loading…'}</em></div>
+      <div><small>Difference</small><b class="${p==null?'':p>=0?'up':'dn'}">${p==null?'—':(p>0?'+':'')+p+'%'}</b><em>${today&&nU?`usual whole day ${r1(UA)}`:''}</em></div></div>
+      <p class="dsmix">Dine <b>${r1(ch.dine)}</b> · CO <b>${r1(ch.counter)}</b> · Delivery <b>${r1(ch.delivery)}</b> plates</p>
+      <h3>By hour</h3><div class="dsh"><div class="dshr hd"><span>Hour</span><span></span><b>${today?'Today':'Day'}</b><small>Usual</small></div>${hrs.map(i=>`<div class="dshr${today&&i===nowH?' now':''}"><span>${hlabel(i)}:00</span><span class="dsbar"><i style="width:${Math.round(100*H[i]/mx)}%"></i>${nU?`<em style="left:${Math.round(100*UH[i]/mx)}%"></em>`:''}</span><b>${r1(H[i])}</b><small>${nU?r1(UH[i]):'…'}</small></div>`).join('')||'<p class="note">Not sold yet.</p>'}</div>
+      <p class="note">Bar = plates ${today?'today':'that day'} (every size counts 1) · black tick = the usual for that hour.</p>`;
+    const bills=recs().filter(isSale).map(r=>{ const its=(r.items||[]).filter(i=>i.n&&i.q>0&&sizeOf(String(i.n).trim().toUpperCase().replace(/\s+/g,' ')).fam===f); return its.length?{r,its}:null; }).filter(Boolean).sort((a,b)=>String(b.r.createdAt||'').localeCompare(String(a.r.createdAt||'')));
+    body+=`<h3>${today?"Today's":"That day's"} bills with it · ${bills.length}</h3>${bills.length?`<div class="scroll"><table class="datab"><tr><th>Ordered</th><th>Where</th><th>What</th><th class="r">Bill</th></tr>${bills.slice(0,60).map(({r,its})=>`<tr class="rowlink" data-drill="${esc(r.key||r.id||'')}"><td>${esc(String(r.createdAt||'').slice(11,16))}</td><td>${esc(billWhere(r))}</td><td>${its.map(i=>`${i.q}× ${esc(tcase(i.n))}`).join(', ')}</td><td class="r">${rs(saleV(r))}</td></tr>`).join('')}</table></div><p class="note">Tap a bill to open it; close it to come back here.</p>`:'<p class="note">None yet.</p>'}`;
+  } else {
+    const all=dsDays(DS.span*2), cur=all.slice(-DS.span), prev=all.slice(0,all.length-DS.span);
+    const dayV=d=>{ const y=dgDay(d); if(!y) return null; let q=0,v=0,L=0,E=0,c={dine:0,counter:0,delivery:0}; y.bs.forEach(b=>{ const x=dsOf(b,f); if(!x) return; q+=x[1]; v+=x[0]; if(b[1]==='L') L+=x[1]; else E+=x[1]; c[b[0]==='dine'||b[0]==='delivery'?b[0]:'counter']+=x[1]; }); return {q,v,L,E,c}; };
+    const C=cur.map(d=>[d,dayV(d)]), ok=C.filter(x=>x[1]), P=prev.map(dayV).filter(Boolean);
+    const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0, aq=avg(ok.map(x=>x[1].q)), av=avg(ok.map(x=>x[1].v)), pq=avg(P.map(x=>x.q)), mx=Math.max(1,...ok.map(x=>x[1].q));
+    const sum=k=>ok.reduce((s,x)=>s+x[1][k],0), cs=k=>ok.reduce((s,x)=>s+x[1].c[k],0), tq=sum('q')||1, chg=pq>0?Math.round(100*(aq-pq)/pq):null;
+    body=`<div class="dskp"><div><small>Plates a day</small><b>${r1(aq)}</b><em>${rs(Math.round(av))} a day</em></div>
+      <div><small>The ${DS.span} days before</small><b>${P.length?r1(pq):'…'}</b><em>plates a day</em></div>
+      <div><small>Change</small><b class="${chg==null?'':chg>=0?'up':'dn'}">${chg==null?'—':(chg>0?'+':'')+chg+'%'}</b><em>lunch ${Math.round(100*sum('L')/tq)}% · evening ${Math.round(100*sum('E')/tq)}%</em></div></div>
+      <p class="dsmix">Dine <b>${Math.round(100*cs('dine')/tq)}%</b> · CO <b>${Math.round(100*cs('counter')/tq)}%</b> · Delivery <b>${Math.round(100*cs('delivery')/tq)}%</b> of plates</p>
+      <h3>Day by day</h3><div class="dsh">${C.slice().reverse().map(([d,x])=>{ const we=[0,6].includes(new Date(d+'T12:00:00').getDay()); return `<div class="dshr rowlink${we?' we':''}" data-dsday="${d}"><span>${rpWd(d)} ${+d.slice(8)}</span><span class="dsbar">${x?`<i style="width:${Math.round(100*x.q/mx)}%"></i><em style="left:${Math.round(100*aq/mx)}%"></em>`:''}</span><b>${x?r1(x.q):CACHE[d]===undefined?'…':'—'}</b><small>${x?kfmt(x.v):''}</small></div>`; }).join('')}</div>
+      <p class="note">Bar = plates that day · black tick = the ${DS.span}-day average (${r1(aq)}) · Sat / Sun shaded · tap a day to open it.${loading?' Loading days…':''}</p>`;
+  }
+  box.innerHTML=`<div class="sheet dsheet"><h2>🍽 ${name} <button class="x" id="dishsX">✕</button></h2>${chips}${body}</div>`;
+  box.querySelector('.sheet').scrollTop=sc; }
+function trendSheet(f){ DS.span='day'; dishSheet(f); }
 const TRN={all:false,sel:null}; document.addEventListener('click',e=>{ if(!e.target.closest) return; const b=e.target.closest('[data-trend]'); if(b){ trendSheet(b.dataset.trend); return; } if(e.target.closest('.trall')){ TRN.all=!TRN.all; render(); return; } const sb=e.target.closest('[data-trsel]'); if(sb){ const v=sb.dataset.trsel; TRN.sel=/^\d+$/.test(v)?+v:v; renderNow(); } });
 /* v364: BIG BILLS up top (Majid: "large bill notices important"). Today's customer bills of ₹2,000+, newest first, on Live and
    Sales right under the top box; pre-bookings (isLarge) say so. Tap = the bill. */
@@ -2736,7 +2786,7 @@ function topItems(rows,tot){ if(!rows.length||!tot) return '';
         const d=v>=tot-0.01?`M${p(R,a)} A${R} ${R} 0 1 1 ${p(R,a+Math.PI)} A${R} ${R} 0 1 1 ${p(R,a)} M${p(r0,a)} A${r0} ${r0} 0 1 0 ${p(r0,a+Math.PI)} A${r0} ${r0} 0 1 0 ${p(r0,a)}Z`:`M${p(R,a)} A${R} ${R} 0 ${big} 1 ${p(R,a2)} L${p(r0,a2)} A${r0} ${r0} 0 ${big} 0 ${p(r0,a)}Z`; a=a2; return d; };
       return `<div class="tppie"><svg viewBox="0 0 160 160" role="img" aria-label="${esc(P.map(x=>x[0]+' '+pc(x[1])+'%').join(', '))}">${P.map(x=>`<path d="${arc(x[1])}" class="${x[2]}"><title>${esc(x[0])} · ${rs(x[1])} · ${pc(x[1])}%</title></path>`).join('')}<text x="80" y="76" text-anchor="middle" class="tpc1">Top 5</text><text x="80" y="94" text-anchor="middle" class="tpc2">${pc(tot-o)}%</text></svg>
         <div class="tplg">${P.map(x=>`<div><i class="${x[2]}"></i><span>${esc(x[0])}</span><em class="tpq">${Math.round(x[3]*10)/10} plates</em><b>${pc(x[1])}%</b><em>${kfmt(x[1])}</em></div>`).join('')}</div></div>`; })()}
-<div class="tprows">${L.map((x,i)=>`<div class="tpr${x[3]?' tpo':''}" title="${esc(x[0])} · ${rs(x[1])} · ${x[2]} sold · ${pc(x[1])}%"><span class="tpn2">${x[3]?'':i+1}</span><span class="tpl">${esc(x[0])}${chq(x)}</span><span class="tpb">${bar(x)}</span><span class="tpq"><b>${Math.round(x[2]*10)/10}</b> plates${x[2]>0&&!x[3]?`<small>₹${Math.round(x[1]/x[2])} each</small>`:''}</span><span class="tpv">${kfmt(x[1])}</span><span class="tpp">${pc(x[1])}%</span></div>`).join('')}</div>
+<div class="tprows">${L.map((x,i)=>`<div class="tpr${x[3]?' tpo':' rowlink'}"${x[3]?'':` data-trend="${esc(sizeOf(String(x[0]).trim().toUpperCase().replace(/\s+/g,' ')).fam)}"`} title="${esc(x[0])} · ${rs(x[1])} · ${x[2]} sold · ${pc(x[1])}%"><span class="tpn2">${x[3]?'':i+1}</span><span class="tpl">${esc(x[0])}${chq(x)}</span><span class="tpb">${bar(x)}</span><span class="tpq"><b>${Math.round(x[2]*10)/10}</b> plates${x[2]>0&&!x[3]?`<small>₹${Math.round(x[1]/x[2])} each</small>`:''}</span><span class="tpv">${kfmt(x[1])}</span><span class="tpp">${pc(x[1])}%</span></div>`).join('')}</div>
     <div class="ptkey">${TPC.map(([c,l,col])=>`<span><i class="trdot" style="background:${col}"></i>${l==='Deliv'?'Delivery':l==='CO'?'CO · counter':'Dine-in'}</span>`).join('')}</div>
     <p class="note">Bars are split by where the plates went (money). Plates = quantity on the bills (a Half and a Full each count as one plate); ₹ each = money ÷ plates, before any bill discount.</p></div>`; }
 function items(g){
