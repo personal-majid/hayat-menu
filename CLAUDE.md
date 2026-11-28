@@ -1289,3 +1289,9 @@ What that means, and what to say if it comes up:
 - Card pictures: 🖼 (.cardpic, inside every card's h2 before 📤) → assets/html-to-image.js (html-to-image 1.11.11, MIT, bundled, in sw CORE, loaded on first use) toBlob at 2× with the page background, skipFonts, buttons left out → phones (hover:none + canShare files): the share sheet (WhatsApp, Photos); else a preview (.picwrap) with ⬇ Save picture (download), 📋 Copy (ClipboardItem), ↗ Share, ✕.
 - Pop-ups: a dblclick within 1.5 s of a touch also closes (the phone's own double-tap), not only the 450 ms touch timer.
 - Tests scratchpad oh/: t-v368 (34: lighter bars, picture made + preview, trending chips by hour, swipes on chip rows / big bills / short swipes ignored and a long plain swipe still works, classic switch both ways), t-v364b now expects channel tints by default (22), t-v367 50, t-v366 12, t-v365 16, t-v364 26, t-anchor 14, t-st 38, t-of 34.
+
+## v369 — card pictures: chart and numbers only
+- Majid, 28 Nov: "the image shared is also showing filters, I need graph and text of projection numbers with graphs".
+- cardPic: htmlToImage filter picKeep leaves out PIC_OUT (chip rows .chips/.cmpchips/.trsel/.rtsw, the .ovs tick row, .chip/.tab, select, input, textarea, label, buttons and links in the h2, .tbmot/.nctog/.trall, 🖼/📤) but keeps PIC_KEEP data rows (.bigbi, .trrow, .dgmr, [data-drill], [data-day], [data-bfk]). Numbers, projection boxes (.stbox "→ month ₹X (forecast)") and legends stay.
+- picCaption(): a temporary .picstamp line under the title, "Hayat · <day> · <time if today> · <chips on, ticked boxes, selected options, dates>", removed after the picture.
+- Test data: realdb.json ends 27 Nov; tests now use realdb28.json (27 Nov copied to 28 Nov, timestamps +1 day). scratchpad oh/t-v369 (38).
