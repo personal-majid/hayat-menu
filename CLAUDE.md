@@ -1301,3 +1301,9 @@ What that means, and what to say if it comes up:
 - body:has(#tblv) .sheetwrap{z-index:115}: a bill opened from the full-screen 🧾 / 🍽 list came up UNDER it (sheets 50, list 110). Back closes the bill and the list stays.
 - 🧾 (ordView) = the "last order" boxes (lastGap) on top, then newOrders(). Live keeps only the boxes + "🧾 New orders, last hour ›" (data-ordopen); the New orders list is off Live (classic layout unchanged). Boxes 2 × 2 on phones.
 - Test scratchpad oh/t-v370 (24).
+
+## v371 — one dish sheet for every dish
+- Majid, 28 Nov: the Trending dish screen "was awesome… we need it for all dish items"; closing a bill opened from it went back to the main page.
+- dishSheet(f) (#dishs, DS.span 'day' | 14 | 28): Today/That day = so far vs usual by now (last 4 same weekdays, loads them via dgLoad and redraws), Dine/CO/Delivery plates, by hour (labelled Today / Usual columns, black tick = usual), every bill with the dish (tap = bill ON TOP; Back returns to the sheet — the sheet is no longer removed). 14 / 28 days = plates a day vs the days before, lunch/evening share, channel share, day by day (weekends shaded, tick = average, tap = open that day; "—" = no day log).
+- Opened from Trending ([data-trend], trendSheet = alias) and every Top dishes row (.tpr data-trend = family via sizeOf). The old .trhr rows are gone (their .trh class also styled the traffic history table green).
+- Test scratchpad oh/t-v371 (22).
