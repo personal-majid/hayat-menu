@@ -1295,3 +1295,9 @@ What that means, and what to say if it comes up:
 - cardPic: htmlToImage filter picKeep leaves out PIC_OUT (chip rows .chips/.cmpchips/.trsel/.rtsw, the .ovs tick row, .chip/.tab, select, input, textarea, label, buttons and links in the h2, .tbmot/.nctog/.trall, 🖼/📤) but keeps PIC_KEEP data rows (.bigbi, .trrow, .dgmr, [data-drill], [data-day], [data-bfk]). Numbers, projection boxes (.stbox "→ month ₹X (forecast)") and legends stay.
 - picCaption(): a temporary .picstamp line under the title, "Hayat · <day> · <time if today> · <chips on, ticked boxes, selected options, dates>", removed after the picture.
 - Test data: realdb.json ends 27 Nov; tests now use realdb28.json (27 Nov copied to 28 Nov, timestamps +1 day). scratchpad oh/t-v369 (38).
+
+## v370 — Sales by hour key · bill opens on top of 🧾 / 🍽 · New orders moved to 🧾
+- hkey under Sales by hour (kept in card pictures): Dine / CO / Delivery tints (or "sold"), white line = between two bills, ordered not paid (₹), forecast (still to come), the usual line by its compare name (dark dashes), yesterday (grey cap). The tick row (.ovs) keeps only the switches.
+- body:has(#tblv) .sheetwrap{z-index:115}: a bill opened from the full-screen 🧾 / 🍽 list came up UNDER it (sheets 50, list 110). Back closes the bill and the list stays.
+- 🧾 (ordView) = the "last order" boxes (lastGap) on top, then newOrders(). Live keeps only the boxes + "🧾 New orders, last hour ›" (data-ordopen); the New orders list is off Live (classic layout unchanged). Boxes 2 × 2 on phones.
+- Test scratchpad oh/t-v370 (24).
