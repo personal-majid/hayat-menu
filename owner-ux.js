@@ -186,16 +186,8 @@
   }
 
   /* v365: cards that show much the same thing (checked against the code) — the less-used one is offered for hiding */
-  var OVERLAP = [
-    ['d/floor', 'trendNow', 'dishPace', 'both compare today\'s dishes with the usual by now'],
-    ['d/floor', 'demandAhead', 'chFc', 'both forecast the rest of today by Dine / CO / Delivery'],
+  var OVERLAP = [   /* v367: the pairs merged in v367 are gone from the pages; these two remain */
     ['d/floor', 'fcCheck', 'outlook', 'both show how today is expected to close'],
-    ['d/floor', 'unrealized', 'floor', 'unpaid bills are also on the tables and in the top box'],
-    ['d/floor', 'likeCard', 'outlook', '"Days like today" also sits on Sales'],
-    ['d/sales', 'runLine', 'chRun', 'running total, whole shop vs per channel'],
-    ['d/sales', 'mg:kpi2', 'todayBox', '"More numbers" repeats parts of the top box'],
-    ['d/sales', 'avgStrip', 'stCard', 'both give ₹ a day for the week / month'],
-    ['d/sales', 'pace', 'runLine', 'Pace is the running total said in words'],
     ['d/sales', 'breakdown', 'dayMatrix', 'both split the day by channel / section']
   ];
   var LASTLIST = { page: '', keys: [] };

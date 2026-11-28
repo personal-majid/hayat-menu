@@ -516,6 +516,7 @@ html[data-theme="dark"] .bseg{border-top-color:rgba(0,0,0,.55)}
 .dgmr:hover{background:var(--soft2)} .dgmn{font-weight:600;justify-self:start} .dgmb{position:relative;height:12px;background:var(--soft2,#eee);border-radius:4px} .dgmb i{display:block;height:100%;background:var(--k-dine,#2a8f86);border-radius:4px} .dgmb em{position:absolute;top:-3px;bottom:-3px;width:0;border-left:2px dashed var(--ink,#333)}
 .dgmv{white-space:nowrap;justify-self:end} .dgmv small{color:var(--muted,#777)} .dgmp{text-align:right;font-weight:700;font-size:13px;display:flex;flex-direction:column} .dgmp small{font-weight:400;color:var(--muted,#777);font-size:11px} .dgmp.up{color:#1d6a34} .dgmp.dn{color:#a12a2a}
 @media(max-width:640px){ .dgmr{grid-template-columns:minmax(0,1fr) auto 58px;grid-template-areas:"n v p" "b b p"} .dgmn{grid-area:n} .dgmb{grid-area:b} .dgmv{grid-area:v} .dgmp{grid-area:p} }
+.tbmot{font:inherit;font-size:12.5px;border:0;background:none;color:var(--muted,#777);cursor:pointer;padding:2px 0;text-decoration:underline dotted} .lgin{margin:0 0 10px} .lgin .lgap{margin:0} .rtsw{margin:2px 0 8px}
 </style>
 <style id="v283">
 /* v283 one colour code everywhere: Dine teal · CO purple · Delivery coral · Staff grey · unpaid amber · forecast blue · up green · down red */
@@ -680,7 +681,7 @@ const bizToday=()=>{ const d=new Date(); if(d.getHours()<DAYSTART) d.setDate(d.g
 /* which of OUR kitchens cooks a VMENU item: same words the office KOT split uses */
 const station=it=>{ const s=((it.cat||'')+' '+(it.n||'')).toLowerCase(); if(/fried rice|juice|lime|water|tea|coffee|shake|mojito|salad|gravy|curry|fish|shawarma|shawaya|broast|dessert|ice/.test(s)) return 'front'; if(/mandi|alfaham|bread|parotta|kuboos|chapati|meal|biryani|beef|rice/.test(s)) return 'main'; return 'front'; };
 
-const BOARD='v366';
+const BOARD='v367';
 setTimeout(()=>{ const v=document.getElementById('verTag'); if(v) v.textContent=BOARD; },0);
 let ESS=false, DOCWAIT=true, DOCSLOW=false, WD_FIRST=Promise.resolve(); let FB=null, DOC=null, YDOC=null, FLOOR=null, DAY=bizToday(), NOW=Date.now(), TAB='sales', Q='', DAYS=[], INDEX={};
 const $$=(sel,root)=>Array.from((root||document).querySelectorAll(sel));
@@ -731,6 +732,9 @@ function usualByNow(){ /* usual customer sales by this minute on the last 4 same
   const v=L.map(d=>{ const x=INDEX[d], h=x.byOrder&&x.hours?x.hours:OHS[d].h; /* INDEX hours = OHS h with pre-bookings taken out (applyLarge) */ let s=0; for(let i=0;i<j;i++) s+=h[i]||0; return s+(h[j]||0)*fr; });
   return {v:v.reduce((a,b)=>a+b,0)/v.length,n:L.length,wd}; }
 /* v361: speeding up / slowing per channel - today's last 60 min and today by now against the same minutes on the last 4 same weekdays (bills made, pre-bookings out) */
+/* v367: the speed rows fold shut by default (the top box was ~1 phone screen) */
+const TBMO={open:false}; try{ TBMO.open=localStorage.getItem('hayat-tbmo')==='1'; }catch(e){}
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-tbmo]'); if(!b) return; e.stopPropagation(); TBMO.open=!TBMO.open; try{ localStorage.setItem('hayat-tbmo',TBMO.open?'1':'0'); }catch(x){} renderNow(); },true);
 function tbMomentum(R){ const D=tmDow(DAY,4); if(D.length<2) return null; const need=D.filter(d=>CACHE[d]===undefined); if(need.length){ if(!DG.busy) setTimeout(()=>dgLoad(need),0); return null; }
   const nw=new Date(NOW), m=((nw.getHours()-BH0+24)%24)*60+nw.getMinutes(), bm=t=>{ const x=T(t); return ((x.getHours()-BH0+24)%24)*60+x.getMinutes(); };
   const o={}; ['dine','counter','delivery'].forEach(c=>o[c]={t60:0,tb:0,u60:0,ub:0});
@@ -756,7 +760,7 @@ function todayBox(){
     if(D.length>=2){ const usual=D.reduce((n,d)=>n+nrev(d),0)/D.length; if(usual>0){ const p=Math.round(100*((tot-big)-usual)/usual); cmp=`<span class="${p>=0?'up':'dn'}">${p>=0?'▲':'▼'} ${Math.abs(p)}% <small>vs usual ${esc(wd)} (${kfmt(usual)} · ${D.length} days)</small></span>`; } } }
   const bar=tot?`<div class="tbbar">${rows.map(x=>x.v?`<i class="k-${x.k}" style="width:${(100*x.v/tot).toFixed(1)}%"></i>`:'').join('')}</div>`:'';
   const MO=live?tbMomentum(R):null;
-  const moRow=x=>{ const m=MO&&MO[x.k]; if(!m) return ''; const t=m.u60<300?['st','● quiet hour']:m.r>=1.25?['acc','▲ speeding up']:m.r<=0.75?['dec','▼ slowing']:['st','● steady'], bn=m.ub>0?Math.round(100*(m.tb-m.ub)/m.ub):null;
+  const moRow=x=>{ const m=MO&&MO[x.k]; if(!m||!TBMO.open) return ''; const t=m.u60<300?['st','● quiet hour']:m.r>=1.25?['acc','▲ speeding up']:m.r<=0.75?['dec','▼ slowing']:['st','● steady'], bn=m.ub>0?Math.round(100*(m.tb-m.ub)/m.ub):null;
     return `<tr class="tbsub tbmo"><td colspan="5"><small>last 60 min <b>${kfmt(m.t60)}</b> vs usual ${kfmt(m.u60)}</small> <span class="mot ${t[0]}">${t[1]}</span>${bn!=null?` <small class="${bn>=0?'up':'dn'}">${bn>=0?'+':''}${bn}% vs usual by now</small>`:''}</td></tr>`; };
   const cell=(x,staff)=>`<tr class="k-${x.k}${staff?' st':''}" data-tab="bills" data-bfk="${x.k}" title="show only ${x.l} bills"><td><i></i>${x.l}${staff?' <small>food · not in sales</small>':''}</td><td class="r"><b>${x.v?kfmt(x.v):'—'}</b></td><td class="r u">${x.un?`${kfmt(x.u)} <small>· ${x.un}</small>`:'<span class="z">—</span>'}</td><td class="r">${x.n||'—'}</td><td class="r">${x.n&&!staff?rs(x.ab):'—'}</td></tr>`;
   /* v316: dine-in money from the FIRST order vs later ADD-ONS (items whose kotAt is >3 min after the bill's first KOT) */
@@ -764,7 +768,7 @@ function todayBox(){
       let add=0; its.forEach(i=>{ if(t0&&i.kotAt&&T(i.kotAt).getTime()-t0>3*60e3) add+=i.a||0; }); const k=v/s0; a+=add*k; f+=v-add*k; nt++; if(add>0) na++; }); return {f,a,nt,na}; })();
   const aoRow=AO.nt?`<tr class="tbsub" data-tab="bills" data-bfk="dine"><td colspan="5"><small>first orders <b>${kfmt(AO.f)}</b> · add-ons <b>${kfmt(AO.a)}</b> (${AO.nt?Math.round(100*AO.a/Math.max(1,AO.f+AO.a)):0}%) · ${AO.na} of ${AO.nt} tables ordered more</small></td></tr>`:'';
   const tbl=`<table class="tbt"><thead><tr><th>Type</th><th class="r">So far</th><th class="r">Unpaid</th><th class="r">Bills</th><th class="r">Avg</th></tr></thead><tbody>
-    ${rows.map(x=>cell(x)+moRow(x)+(x.k==='dine'?aoRow:'')).join('')}${st.n?cell(Object.assign(st,{l:'Staff'}),true):''}
+    ${rows.map(x=>cell(x)+moRow(x)+(x.k==='dine'?aoRow:'')).join('')}${st.n?cell(Object.assign(st,{l:'Staff'}),true):''}${MO?`<tr class="tbsub"><td colspan="5"><button type="button" class="tbmot" data-tbmo>${TBMO.open?'▴ hide speed':'▾ speeding up or slowing? (last 60 min)'}</button></td></tr>`:''}
     <tr class="tot" data-tab="bills" data-bfk="" title="show every bill"><td>Total</td><td class="r"><b>${kfmt(tot)}</b></td><td class="r u">${uN?`<b>${kfmt(uT)}</b> <small>· ${uN}</small>`:'—'}${lN?`<small class="lt"><br>+ late ${kfmt(lT)} · ${lN}</small>`:''}</td><td class="r"><b>${nb}</b></td><td class="r"><b>${nb?rs(ab):'—'}</b></td></tr></tbody></table>`;
   /* forecast row: today only. Not on the full view's Live tab (Majid, 15 Oct: Live = what is happening now; the forecast stays on Sales and the simple Today page) */
   let fc=''; if(live){   /* v331: on Live again (approved redesign) */ let F=null; try{ F=fcToday(); }catch(e){} const PB=(()=>{ try{ return preToday(); }catch(e){ return {add:0}; } })();
@@ -807,7 +811,7 @@ function simpleWire(){ $$('[data-sday]').forEach(b=>b.onclick=()=>{ TAB='floor';
   $$('[data-full]').forEach(b=>b.onclick=e=>{ e.preventDefault(); setView('full'); TAB=b.dataset.full; window.scrollTo(0,0); render(); });
   $$('[data-ownout]').forEach(b=>b.onclick=e=>{ e.preventDefault(); if(b.dataset.sure!=='1'){ b.dataset.sure='1'; b.textContent='⎋ Tap again to sign out'; setTimeout(()=>{ b.dataset.sure=''; b.textContent='⎋ Sign out here'; },4000); return; } ownMe(null); if(FB) HayatAuth.signOut(FB); else location.reload(); });
   $$('[data-simple]').forEach(b=>b.onclick=e=>{ e.preventDefault(); setView('simple'); MODE='day'; TAB='floor'; $('dockSheet').hidden=true; window.scrollTo(0,0); render(); }); }
-function kpis(){
+function kpis(part){
   /* the top of Live / Sales: todayBox() + the folded "More numbers" (the old 4 boxes were built here and thrown away until v294) */
   const R=recs(), settled=R.filter(r=>r.status==='settled'), open=R.filter(r=>r.status==='open'||r.status==='due'), live=DAY===bizToday();
   const rev=R.filter(isSale).reduce((n,r)=>n+saleV(r),0);   /* paid out as % of sales */
@@ -816,9 +820,9 @@ function kpis(){
   const cash=settled.reduce((n,r)=>n+(r.cash||0),0), card=settled.reduce((n,r)=>n+(r.card||0),0);
   const tables=FLOOR?FLOOR.tables.filter(t=>t.active):[]; const busy=new Set(open.filter(r=>r.kind==='dine').map(r=>r.table));
   const seats=tables.reduce((n,t)=>n+(t.chairs||0),0), seatsBusy=tables.filter(t=>busy.has(t.name)).reduce((n,t)=>n+(t.chairs||0),0);
-  return `${staleBar()}${todayBox()}${SAFE(bigBills,'bigBills')()}${SAFE(fcCheck,'fcCheck')()}
-  ${live&&FCSET.open?`<div class="fcset">${scnBar()}</div>`:''}${live?`<div class="fcline">${trfHint()}</div>`:''}
-  ${TAB==='floor'?'':avgStrip()}<details class="moreg kmore" data-mg="kpi2"${MOREG.kpi2!==false?' open':''}><summary><b>More numbers</b><small>seats · table time · cash / card · paid out</small></summary><div class="kpis">
+  if(part!=='more') return `${staleBar()}${todayBox()}${TAB==='floor'&&live?alerts():''}${SAFE(bigBills,'bigBills')()}
+  ${live&&FCSET.open?`<div class="fcset">${scnBar()}</div>`:''}${live?`<div class="fcline">${trfHint()}</div>`:''}`;
+  return `${avgStrip()}<details class="moreg kmore" data-mg="kpi2"${MOREG.kpi2!==false?' open':''}><summary><b>More numbers</b><small>seats · table time · cash / card · paid out</small></summary><div class="kpis">
     <div class="kpi"><small>${seats?'Seats':'Tables busy'}</small><b>${!tables.length?'—':seats?Math.round(100*seatsBusy/seats)+'%':Math.round(100*busy.size/tables.length)+'%'}</b><em>${!tables.length?'no floor plan from the shop PC yet':busy.size+' of '+tables.length+' tables'}${!tables.length?'':seats?` · ${seatsBusy}/${seats} chairs`:' · chair counts not set on the shop PC floor plan'}</em></div>
     <div class="kpi"><small>Avg table time</small><b>${avgStay!=null?avgStay+' min':'—'}</b><em>${pax?pax+' covers':'covers not entered'}</em></div>
     <div class="kpi"><small>Cash · Card</small><b>${rs(cash)}</b><em>card ${rs(card)}</em></div>
@@ -1461,7 +1465,7 @@ function bigBills(){ if(MODE!=='day'||!DOC) return ''; const L=recs().filter(r=>
   const INT='button,a,input,select,textarea,label,summary,svg,canvas,[data-drill],[data-day],[data-h],[data-table],[data-trend],.chip,.tab,.x';
   let lt=0, lx=0, ly=0;
   document.addEventListener('touchend',e=>{ const p=e.target.closest&&e.target.closest('.sheetwrap,#tblv'); if(!p||e.target.closest(INT)||e.changedTouches.length!==1) { lt=0; return; } const t=e.changedTouches[0], now=Date.now();
-    if(now-lt<320&&Math.abs(t.clientX-lx)<30&&Math.abs(t.clientY-ly)<30){ lt=0; e.preventDefault(); closeEl(p); return; } lt=now; lx=t.clientX; ly=t.clientY; },{passive:false});
+    if(now-lt<450&&Math.abs(t.clientX-lx)<30&&Math.abs(t.clientY-ly)<30){ lt=0; e.preventDefault(); closeEl(p); return; } lt=now; lx=t.clientX; ly=t.clientY; },{passive:false});
   document.addEventListener('dblclick',e=>{ const p=e.target.closest&&e.target.closest('.sheetwrap,#tblv'); if(!p||e.target.closest(INT)) return; if(e.target===p||e.target.closest('.sheet>h2,.tblvh')){ window.getSelection&&getSelection().removeAllRanges(); closeEl(p); } });
 })();
 function dishPace(){ if(DAY!==bizToday()) return ''; const D=tmDow(DAY,4); if(D.length<3||D.some(d=>CACHE[d]===undefined)) return ''; const x=dgDay(DAY); if(!x||!x.bs.length) return '';
@@ -2593,6 +2597,12 @@ function feedRows(){ const out=[]; if(DAY!==bizToday()) return '';
   const up=DOC&&DOC.updatedAt?Math.round((Date.now()-T(DOC.updatedAt).getTime())/60000):null, open=bizMin(NOW)>=6*60&&bizMin(NOW)<closeMin(DAY);
   if(open&&up!=null&&up>10) out.push(`<div class="fdr warn"><b>STALE</b><span>No new data from the shop PC for ${up} min. Is "Hayat Day Log" running?</span></div>`);
   return out.join(''); }
+/* v367: one Running total card; "Dine · CO · Delivery" shows the by-channel chart in its place (the second card is gone) */
+const RTV={v:'all'}; try{ RTV.v=localStorage.getItem('hayat-rtv')||'all'; }catch(e){}
+function rtSwitch(){ const h=RTV.v==='ch'?SAFE(chRun,'chRun')():runLine(); if(!h) return RTV.v==='ch'?runLine():'';
+  const sw=`<div class="chips rtsw"><button type="button" class="chip${RTV.v!=='ch'?' on':''}" data-rtv="all">All</button><button type="button" class="chip${RTV.v==='ch'?' on':''}" data-rtv="ch">Dine · CO · Delivery</button></div>`;
+  return h.replace('</h2>','</h2>'+sw); }
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rtv]'); if(!b) return; RTV.v=b.dataset.rtv; try{ localStorage.setItem('hayat-rtv',RTV.v); }catch(x){} renderNow(); });
 function noticeCard(){ const K=takeData(); if(!K) return ''; const {live,T,U,nowH}=K, L=[];
   const upTo=live?nowH+1:24, T1=T.slice(0,upTo), U1=U.slice(0,upTo); if(live) U1[nowH]=U[nowH]*K.fr;   /* the hour in progress against the usual by this minute */
   const full=live?nowH:24;   /* weakest / strongest only among finished hours */
@@ -2634,13 +2644,13 @@ function breakdown(){
   const S=recs().filter(isSale);
   const group=(f)=>{ const g={}; S.forEach(r=>{ const k=f(r)||'—'; g[k]=g[k]||{n:0,v:0}; g[k].n++; g[k].v+=saleV(r); }); return Object.entries(g).sort((a,b)=>b[1].v-a[1].v); };
   const block=(title,rows)=>{ const max=Math.max(1,...rows.map(r=>r[1].v)); return `<div class="card"><h2>${title}</h2><div class="mini">${rows.map(([k,x])=>`<div class="mrow"><span>${esc(k)} <small style="color:var(--muted)">${x.n}</small></span><div class="b" style="width:${100*x.v/max}%"></div><span class="v">${rs(x.v)}</span></div>`).join('')||'<div class="note">No bills yet.</div>'}</div></div>`; };
-  return block('By section',group(r=>r.section))+block('By type',group(r=>r.kind))+block('By payment',group(r=>r.status==='settled'?r.payMode:'not paid yet'))+block('By waiter',group(r=>r.waiter));
+  return block('By section',group(r=>r.section))+block('By payment',group(r=>r.status==='settled'?r.payMode:'not paid yet'))+block('By waiter',group(r=>r.waiter));
 }
 
 function itemsOf(records){ const g={}; Object.values(records||{}).forEach(r=>{ if(!isSale(r)) return;   /* unpaid counts too (v250) */ (r.items||[]).forEach(i=>{ const k=i.n; g[k]=g[k]||{n:i.n,cat:i.cat||'',q:0,v:0,bills:0,ch:{}}; g[k].q+=i.q||0; g[k].v+=i.a||0; g[k].bills++; const c=r.kind==='dine'||r.kind==='delivery'?r.kind:'counter', x=g[k].ch[c]=g[k].ch[c]||[0,0]; x[0]+=i.q||0; x[1]+=i.a||0; }); }); return g; }
 /* TOP ITEMS: who carries the sales. A 16-slice pie can't be read, so: one share strip (top 5 · the next ones · everything else)
    and ranked bars for the top 10 / 15 + "Others" in one row. Colours = dataviz reference slots 1-3, validated light + dark. */
-let TOPN=15; try{ TOPN=+localStorage.getItem('hayat-topn')||15; }catch(e){}
+let TOPN=10; try{ TOPN=+localStorage.getItem('hayat-topn')||10; }catch(e){}
 /* ITEMS BY CATEGORY: the bills only say "MAIN CATEGORY", so the dish name decides. First rule that matches wins. */
 const CATS=[['Mandi',/MANDI|KABSA|MAJBOOS|MANDHI/],['Juices & shakes',null,'juice'],['Bottled drinks',null,'soft'],
   ['Fish & seafood',/FISH|PRAWN|SQUID|CRAB|POMFRET|AILA|AYALA|MATHI|NEYMEEN|SEER|KOONTHAL|CHEMMEEN|KALLUMMAKKAYA|ANCHOVY|NATHOLI/],
@@ -6125,8 +6135,8 @@ function render0(){ tabCarry(); if(VIEW!=='simple'&&TAB==='days') TAB='floor';
   if(MODE==='period'){ m.innerHTML=(PTAB==='money'||PTAB==='cash'?`<div class="subnav">${[['money','Spends'],['cash','Cash & bank']].map(t=>`<button type="button" class="${PTAB===t[0]?'on':''}" data-ptab="${t[0]}">${t[1]}</button>`).join('')}</div>`:'')+period()+`<div class="note">board ${BOARD}</div>`; }
   else if(VIEW==='simple'&&(()=>{ if(!['floor','days','buy','cash','items'].includes(TAB)) TAB='floor'; const sm=simpleMain(live); if(sm==null) return false; m.innerHTML=sm+`<div class="note">Day log ${esc(DOC.updatedAt||'')} · board ${BOARD} · <a href="#" data-full="sales">full analysis</a></div>`; return true; })()){}
   else m.innerHTML=((TAB==='floor'||TAB==='sales')?kpis():'')+pgHead()+subNav()+
-    (TAB==='sales'?`<div class="grid">${SAFE(stCard,'stCard')()}${SAFE(noticeCard,'noticeCard')()}${hourly()}${runLine()}${SAFE(dgMini,'dgMini')()}${SAFE(chRun,'chRun')()}${SAFE(likeCard,'likeCard')()}${SAFE(dayMatrix,'dayMatrix')()}${billsCard()}</div>${SL.open&&TCUT!=null?`<div class="note sltag">⏱ showing the day as of <b>${tcutLabel()}</b> · <a href="#" id="slTog">back to now</a></div>`:''}<div class="grid">${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); const T=R.reduce((n,r)=>n+r.v,0); return topItems(R,T); })()}</div>${moreG('sales','More breakdowns','by section · type · payment · pace · bill times · waiters · upselling · tables · voids · discounts',breakdown()+pace()+closures()+waiters()+upsell()+tables()+voids()+discounts())}`:
-     TAB==='floor'?`<div class="grid">${live?alerts():''}${SAFE(newsTop,'newsTop')()}${floor()}${newOrders()}${SAFE(trendNow,'trendNow')()}${SAFE(demandAhead,'demandAhead')()}${SAFE(riderCard,'riderCard')()}${SAFE(prepCard,'prepCard')()}${SAFE(nextCust,'nextCust')()}${SAFE(dishPace,'dishPace')()}${SAFE(comingUp,'comingUp')()}${SAFE(newsCard,'newsCard')()}${lastGap()?`<div class="card wide lgcard">${lastGap()}</div>`:''}</div>${moreG('live','More live details','unpaid list · today & tomorrow outlook · days like today · by channel · tomorrow\'s dishes · kitchens · road traffic',`<div class="grid">${unrealized()}${outlook()}${SAFE(likeCard,'likeCard')()}${SAFE(chFc,'chFc')()}${SAFE(tmDishes,'tmDishes')()}${kitchens()}${trafficCard()}</div>`)}`:
+    (TAB==='sales'?`<div class="grid">${hourly()}${SAFE(stCard,'stCard')()}${rtSwitch()}${SAFE(dgMini,'dgMini')()}${SAFE(noticeCard,'noticeCard')()}${SAFE(dayMatrix,'dayMatrix')()}${billsCard()}</div>${SL.open&&TCUT!=null?`<div class="note sltag">⏱ showing the day as of <b>${tcutLabel()}</b> · <a href="#" id="slTog">back to now</a></div>`:''}<div class="grid">${(()=>{ const R=Object.values(itemsOf(recs())).sort((x,y)=>y.v-x.v); const T=R.reduce((n,r)=>n+r.v,0); return topItems(R,T); })()}</div><div class="grid">${SAFE(fcCheck,'fcCheck')()}${SAFE(likeCard,'likeCard')()}</div>${moreG('sales','More breakdowns','average a day · more numbers · by section · payment · bill times · waiters · upselling · tables · voids · discounts',kpis('more')+breakdown()+closures()+waiters()+upsell()+tables()+voids()+discounts())}`:
+     TAB==='floor'?`<div class="grid">${SAFE(newsTop,'newsTop')()}${floor()}${(()=>{ const n=newOrders(), g=lastGap(); return n&&g?n.replace('</h2>','</h2><div class="lgin">'+g+'</div>'):n||(g?`<div class="card wide lgcard">${g}</div>`:''); })()}${SAFE(trendNow,'trendNow')()}${SAFE(nextCust,'nextCust')()}${SAFE(demandAhead,'demandAhead')()}${SAFE(prepCard,'prepCard')()}${SAFE(riderCard,'riderCard')()}${SAFE(comingUp,'comingUp')()}${SAFE(newsCard,'newsCard')()}</div>${moreG('live','More live details','forecast check · today & tomorrow outlook · tomorrow\'s dishes · kitchens · road traffic',`<div class="grid">${SAFE(fcCheck,'fcCheck')()}${outlook()}${SAFE(tmDishes,'tmDishes')()}${kitchens()}${trafficCard()}</div>`)}`:
      TAB==='bills'?`<div class="grid">${bills()}</div>`:
      TAB==='buy'?`<div class="grid">${SAFE(spMissCard,'spMissCard')(DAY.slice(0,8)+'01',DAY)}${daySpendCard(DOC,DAY)}${drafts()}${payments()}</div>`:
      TAB==='patterns'?patterns():
