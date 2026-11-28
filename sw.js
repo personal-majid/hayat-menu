@@ -1,9 +1,9 @@
 /* Hayat menu — offline cache.
    Bump CACHE below whenever you upload changes, so tablets pick them up. */
-const CACHE = "hayat-v367";
+const CACHE = "hayat-v368";
 const CORE = [
   "./","./index.html","./app.css","./premium.css","./config.js","./menu-data.js","./lang.js",
-  "./assets/icons.js","./assets/qr.js","./shop.js","./call.js",
+  "./assets/icons.js","./assets/qr.js","./assets/html-to-image.js","./shop.js","./call.js",
   "./rider.webmanifest","./rider.html","./captain.html","./captain.js","./setup.html","./stock.html","./stock-read.js","./planner.html","./planner.js","./planner3d.js","./planner-models.js","./planner-sketch.js","./hub.html","./nav.js","./captain.webmanifest","./hayat-auth.js","./print.html",
   "./owner.html","./owner-ux.js","./kds.html","./clean.html","./waitlist.html","./sim.html","./hayat-clean.js",   // pages + kds/clean helper, so they open offline after install
 "./assets/logo.png","./assets/mark.png",
